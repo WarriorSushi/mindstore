@@ -42,10 +42,14 @@ export default function VoiceRecorder({ onEntrySaved }: VoiceRecorderProps) {
       } else {
         // Fallback: try to get user media to check permission
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(track => track.stop());
-          setPermissionStatus('granted');
-          setError(null);
+          if (typeof window !== 'undefined' && navigator.mediaDevices) {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+            setPermissionStatus('granted');
+            setError(null);
+          } else {
+            setPermissionStatus('denied');
+          }
         } catch (err) {
           setPermissionStatus('denied');
         }
@@ -161,11 +165,17 @@ export default function VoiceRecorder({ onEntrySaved }: VoiceRecorderProps) {
 
   const requestMicrophonePermission = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately
-      setPermissionStatus('granted');
-      setError(null);
-      return true;
+      if (typeof window !== 'undefined' && navigator.mediaDevices) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Stop the stream immediately
+        setPermissionStatus('granted');
+        setError(null);
+        return true;
+      } else {
+        setPermissionStatus('denied');
+        setError('Microphone access not available in this browser');
+        return false;
+      }
     } catch (error) {
       setPermissionStatus('denied');
       setError('Microphone access denied. Please allow microphone access in your browser settings.');
