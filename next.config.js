@@ -7,8 +7,14 @@ const nextConfig = {
   generateEtags: false,
   reactStrictMode: true,
   experimental: {
-    optimizeCss: true,
-  }
+    // Removed optimizeCss as it's causing build issues
+  },
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
 }
 
 module.exports = nextConfig 

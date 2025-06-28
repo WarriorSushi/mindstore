@@ -30,7 +30,7 @@ export default function VoiceRecorder({ onEntrySaved }: VoiceRecorderProps) {
   const checkMicrophonePermission = async () => {
     try {
       if ('permissions' in navigator) {
-        const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        const permission = await (navigator as any).permissions.query({ name: 'microphone' });
         setPermissionStatus(permission.state);
         
         permission.onchange = () => {
@@ -42,8 +42,8 @@ export default function VoiceRecorder({ onEntrySaved }: VoiceRecorderProps) {
       } else {
         // Fallback: try to get user media to check permission
         try {
-          if (typeof window !== 'undefined' && navigator.mediaDevices) {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (typeof window !== 'undefined' && (navigator as any).mediaDevices) {
+            const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
             setPermissionStatus('granted');
             setError(null);
@@ -165,8 +165,8 @@ export default function VoiceRecorder({ onEntrySaved }: VoiceRecorderProps) {
 
   const requestMicrophonePermission = async () => {
     try {
-      if (typeof window !== 'undefined' && navigator.mediaDevices) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (typeof window !== 'undefined' && (navigator as any).mediaDevices) {
+        const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Stop the stream immediately
         setPermissionStatus('granted');
         setError(null);
