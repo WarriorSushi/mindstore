@@ -2,6 +2,8 @@
 
 A beautiful voice journal application that transforms your thoughts into written memories using the power of speech recognition. Built with modern web technologies and featuring a stunning glassmorphism interface.
 
+<!-- Deployment trigger: Force fresh deployment -->
+
 ## ✨ Features
 
 - **🎤 Voice Recognition**: Real-time speech-to-text using Web Speech API
