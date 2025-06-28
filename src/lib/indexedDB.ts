@@ -7,7 +7,7 @@ export interface DiaryEntry {
 }
 
 export class DiaryDatabase {
-  private dbName = 'SpeakDiaryDB';
+  private dbName = 'MindStoreDB';
   private version = 1;
   private storeName = 'entries';
   private db: IDBDatabase | null = null;

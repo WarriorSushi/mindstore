@@ -59,7 +59,7 @@ export default function EntryList({ entries, onEntryDeleted }: EntryListProps) {
         className="text-center mb-8"
       >
         <h2 className="text-2xl font-bold text-white mb-2 text-glow">
-          Your Diary Entries
+          Your MindStore Entries
         </h2>
         <p className="text-white/60">
           {entries.length} entr{entries.length === 1 ? 'y' : 'ies'} captured

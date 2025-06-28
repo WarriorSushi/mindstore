@@ -1,4 +1,4 @@
-# SpeakDiary 🎤✨
+# MindStore 🎤✨
 
 A beautiful voice journal application that transforms your thoughts into written memories using the power of speech recognition. Built with modern web technologies and featuring a stunning glassmorphism interface.
 
@@ -33,7 +33,7 @@ A beautiful voice journal application that transforms your thoughts into written
 1. Clone the repository:
 ```bash
 git clone <your-repo-url>
-cd speakdiary
+cd mindstore
 ```
 
 2. Install dependencies:
@@ -53,7 +53,7 @@ npm run dev
 1. **Start Recording**: Click the microphone button to begin voice recording
 2. **Speak Clearly**: Talk naturally - your words will appear in real-time
 3. **Auto-Save**: Entries are automatically saved when you finish speaking
-4. **View Entries**: Scroll down to see all your diary entries
+4. **View Entries**: Scroll down to see all your MindStore entries
 5. **Delete Entries**: Hover over entries and click the delete button
 
 ## 🌟 Key Features Explained
