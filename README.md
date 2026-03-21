@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MindStore
 
-## Getting Started
+**Your Mind, Connected to Every AI.**
 
-First, run the development server:
+MindStore is a personal mind layer — import your knowledge from anywhere, and connect it to any AI via MCP (Model Context Protocol). Your ChatGPT, Claude, VS Code Copilot, Cursor — they all get full context about you.
+
+## What Makes MindStore Different
+
+| Feature | MindStore | Mem.ai | Khoj | Rewind |
+|---------|-----------|--------|------|--------|
+| Universal AI connector (MCP) | ✅ | ❌ | ❌ | ❌ |
+| Import Obsidian/Notion/ChatGPT | ✅ | ❌ | Partial | ❌ |
+| BYOM (Bring Your Own Model) | ✅ | ❌ | ✅ | ❌ |
+| Self-hostable | ✅ | ❌ | ✅ | ❌ |
+| AI that learns about you | ✅ | Partial | ❌ | ❌ |
+| Privacy-first | ✅ | ❌ | ✅ | ❌ |
+
+## Quick Start
 
 ```bash
+# Clone and install
+git clone https://github.com/altcorp/mindstore.git
+cd mindstore
+npm install
+
+# Run locally
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Connect to Your AI
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Add MindStore to any MCP-compatible AI client:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Claude Desktop
+```json
+{
+  "mcpServers": {
+    "mindstore": {
+      "command": "npx",
+      "args": ["mindstore-mcp"]
+    }
+  }
+}
+```
 
-## Learn More
+### VS Code / Cursor
+```json
+{
+  "mcp": {
+    "servers": {
+      "mindstore": {
+        "command": "npx",
+        "args": ["mindstore-mcp"]
+      }
+    }
+  }
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 📥 Import Everything
+- **Obsidian** vaults (.md files with frontmatter, tags, wiki-links)
+- **Notion** exports (markdown, CSV)
+- **ChatGPT** conversation exports (conversations.json)
+- **Claude** conversation exports
+- **Any text** — markdown, plain text, CSV
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 🧠 AI Learning Engine
+- Talk to your MindStore — it learns about you from conversation
+- Extracts facts, preferences, goals, relationships automatically
+- Builds a living profile that grows over time
 
-## Deploy on Vercel
+### 🔍 Hybrid Search
+- **Semantic search** — find by meaning, not just keywords
+- **Full-text search** — SQLite FTS5 for fast keyword matching
+- **Temporal search** — find knowledge by time period
+- **Context assembly** — automatically builds coherent context from top results
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🔗 MCP Server
+MindStore exposes 6 tools, 1 resource, and 2 prompts via MCP:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Tools:**
+- `search_mind` — Search across all stored knowledge
+- `get_context` — Get assembled context for a query
+- `get_profile` — Get user profile and preferences
+- `learn_fact` — Store a new fact about the user
+- `get_mind_stats` — Statistics about stored knowledge
+- `get_timeline` — Recent knowledge entries
+
+**Resources:**
+- `profile://summary` — Full profile summary
+
+**Prompts:**
+- `introduce_user` — Generate user introduction for AI context
+- `provide_context` — Assemble relevant context for a query
+
+### 🖥️ Web Dashboard
+- Beautiful dark-mode interface
+- Drag & drop file import
+- Chat interface for AI learning
+- MCP connection setup guides
+- Knowledge statistics
+
+## Architecture
+
+- **Runtime:** Node.js + TypeScript
+- **Framework:** Next.js 15 (App Router)
+- **Database:** SQLite (portable, zero-config)
+- **Search:** Hybrid vector + FTS5 full-text
+- **Embeddings:** OpenAI text-embedding-3-small (with local fallback)
+- **MCP:** @modelcontextprotocol/sdk
+- **Storage:** Memvid SDK for advanced memory management
+
+## API
+
+```
+GET  /api/search?q=query     — Semantic search
+GET  /api/profile             — Get user profile
+GET  /api/stats               — Mind statistics
+POST /api/import              — Upload & import files
+POST /api/profile             — Set profile facts
+POST /api/chat                — Chat with your mind
+```
+
+## Self-Hosting
+
+```bash
+# Build for production
+npm run build
+
+# Start
+npm start
+
+# Or use Docker
+docker-compose up
+```
+
+## Environment Variables
+
+```env
+# Optional — for better embeddings (falls back to local if not set)
+OPENAI_API_KEY=sk-...
+
+# Database path (default: ./data/mindstore.db)
+MINDSTORE_DB_PATH=./data/mindstore.db
+```
+
+## License
+
+MIT
+
+---
+
+Built by [AltCorp](https://altcorp.frain.cloud) — Making AI personal.
