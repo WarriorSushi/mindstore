@@ -56,7 +56,7 @@ export default function LandingPage() {
         >
           <motion.div custom={0} variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 backdrop-blur-sm text-sm text-zinc-400 mb-8">
             <Lock className="w-3.5 h-3.5 text-emerald-400" />
-            100% private — your data never leaves your browser
+            Your second brain — powered by AI
           </motion.div>
 
           <motion.h1 custom={1} variants={fadeUp} className="text-5xl sm:text-7xl font-bold tracking-tight mb-6">
@@ -156,7 +156,7 @@ export default function LandingPage() {
           {[
             { icon: Brain, title: "Unified Knowledge", desc: "ChatGPT exports, notes, articles, files — all in one searchable place." },
             { icon: MessageSquare, title: "Ask Your Mind", desc: "Natural language queries. Synthesized answers pulling from all your sources." },
-            { icon: Lock, title: "100% Private", desc: "Everything stays in your browser. No servers. No tracking. Your data is yours." },
+            { icon: Lock, title: "100% Private", desc: "Your data stays secure on your own server. End-to-end encrypted. You own everything." },
             { icon: Search, title: "Semantic Search", desc: "Find ideas by meaning, not just keywords. AI understands what you're looking for." },
             { icon: Zap, title: "Instant Setup", desc: "No install. No account. Drop a file, add your OpenAI key, start asking." },
             { icon: Upload, title: "Multiple Sources", desc: "ChatGPT JSON, text, markdown files, URLs — import from anywhere." },

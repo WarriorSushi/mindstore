@@ -8,7 +8,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "MindStore — Your mind, searchable.",
-  description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get synthesized answers from your own brain. 100% private — your data never leaves your browser.",
+  description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get synthesized answers from your own brain. Self-hosted, private, and AI-powered.",
   keywords: ["mind storage", "knowledge base", "ChatGPT export", "personal AI", "MCP", "semantic search", "second brain"],
   authors: [{ name: "AltCorp" }],
   openGraph: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "MindStore — Your mind, searchable.",
-    description: "Import your ChatGPT conversations, notes, and knowledge. 100% private — runs entirely in your browser.",
+    description: "Import your ChatGPT conversations, notes, and knowledge. Self-hosted and AI-powered.",
   },
   metadataBase: new URL("https://mindstore.org"),
 };
