@@ -7,7 +7,7 @@ import { Brain, Upload, MessageSquare, Compass, Database, FileText, Globe, Messa
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getApiKey, setApiKey, testApiKey } from "@/lib/openai";
+import { checkApiKey, saveApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
 
@@ -20,7 +20,7 @@ async function fetchStats() {
 }
 
 export default function DashboardPage() {
-  const [apiKey, setKey] = useState<string | null>(null);
+  const [hasKey, setHasKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [testing, setTesting] = useState(false);
   const [stats, setStats] = useState<any>(null);
@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const [loadingDemo, setLoadingDemo] = useState(false);
 
   useEffect(() => {
-    setKey(getApiKey());
+    checkApiKey().then((data) => setHasKey(data.hasApiKey));
     setDemo(isDemoMode());
     fetchStats().then(setStats);
     setLoaded(true);
@@ -37,8 +37,10 @@ export default function DashboardPage() {
 
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (searchParams.get("demo") === "true" && !isDemoMode() && !getApiKey()) {
-      handleStartDemo();
+    if (searchParams.get("demo") === "true" && !isDemoMode()) {
+      checkApiKey().then((data) => {
+        if (!data.hasApiKey) handleStartDemo();
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -63,21 +65,21 @@ export default function DashboardPage() {
   const handleSetKey = async () => {
     if (!keyInput.trim()) return;
     setTesting(true);
-    const valid = await testApiKey(keyInput.trim());
+    const result = await saveApiKey(keyInput.trim());
     setTesting(false);
-    if (valid) {
-      setApiKey(keyInput.trim());
-      setKey(keyInput.trim());
+    if (result.ok) {
+      setHasKey(true);
+      setKeyInput("");
       toast.success("API key verified and saved!");
     } else {
-      toast.error("Invalid API key. Please check and try again.");
+      toast.error(result.error || "Invalid API key. Please check and try again.");
     }
   };
 
   if (!loaded) return null;
 
   // Setup wizard if no API key and not in demo mode
-  if (!apiKey && !demo) {
+  if (!hasKey && !demo) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
         <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800">
@@ -85,7 +87,7 @@ export default function DashboardPage() {
             <Brain className="w-12 h-12 text-violet-400 mx-auto mb-4" />
             <CardTitle className="text-2xl">Welcome to MindStore</CardTitle>
             <p className="text-zinc-400 mt-2">
-              To get started, you&apos;ll need an OpenAI API key. Your key stays in your browser — we never see it.
+              To get started, you&apos;ll need an OpenAI API key. Your key is stored securely on the server.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

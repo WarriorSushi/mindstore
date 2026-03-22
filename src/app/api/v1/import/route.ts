@@ -1,25 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { buildTreeIndex } from '@/server/retrieval';
+import { getServerApiKey, getEmbeddingsServer } from '@/server/apikey';
 import { sql } from 'drizzle-orm';
-
-// Embedding helper
-async function getEmbeddings(texts: string[], apiKey: string): Promise<number[][]> {
-  const batchSize = 100;
-  const all: number[][] = [];
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: 'text-embedding-3-small', input: batch }),
-    });
-    if (!res.ok) throw new Error('Embedding failed');
-    const data = await res.json();
-    all.push(...data.data.sort((a: any, b: any) => a.index - b.index).map((d: any) => d.embedding));
-  }
-  return all;
-}
 
 // Chunking — intelligent paragraph/sentence splitting
 function chunkText(text: string, maxChunkSize = 1000): string[] {
@@ -78,7 +61,7 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
 export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || 'default';
-    const apiKey = req.headers.get('x-openai-key') || process.env.OPENAI_API_KEY;
+    const apiKey = await getServerApiKey();
     
     const contentType = req.headers.get('content-type') || '';
     let documents: Array<{ title: string; content: string; sourceType: string; timestamp?: Date }> = [];
@@ -128,7 +111,7 @@ export async function POST(req: NextRequest) {
     let embeddings: number[][] | null = null;
     if (apiKey) {
       try {
-        embeddings = await getEmbeddings(allChunks.map(c => c.content), apiKey);
+        embeddings = await getEmbeddingsServer(allChunks.map(c => c.content), apiKey);
       } catch (e) {
         console.error('Embedding failed, storing without vectors:', e);
       }

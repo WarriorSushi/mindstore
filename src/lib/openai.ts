@@ -1,86 +1,49 @@
-const API_KEY_STORAGE = 'mindstore_api_key';
+/**
+ * OpenAI client — thin wrapper that calls server-side API routes.
+ * No API keys or direct OpenAI calls from the browser.
+ */
 
-export function getApiKey(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(API_KEY_STORAGE);
+/** Check if an API key is configured server-side */
+export async function checkApiKey(): Promise<{ hasApiKey: boolean; apiKeyPreview: string | null }> {
+  const res = await fetch('/api/v1/settings');
+  if (!res.ok) return { hasApiKey: false, apiKeyPreview: null };
+  return res.json();
 }
 
-export function setApiKey(key: string) {
-  localStorage.setItem(API_KEY_STORAGE, key);
-}
-
-export function clearApiKey() {
-  localStorage.removeItem(API_KEY_STORAGE);
-}
-
-export async function testApiKey(key: string): Promise<boolean> {
-  try {
-    const res = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${key}` },
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-export async function getEmbeddings(
-  texts: string[],
-  apiKey: string
-): Promise<number[][]> {
-  const batchSize = 100;
-  const allEmbeddings: number[][] = [];
-
-  for (let i = 0; i < texts.length; i += batchSize) {
-    const batch = texts.slice(i, i + batchSize);
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'text-embedding-3-small',
-        input: batch,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message || 'Embedding API failed');
-    }
-
-    const data = await res.json();
-    const embeddings = data.data
-      .sort((a: any, b: any) => a.index - b.index)
-      .map((d: any) => d.embedding);
-    allEmbeddings.push(...embeddings);
-  }
-
-  return allEmbeddings;
-}
-
-export async function* streamChat(
-  messages: { role: string; content: string }[],
-  apiKey: string
-): AsyncGenerator<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+/** Save an API key (sent to server, stored in DB) */
+export async function saveApiKey(apiKey: string): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch('/api/v1/settings', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages,
-      stream: true,
-      temperature: 0.7,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { ok: false, error: data.error };
+  return { ok: true };
+}
+
+/** Remove the API key from server */
+export async function removeApiKey(): Promise<void> {
+  await fetch('/api/v1/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'remove' }),
+  });
+}
+
+/** Stream chat via server-side proxy */
+export async function* streamChat(
+  messages: { role: string; content: string }[]
+): AsyncGenerator<string> {
+  const res = await fetch('/api/v1/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages }),
   });
 
   if (!res.ok) {
     const err = await res.json();
-    throw new Error(err.error?.message || 'Chat API failed');
+    throw new Error(err.error || 'Chat API failed');
   }
 
   const reader = res.body!.getReader();

@@ -5,7 +5,7 @@ import { Key, Download, Upload, Trash2, Info, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getApiKey, setApiKey, clearApiKey, testApiKey } from "@/lib/openai";
+import { checkApiKey, saveApiKey, removeApiKey } from "@/lib/openai";
 import { toast } from "sonner";
 
 async function fetchStats() {
@@ -19,34 +19,38 @@ async function fetchStats() {
 export default function SettingsPage() {
   const [key, setKey] = useState("");
   const [hasKey, setHasKey] = useState(false);
+  const [keyPreview, setKeyPreview] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    const k = getApiKey();
-    setHasKey(!!k);
-    if (k) setKey(k);
+    checkApiKey().then((data) => {
+      setHasKey(data.hasApiKey);
+      setKeyPreview(data.apiKeyPreview);
+    });
     fetchStats().then(setStats);
   }, []);
 
   const handleSaveKey = async () => {
     if (!key.trim()) return;
     setTesting(true);
-    const valid = await testApiKey(key.trim());
+    const result = await saveApiKey(key.trim());
     setTesting(false);
-    if (valid) {
-      setApiKey(key.trim());
+    if (result.ok) {
       setHasKey(true);
+      setKeyPreview(`sk-...${key.trim().slice(-4)}`);
+      setKey("");
       toast.success("API key saved!");
     } else {
-      toast.error("Invalid API key.");
+      toast.error(result.error || "Invalid API key.");
     }
   };
 
-  const handleRemoveKey = () => {
-    clearApiKey();
+  const handleRemoveKey = async () => {
+    await removeApiKey();
     setKey("");
     setHasKey(false);
+    setKeyPreview(null);
     toast.success("API key removed.");
   };
 
@@ -124,6 +128,11 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {hasKey && keyPreview && (
+            <p className="text-sm text-zinc-400">
+              Current key: <code className="bg-zinc-800 px-2 py-0.5 rounded">{keyPreview}</code>
+            </p>
+          )}
           <Input
             type="password"
             placeholder="sk-..."
@@ -143,7 +152,7 @@ export default function SettingsPage() {
             )}
           </div>
           <p className="text-xs text-zinc-500">
-            Your key is stored locally in your browser. It&apos;s used to create embeddings and generate answers.
+            Your key is stored securely on the server. It&apos;s used to create embeddings and generate answers.
           </p>
         </CardContent>
       </Card>
@@ -196,7 +205,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="text-sm text-zinc-400 space-y-2">
           <p><strong className="text-zinc-200">MindStore</strong> is your personal knowledge base. Import your ChatGPT conversations, notes, and articles, then ask questions and get synthesized answers from your own brain.</p>
-          <p>All data is stored server-side in PostgreSQL. Your OpenAI API key is stored locally in your browser and used only for embeddings and chat.</p>
+          <p>All data and API keys are stored securely on the server in PostgreSQL. OpenAI calls are handled server-side — your key never touches the browser.</p>
           <p className="pt-2">
             Built by{" "}
             <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">

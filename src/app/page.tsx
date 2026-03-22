@@ -156,9 +156,9 @@ export default function LandingPage() {
           {[
             { icon: Brain, title: "Unified Knowledge", desc: "ChatGPT exports, notes, articles, files — all in one searchable place." },
             { icon: MessageSquare, title: "Ask Your Mind", desc: "Natural language queries. Synthesized answers pulling from all your sources." },
-            { icon: Lock, title: "100% Private", desc: "Your data stays secure on your own server. End-to-end encrypted. You own everything." },
+            { icon: Lock, title: "100% Private", desc: "Your data stays secure on your own server. All AI calls handled server-side. You own everything." },
             { icon: Search, title: "Semantic Search", desc: "Find ideas by meaning, not just keywords. AI understands what you're looking for." },
-            { icon: Zap, title: "Instant Setup", desc: "No install. No account. Drop a file, add your OpenAI key, start asking." },
+            { icon: Zap, title: "Instant Setup", desc: "Quick deploy. Add your OpenAI key, start asking. All processing happens server-side." },
             { icon: Upload, title: "Multiple Sources", desc: "ChatGPT JSON, text, markdown files, URLs — import from anywhere." },
           ].map((feature, i) => (
             <motion.div
@@ -183,7 +183,7 @@ export default function LandingPage() {
           <div className="orb w-64 h-64 bg-violet-600 -top-32 -right-32" style={{ animationDelay: '-5s' }} />
           <div className="relative">
           <h2 className="text-3xl font-bold mb-4">Ready to search your mind?</h2>
-          <p className="text-zinc-400 mb-8">Free. Private. No account needed.</p>
+          <p className="text-zinc-400 mb-8">Free. Private. Self-hosted.</p>
           <Link href="/app">
             <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white px-10">
               Open MindStore <ArrowRight className="w-4 h-4 ml-2" />

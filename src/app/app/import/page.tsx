@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { getApiKey } from "@/lib/openai";
 import { toast } from "sonner";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
@@ -24,12 +23,6 @@ export default function ImportPage() {
   const importViaApi = async (
     formData: FormData
   ) => {
-    const apiKey = getApiKey();
-    if (!apiKey && !process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-      toast.error("No API key set. Go to Settings.");
-      return;
-    }
-
     setState("uploading");
     setProgress(50);
     setProgressText("Uploading and processing...");
@@ -37,9 +30,6 @@ export default function ImportPage() {
     try {
       const res = await fetch('/api/v1/import', {
         method: 'POST',
-        headers: {
-          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
-        },
         body: formData,
       });
 
@@ -63,12 +53,6 @@ export default function ImportPage() {
   const importJsonViaApi = async (
     documents: Array<{ title: string; content: string; sourceType: string; timestamp?: string }>,
   ) => {
-    const apiKey = getApiKey();
-    if (!apiKey && !process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-      toast.error("No API key set. Go to Settings.");
-      return;
-    }
-
     setState("uploading");
     setProgress(50);
     setProgressText("Uploading and processing...");
@@ -78,7 +62,6 @@ export default function ImportPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
         },
         body: JSON.stringify({ documents }),
       });

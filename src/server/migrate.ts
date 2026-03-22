@@ -150,6 +150,16 @@ async function migrate() {
     )
   `);
 
+  // Settings (server-side config storage)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS settings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // Indexes for performance
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(user_id, source_type)`);

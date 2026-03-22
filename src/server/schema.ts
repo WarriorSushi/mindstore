@@ -150,6 +150,14 @@ export const sessions = pgTable('sessions', {
   expires: timestamp('expires').notNull(),
 });
 
+// App settings (API keys, config)
+export const settings = pgTable('settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  key: text('key').unique().notNull(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // API Keys (for MCP server auth)
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').defaultRandom().primaryKey(),

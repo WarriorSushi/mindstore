@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Brain, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { getApiKey, streamChat } from "@/lib/openai";
+import { streamChat } from "@/lib/openai";
 import { toast } from "sonner";
 
 interface Message {
@@ -40,12 +40,6 @@ export default function ChatPage() {
     const query = (text || input).trim();
     if (!query || loading) return;
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      toast.error("No API key set. Go to Dashboard to add one.");
-      return;
-    }
-
     if (memoryCount === 0) {
       toast.error("No memories yet! Import some knowledge first.");
       return;
@@ -56,10 +50,8 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      // Search via server API (triple-layer fusion)
-      const searchRes = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`, {
-        headers: { 'x-openai-key': apiKey },
-      });
+      // Search via server API (triple-layer fusion) — no API key needed in header
+      const searchRes = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`);
       
       if (!searchRes.ok) throw new Error('Search failed');
       const searchData = await searchRes.json();
@@ -112,7 +104,7 @@ When answering:
         },
       ]);
 
-      for await (const chunk of streamChat(ragMessages, apiKey)) {
+      for await (const chunk of streamChat(ragMessages)) {
         fullResponse += chunk;
         setMessages((prev) => {
           const updated = [...prev];

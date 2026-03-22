@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
+import { getServerApiKey } from '@/server/apikey';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || 'default';
-    const apiKey = req.headers.get('x-openai-key') || process.env.OPENAI_API_KEY;
+    const apiKey = await getServerApiKey();
     const body = await req.json();
     const { content, sourceType, sourceId, sourceTitle, metadata } = body;
 

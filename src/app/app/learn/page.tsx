@@ -6,7 +6,7 @@ import { Send, Brain, User, Loader2, Sparkles, CheckCircle2, RotateCcw } from "l
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { getApiKey, getEmbeddings, streamChat } from "@/lib/openai";
+import { checkApiKey, streamChat } from "@/lib/openai";
 
 interface Message {
   role: "user" | "assistant";
@@ -82,6 +82,7 @@ export default function LearnPage() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [allFacts, setAllFacts] = useState<LearnedFact[]>([]);
   const [factsSaved, setFactsSaved] = useState(0);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,8 +91,9 @@ export default function LearnPage() {
     }
   }, [messages]);
 
-  // Load saved facts count from server
+  // Check API key status and load saved facts count
   useEffect(() => {
+    checkApiKey().then((data) => setHasApiKey(data.hasApiKey));
     fetch('/api/v1/memories?source=text&search=Learned%3A&limit=1')
       .then(r => r.json())
       .then(data => setFactsSaved(data.total || 0))
@@ -101,13 +103,11 @@ export default function LearnPage() {
   const saveFact = useCallback(async (fact: LearnedFact) => {
     try {
       const content = `${fact.key}: ${fact.value}`;
-      const apiKey = getApiKey();
       
       await fetch('/api/v1/memories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
         },
         body: JSON.stringify({
           content,
@@ -137,11 +137,9 @@ export default function LearnPage() {
       const assistantMsg: Message = { role: "assistant", content: "" };
       setMessages([assistantMsg]);
 
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("No API key set");
+      if (!hasApiKey) throw new Error("No API key set");
       const stream = streamChat(
-        [{ role: "system", content: systemMsg }, { role: "user", content: `Start the conversation about: ${topic.label}. Ask your first question.` }],
-        apiKey
+        [{ role: "system", content: systemMsg }, { role: "user", content: `Start the conversation about: ${topic.label}. Ask your first question.` }]
       );
       for await (const chunk of stream) {
         response += chunk;
@@ -176,11 +174,9 @@ export default function LearnPage() {
       const assistantMsg: Message = { role: "assistant", content: "" };
       setMessages(prev => [...prev, assistantMsg]);
 
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("No API key set");
+      if (!hasApiKey) throw new Error("No API key set");
       const stream = streamChat(
-        [{ role: "system", content: systemMsg }, ...history],
-        apiKey
+        [{ role: "system", content: systemMsg }, ...history]
       );
       for await (const chunk of stream) {
         response += chunk;
@@ -247,7 +243,7 @@ export default function LearnPage() {
               <p className="text-sm text-muted-foreground">Pick a topic. The AI will interview you naturally — no forms, just conversation.</p>
             </motion.div>
 
-            {!getApiKey() && (
+            {!hasApiKey && (
               <motion.div
                 className="mb-6 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 text-sm text-center"
                 initial={{ opacity: 0 }}
@@ -261,12 +257,12 @@ export default function LearnPage() {
               {INTERVIEW_TOPICS.map((topic, i) => (
                 <motion.button
                   key={topic.id}
-                  onClick={() => getApiKey() && startInterview(topic.id)}
+                  onClick={() => hasApiKey && startInterview(topic.id)}
                   className="p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-card hover:border-primary/30 transition-all text-left group"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  disabled={!getApiKey()}
+                  disabled={!hasApiKey}
                 >
                   <span className="text-2xl mb-2 block">{topic.icon}</span>
                   <span className="font-medium text-sm group-hover:text-primary transition-colors">{topic.label}</span>
