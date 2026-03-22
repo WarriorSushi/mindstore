@@ -136,6 +136,32 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Innovation Features */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Link href="/app/fingerprint">
+          <Card className="bg-gradient-to-br from-violet-950/50 to-zinc-900 border-violet-500/20 hover:border-violet-500/40 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6 flex items-start gap-4">
+              <div className="text-3xl">🧬</div>
+              <div>
+                <h3 className="font-semibold mb-1">Knowledge Fingerprint</h3>
+                <p className="text-sm text-zinc-400">3D visualization of your mind&apos;s topology. See clusters, connections, and blind spots.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/app/insights">
+          <Card className="bg-gradient-to-br from-fuchsia-950/50 to-zinc-900 border-fuchsia-500/20 hover:border-fuchsia-500/40 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6 flex items-start gap-4">
+              <div className="text-3xl">⚡</div>
+              <div>
+                <h3 className="font-semibold mb-1">Mind Insights</h3>
+                <p className="text-sm text-zinc-400">Cross-pollinations, contradictions, forgetting risks, and your knowledge metabolism score.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
       {/* Top Sources */}
       {stats?.topSources?.length > 0 && (
         <div>
