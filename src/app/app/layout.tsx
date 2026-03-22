@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings } from "lucide-react";
+import { Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings, GraduationCap, Fingerprint, Lightbulb, Network } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,6 +10,10 @@ const navItems = [
   { href: "/app/import", icon: Upload, label: "Import" },
   { href: "/app/chat", icon: MessageSquare, label: "Chat" },
   { href: "/app/explore", icon: Compass, label: "Explore" },
+  { href: "/app/learn", icon: GraduationCap, label: "Learn" },
+  { href: "/app/fingerprint", icon: Fingerprint, label: "Fingerprint" },
+  { href: "/app/insights", icon: Lightbulb, label: "Insights" },
+  { href: "/app/connect", icon: Network, label: "Connect" },
   { href: "/app/settings", icon: Settings, label: "Settings" },
 ];
 
