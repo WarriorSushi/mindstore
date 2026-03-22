@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Brain, Upload, MessageSquare, Compass, Database, FileText, Globe, MessageCircle } from "lucide-react";
+import { Brain, Upload, MessageSquare, Compass, Database, FileText, Globe, MessageCircle, Sparkles, Key, Server, ExternalLink, Check, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { checkApiKey, saveApiKey } from "@/lib/openai";
+import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
 
@@ -19,6 +19,8 @@ async function fetchStats() {
   } catch { return null; }
 }
 
+type SetupTab = "gemini" | "openai" | "ollama";
+
 export default function DashboardPage() {
   const [hasKey, setHasKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
@@ -27,6 +29,8 @@ export default function DashboardPage() {
   const [loaded, setLoaded] = useState(false);
   const [demo, setDemo] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [setupTab, setSetupTab] = useState<SetupTab>("gemini");
+  const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
 
   useEffect(() => {
     checkApiKey().then((data) => setHasKey(data.hasApiKey));
@@ -62,18 +66,37 @@ export default function DashboardPage() {
     toast.success("Demo data cleared.");
   };
 
-  const handleSetKey = async () => {
-    if (!keyInput.trim()) return;
+  const handleSaveProvider = async (provider: string) => {
+    const key = keyInput.trim();
+    const url = ollamaUrl.trim();
+    if (provider === "ollama" && !url) return;
+    if (provider !== "ollama" && !key) return;
+
     setTesting(true);
-    const result = await saveApiKey(keyInput.trim());
-    setTesting(false);
-    if (result.ok) {
-      setHasKey(true);
-      setKeyInput("");
-      toast.success("API key verified and saved!");
-    } else {
-      toast.error(result.error || "Invalid API key. Please check and try again.");
+    try {
+      const body: any = {};
+      if (provider === "gemini") body.geminiKey = key;
+      else if (provider === "openai") body.apiKey = key;
+      else if (provider === "ollama") body.ollamaUrl = url;
+
+      const res = await fetch('/api/v1/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        setHasKey(true);
+        setKeyInput("");
+        toast.success(`${provider === "gemini" ? "Gemini" : provider === "openai" ? "OpenAI" : "Ollama"} connected!`);
+      } else {
+        toast.error(data.error || "Failed to save. Check your key and try again.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Connection failed");
     }
+    setTesting(false);
   };
 
   if (!loaded) return null;
@@ -81,55 +104,213 @@ export default function DashboardPage() {
   // Setup wizard if no API key and not in demo mode
   if (!hasKey && !demo) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800">
-          <CardHeader className="text-center">
-            <Brain className="w-12 h-12 text-violet-400 mx-auto mb-4" />
-            <CardTitle className="text-2xl">Welcome to MindStore</CardTitle>
-            <p className="text-zinc-400 mt-2">
-              To get started, add an API key. Supports OpenAI, Google Gemini (free), or Ollama (local).
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="w-full max-w-xl space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <Brain className="w-14 h-14 text-violet-400 mx-auto" />
+            <h1 className="text-3xl font-bold">Welcome to MindStore</h1>
+            <p className="text-zinc-400 text-sm max-w-md mx-auto">
+              Connect an AI provider to power search, chat, and embeddings. Pick the one that works for you.
             </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm text-zinc-400">OpenAI API Key</label>
-              <Input
-                type="password"
-                placeholder="sk-..."
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSetKey()}
-                className="bg-zinc-800 border-zinc-700"
-              />
-              <p className="text-xs text-zinc-500">
-                Get yours at{" "}
-                <a href="https://platform.openai.com/api-keys" target="_blank" className="text-violet-400 hover:underline">
-                  platform.openai.com/api-keys
-                </a>
-              </p>
-            </div>
-            <Button onClick={handleSetKey} disabled={testing || !keyInput.trim()} className="w-full bg-violet-600 hover:bg-violet-500">
-              {testing ? "Verifying..." : "Save & Continue"}
-            </Button>
+          </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">or</span></div>
-            </div>
-
-            <Button
-              onClick={handleStartDemo}
-              disabled={loadingDemo}
-              variant="outline"
-              className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+          {/* Provider Tabs */}
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => { setSetupTab("gemini"); setKeyInput(""); }}
+              className={`flex-1 max-w-[160px] rounded-xl border px-4 py-3 text-left transition-all ${
+                setupTab === "gemini"
+                  ? "border-blue-500/50 bg-blue-500/10"
+                  : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+              }`}
             >
-              {loadingDemo ? "Loading demo..." : "🎯 Try Demo — No API Key Needed"}
-            </Button>
-            <p className="text-xs text-zinc-500 text-center">
-              Explore with 24 sample memories from AI chats, notes, and articles
-            </p>
-          </CardContent>
-        </Card>
+              <div className="flex items-center gap-2">
+                <Sparkles className={`w-4 h-4 ${setupTab === "gemini" ? "text-blue-400" : "text-zinc-500"}`} />
+                <span className="text-sm font-medium">Gemini</span>
+              </div>
+              <span className={`text-xs ${setupTab === "gemini" ? "text-blue-400" : "text-zinc-600"}`}>Free</span>
+            </button>
+            <button
+              onClick={() => { setSetupTab("openai"); setKeyInput(""); }}
+              className={`flex-1 max-w-[160px] rounded-xl border px-4 py-3 text-left transition-all ${
+                setupTab === "openai"
+                  ? "border-emerald-500/50 bg-emerald-500/10"
+                  : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Key className={`w-4 h-4 ${setupTab === "openai" ? "text-emerald-400" : "text-zinc-500"}`} />
+                <span className="text-sm font-medium">OpenAI</span>
+              </div>
+              <span className={`text-xs ${setupTab === "openai" ? "text-emerald-400" : "text-zinc-600"}`}>Paid</span>
+            </button>
+            <button
+              onClick={() => { setSetupTab("ollama"); setKeyInput(""); }}
+              className={`flex-1 max-w-[160px] rounded-xl border px-4 py-3 text-left transition-all ${
+                setupTab === "ollama"
+                  ? "border-orange-500/50 bg-orange-500/10"
+                  : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Server className={`w-4 h-4 ${setupTab === "ollama" ? "text-orange-400" : "text-zinc-500"}`} />
+                <span className="text-sm font-medium">Ollama</span>
+              </div>
+              <span className={`text-xs ${setupTab === "ollama" ? "text-orange-400" : "text-zinc-600"}`}>Local</span>
+            </button>
+          </div>
+
+          {/* Gemini Setup */}
+          {setupTab === "gemini" && (
+            <Card className="bg-zinc-900 border-blue-500/20">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                  <Sparkles className="w-5 h-5 text-blue-400 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="text-blue-200 font-medium">Recommended — Completely Free</p>
+                    <p className="text-zinc-400 mt-1">Google Gemini offers free embeddings and chat. No credit card needed. Takes 30 seconds.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-xs font-bold text-blue-400">1</div>
+                    <span>Go to </span>
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium"
+                    >
+                      Google AI Studio <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-xs font-bold text-blue-400">2</div>
+                    <span>Click &quot;Create API key&quot; → copy it</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center text-xs font-bold text-blue-400">3</div>
+                    <span>Paste it below</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder="AIza..."
+                    value={keyInput}
+                    onChange={(e) => setKeyInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("gemini")}
+                    className="bg-zinc-800 border-zinc-700 font-mono"
+                  />
+                  <Button
+                    onClick={() => handleSaveProvider("gemini")}
+                    disabled={testing || !keyInput.trim()}
+                    className="bg-blue-600 hover:bg-blue-500 shrink-0"
+                  >
+                    {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* OpenAI Setup */}
+          {setupTab === "openai" && (
+            <Card className="bg-zinc-900 border-emerald-500/20">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <Key className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="text-emerald-200 font-medium">OpenAI API Key</p>
+                    <p className="text-zinc-400 mt-1">Uses GPT-4o-mini for chat and text-embedding-3-small for search. Usage-based billing (~$0.01 per 10 queries).</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder="sk-..."
+                    value={keyInput}
+                    onChange={(e) => setKeyInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("openai")}
+                    className="bg-zinc-800 border-zinc-700 font-mono"
+                  />
+                  <Button
+                    onClick={() => handleSaveProvider("openai")}
+                    disabled={testing || !keyInput.trim()}
+                    className="bg-emerald-600 hover:bg-emerald-500 shrink-0"
+                  >
+                    {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
+                  </Button>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Get your key at{" "}
+                  <a href="https://platform.openai.com/api-keys" target="_blank" className="text-emerald-400 hover:underline">
+                    platform.openai.com/api-keys
+                  </a>
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ollama Setup */}
+          {setupTab === "ollama" && (
+            <Card className="bg-zinc-900 border-orange-500/20">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10">
+                  <Server className="w-5 h-5 text-orange-400 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="text-orange-200 font-medium">100% Local & Private</p>
+                    <p className="text-zinc-400 mt-1">
+                      Run AI on your own machine. Install{" "}
+                      <a href="https://ollama.ai" target="_blank" className="text-orange-400 hover:underline">Ollama</a>
+                      , then run <code className="bg-zinc-800 px-1 rounded text-xs">ollama pull nomic-embed-text</code>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="http://localhost:11434"
+                    value={ollamaUrl}
+                    onChange={(e) => setOllamaUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("ollama")}
+                    className="bg-zinc-800 border-zinc-700 font-mono"
+                  />
+                  <Button
+                    onClick={() => handleSaveProvider("ollama")}
+                    disabled={testing || !ollamaUrl.trim()}
+                    className="bg-orange-600 hover:bg-orange-500 shrink-0"
+                  >
+                    {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-zinc-950 px-3 text-zinc-500">or explore first</span></div>
+          </div>
+
+          {/* Demo */}
+          <Button
+            onClick={handleStartDemo}
+            disabled={loadingDemo}
+            variant="outline"
+            className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+          >
+            {loadingDemo ? "Loading demo..." : "🎯 Try Demo — No API Key Needed"}
+          </Button>
+          <p className="text-xs text-zinc-500 text-center -mt-4">
+            Explore with 24 sample memories from AI chats, notes, and articles
+          </p>
+        </div>
       </div>
     );
   }
