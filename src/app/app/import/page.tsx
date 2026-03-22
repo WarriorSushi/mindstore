@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { db } from "@/lib/db";
 import { getApiKey, getEmbeddings } from "@/lib/openai";
-import { parseChatGPTExport, createTextMemories } from "@/lib/parsers";
+import { parseChatGPTExport, createTextMemories, parseObsidianVault, parseNotionExport } from "@/lib/parsers";
 import { toast } from "sonner";
 
 type ImportState = "idle" | "parsing" | "embedding" | "storing" | "done" | "error";
@@ -177,6 +177,54 @@ export default function ImportPage() {
     }
   };
 
+  const handleObsidianImport = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setState("parsing");
+    setProgressText("Reading Obsidian vault...");
+
+    const fileData: { name: string; content: string }[] = [];
+    for (const file of Array.from(files)) {
+      if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
+        const content = await file.text();
+        fileData.push({ name: file.webkitRelativePath || file.name, content });
+      }
+    }
+
+    const { memories, sources } = parseObsidianVault(fileData);
+    if (memories.length === 0) {
+      toast.error("No importable notes found.");
+      setState("idle");
+      return;
+    }
+
+    setProgressText(`Found ${memories.length} chunks from ${sources.length} notes. Embedding...`);
+    await embedAndStore(memories, sources);
+  };
+
+  const handleNotionImport = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setState("parsing");
+    setProgressText("Reading Notion export...");
+
+    const fileData: { name: string; content: string }[] = [];
+    for (const file of Array.from(files)) {
+      if (file.name.endsWith('.md')) {
+        const content = await file.text();
+        fileData.push({ name: file.webkitRelativePath || file.name, content });
+      }
+    }
+
+    const { memories, sources } = parseNotionExport(fileData);
+    if (memories.length === 0) {
+      toast.error("No importable pages found.");
+      setState("idle");
+      return;
+    }
+
+    setProgressText(`Found ${memories.length} chunks from ${sources.length} pages. Embedding...`);
+    await embedAndStore(memories, sources);
+  };
+
   const resetState = () => {
     setState("idle");
     setProgress(0);
@@ -230,6 +278,12 @@ export default function ImportPage() {
           </TabsTrigger>
           <TabsTrigger value="url" className="data-[state=active]:bg-zinc-800">
             <Globe className="w-4 h-4 mr-2" /> URL
+          </TabsTrigger>
+          <TabsTrigger value="obsidian" className="data-[state=active]:bg-zinc-800">
+            <FileText className="w-4 h-4 mr-2" /> Obsidian
+          </TabsTrigger>
+          <TabsTrigger value="notion" className="data-[state=active]:bg-zinc-800">
+            <FileText className="w-4 h-4 mr-2" /> Notion
           </TabsTrigger>
         </TabsList>
 
@@ -370,6 +424,90 @@ export default function ImportPage() {
                 </Button>
               </div>
               <p className="text-xs text-zinc-600">Note: Some websites may block content extraction due to CORS restrictions.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="obsidian" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-lg">Import Obsidian Vault</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-zinc-400 space-y-2">
+                <p><strong>How to import:</strong></p>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-500">
+                  <li>Find your Obsidian vault folder on your computer</li>
+                  <li>Select all .md files from the vault (or a subfolder)</li>
+                  <li>Drop them below or click to browse</li>
+                </ol>
+              </div>
+              <div
+                className="border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-violet-500/50 transition-colors cursor-pointer"
+                onClick={() => document.getElementById("obsidian-upload")?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-violet-500/50"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("border-violet-500/50"); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove("border-violet-500/50");
+                  handleObsidianImport(e.dataTransfer.files);
+                }}
+              >
+                <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+                <p className="text-zinc-400">Drop your Obsidian .md files here</p>
+                <p className="text-sm text-zinc-600 mt-1">Supports .md and .txt — YAML frontmatter is automatically stripped</p>
+              </div>
+              <input
+                id="obsidian-upload"
+                type="file"
+                accept=".md,.txt,.markdown"
+                multiple
+                className="hidden"
+                disabled={isProcessing}
+                onChange={(e) => handleObsidianImport(e.target.files)}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notion" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-lg">Import Notion Export</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-zinc-400 space-y-2">
+                <p><strong>How to export from Notion:</strong></p>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-500">
+                  <li>In Notion, go to Settings → Export all workspace content</li>
+                  <li>Choose &quot;Markdown &amp; CSV&quot; format</li>
+                  <li>Download and extract the ZIP file</li>
+                  <li>Select the .md files from the extracted folder</li>
+                </ol>
+              </div>
+              <div
+                className="border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-violet-500/50 transition-colors cursor-pointer"
+                onClick={() => document.getElementById("notion-upload")?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-violet-500/50"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("border-violet-500/50"); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove("border-violet-500/50");
+                  handleNotionImport(e.dataTransfer.files);
+                }}
+              >
+                <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+                <p className="text-zinc-400">Drop your Notion .md files here</p>
+                <p className="text-sm text-zinc-600 mt-1">UUID suffixes in filenames are automatically cleaned</p>
+              </div>
+              <input
+                id="notion-upload"
+                type="file"
+                accept=".md,.markdown"
+                multiple
+                className="hidden"
+                disabled={isProcessing}
+                onChange={(e) => handleNotionImport(e.target.files)}
+              />
             </CardContent>
           </Card>
         </TabsContent>

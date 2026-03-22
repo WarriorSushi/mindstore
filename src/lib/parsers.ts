@@ -160,6 +160,110 @@ export function chunkText(text: string, maxTokens = 500): string[] {
   return result.filter(c => c.length > 20);
 }
 
+/**
+ * Parse an Obsidian vault export (folder of .md files).
+ * Accepts an array of { name, content } objects from file input.
+ */
+export function parseObsidianVault(
+  files: { name: string; content: string }[]
+): { memories: Omit<Memory, 'embedding'>[]; sources: Source[] } {
+  const now = new Date();
+  const memories: Omit<Memory, 'embedding'>[] = [];
+  const sources: Source[] = [];
+
+  for (const file of files) {
+    if (!file.name.endsWith('.md') && !file.name.endsWith('.txt')) continue;
+    const text = file.content.trim();
+    if (text.length < 20) continue;
+
+    const sourceId = uuid();
+    const title = file.name.replace(/\.(md|txt)$/, '').replace(/^.*[/\\]/, '');
+
+    // Strip YAML frontmatter
+    const cleaned = text.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+    if (cleaned.length < 20) continue;
+
+    const chunks = chunkText(cleaned);
+
+    for (const chunk of chunks) {
+      memories.push({
+        id: uuid(),
+        content: chunk,
+        source: 'file',
+        sourceId,
+        sourceTitle: title,
+        timestamp: now,
+        importedAt: now,
+        metadata: { obsidian: true, filename: file.name },
+      });
+    }
+
+    sources.push({
+      id: sourceId,
+      type: 'file',
+      title,
+      itemCount: chunks.length,
+      importedAt: now,
+      metadata: { obsidian: true, filename: file.name, originalLength: text.length },
+    });
+  }
+
+  return { memories, sources };
+}
+
+/**
+ * Parse a Notion export (folder of .md or .html files + nested folders).
+ * Notion exports pages as markdown with UUIDs in filenames.
+ */
+export function parseNotionExport(
+  files: { name: string; content: string }[]
+): { memories: Omit<Memory, 'embedding'>[]; sources: Source[] } {
+  const now = new Date();
+  const memories: Omit<Memory, 'embedding'>[] = [];
+  const sources: Source[] = [];
+
+  for (const file of files) {
+    // Notion exports .md and .csv files; we handle markdown
+    if (!file.name.endsWith('.md')) continue;
+    const text = file.content.trim();
+    if (text.length < 20) continue;
+
+    const sourceId = uuid();
+    // Notion appends UUIDs to filenames like "Page Title abc123def456.md"
+    const title = file.name
+      .replace(/\.(md|html)$/, '')
+      .replace(/^.*[/\\]/, '')
+      .replace(/\s+[a-f0-9]{32}$/, '') // strip Notion UUID suffix
+      .trim();
+
+    const chunks = chunkText(text);
+
+    for (const chunk of chunks) {
+      memories.push({
+        id: uuid(),
+        content: chunk,
+        source: 'file',
+        sourceId,
+        sourceTitle: title || 'Notion Page',
+        timestamp: now,
+        importedAt: now,
+        metadata: { notion: true, filename: file.name },
+      });
+    }
+
+    sources.push({
+      id: sourceId,
+      type: 'file',
+      title: title || 'Notion Page',
+      itemCount: chunks.length,
+      importedAt: now,
+      metadata: { notion: true, filename: file.name, originalLength: text.length },
+    });
+  }
+
+  return { memories, sources };
+}
+
 export function createTextMemories(
   text: string,
   title: string,
