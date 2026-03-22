@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiKey, setApiKey, testApiKey } from "@/lib/openai";
 import { getStats } from "@/lib/db";
+import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
 
 export default function DashboardPage() {
@@ -16,12 +17,32 @@ export default function DashboardPage() {
   const [testing, setTesting] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
+  const [demo, setDemo] = useState(false);
+  const [loadingDemo, setLoadingDemo] = useState(false);
 
   useEffect(() => {
     setKey(getApiKey());
+    setDemo(isDemoMode());
     getStats().then(setStats);
     setLoaded(true);
   }, []);
+
+  const handleStartDemo = async () => {
+    setLoadingDemo(true);
+    await loadDemoData();
+    setDemo(true);
+    const s = await getStats();
+    setStats(s);
+    setLoadingDemo(false);
+    toast.success("Demo loaded! Explore 24 sample memories.");
+  };
+
+  const handleExitDemo = async () => {
+    await clearDemoData();
+    setDemo(false);
+    setStats(null);
+    toast.success("Demo data cleared.");
+  };
 
   const handleSetKey = async () => {
     if (!keyInput.trim()) return;
@@ -39,8 +60,8 @@ export default function DashboardPage() {
 
   if (!loaded) return null;
 
-  // Setup wizard if no API key
-  if (!apiKey) {
+  // Setup wizard if no API key and not in demo mode
+  if (!apiKey && !demo) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
         <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800">
@@ -72,6 +93,23 @@ export default function DashboardPage() {
             <Button onClick={handleSetKey} disabled={testing || !keyInput.trim()} className="w-full bg-violet-600 hover:bg-violet-500">
               {testing ? "Verifying..." : "Save & Continue"}
             </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800" /></div>
+              <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">or</span></div>
+            </div>
+
+            <Button
+              onClick={handleStartDemo}
+              disabled={loadingDemo}
+              variant="outline"
+              className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              {loadingDemo ? "Loading demo..." : "🎯 Try Demo — No API Key Needed"}
+            </Button>
+            <p className="text-xs text-zinc-500 text-center">
+              Explore with 24 sample memories from AI chats, notes, and articles
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -80,6 +118,21 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Demo Mode Banner */}
+      {demo && (
+        <div className="flex items-center justify-between rounded-lg bg-violet-950/50 border border-violet-500/30 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🎯</span>
+            <span className="text-sm text-violet-200">
+              <strong>Demo Mode</strong> — Exploring with sample data. Chat & AI features need an API key.
+            </span>
+          </div>
+          <Button onClick={handleExitDemo} variant="ghost" size="sm" className="text-violet-300 hover:text-white hover:bg-violet-900/50 text-xs">
+            Exit Demo
+          </Button>
+        </div>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold">Your Mind</h1>
         <p className="text-zinc-400 mt-1">
