@@ -84,10 +84,19 @@ export async function POST(req: NextRequest) {
     }
 
     const id = crypto.randomUUID();
-    await db.execute(sql`
-      INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, metadata, created_at, imported_at)
-      VALUES (${id}, ${userId}, ${content}, ${embStr}::vector, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${JSON.stringify(metadata || {})}::jsonb, NOW(), NOW())
-    `);
+    const meta = JSON.stringify(metadata || {});
+
+    if (embStr) {
+      await db.execute(sql`
+        INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, metadata, created_at, imported_at)
+        VALUES (${id}, ${userId}::uuid, ${content}, ${embStr}::vector, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
+      `);
+    } else {
+      await db.execute(sql`
+        INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, metadata, created_at, imported_at)
+        VALUES (${id}, ${userId}::uuid, ${content}, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
+      `);
+    }
 
     return NextResponse.json({ id });
   } catch (error: unknown) {

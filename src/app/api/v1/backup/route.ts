@@ -17,17 +17,22 @@ export async function POST(req: NextRequest) {
 
     let imported = 0;
     for (const m of memories) {
+      const memId = m.id || crypto.randomUUID();
+      const ts = (m.timestamp ? new Date(m.timestamp) : new Date()).toISOString();
+      const source = m.source || m.sourceType || 'text';
+      const meta = JSON.stringify(m.metadata || {});
+
       await db.execute(sql`
         INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, metadata, created_at, imported_at)
         VALUES (
-          ${m.id || crypto.randomUUID()},
-          ${userId},
+          ${memId},
+          ${userId}::uuid,
           ${m.content},
-          ${m.source || m.sourceType || 'text'},
+          ${source},
           ${m.sourceId || null},
           ${m.sourceTitle || null},
-          ${JSON.stringify(m.metadata || {})}::jsonb,
-          ${m.timestamp ? new Date(m.timestamp) : new Date()},
+          ${meta}::jsonb,
+          ${ts}::timestamptz,
           NOW()
         )
         ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content
