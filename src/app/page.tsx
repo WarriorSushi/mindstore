@@ -14,8 +14,19 @@ const fadeUp = {
 };
 
 export default function LandingPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Mindstore",
+    applicationCategory: "ProductivityApplication",
+    operatingSystem: "Web",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get synthesized answers from your own brain.",
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Nav */}
       <nav className="border-b border-zinc-800/50 backdrop-blur-sm sticky top-0 z-50 bg-zinc-950/80">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -60,10 +71,15 @@ export default function LandingPage() {
             Ask anything. Get synthesized answers from <span className="text-zinc-200 font-medium">your own brain</span>.
           </motion.p>
 
-          <motion.div custom={3} variants={fadeUp} className="flex gap-4 justify-center">
+          <motion.div custom={3} variants={fadeUp} className="flex flex-wrap gap-4 justify-center">
             <Link href="/app">
               <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white px-8">
                 Get Started — Free
+              </Button>
+            </Link>
+            <Link href="/app?demo=true">
+              <Button size="lg" variant="outline" className="border-violet-500/40 hover:bg-violet-950/50 text-violet-300 px-8">
+                🎯 Try Demo
               </Button>
             </Link>
             <Link href="#how-it-works">

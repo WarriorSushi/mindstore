@@ -1,5 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /app/
-
 Sitemap: https://mindstore.frain.cloud/sitemap.xml

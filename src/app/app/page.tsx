@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Brain, Upload, MessageSquare, Compass, Database, FileText, Globe, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,14 @@ export default function DashboardPage() {
     fetchStats().then(setStats);
     setLoaded(true);
   }, []);
+
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("demo") === "true" && !isDemoMode() && !getApiKey()) {
+      handleStartDemo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleStartDemo = async () => {
     setLoadingDemo(true);
