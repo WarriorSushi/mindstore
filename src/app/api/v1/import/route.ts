@@ -121,21 +121,21 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < allChunks.length; i++) {
       const chunk = allChunks[i];
       const embedding = embeddings?.[i];
-      const embStr = embedding ? `[${embedding.join(',')}]` : null;
+      const memId = crypto.randomUUID();
+      const ts = (chunk.timestamp || new Date()).toISOString();
 
-      await db.execute(sql`
-        INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, created_at, imported_at)
-        VALUES (
-          ${crypto.randomUUID()},
-          ${userId}::uuid,
-          ${chunk.content},
-          ${embStr}::vector,
-          ${chunk.sourceType},
-          ${chunk.sourceTitle},
-          ${chunk.timestamp || new Date()},
-          NOW()
-        )
-      `);
+      if (embedding) {
+        const embStr = `[${embedding.join(',')}]`;
+        await db.execute(sql`
+          INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, created_at, imported_at)
+          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceTitle}, ${ts}, NOW())
+        `);
+      } else {
+        await db.execute(sql`
+          INSERT INTO memories (id, user_id, content, source_type, source_title, created_at, imported_at)
+          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceTitle}, ${ts}, NOW())
+        `);
+      }
     }
 
     // Rebuild tree index after import
