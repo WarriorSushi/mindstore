@@ -87,7 +87,7 @@ export default function DashboardPage() {
             <Brain className="w-12 h-12 text-violet-400 mx-auto mb-4" />
             <CardTitle className="text-2xl">Welcome to MindStore</CardTitle>
             <p className="text-zinc-400 mt-2">
-              To get started, you&apos;ll need an OpenAI API key. Your key is stored securely on the server.
+              To get started, add an API key. Supports OpenAI, Google Gemini (free), or Ollama (local).
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

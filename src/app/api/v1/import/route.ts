@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { buildTreeIndex } from '@/server/retrieval';
-import { getServerApiKey, getEmbeddingsServer } from '@/server/apikey';
+import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 
 // Chunking — intelligent paragraph/sentence splitting
@@ -61,7 +61,6 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
 export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
-    const apiKey = await getServerApiKey();
     
     const contentType = req.headers.get('content-type') || '';
     let documents: Array<{ title: string; content: string; sourceType: string; timestamp?: Date }> = [];
@@ -107,14 +106,12 @@ export async function POST(req: NextRequest) {
       totalChunks += chunks.length;
     }
 
-    // Generate embeddings if API key available
+    // Generate embeddings using available provider (OpenAI, Gemini, or Ollama)
     let embeddings: number[][] | null = null;
-    if (apiKey) {
-      try {
-        embeddings = await getEmbeddingsServer(allChunks.map(c => c.content), apiKey);
-      } catch (e) {
-        console.error('Embedding failed, storing without vectors:', e);
-      }
+    try {
+      embeddings = await generateEmbeddings(allChunks.map(c => c.content));
+    } catch (e) {
+      console.error('Embedding failed, storing without vectors:', e);
     }
 
     // Insert into PostgreSQL

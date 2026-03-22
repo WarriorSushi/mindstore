@@ -1,16 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerApiKey, setServerApiKey, removeServerApiKey, testApiKeyServer } from '@/server/apikey';
+import { db } from '@/server/db';
+import { sql } from 'drizzle-orm';
+import { getEmbeddingConfig } from '@/server/embeddings';
 
 /**
- * GET /api/v1/settings — get current settings (API key masked)
+ * GET /api/v1/settings — get current settings
  */
 export async function GET() {
   try {
-    const key = await getServerApiKey();
+    const settings = await db.execute(
+      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'embedding_provider', 'chat_provider')`
+    );
+
+    const config: Record<string, string> = {};
+    for (const row of settings as any[]) {
+      config[row.key] = row.value;
+    }
+
+    const embConfig = await getEmbeddingConfig();
+
     return NextResponse.json({
-      hasApiKey: !!key,
-      apiKeyPreview: key ? `sk-...${key.slice(-4)}` : null,
-      source: key ? (process.env.OPENAI_API_KEY ? 'environment' : 'database') : null,
+      // Legacy compat
+      hasApiKey: !!(config.openai_api_key || config.gemini_api_key || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY),
+      apiKeyPreview: config.openai_api_key ? `sk-...${config.openai_api_key.slice(-4)}` : null,
+      source: config.openai_api_key ? 'database' : (process.env.OPENAI_API_KEY ? 'environment' : null),
+      // New multi-provider
+      providers: {
+        openai: {
+          configured: !!(config.openai_api_key || process.env.OPENAI_API_KEY),
+          preview: config.openai_api_key ? `sk-...${config.openai_api_key.slice(-4)}` : (process.env.OPENAI_API_KEY ? 'env' : null),
+        },
+        gemini: {
+          configured: !!(config.gemini_api_key || process.env.GEMINI_API_KEY),
+          preview: config.gemini_api_key ? `...${config.gemini_api_key.slice(-4)}` : (process.env.GEMINI_API_KEY ? 'env' : null),
+        },
+        ollama: {
+          configured: !!(config.ollama_url || process.env.OLLAMA_URL),
+          url: config.ollama_url || process.env.OLLAMA_URL || null,
+        },
+      },
+      embeddingProvider: embConfig?.provider || null,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -19,37 +48,65 @@ export async function GET() {
 }
 
 /**
- * POST /api/v1/settings — store API key
- * Body: { apiKey: string } or { action: "remove" }
+ * POST /api/v1/settings — store settings
+ * Body: { apiKey, geminiKey, ollamaUrl, embeddingProvider, action }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // Legacy: remove all keys
     if (body.action === 'remove') {
-      await removeServerApiKey();
-      return NextResponse.json({ ok: true, message: 'API key removed' });
+      await db.execute(sql`DELETE FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'embedding_provider')`);
+      return NextResponse.json({ ok: true, message: 'All keys removed' });
     }
 
-    const { apiKey } = body;
-    if (!apiKey || typeof apiKey !== 'string') {
-      return NextResponse.json({ error: 'apiKey required' }, { status: 400 });
+    // Save OpenAI key
+    if (body.apiKey) {
+      const key = body.apiKey.trim();
+      // Test it
+      const testRes = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!testRes.ok) {
+        return NextResponse.json({ error: 'Invalid OpenAI API key' }, { status: 400 });
+      }
+      await upsertSetting('openai_api_key', key);
     }
 
-    // Validate the key
-    const valid = await testApiKeyServer(apiKey.trim());
-    if (!valid) {
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 400 });
+    // Save Gemini key
+    if (body.geminiKey) {
+      const key = body.geminiKey.trim();
+      // Test it
+      const testRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
+      );
+      if (!testRes.ok) {
+        return NextResponse.json({ error: 'Invalid Gemini API key' }, { status: 400 });
+      }
+      await upsertSetting('gemini_api_key', key);
     }
 
-    await setServerApiKey(apiKey.trim());
-    return NextResponse.json({
-      ok: true,
-      message: 'API key saved',
-      apiKeyPreview: `sk-...${apiKey.trim().slice(-4)}`,
-    });
+    // Save Ollama URL
+    if (body.ollamaUrl) {
+      await upsertSetting('ollama_url', body.ollamaUrl.trim());
+    }
+
+    // Save preferred embedding provider
+    if (body.embeddingProvider) {
+      await upsertSetting('embedding_provider', body.embeddingProvider);
+    }
+
+    return NextResponse.json({ ok: true, message: 'Settings saved' });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+async function upsertSetting(key: string, value: string) {
+  await db.execute(sql`
+    INSERT INTO settings (key, value, updated_at) VALUES (${key}, ${value}, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = ${value}, updated_at = NOW()
+  `);
 }

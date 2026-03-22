@@ -191,6 +191,33 @@ async function migrate() {
     USING gin(content gin_trgm_ops)
   `);
 
+  // OAuth accounts (NextAuth)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS accounts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      type TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_account_id TEXT NOT NULL,
+      refresh_token TEXT,
+      access_token TEXT,
+      expires_at INT,
+      token_type TEXT,
+      scope TEXT,
+      id_token TEXT
+    )
+  `);
+
+  // Sessions (NextAuth)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      session_token TEXT UNIQUE NOT NULL,
+      expires TIMESTAMPTZ NOT NULL
+    )
+  `);
+
   // Create default user
   await db.execute(sql`
     INSERT INTO users (id, email, name) 

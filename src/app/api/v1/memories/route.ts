@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
-import { getServerApiKey } from '@/server/apikey';
+import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -60,28 +60,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
-    const apiKey = await getServerApiKey();
     const body = await req.json();
     const { content, sourceType, sourceId, sourceTitle, metadata } = body;
 
     if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
 
-    // Generate embedding if API key available
+    // Generate embedding using available provider
     let embStr: string | null = null;
-    if (apiKey) {
-      try {
-        const res = await fetch('https://api.openai.com/v1/embeddings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: 'text-embedding-3-small', input: content }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const emb = data.data[0].embedding;
-          embStr = `[${emb.join(',')}]`;
-        }
-      } catch { /* skip */ }
-    }
+    try {
+      const embeddings = await generateEmbeddings([content]);
+      if (embeddings && embeddings.length > 0) {
+        embStr = `[${embeddings[0].join(',')}]`;
+      }
+    } catch { /* skip */ }
 
     const id = crypto.randomUUID();
     const meta = JSON.stringify(metadata || {});

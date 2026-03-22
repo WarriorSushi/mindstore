@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { retrieve } from '@/server/retrieval';
-import { getServerApiKey, getEmbeddingsServer } from '@/server/apikey';
+import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -18,17 +18,14 @@ export async function GET(req: NextRequest) {
 
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
 
-    // Get API key server-side
-    const apiKey = await getServerApiKey();
-
-    // Get embedding for the query
+    // Get embedding for the query using available provider
     let embedding: number[] | null = null;
-    if (apiKey) {
-      try {
-        const embeddings = await getEmbeddingsServer([query], apiKey);
+    try {
+      const embeddings = await generateEmbeddings([query]);
+      if (embeddings && embeddings.length > 0) {
         embedding = embeddings[0];
-      } catch { /* fallback to BM25 only */ }
-    }
+      }
+    } catch { /* fallback to BM25 only */ }
 
     const results = await retrieve(query, embedding, {
       userId,
