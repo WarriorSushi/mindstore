@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { chatCompletion, getApiKey } from "@/lib/openai";
+import { getApiKey, getEmbeddings, streamChat } from "@/lib/openai";
 import { db, type Memory } from "@/lib/db";
-import { generateEmbedding } from "@/lib/openai";
 
 interface Message {
   role: "user" | "assistant";
@@ -104,7 +103,8 @@ export default function LearnPage() {
       const apiKey = getApiKey();
       let embedding: number[] = [];
       if (apiKey) {
-        embedding = await generateEmbedding(content);
+        const embeddings = await getEmbeddings([content], apiKey);
+        embedding = embeddings[0] || [];
       }
       
       await db.memories.add({
@@ -138,15 +138,17 @@ export default function LearnPage() {
       const assistantMsg: Message = { role: "assistant", content: "" };
       setMessages([assistantMsg]);
 
-      await chatCompletion(
-        systemMsg,
-        [{ role: "user", content: `Start the conversation about: ${topic.label}. Ask your first question.` }],
-        (chunk) => {
-          response = chunk;
-          const { cleanContent } = parseFacts(response);
-          setMessages([{ ...assistantMsg, content: cleanContent }]);
-        }
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("No API key set");
+      const stream = streamChat(
+        [{ role: "system", content: systemMsg }, { role: "user", content: `Start the conversation about: ${topic.label}. Ask your first question.` }],
+        apiKey
       );
+      for await (const chunk of stream) {
+        response += chunk;
+        const { cleanContent } = parseFacts(response);
+        setMessages([{ ...assistantMsg, content: cleanContent }]);
+      }
 
       const { cleanContent } = parseFacts(response);
       setMessages([{ role: "assistant", content: cleanContent }]);
@@ -175,15 +177,21 @@ export default function LearnPage() {
       const assistantMsg: Message = { role: "assistant", content: "" };
       setMessages(prev => [...prev, assistantMsg]);
 
-      await chatCompletion(systemMsg, history, (chunk) => {
-        response = chunk;
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("No API key set");
+      const stream = streamChat(
+        [{ role: "system", content: systemMsg }, ...history],
+        apiKey
+      );
+      for await (const chunk of stream) {
+        response += chunk;
         const { cleanContent } = parseFacts(response);
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = { ...assistantMsg, content: cleanContent };
           return updated;
         });
-      });
+      }
 
       const { cleanContent, facts } = parseFacts(response);
       

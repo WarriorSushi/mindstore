@@ -2,179 +2,159 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Upload, MessageSquare, Compass, Database, FileText, Clock, AlertCircle, Sparkles } from "lucide-react";
+import { Brain, Upload, MessageSquare, Compass, Database, FileText, Globe, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { getApiKey, setApiKey, testApiKey } from "@/lib/openai";
-import { getStats, db } from "@/lib/db";
-import type { Source } from "@/lib/db";
+import { getStats } from "@/lib/db";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
-  const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [apiKey, setKey] = useState<string | null>(null);
   const [keyInput, setKeyInput] = useState("");
   const [testing, setTesting] = useState(false);
-  const [keyError, setKeyError] = useState("");
-  const [stats, setStats] = useState({ totalMemories: 0, totalSources: 0, sourceTypes: 0, lastActivity: undefined as Date | undefined });
-  const [recentSources, setRecentSources] = useState<Source[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setHasKey(!!getApiKey());
-    loadStats();
+    setKey(getApiKey());
+    getStats().then(setStats);
+    setLoaded(true);
   }, []);
 
-  async function loadStats() {
-    try {
-      const s = await getStats();
-      setStats(s);
-      const sources = await db.sources.orderBy('importedAt').reverse().limit(5).toArray();
-      setRecentSources(sources);
-    } catch { /* db not ready */ }
-  }
-
-  async function handleSaveKey() {
+  const handleSetKey = async () => {
+    if (!keyInput.trim()) return;
     setTesting(true);
-    setKeyError("");
-    const valid = await testApiKey(keyInput);
-    if (valid) {
-      setApiKey(keyInput);
-      setHasKey(true);
-    } else {
-      setKeyError("Invalid API key. Please check and try again.");
-    }
+    const valid = await testApiKey(keyInput.trim());
     setTesting(false);
-  }
+    if (valid) {
+      setApiKey(keyInput.trim());
+      setKey(keyInput.trim());
+      toast.success("API key verified and saved!");
+    } else {
+      toast.error("Invalid API key. Please check and try again.");
+    }
+  };
 
-  if (hasKey === null) return null;
+  if (!loaded) return null;
 
-  if (!hasKey) {
+  // Setup wizard if no API key
+  if (!apiKey) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
-        <motion.div
-          className="max-w-md w-full space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold">Welcome to Mindstore</h1>
-            <p className="text-muted-foreground text-sm">To get started, enter your OpenAI API key. It&apos;s stored locally in your browser and used only for embeddings and chat.</p>
-          </div>
-          <Card>
-            <CardContent className="pt-6 space-y-4">
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800">
+          <CardHeader className="text-center">
+            <Brain className="w-12 h-12 text-violet-400 mx-auto mb-4" />
+            <CardTitle className="text-2xl">Welcome to Mindstore</CardTitle>
+            <p className="text-zinc-400 mt-2">
+              To get started, you&apos;ll need an OpenAI API key. Your key stays in your browser — we never see it.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm text-zinc-400">OpenAI API Key</label>
               <Input
                 type="password"
                 placeholder="sk-..."
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveKey()}
+                onKeyDown={(e) => e.key === "Enter" && handleSetKey()}
+                className="bg-zinc-800 border-zinc-700"
               />
-              {keyError && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {keyError}
-                </p>
-              )}
-              <Button onClick={handleSaveKey} disabled={!keyInput || testing} className="w-full">
-                {testing ? "Verifying..." : "Save & Continue"}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Get your key at{" "}
-                <a href="https://platform.openai.com/api-keys" target="_blank" className="underline">
-                  platform.openai.com
+              <p className="text-xs text-zinc-500">
+                Get yours at{" "}
+                <a href="https://platform.openai.com/api-keys" target="_blank" className="text-violet-400 hover:underline">
+                  platform.openai.com/api-keys
                 </a>
               </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+            <Button onClick={handleSetKey} disabled={testing || !keyInput.trim()} className="w-full bg-violet-600 hover:bg-violet-500">
+              {testing ? "Verifying..." : "Save & Continue"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Your personal knowledge base at a glance.</p>
+        <h1 className="text-3xl font-bold">Your Mind</h1>
+        <p className="text-zinc-400 mt-1">
+          {stats?.totalMemories ? `${stats.totalMemories.toLocaleString()} memories across ${stats.totalSources} sources` : "Import some knowledge to get started"}
+        </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Memories", value: stats.totalMemories, icon: Database },
-          { label: "Sources", value: stats.totalSources, icon: FileText },
-          { label: "Source Types", value: stats.sourceTypes, icon: Compass },
-          { label: "Last Import", value: stats.lastActivity ? new Date(stats.lastActivity).toLocaleDateString() : "Never", icon: Clock },
-        ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                  <p className="text-2xl font-bold mt-1">{s.value}</p>
-                </div>
-                <s.icon className="w-5 h-5 text-muted-foreground" />
-              </div>
+          { label: "Total Memories", value: stats?.totalMemories || 0, icon: Database },
+          { label: "ChatGPT", value: stats?.byType?.chatgpt || 0, icon: MessageCircle },
+          { label: "Files & Notes", value: (stats?.byType?.file || 0) + (stats?.byType?.text || 0), icon: FileText },
+          { label: "URLs", value: stats?.byType?.url || 0, icon: Globe },
+        ].map((stat) => (
+          <Card key={stat.label} className="bg-zinc-900 border-zinc-800">
+            <CardContent className="pt-6">
+              <stat.icon className="w-5 h-5 text-zinc-500 mb-2" />
+              <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
+              <div className="text-sm text-zinc-500">{stat.label}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { href: "/app/import", icon: Upload, label: "Import Knowledge", desc: "Add ChatGPT exports, text, or files" },
-          { href: "/app/learn", icon: Sparkles, label: "Teach MindStore", desc: "AI interviews you to learn who you are" },
-          { href: "/app/chat", icon: MessageSquare, label: "Ask Your Brain", desc: "Chat with your personal knowledge" },
-          { href: "/app/explore", icon: Compass, label: "Browse Memories", desc: "Explore and search your knowledge" },
-        ].map((action) => (
-          <Link key={action.href} href={action.href}>
-            <Card className="hover:bg-muted/30 transition-colors cursor-pointer h-full">
-              <CardContent className="pt-5 pb-4">
-                <action.icon className="w-6 h-6 text-primary mb-3" />
-                <h3 className="font-medium text-sm">{action.label}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{action.desc}</p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <Link href="/app/import">
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-violet-500/30 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6 flex flex-col items-center text-center">
+              <Upload className="w-8 h-8 text-violet-400 mb-3" />
+              <h3 className="font-medium mb-1">Import Knowledge</h3>
+              <p className="text-sm text-zinc-500">ChatGPT exports, notes, files, URLs</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/app/chat">
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-violet-500/30 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6 flex flex-col items-center text-center">
+              <MessageSquare className="w-8 h-8 text-violet-400 mb-3" />
+              <h3 className="font-medium mb-1">Ask Your Mind</h3>
+              <p className="text-sm text-zinc-500">Query your knowledge in natural language</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/app/explore">
+          <Card className="bg-zinc-900 border-zinc-800 hover:border-violet-500/30 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6 flex flex-col items-center text-center">
+              <Compass className="w-8 h-8 text-violet-400 mb-3" />
+              <h3 className="font-medium mb-1">Explore</h3>
+              <p className="text-sm text-zinc-500">Browse and discover your stored knowledge</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      {/* Recent Sources */}
-      {recentSources.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Imports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentSources.map((s) => (
-                <div key={s.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">{s.type}</Badge>
-                    <span>{s.title}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {s.itemCount} chunks · {new Date(s.importedAt).toLocaleDateString()}
-                  </span>
+      {/* Top Sources */}
+      {stats?.topSources?.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Top Sources</h2>
+          <div className="space-y-2">
+            {stats.topSources.map((source: any) => (
+              <div key={source.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-900 border border-zinc-800/50">
+                <div className="flex items-center gap-3">
+                  {source.type === 'chatgpt' ? <MessageCircle className="w-4 h-4 text-green-400" /> :
+                   source.type === 'file' ? <FileText className="w-4 h-4 text-blue-400" /> :
+                   source.type === 'url' ? <Globe className="w-4 h-4 text-orange-400" /> :
+                   <FileText className="w-4 h-4 text-zinc-400" />}
+                  <span className="text-sm truncate max-w-md">{source.title}</span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {stats.totalMemories === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Database className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-medium mb-1">No knowledge imported yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">Start by importing your ChatGPT conversations or pasting some text.</p>
-            <Link href="/app/import">
-              <Button>Import Knowledge</Button>
-            </Link>
-          </CardContent>
-        </Card>
+                <span className="text-sm text-zinc-500">{source.itemCount} memories</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,120 +1,130 @@
 import { v4 as uuid } from 'uuid';
-import type { Memory } from './db';
+import type { Memory, Source } from './db';
 
-interface ChatGPTConversation {
+interface ChatGPTExport {
   title: string;
   create_time: number;
   update_time: number;
   mapping: Record<string, {
     message?: {
-      content?: { parts?: string[] };
-      author?: { role?: string };
-      create_time?: number;
+      content: { parts: string[] };
+      author: { role: string };
+      create_time: number | null;
     };
     parent?: string;
     children?: string[];
   }>;
 }
 
-export interface ParsedChunk {
-  content: string;
-  sourceTitle: string;
-  sourceId: string;
-  timestamp: Date;
-  metadata: Record<string, unknown>;
-}
+export function parseChatGPTExport(json: ChatGPTExport[]): { memories: Omit<Memory, 'embedding'>[]; sources: Source[] } {
+  const memories: Omit<Memory, 'embedding'>[] = [];
+  const sources: Source[] = [];
+  const now = new Date();
 
-export function parseChatGPTExport(data: ChatGPTConversation[]): ParsedChunk[] {
-  const chunks: ParsedChunk[] = [];
-  
-  for (const conv of data) {
-    if (!conv.mapping) continue;
-    
-    // Find root node (one without parent or with null parent)
-    const nodes = Object.entries(conv.mapping);
-    const childIds = new Set<string>();
-    for (const [, node] of nodes) {
-      if (node.children) node.children.forEach(c => childIds.add(c));
-    }
-    
-    // Walk tree in order to extract messages
-    const messages: { role: string; content: string; time?: number }[] = [];
-    
-    // BFS from root
-    const rootId = nodes.find(([id]) => !childIds.has(id) || !conv.mapping[id]?.parent)?.[0]
-      || nodes.find(([, n]) => !n.parent)?.[0];
-    
-    if (!rootId) continue;
-    
+  for (const convo of json) {
+    if (!convo.mapping) continue;
+
+    const sourceId = uuid();
+    const messages: { role: string; content: string; time: number | null }[] = [];
+
+    // Walk the tree to extract messages in order
     const visited = new Set<string>();
-    const queue = [rootId];
-    
-    while (queue.length > 0) {
-      const nodeId = queue.shift()!;
-      if (visited.has(nodeId)) continue;
+    function walk(nodeId: string) {
+      if (visited.has(nodeId)) return;
       visited.add(nodeId);
-      
-      const node = conv.mapping[nodeId];
-      if (!node) continue;
-      
-      if (node.message?.content?.parts && node.message.author?.role) {
+      const node = convo.mapping[nodeId];
+      if (!node) return;
+
+      if (node.message?.content?.parts) {
         const text = node.message.content.parts
           .filter((p): p is string => typeof p === 'string')
           .join('\n')
           .trim();
-        
-        if (text && (node.message.author.role === 'user' || node.message.author.role === 'assistant')) {
+        if (text) {
           messages.push({
-            role: node.message.author.role,
+            role: node.message.author?.role || 'unknown',
             content: text,
-            time: node.message.create_time ?? undefined,
+            time: node.message.create_time,
           });
         }
       }
-      
-      if (node.children) {
-        for (const childId of node.children) {
-          queue.push(childId);
-        }
+
+      for (const childId of node.children || []) {
+        walk(childId);
       }
     }
-    
-    // Group into user+assistant pairs
-    const convId = uuid();
-    for (let i = 0; i < messages.length; i += 2) {
-      const user = messages[i];
-      const assistant = messages[i + 1];
-      if (!user) continue;
-      
-      let content = `User: ${user.content}`;
-      if (assistant) {
-        content += `\n\nAssistant: ${assistant.content}`;
+
+    // Find root nodes (no parent or parent not in mapping)
+    for (const [id, node] of Object.entries(convo.mapping)) {
+      if (!node.parent || !convo.mapping[node.parent]) {
+        walk(id);
       }
-      
-      chunks.push({
-        content,
-        sourceTitle: conv.title || 'Untitled Conversation',
-        sourceId: convId,
-        timestamp: new Date((user.time || conv.create_time || 0) * 1000),
+    }
+
+    // Pair user+assistant messages into chunks
+    let i = 0;
+    let chunkCount = 0;
+    while (i < messages.length) {
+      let chunk = '';
+      const startTime = messages[i].time;
+
+      if (messages[i].role === 'user') {
+        chunk += `User: ${messages[i].content}\n`;
+        i++;
+        if (i < messages.length && messages[i].role === 'assistant') {
+          chunk += `Assistant: ${messages[i].content}`;
+          i++;
+        }
+      } else if (messages[i].role === 'assistant') {
+        chunk += `Assistant: ${messages[i].content}`;
+        i++;
+      } else {
+        i++;
+        continue;
+      }
+
+      if (chunk.trim().length > 10) {
+        chunkCount++;
+        memories.push({
+          id: uuid(),
+          content: chunk.trim(),
+          source: 'chatgpt',
+          sourceId,
+          sourceTitle: convo.title || 'Untitled Conversation',
+          timestamp: startTime ? new Date(startTime * 1000) : new Date(convo.create_time * 1000),
+          importedAt: now,
+          metadata: { conversationTitle: convo.title },
+        });
+      }
+    }
+
+    if (chunkCount > 0) {
+      sources.push({
+        id: sourceId,
+        type: 'chatgpt',
+        title: convo.title || 'Untitled Conversation',
+        itemCount: chunkCount,
+        importedAt: now,
         metadata: {
-          conversationTitle: conv.title,
-          turnIndex: Math.floor(i / 2),
+          createTime: convo.create_time,
+          updateTime: convo.update_time,
+          totalMessages: messages.length,
         },
       });
     }
   }
-  
-  return chunks;
+
+  return { memories, sources };
 }
 
-export function chunkText(text: string, maxTokens: number = 500): string[] {
-  const paragraphs = text.split(/\n\n+/);
+export function chunkText(text: string, maxTokens = 500): string[] {
+  const paragraphs = text.split(/\n\s*\n/);
   const chunks: string[] = [];
   let current = '';
-  
+
   for (const para of paragraphs) {
     const combined = current ? `${current}\n\n${para}` : para;
-    // rough token estimate: 1 token ≈ 4 chars
+    // Rough token estimate: ~4 chars per token
     if (combined.length / 4 > maxTokens && current) {
       chunks.push(current.trim());
       current = para;
@@ -122,29 +132,62 @@ export function chunkText(text: string, maxTokens: number = 500): string[] {
       current = combined;
     }
   }
-  
+
   if (current.trim()) {
     chunks.push(current.trim());
   }
-  
-  return chunks.filter(c => c.length > 10);
+
+  // If any chunk is still too long, split by sentences
+  const result: string[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length / 4 > maxTokens * 1.5) {
+      const sentences = chunk.match(/[^.!?]+[.!?]+/g) || [chunk];
+      let sub = '';
+      for (const sent of sentences) {
+        if ((sub + sent).length / 4 > maxTokens && sub) {
+          result.push(sub.trim());
+          sub = sent;
+        } else {
+          sub += sent;
+        }
+      }
+      if (sub.trim()) result.push(sub.trim());
+    } else {
+      result.push(chunk);
+    }
+  }
+
+  return result.filter(c => c.length > 20);
 }
 
-export function createMemoriesFromChunks(
-  chunks: ParsedChunk[],
-  embeddings: number[][],
-  source: Memory['source'],
-): Memory[] {
+export function createTextMemories(
+  text: string,
+  title: string,
+  sourceType: 'text' | 'file' | 'url'
+): { memories: Omit<Memory, 'embedding'>[]; source: Source } {
   const now = new Date();
-  return chunks.map((chunk, i) => ({
+  const sourceId = uuid();
+  const chunks = chunkText(text);
+
+  const memories = chunks.map(chunk => ({
     id: uuid(),
-    content: chunk.content,
-    embedding: embeddings[i],
-    source,
-    sourceId: chunk.sourceId,
-    sourceTitle: chunk.sourceTitle,
-    timestamp: chunk.timestamp,
+    content: chunk,
+    source: sourceType,
+    sourceId,
+    sourceTitle: title,
+    timestamp: now,
     importedAt: now,
-    metadata: chunk.metadata,
+    metadata: {},
   }));
+
+  const source: Source = {
+    id: sourceId,
+    type: sourceType,
+    title,
+    itemCount: memories.length,
+    importedAt: now,
+    metadata: { originalLength: text.length },
+  };
+
+  return { memories, source };
 }

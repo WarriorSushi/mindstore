@@ -1,239 +1,190 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, FileText, MessageSquare, Globe, Type, X, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, MessageCircle, FileText, Globe, Type, Calendar, ChevronDown } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { db, type Memory, type Source } from "@/lib/db";
-import { semanticSearch } from "@/lib/search";
-import { getApiKey } from "@/lib/openai";
 
-const sourceIcons: Record<string, React.ElementType> = {
-  chatgpt: MessageSquare,
+const sourceIcons: Record<string, any> = {
+  chatgpt: MessageCircle,
   text: Type,
   file: FileText,
   url: Globe,
 };
 
+const sourceColors: Record<string, string> = {
+  chatgpt: "text-green-400 bg-green-400/10",
+  text: "text-violet-400 bg-violet-400/10",
+  file: "text-blue-400 bg-blue-400/10",
+  url: "text-orange-400 bg-orange-400/10",
+};
+
 export default function ExplorePage() {
-  const [memories, setMemories] = useState<Memory[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
-  const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<(Memory & { score?: number })[] | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [filterSource, setFilterSource] = useState<string | null>(null);
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Memory | null>(null);
+  const [visibleCount, setVisibleCount] = useState(50);
 
   useEffect(() => {
-    loadData();
+    db.sources.toArray().then(setSources);
+    db.memories.toArray().then(setMemories);
   }, []);
 
-  async function loadData() {
-    const mems = await db.memories.orderBy('importedAt').reverse().limit(200).toArray();
-    setMemories(mems);
-    const srcs = await db.sources.toArray();
-    setSources(srcs);
-  }
-
-  async function handleSearch() {
-    if (!query.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    setSearching(true);
-    try {
-      if (getApiKey()) {
-        const results = await semanticSearch(query, 20);
-        setSearchResults(results);
-      } else {
-        // Keyword fallback
-        const lower = query.toLowerCase();
-        const all = await db.memories.toArray();
-        setSearchResults(all.filter(m => m.content.toLowerCase().includes(lower)).slice(0, 20));
+  const filtered = memories
+    .filter((m) => {
+      if (filter && m.source !== filter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return m.content.toLowerCase().includes(q) || m.sourceTitle.toLowerCase().includes(q);
       }
-    } catch {
-      // Keyword fallback
-      const lower = query.toLowerCase();
-      setSearchResults(memories.filter(m => m.content.toLowerCase().includes(lower)));
-    }
-    setSearching(false);
-  }
+      return true;
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const displayMemories = searchResults || memories;
-  const filtered = filterSource ? displayMemories.filter(m => m.source === filterSource) : displayMemories;
-  const shown = showAll ? filtered : filtered.slice(0, 50);
+  const topTopics = sources
+    .reduce((acc, s) => {
+      const title = s.title.slice(0, 40);
+      acc[title] = (acc[title] || 0) + s.itemCount;
+      return acc;
+    }, {} as Record<string, number>);
 
-  // Topic extraction (simple: group by sourceTitle)
-  const topicCounts: Record<string, number> = {};
-  memories.forEach(m => {
-    topicCounts[m.sourceTitle] = (topicCounts[m.sourceTitle] || 0) + 1;
-  });
-  const topTopics = Object.entries(topicCounts)
-    .sort((a, b) => b[1] - a[1])
+  const topTopicsSorted = Object.entries(topTopics)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 20);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b border-border/50 px-6 py-3 shrink-0 space-y-3">
-        <div>
-          <h1 className="text-lg font-semibold">Explore Memories</h1>
-          <p className="text-xs text-muted-foreground">{memories.length} memories across {sources.length} sources</p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Explore Your Mind</h1>
+        <p className="text-zinc-400 mt-1">{memories.length.toLocaleString()} memories from {sources.length} sources</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            placeholder="Search your knowledge..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-zinc-900 border-zinc-800"
+          />
         </div>
         <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search your knowledge (semantic + keyword)..."
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            />
-          </div>
-          <Button onClick={handleSearch} disabled={searching} size="sm">
-            {searching ? "Searching..." : "Search"}
-          </Button>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          <Badge
-            variant={filterSource === null ? "default" : "secondary"}
-            className="cursor-pointer text-xs"
-            onClick={() => setFilterSource(null)}
+          <Button
+            variant={filter === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter(null)}
+            className={filter === null ? "bg-violet-600" : "border-zinc-700"}
           >
             All
-          </Badge>
-          {["chatgpt", "text", "file", "url"].map(type => {
-            const count = memories.filter(m => m.source === type).length;
+          </Button>
+          {(["chatgpt", "text", "file", "url"] as const).map((type) => {
+            const count = memories.filter((m) => m.source === type).length;
             if (count === 0) return null;
+            const Icon = sourceIcons[type];
             return (
-              <Badge
+              <Button
                 key={type}
-                variant={filterSource === type ? "default" : "secondary"}
-                className="cursor-pointer text-xs"
-                onClick={() => setFilterSource(filterSource === type ? null : type)}
+                variant={filter === type ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(filter === type ? null : type)}
+                className={filter === type ? "bg-violet-600" : "border-zinc-700"}
               >
+                <Icon className="w-3.5 h-3.5 mr-1" />
                 {type} ({count})
-              </Badge>
+              </Button>
             );
           })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 py-4">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {/* Topic cloud */}
-          {!searchResults && topTopics.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Topics</h3>
-              <div className="flex flex-wrap gap-1.5">
-                {topTopics.map(([topic, count]) => (
-                  <Badge
-                    key={topic}
-                    variant="outline"
-                    className="cursor-pointer text-xs hover:bg-muted"
-                    onClick={() => { setQuery(topic); }}
-                  >
-                    {topic} <span className="ml-1 text-muted-foreground">({count})</span>
-                  </Badge>
-                ))}
+      {/* Topic Cloud */}
+      {topTopicsSorted.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {topTopicsSorted.map(([topic, count]) => (
+            <Badge
+              key={topic}
+              variant="outline"
+              className="border-zinc-700 text-zinc-400 hover:border-violet-500/30 cursor-pointer transition-colors"
+              onClick={() => setSearch(topic)}
+            >
+              {topic} ({count})
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Memory List */}
+      <div className="space-y-2">
+        {filtered.slice(0, visibleCount).map((m) => {
+          const Icon = sourceIcons[m.source] || FileText;
+          const colorClass = sourceColors[m.source] || "text-zinc-400 bg-zinc-400/10";
+
+          return (
+            <div
+              key={m.id}
+              onClick={() => setSelected(m)}
+              className="p-4 rounded-lg border border-zinc-800/50 bg-zinc-900/50 hover:border-zinc-700 cursor-pointer transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${colorClass}`}>
+                      <Icon className="w-3 h-3" />
+                      {m.source}
+                    </span>
+                    <span className="text-xs text-zinc-600 truncate">{m.sourceTitle}</span>
+                  </div>
+                  <p className="text-sm text-zinc-300 line-clamp-2">{m.content}</p>
+                </div>
+                <div className="text-xs text-zinc-600 whitespace-nowrap flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(m.timestamp).toLocaleDateString()}
+                </div>
               </div>
             </div>
-          )}
+          );
+        })}
 
-          {/* Results */}
-          <div className="space-y-2">
-            {searchResults && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{filtered.length} results for &ldquo;{query}&rdquo;</p>
-                <Button variant="ghost" size="sm" onClick={() => { setSearchResults(null); setQuery(""); }}>
-                  <X className="w-3 h-3 mr-1" /> Clear
-                </Button>
-              </div>
-            )}
+        {filtered.length > visibleCount && (
+          <Button
+            variant="outline"
+            onClick={() => setVisibleCount((v) => v + 50)}
+            className="w-full border-zinc-700"
+          >
+            <ChevronDown className="w-4 h-4 mr-2" />
+            Show more ({filtered.length - visibleCount} remaining)
+          </Button>
+        )}
 
-            <AnimatePresence>
-              {shown.map((memory, i) => {
-                const Icon = sourceIcons[memory.source] || FileText;
-                return (
-                  <motion.div
-                    key={memory.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i * 0.02, 0.5) }}
-                  >
-                    <Card
-                      className="cursor-pointer hover:bg-muted/30 transition-colors"
-                      onClick={() => setSelectedMemory(memory)}
-                    >
-                      <CardContent className="py-3 px-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                            <Icon className="w-3 h-3" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium truncate">{memory.sourceTitle}</span>
-                              {'score' in memory && (memory as Memory & {score: number}).score !== undefined && (
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {Math.round(((memory as Memory & {score: number}).score) * 100)}% match
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{memory.content}</p>
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                              {new Date(memory.timestamp).toLocaleDateString()} · {memory.source}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-
-            {filtered.length > 50 && !showAll && (
-              <Button variant="ghost" className="w-full" onClick={() => setShowAll(true)}>
-                <ChevronDown className="w-4 h-4 mr-1" /> Show all {filtered.length} results
-              </Button>
-            )}
-
-            {filtered.length === 0 && (
-              <div className="text-center py-20 text-muted-foreground">
-                <Search className="w-10 h-10 mx-auto mb-3" />
-                <p className="text-sm">No memories found. Import some knowledge to get started.</p>
-              </div>
-            )}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-zinc-500">
+            {memories.length === 0 ? "No memories yet. Import some knowledge to get started." : "No results found."}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Detail dialog */}
-      <Dialog open={!!selectedMemory} onOpenChange={() => setSelectedMemory(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+      {/* Detail Dialog */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedMemory && (() => {
-                const Icon = sourceIcons[selectedMemory.source] || FileText;
-                return <Icon className="w-4 h-4" />;
-              })()}
-              {selectedMemory?.sourceTitle}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Badge variant="secondary">{selectedMemory?.source}</Badge>
-              <Badge variant="outline">{selectedMemory && new Date(selectedMemory.timestamp).toLocaleDateString()}</Badge>
+            <DialogTitle className="text-lg">{selected?.sourceTitle}</DialogTitle>
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sourceColors[selected?.source || "text"]}`}>
+                {selected?.source}
+              </span>
+              <span>{selected?.timestamp ? new Date(selected.timestamp).toLocaleString() : ""}</span>
             </div>
-            <Separator />
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">{selectedMemory?.content}</div>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed mt-4">
+            {selected?.content}
           </div>
         </DialogContent>
       </Dialog>

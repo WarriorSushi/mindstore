@@ -9,7 +9,7 @@ export interface Memory {
   sourceTitle: string;
   timestamp: Date;
   importedAt: Date;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
 }
 
 export interface Source {
@@ -18,7 +18,7 @@ export interface Source {
   title: string;
   itemCount: number;
   importedAt: Date;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
 }
 
 class MindstoreDB extends Dexie {
@@ -40,11 +40,25 @@ export async function getStats() {
   const totalMemories = await db.memories.count();
   const totalSources = await db.sources.count();
   const sources = await db.sources.toArray();
-  const sourceTypes = new Set(sources.map(s => s.type));
-  const lastSource = sources.sort((a, b) => 
-    new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
-  )[0];
-  return { totalMemories, totalSources, sourceTypes: sourceTypes.size, lastActivity: lastSource?.importedAt };
+  
+  const byType = {
+    chatgpt: sources.filter(s => s.type === 'chatgpt').length,
+    text: sources.filter(s => s.type === 'text').length,
+    file: sources.filter(s => s.type === 'file').length,
+    url: sources.filter(s => s.type === 'url').length,
+  };
+
+  // Get top topics (source titles, grouped)
+  const topSources = sources
+    .sort((a, b) => b.itemCount - a.itemCount)
+    .slice(0, 10);
+
+  return { totalMemories, totalSources, byType, topSources };
+}
+
+export async function clearAllData() {
+  await db.memories.clear();
+  await db.sources.clear();
 }
 
 export async function exportAllData() {
@@ -54,13 +68,6 @@ export async function exportAllData() {
 }
 
 export async function importBackup(data: { memories: Memory[]; sources: Source[] }) {
-  await db.transaction('rw', db.memories, db.sources, async () => {
-    await db.memories.bulkPut(data.memories);
-    await db.sources.bulkPut(data.sources);
-  });
-}
-
-export async function clearAllData() {
-  await db.memories.clear();
-  await db.sources.clear();
+  await db.memories.bulkPut(data.memories);
+  await db.sources.bulkPut(data.sources);
 }

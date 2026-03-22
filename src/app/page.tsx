@@ -2,26 +2,31 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Brain, Search, MessageSquare, Shield, ArrowRight, Zap, Database, Lock } from "lucide-react";
+import { Brain, Lock, Search, Upload, Zap, MessageSquare, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" as const },
+  }),
 };
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-zinc-950">
       {/* Nav */}
-      <nav className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-50 bg-background/80">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-semibold text-lg">
-            <Brain className="w-5 h-5 text-primary" />
-            <span>Mindstore</span>
+      <nav className="border-b border-zinc-800/50 backdrop-blur-sm sticky top-0 z-50 bg-zinc-950/80">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain className="w-6 h-6 text-violet-400" />
+            <span className="font-semibold text-lg">Mindstore</span>
           </div>
           <Link href="/app">
-            <Button variant="secondary" size="sm">Open App</Button>
+            <Button variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800">
+              Open App <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
           </Link>
         </div>
       </nav>
@@ -29,134 +34,117 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-6 pt-24 pb-20">
         <motion.div
-          className="text-center max-w-3xl mx-auto"
           initial="hidden"
           animate="visible"
-          variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+          className="text-center max-w-3xl mx-auto"
         >
-          <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-6 border border-primary/20">
-            <Lock className="w-3 h-3" />
-            100% private. Your data never leaves your browser.
+          <motion.div custom={0} variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900 text-sm text-zinc-400 mb-8">
+            <Lock className="w-3.5 h-3.5" />
+            100% private — your data never leaves your browser
           </motion.div>
-          <motion.h1 variants={fadeUp} custom={1} className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
+
+          <motion.h1 custom={1} variants={fadeUp} className="text-5xl sm:text-7xl font-bold tracking-tight mb-6">
             Your mind,{" "}
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
               searchable.
             </span>
           </motion.h1>
-          <motion.p variants={fadeUp} custom={2} className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Import your ChatGPT conversations, notes, and knowledge. Ask anything.
-            Get answers from YOUR brain — powered by AI, stored locally.
+
+          <motion.p custom={2} variants={fadeUp} className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Import your ChatGPT conversations, notes, and knowledge.
+            Ask anything. Get synthesized answers from <span className="text-zinc-200">your own brain</span>.
           </motion.p>
-          <motion.div variants={fadeUp} custom={3} className="flex gap-3 justify-center">
+
+          <motion.div custom={3} variants={fadeUp} className="flex gap-4 justify-center">
             <Link href="/app">
-              <Button size="lg" className="gap-2">
-                Get Started <ArrowRight className="w-4 h-4" />
+              <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white px-8">
+                Get Started — Free
+              </Button>
+            </Link>
+            <Link href="#how-it-works">
+              <Button size="lg" variant="outline" className="border-zinc-700 hover:bg-zinc-800 px-8">
+                See How It Works
               </Button>
             </Link>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* How it works */}
-      <section className="max-w-6xl mx-auto px-6 py-20 border-t border-border/50">
-        <motion.h2
-          className="text-3xl font-bold text-center mb-12"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          How it works
-        </motion.h2>
+      {/* How It Works */}
+      <section id="how-it-works" className="max-w-6xl mx-auto px-6 py-20">
+        <h2 className="text-3xl font-bold text-center mb-16">Three steps to a searchable mind</h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
-            { icon: Database, title: "1. Import", desc: "Upload your ChatGPT export, paste text, or drop files. We parse and chunk everything automatically." },
-            { icon: Zap, title: "2. Index", desc: "Each chunk gets embedded with OpenAI's latest model. Vectors are stored locally in your browser's IndexedDB." },
-            { icon: Search, title: "3. Ask", desc: "Ask any question. We search your knowledge semantically, find the best matches, and synthesize an answer." },
+            { icon: Upload, title: "1. Import", desc: "Drop your ChatGPT export, paste notes, upload files. Mindstore ingests everything." },
+            { icon: Zap, title: "2. Index", desc: "AI creates semantic embeddings of your knowledge. Every idea becomes findable." },
+            { icon: Search, title: "3. Ask", desc: "Query your mind in natural language. Get synthesized answers with source citations." },
           ].map((step, i) => (
             <motion.div
               key={step.title}
-              className="p-6 rounded-xl border border-border/50 bg-card/50 hover:bg-card transition-colors"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15 }}
+              className="p-6 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 transition-colors"
             >
-              <step.icon className="w-8 h-8 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">{step.title}</h3>
-              <p className="text-muted-foreground text-sm">{step.desc}</p>
+              <step.icon className="w-10 h-10 text-violet-400 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+              <p className="text-zinc-400 leading-relaxed">{step.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Demo */}
-      <section className="max-w-6xl mx-auto px-6 py-20 border-t border-border/50">
-        <motion.div
-          className="max-w-2xl mx-auto"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-3xl font-bold text-center mb-8">See it in action</h2>
-          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-4 h-4 text-primary" />
-              </div>
-              <div className="bg-secondary rounded-lg p-3 text-sm">
-                What was my pricing strategy for the SaaS product?
-              </div>
-            </div>
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Brain className="w-4 h-4 text-primary" />
-              </div>
-              <div className="bg-muted rounded-lg p-3 text-sm space-y-2">
-                <p>Based on your conversations, you discussed a <strong>tiered pricing strategy</strong> with three plans:</p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Free tier with 100 queries/month</li>
-                  <li>Pro at $19/mo with unlimited queries</li>
-                  <li>Team at $49/mo with collaboration features</li>
-                </ul>
-                <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">
-                  📎 Source: ChatGPT conversation &ldquo;Pricing Strategy Discussion&rdquo;, March 2025
-                </p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
       {/* Features */}
-      <section className="max-w-6xl mx-auto px-6 py-20 border-t border-border/50">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <h2 className="text-3xl font-bold text-center mb-4">Why Mindstore?</h2>
+        <p className="text-zinc-400 text-center mb-16 max-w-xl mx-auto">ChatGPT forgets. Your notes are scattered. Mindstore unifies everything into one queryable brain.</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { icon: Shield, title: "100% Private", desc: "All data stored in your browser. Nothing sent to any server." },
-            { icon: Brain, title: "AI-Powered", desc: "Semantic search + GPT synthesis for accurate answers." },
-            { icon: Database, title: "Multi-Source", desc: "ChatGPT exports, text, files, and URLs." },
-            { icon: Zap, title: "Instant", desc: "Client-side vector search. No backend latency." },
-          ].map((f, i) => (
+            { icon: Brain, title: "Unified Knowledge", desc: "ChatGPT exports, notes, articles, files — all in one searchable place." },
+            { icon: MessageSquare, title: "Ask Your Mind", desc: "Natural language queries. Synthesized answers pulling from all your sources." },
+            { icon: Lock, title: "100% Private", desc: "Everything stays in your browser. No servers. No tracking. Your data is yours." },
+            { icon: Search, title: "Semantic Search", desc: "Find ideas by meaning, not just keywords. AI understands what you're looking for." },
+            { icon: Zap, title: "Instant Setup", desc: "No install. No account. Drop a file, add your OpenAI key, start asking." },
+            { icon: Upload, title: "Multiple Sources", desc: "ChatGPT JSON, text, markdown files, URLs — import from anywhere." },
+          ].map((feature, i) => (
             <motion.div
-              key={f.title}
-              className="p-5 rounded-lg border border-border/30 bg-card/30"
+              key={feature.title}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.05 }}
+              className="p-5 rounded-lg border border-zinc-800/50 hover:border-zinc-700/50 transition-colors"
             >
-              <f.icon className="w-5 h-5 text-primary mb-3" />
-              <h3 className="font-medium mb-1 text-sm">{f.title}</h3>
-              <p className="text-xs text-muted-foreground">{f.desc}</p>
+              <feature.icon className="w-5 h-5 text-violet-400 mb-3" />
+              <h3 className="font-medium mb-1">{feature.title}</h3>
+              <p className="text-sm text-zinc-500">{feature.desc}</p>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="max-w-6xl mx-auto px-6 py-20 text-center">
+        <div className="p-12 rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950">
+          <h2 className="text-3xl font-bold mb-4">Ready to search your mind?</h2>
+          <p className="text-zinc-400 mb-8">Free. Private. No account needed.</p>
+          <Link href="/app">
+            <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white px-10">
+              Open Mindstore <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-8">
-        <div className="max-w-6xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>Mindstore — Your personal knowledge base. Built with privacy in mind.</p>
+      <footer className="border-t border-zinc-800/50 py-8">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-sm text-zinc-500">
+          <div className="flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            <span>Mindstore</span>
+          </div>
+          <span>Built by <a href="https://github.com/WarriorSushi" className="text-zinc-400 hover:text-zinc-300">WarriorSushi</a></span>
         </div>
       </footer>
     </div>

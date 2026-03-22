@@ -1,211 +1,211 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Send, Brain, User, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Send, Loader2, Brain, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { semanticSearch } from "@/lib/search";
-import { chatCompletion, getApiKey } from "@/lib/openai";
 import { db } from "@/lib/db";
+import { getApiKey, getEmbeddings, streamChat } from "@/lib/openai";
+import { searchMemories, buildRAGPrompt } from "@/lib/search";
+import { toast } from "sonner";
 
-interface ChatMessage {
+interface Message {
   role: "user" | "assistant";
   content: string;
-  sources?: { title: string; score: number; snippet: string }[];
+  sources?: { title: string; type: string; score: number }[];
 }
 
-const SUGGESTED_QUESTIONS = [
-  "What are the main topics I've discussed?",
-  "Summarize my key ideas and insights",
-  "What decisions have I made recently?",
-  "What problems was I trying to solve?",
+const SUGGESTIONS = [
+  "What topics have I explored the most?",
+  "What did I learn about recently?",
+  "Summarize my key interests and patterns",
+  "What connections exist between my different areas of knowledge?",
 ];
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [memoryCount, setMemoryCount] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     db.memories.count().then(setMemoryCount);
   }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSend(query?: string) {
-    const q = query || input.trim();
-    if (!q || loading) return;
+  const handleSend = async (text?: string) => {
+    const query = (text || input).trim();
+    if (!query || loading) return;
 
-    if (!getApiKey()) {
-      setMessages(prev => [...prev, { role: "user", content: q }, { role: "assistant", content: "Please set your OpenAI API key in Settings first." }]);
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      toast.error("No API key set. Go to Dashboard to add one.");
+      return;
+    }
+
+    if (memoryCount === 0) {
+      toast.error("No memories yet! Import some knowledge first.");
       return;
     }
 
     setInput("");
-    const userMsg: ChatMessage = { role: "user", content: q };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: "user", content: query }]);
     setLoading(true);
 
     try {
-      // Semantic search
-      const results = await semanticSearch(q, 10);
+      // 1. Embed the query
+      const [queryEmbedding] = await getEmbeddings([query], apiKey);
 
-      const sources = results.map(r => ({
-        title: r.sourceTitle,
-        score: r.score,
-        snippet: r.content.slice(0, 150),
-      }));
+      // 2. Search memories
+      const allMemories = await db.memories.toArray();
+      const results = searchMemories(queryEmbedding, allMemories, 8);
 
-      // Build context
-      const context = results
-        .map((r, i) => `[Source ${i + 1}: "${r.sourceTitle}" (${r.source}, ${new Date(r.timestamp).toLocaleDateString()})]\n${r.content}`)
-        .join("\n\n---\n\n");
+      if (results.length === 0) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "I couldn't find anything relevant in your knowledge base. Try importing more content or rephrasing your question." },
+        ]);
+        setLoading(false);
+        return;
+      }
 
-      const systemPrompt = `You are Mindstore, a personal knowledge assistant. You answer questions based ONLY on the user's own stored knowledge provided below. Always cite your sources using the format [Source: "title"]. If the provided context doesn't contain relevant information, say so honestly.
+      // 3. Build RAG prompt and stream response
+      const ragMessages = buildRAGPrompt(query, results);
+      let fullResponse = "";
 
-User's Knowledge Context:
-${context || "No relevant memories found."}`;
-
-      const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
-      chatHistory.push({ role: "user" as const, content: q });
-
-      const assistantMsg: ChatMessage = { role: "assistant", content: "", sources };
-      setMessages(prev => [...prev, assistantMsg]);
-
-      await chatCompletion(
-        systemPrompt,
-        chatHistory,
-        (chunk) => {
-          setMessages(prev => {
-            const updated = [...prev];
-            updated[updated.length - 1] = { ...assistantMsg, content: chunk };
-            return updated;
-          });
-        }
-      );
-    } catch (err) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Something went wrong"}` },
+        {
+          role: "assistant",
+          content: "",
+          sources: results.map((r) => ({
+            title: r.sourceTitle,
+            type: r.source,
+            score: r.score,
+          })),
+        },
       ]);
-    }
 
-    setLoading(false);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+      for await (const chunk of streamChat(ragMessages, apiKey)) {
+        fullResponse += chunk;
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            content: fullResponse,
+          };
+          return updated;
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `Error: ${err.message}` },
+      ]);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="border-b border-border/50 px-6 py-3 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-lg font-semibold">Chat with your knowledge</h1>
-          <p className="text-xs text-muted-foreground">{memoryCount} memories indexed</p>
-        </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      <div className="mb-4">
+        <h1 className="text-3xl font-bold">Ask Your Mind</h1>
+        <p className="text-zinc-400 mt-1">
+          {memoryCount > 0
+            ? `Searching across ${memoryCount.toLocaleString()} memories`
+            : "Import some knowledge first to start asking questions"}
+        </p>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto px-6" ref={scrollRef}>
-        <div className="max-w-2xl mx-auto py-6 space-y-6">
-          {messages.length === 0 && (
-            <motion.div
-              className="text-center py-20 space-y-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <Brain className="w-12 h-12 mx-auto text-muted-foreground" />
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Ask your knowledge anything</h2>
-                <p className="text-sm text-muted-foreground">Your question will be matched against your stored memories using semantic search.</p>
-              </div>
-              {memoryCount > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
-                  {SUGGESTED_QUESTIONS.map(q => (
-                    <button
-                      key={q}
-                      onClick={() => handleSend(q)}
-                      className="px-3 py-1.5 rounded-full border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-                    >
-                      <Sparkles className="w-3 h-3 inline mr-1" />
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {memoryCount === 0 && (
-                <div className="flex items-center gap-2 justify-center text-sm text-muted-foreground">
-                  <AlertCircle className="w-4 h-4" />
-                  Import some knowledge first to start chatting.
-                </div>
-              )}
-            </motion.div>
-          )}
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Sparkles className="w-12 h-12 text-violet-400/30 mb-4" />
+            <h3 className="text-lg font-medium text-zinc-400 mb-6">What would you like to know?</h3>
+            <div className="grid sm:grid-cols-2 gap-3 max-w-lg">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleSend(s)}
+                  className="text-left text-sm p-3 rounded-lg border border-zinc-800 hover:border-violet-500/30 hover:bg-zinc-900 transition-colors text-zinc-400"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-          <AnimatePresence>
-            {messages.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-3 items-start"
-              >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${msg.role === "user" ? "bg-primary/20" : "bg-muted"}`}>
-                  {msg.role === "user" ? <User className="w-3.5 h-3.5" /> : <Brain className="w-3.5 h-3.5" />}
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
+            {msg.role === "assistant" && (
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                <Brain className="w-4 h-4 text-violet-400" />
+              </div>
+            )}
+            <div
+              className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                msg.role === "user"
+                  ? "bg-violet-600 text-white"
+                  : "bg-zinc-900 border border-zinc-800"
+              }`}
+            >
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content || (loading && i === messages.length - 1 ? "Thinking..." : "")}</div>
+              {msg.sources && msg.sources.length > 0 && msg.content && (
+                <div className="mt-3 pt-3 border-t border-zinc-700/50">
+                  <p className="text-xs text-zinc-500 mb-1">Sources:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {msg.sources.slice(0, 5).map((s, j) => (
+                      <span key={j} className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
+                        {s.title.slice(0, 30)}{s.title.length > 30 ? "..." : ""} ({Math.round(s.score * 100)}%)
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div className="text-sm whitespace-pre-wrap break-words">{msg.content || (loading && i === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : null)}</div>
-                  {msg.sources && msg.sources.length > 0 && msg.content && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {msg.sources.slice(0, 5).map((s, j) => (
-                        <Badge key={j} variant="secondary" className="text-[10px] font-normal">
-                          📎 {s.title} ({Math.round(s.score * 100)}%)
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+              )}
+            </div>
+            {msg.role === "user" && (
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-zinc-400" />
+              </div>
+            )}
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="border-t border-border/50 px-6 py-4 shrink-0">
-        <div className="max-w-2xl mx-auto relative">
+      <div className="border-t border-zinc-800 pt-4">
+        <div className="flex gap-2">
           <Textarea
-            ref={inputRef}
+            ref={textareaRef}
+            placeholder="Ask your mind anything..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask your knowledge anything..."
-            className="pr-12 min-h-[48px] max-h-[120px] resize-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             rows={1}
+            className="bg-zinc-900 border-zinc-800 resize-none min-h-[44px] max-h-32"
           />
           <Button
-            size="icon"
-            variant="ghost"
-            className="absolute right-2 bottom-2 h-8 w-8"
             onClick={() => handleSend()}
-            disabled={!input.trim() || loading}
+            disabled={loading || !input.trim()}
+            size="icon"
+            className="bg-violet-600 hover:bg-violet-500 h-[44px] w-[44px] shrink-0"
           >
-            <Send className="w-4 h-4" />
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

@@ -1,296 +1,375 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { v4 as uuid } from "uuid";
-import { motion } from "framer-motion";
-import { Upload, FileText, Type, Globe, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileJson, FileText, Globe, Type, Loader2, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 import { db } from "@/lib/db";
-import { generateEmbeddingsBatch } from "@/lib/openai";
-import { parseChatGPTExport, chunkText, createMemoriesFromChunks } from "@/lib/parsers";
-import type { ParsedChunk } from "@/lib/parsers";
+import { getApiKey, getEmbeddings } from "@/lib/openai";
+import { parseChatGPTExport, createTextMemories } from "@/lib/parsers";
+import { toast } from "sonner";
+
+type ImportState = "idle" | "parsing" | "embedding" | "storing" | "done" | "error";
 
 export default function ImportPage() {
-  const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState({ current: 0, total: 0, label: "" });
-
-  // Text paste state
+  const [state, setState] = useState<ImportState>("idle");
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
+  const [urlInput, setUrlInput] = useState("");
 
-  async function embedAndStore(chunks: ParsedChunk[], source: 'chatgpt' | 'text' | 'file' | 'url', sourceTitle: string) {
-    if (chunks.length === 0) {
-      toast.error("No content found to import");
+  const embedAndStore = async (
+    memories: { id: string; content: string; source: string; sourceId: string; sourceTitle: string; timestamp: Date; importedAt: Date; metadata: Record<string, any> }[],
+    sources: any[]
+  ) => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      toast.error("No API key set. Go to Settings.");
       return;
     }
 
-    setImporting(true);
+    setState("embedding");
+    const contents = memories.map((m: any) => m.content);
     const batchSize = 50;
     const allEmbeddings: number[][] = [];
 
-    for (let i = 0; i < chunks.length; i += batchSize) {
-      const batch = chunks.slice(i, i + batchSize);
-      setProgress({ current: i, total: chunks.length, label: `Embedding ${i + 1}-${Math.min(i + batchSize, chunks.length)} of ${chunks.length} chunks...` });
+    for (let i = 0; i < contents.length; i += batchSize) {
+      const batch = contents.slice(i, i + batchSize);
+      setProgress(Math.round((i / contents.length) * 100));
+      setProgressText(`Embedding ${i + 1}-${Math.min(i + batchSize, contents.length)} of ${contents.length}...`);
 
       try {
-        const embeddings = await generateEmbeddingsBatch(batch.map(c => c.content));
+        const embeddings = await getEmbeddings(batch, apiKey);
         allEmbeddings.push(...embeddings);
-      } catch (err) {
-        toast.error(`Embedding error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-        setImporting(false);
+      } catch (err: any) {
+        toast.error(`Embedding failed: ${err.message}`);
+        setState("error");
         return;
       }
     }
 
-    setProgress({ current: chunks.length, total: chunks.length, label: "Storing memories..." });
+    setState("storing");
+    setProgressText("Saving to your mind...");
 
-    const memories = createMemoriesFromChunks(chunks, allEmbeddings, source);
-    await db.memories.bulkAdd(memories);
+    const fullMemories = memories.map((m: any, i: number) => ({
+      ...m,
+      embedding: allEmbeddings[i],
+    }));
 
-    // Group chunks by sourceId to create source records
-    const sourceIds = new Set(chunks.map(c => c.sourceId));
-    for (const sid of sourceIds) {
-      const sourceChunks = chunks.filter(c => c.sourceId === sid);
-      await db.sources.put({
-        id: sid,
-        type: source,
-        title: sourceChunks[0]?.sourceTitle || sourceTitle,
-        itemCount: sourceChunks.length,
-        importedAt: new Date(),
-        metadata: {},
-      });
-    }
+    await db.memories.bulkPut(fullMemories);
+    await db.sources.bulkPut(sources);
 
-    toast.success(`Imported ${chunks.length} chunks from ${sourceIds.size} source(s)`);
-    setImporting(false);
-    setProgress({ current: 0, total: 0, label: "" });
-  }
+    setState("done");
+    setProgress(100);
+    setProgressText(`Done! Added ${memories.length} memories from ${sources.length} source(s).`);
+    toast.success(`Imported ${memories.length} memories!`);
+  };
 
-  // ChatGPT JSON handler
-  const handleChatGPTFile = useCallback(async (file: File) => {
+  const handleChatGPTImport = useCallback(async (file: File) => {
+    setState("parsing");
+    setProgressText("Parsing ChatGPT export...");
+    setProgress(10);
+
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) {
-        toast.error("Invalid format: expected an array of conversations");
+      const json = JSON.parse(text);
+      const data = Array.isArray(json) ? json : [json];
+      const { memories, sources } = parseChatGPTExport(data);
+
+      if (memories.length === 0) {
+        toast.error("No conversations found in this file.");
+        setState("idle");
         return;
       }
-      setProgress({ current: 0, total: 0, label: `Parsing ${data.length} conversations...` });
-      const chunks = parseChatGPTExport(data);
-      toast.info(`Parsed ${chunks.length} chunks from ${data.length} conversations`);
-      await embedAndStore(chunks, 'chatgpt', file.name);
-    } catch (err) {
-      toast.error(`Parse error: ${err instanceof Error ? err.message : 'Invalid JSON'}`);
+
+      setProgressText(`Found ${memories.length} chunks from ${sources.length} conversations. Embedding...`);
+      await embedAndStore(memories, sources);
+    } catch (err: any) {
+      toast.error(`Parse error: ${err.message}`);
+      setState("error");
     }
   }, []);
 
-  // Text paste handler
-  async function handleTextImport() {
-    if (!textContent.trim()) { toast.error("Please enter some text"); return; }
-    const title = textTitle || "Pasted Text";
-    const textChunks = chunkText(textContent);
-    const sourceId = uuid();
-    const chunks: ParsedChunk[] = textChunks.map((c, i) => ({
-      content: c,
-      sourceTitle: title,
-      sourceId,
-      timestamp: new Date(),
-      metadata: { chunkIndex: i },
-    }));
-    await embedAndStore(chunks, 'text', title);
+  const handleTextImport = async () => {
+    if (!textContent.trim()) return;
+    const title = textTitle.trim() || `Note — ${new Date().toLocaleDateString()}`;
+    setState("parsing");
+    setProgressText("Processing text...");
+
+    const { memories, source } = createTextMemories(textContent, title, "text");
+    if (memories.length === 0) {
+      toast.error("Text too short to import.");
+      setState("idle");
+      return;
+    }
+
+    await embedAndStore(memories, [source]);
     setTextTitle("");
     setTextContent("");
-  }
+  };
 
-  // File upload handler
-  async function handleFileUpload(files: FileList | null) {
-    if (!files) return;
-    const allChunks: ParsedChunk[] = [];
+  const handleFileImport = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setState("parsing");
+
+    const allMemories: any[] = [];
+    const allSources: any[] = [];
+
     for (const file of Array.from(files)) {
-      if (!file.name.match(/\.(txt|md)$/i)) {
-        toast.error(`Skipping ${file.name}: only .txt and .md files supported`);
+      if (!file.name.match(/\.(txt|md|markdown)$/i)) {
+        toast.error(`Skipped ${file.name} — only .txt and .md files supported`);
         continue;
       }
+      setProgressText(`Reading ${file.name}...`);
       const text = await file.text();
-      const textChunks = chunkText(text);
-      const sourceId = uuid();
-      allChunks.push(...textChunks.map((c, i) => ({
-        content: c,
-        sourceTitle: file.name,
-        sourceId,
-        timestamp: new Date(),
-        metadata: { fileName: file.name, chunkIndex: i },
-      })));
+      const { memories, source } = createTextMemories(text, file.name, "file");
+      allMemories.push(...memories);
+      allSources.push(source);
     }
-    if (allChunks.length > 0) {
-      await embedAndStore(allChunks, 'file', 'File Upload');
+
+    if (allMemories.length === 0) {
+      toast.error("No importable content found.");
+      setState("idle");
+      return;
     }
-  }
 
-  // URL handler
-  const [urlInput, setUrlInput] = useState("");
+    await embedAndStore(allMemories, allSources);
+  };
 
-  async function handleUrlImport() {
+  const handleUrlImport = async () => {
     if (!urlInput.trim()) return;
-    toast.info("URL import: due to browser CORS restrictions, please paste the page content directly using the Text tab.");
-    setUrlInput("");
-  }
+    setState("parsing");
+    setProgressText("Fetching URL...");
 
-  const isDragging = useState(false);
+    try {
+      // Use a CORS proxy or allorigins
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput.trim())}`;
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error("Failed to fetch URL");
+      const html = await res.text();
+
+      // Basic HTML to text extraction
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      // Remove scripts and styles
+      doc.querySelectorAll("script, style, nav, footer, header").forEach((el) => el.remove());
+      const text = doc.body?.innerText || doc.body?.textContent || "";
+
+      if (text.trim().length < 50) {
+        toast.error("Could not extract meaningful content from this URL.");
+        setState("idle");
+        return;
+      }
+
+      const title = doc.title || urlInput.trim();
+      const { memories, source } = createTextMemories(text, title, "url");
+      source.metadata = { ...source.metadata, url: urlInput.trim() };
+
+      await embedAndStore(memories, [source]);
+      setUrlInput("");
+    } catch (err: any) {
+      toast.error(`URL fetch failed: ${err.message}`);
+      setState("error");
+    }
+  };
+
+  const resetState = () => {
+    setState("idle");
+    setProgress(0);
+    setProgressText("");
+  };
+
+  const isProcessing = state !== "idle" && state !== "done" && state !== "error";
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Import Knowledge</h1>
-        <p className="text-muted-foreground text-sm">Add your knowledge from various sources.</p>
+        <h1 className="text-3xl font-bold">Import Knowledge</h1>
+        <p className="text-zinc-400 mt-1">Feed your mind. The more you import, the smarter it gets.</p>
       </div>
 
-      {importing && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Card>
-            <CardContent className="pt-6 space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {progress.label}
-              </div>
-              {progress.total > 0 && (
-                <Progress value={(progress.current / progress.total) * 100} />
+      {/* Progress */}
+      {state !== "idle" && (
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center gap-3">
+              {state === "done" ? (
+                <CheckCircle className="w-5 h-5 text-green-400" />
+              ) : state === "error" ? (
+                <span className="text-red-400 text-sm">Error</span>
+              ) : (
+                <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
+              <span className="text-sm">{progressText}</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            {(state === "done" || state === "error") && (
+              <Button variant="outline" size="sm" onClick={resetState} className="border-zinc-700">
+                Import More
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      <Tabs defaultValue="chatgpt">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="chatgpt" className="gap-1.5 text-xs"><Upload className="w-3 h-3" /> ChatGPT</TabsTrigger>
-          <TabsTrigger value="text" className="gap-1.5 text-xs"><Type className="w-3 h-3" /> Text</TabsTrigger>
-          <TabsTrigger value="files" className="gap-1.5 text-xs"><FileText className="w-3 h-3" /> Files</TabsTrigger>
-          <TabsTrigger value="url" className="gap-1.5 text-xs"><Globe className="w-3 h-3" /> URL</TabsTrigger>
+      {/* Import Tabs */}
+      <Tabs defaultValue="chatgpt" className="w-full">
+        <TabsList className="bg-zinc-900 border border-zinc-800">
+          <TabsTrigger value="chatgpt" className="data-[state=active]:bg-zinc-800">
+            <FileJson className="w-4 h-4 mr-2" /> ChatGPT
+          </TabsTrigger>
+          <TabsTrigger value="text" className="data-[state=active]:bg-zinc-800">
+            <Type className="w-4 h-4 mr-2" /> Text
+          </TabsTrigger>
+          <TabsTrigger value="files" className="data-[state=active]:bg-zinc-800">
+            <FileText className="w-4 h-4 mr-2" /> Files
+          </TabsTrigger>
+          <TabsTrigger value="url" className="data-[state=active]:bg-zinc-800">
+            <Globe className="w-4 h-4 mr-2" /> URL
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chatgpt" className="mt-4">
-          <Card>
+        <TabsContent value="chatgpt" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base">Import ChatGPT Export</CardTitle>
+              <CardTitle className="text-lg">Import ChatGPT Conversations</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Go to ChatGPT → Settings → Data Controls → Export Data. You&apos;ll receive a zip file — extract it and upload the <code className="bg-muted px-1 rounded">conversations.json</code> file.
-              </p>
+              <div className="text-sm text-zinc-400 space-y-2">
+                <p><strong>How to export:</strong></p>
+                <ol className="list-decimal list-inside space-y-1 text-zinc-500">
+                  <li>Go to <a href="https://chatgpt.com" target="_blank" className="text-violet-400 hover:underline">chatgpt.com</a></li>
+                  <li>Click your profile → Settings → Data Controls</li>
+                  <li>Click &quot;Export data&quot; and wait for the email</li>
+                  <li>Download the ZIP, extract it, find <code className="bg-zinc-800 px-1 rounded">conversations.json</code></li>
+                  <li>Drop that file below</li>
+                </ol>
+              </div>
               <div
-                className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => document.getElementById('chatgpt-file')?.click()}
-                onDragOver={(e) => { e.preventDefault(); }}
+                className="border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-violet-500/50 transition-colors cursor-pointer"
+                onClick={() => document.getElementById("chatgpt-file")?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-violet-500/50"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("border-violet-500/50"); }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  e.currentTarget.classList.remove("border-violet-500/50");
                   const file = e.dataTransfer.files[0];
-                  if (file) handleChatGPTFile(file);
+                  if (file) handleChatGPTImport(file);
                 }}
               >
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm font-medium">Drop conversations.json here or click to browse</p>
-                <p className="text-xs text-muted-foreground mt-1">Supports the ChatGPT data export format</p>
+                <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+                <p className="text-zinc-400">Drop your <code className="bg-zinc-800 px-1 rounded">conversations.json</code> here</p>
+                <p className="text-sm text-zinc-600 mt-1">or click to browse</p>
               </div>
               <input
                 id="chatgpt-file"
                 type="file"
                 accept=".json"
                 className="hidden"
+                disabled={isProcessing}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleChatGPTFile(file);
+                  if (file) handleChatGPTImport(file);
                 }}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="text" className="mt-4">
-          <Card>
+        <TabsContent value="text" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base">Paste Text</CardTitle>
+              <CardTitle className="text-lg">Paste Text</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  placeholder="Give this text a title..."
-                  value={textTitle}
-                  onChange={(e) => setTextTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Content</Label>
-                <Textarea
-                  placeholder="Paste your text here... Notes, articles, ideas — anything you want to remember."
-                  className="min-h-[200px] font-mono text-sm"
-                  value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
-                />
-              </div>
-              <Button onClick={handleTextImport} disabled={importing || !textContent.trim()}>
+              <Input
+                placeholder="Title (optional)"
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                className="bg-zinc-800 border-zinc-700"
+              />
+              <Textarea
+                placeholder="Paste your notes, articles, thoughts, anything..."
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                rows={10}
+                className="bg-zinc-800 border-zinc-700"
+              />
+              <Button
+                onClick={handleTextImport}
+                disabled={isProcessing || !textContent.trim()}
+                className="bg-violet-600 hover:bg-violet-500"
+              >
+                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Import Text
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="files" className="mt-4">
-          <Card>
+        <TabsContent value="files" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base">Upload Files</CardTitle>
+              <CardTitle className="text-lg">Upload Files</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">Upload .txt or .md files. Batch upload supported.</p>
+              <p className="text-sm text-zinc-500">Upload .txt or .md files. You can select multiple files.</p>
               <div
-                className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => document.getElementById('file-upload')?.click()}
-                onDragOver={(e) => e.preventDefault()}
+                className="border-2 border-dashed border-zinc-700 rounded-xl p-10 text-center hover:border-violet-500/50 transition-colors cursor-pointer"
+                onClick={() => document.getElementById("file-upload")?.click()}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-violet-500/50"); }}
+                onDragLeave={(e) => { e.currentTarget.classList.remove("border-violet-500/50"); }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  handleFileUpload(e.dataTransfer.files);
+                  e.currentTarget.classList.remove("border-violet-500/50");
+                  handleFileImport(e.dataTransfer.files);
                 }}
               >
-                <FileText className="w-8 h-8 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm font-medium">Drop .txt or .md files here or click to browse</p>
+                <FileText className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+                <p className="text-zinc-400">Drop .txt / .md files here</p>
+                <p className="text-sm text-zinc-600 mt-1">or click to browse</p>
               </div>
               <input
                 id="file-upload"
                 type="file"
-                accept=".txt,.md"
+                accept=".txt,.md,.markdown"
                 multiple
                 className="hidden"
-                onChange={(e) => handleFileUpload(e.target.files)}
+                disabled={isProcessing}
+                onChange={(e) => handleFileImport(e.target.files)}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="url" className="mt-4">
-          <Card>
+        <TabsContent value="url" className="mt-6">
+          <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-base">Import from URL</CardTitle>
+              <CardTitle className="text-lg">Import from URL</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Due to browser security restrictions, direct URL fetching is limited. We recommend copying the page content and using the Text tab instead.
-              </p>
+              <p className="text-sm text-zinc-500">Paste a URL and we&apos;ll extract the text content.</p>
               <div className="flex gap-2">
                 <Input
-                  placeholder="https://example.com/article"
+                  placeholder="https://..."
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
+                  className="bg-zinc-800 border-zinc-700"
                 />
-                <Button variant="secondary" onClick={handleUrlImport}>Import</Button>
+                <Button
+                  onClick={handleUrlImport}
+                  disabled={isProcessing || !urlInput.trim()}
+                  className="bg-violet-600 hover:bg-violet-500"
+                >
+                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
+                </Button>
               </div>
+              <p className="text-xs text-zinc-600">Note: Some websites may block content extraction due to CORS restrictions.</p>
             </CardContent>
           </Card>
         </TabsContent>
