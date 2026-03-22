@@ -3,6 +3,7 @@ import { db, schema } from '@/server/db';
 import { buildTreeIndex } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
+import JSZip from 'jszip';
 
 // Chunking — intelligent paragraph/sentence splitting
 function chunkText(text: string, maxChunkSize = 1000): string[] {
@@ -71,13 +72,35 @@ export async function POST(req: NextRequest) {
       const files = formData.getAll('files') as File[];
 
       for (const file of files) {
-        const text = await file.text();
+        const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
         
-        if (sourceType === 'chatgpt' && file.name.endsWith('.json')) {
-          const parsed = parseChatGPT(JSON.parse(text));
-          documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
+        if (isZip) {
+          // Handle ZIP files (ChatGPT exports come as ZIP containing conversations.json)
+          const buffer = await file.arrayBuffer();
+          const zip = await JSZip.loadAsync(buffer);
+          
+          for (const [filename, zipEntry] of Object.entries(zip.files)) {
+            if (zipEntry.dir) continue;
+            const entryText = await zipEntry.async('text');
+            
+            if (filename.endsWith('.json') && (sourceType === 'chatgpt' || filename.includes('conversations'))) {
+              try {
+                const parsed = parseChatGPT(JSON.parse(entryText));
+                documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
+              } catch { /* skip non-ChatGPT JSON files in ZIP */ }
+            } else if (filename.endsWith('.md') || filename.endsWith('.txt')) {
+              documents.push({ title: filename.replace(/^.*\//, ''), content: entryText, sourceType: sourceType || 'file' });
+            }
+          }
         } else {
-          documents.push({ title: file.name, content: text, sourceType });
+          const text = await file.text();
+          
+          if (sourceType === 'chatgpt' && file.name.endsWith('.json')) {
+            const parsed = parseChatGPT(JSON.parse(text));
+            documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
+          } else {
+            documents.push({ title: file.name, content: text, sourceType });
+          }
         }
       }
     } else {

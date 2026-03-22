@@ -258,8 +258,8 @@ export default function ImportPage() {
                   <li>Go to <a href="https://chatgpt.com" target="_blank" className="text-violet-400 hover:underline">chatgpt.com</a></li>
                   <li>Click your profile → Settings → Data Controls</li>
                   <li>Click &quot;Export data&quot; and wait for the email</li>
-                  <li>Download the ZIP, extract it, find <code className="bg-zinc-800 px-1 rounded">conversations.json</code></li>
-                  <li>Drop that file below</li>
+                  <li>Download the ZIP file</li>
+                  <li>Drop the ZIP <strong>or</strong> the extracted <code className="bg-zinc-800 px-1 rounded">conversations.json</code> below</li>
                 </ol>
               </div>
               <div
@@ -275,13 +275,13 @@ export default function ImportPage() {
                 }}
               >
                 <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
-                <p className="text-zinc-400">Drop your <code className="bg-zinc-800 px-1 rounded">conversations.json</code> here</p>
-                <p className="text-sm text-zinc-600 mt-1">or click to browse</p>
+                <p className="text-zinc-400">Drop your ChatGPT export here</p>
+                <p className="text-sm text-zinc-600 mt-1">Accepts <code className="bg-zinc-800 px-1 rounded">.zip</code> or <code className="bg-zinc-800 px-1 rounded">.json</code></p>
               </div>
               <input
                 id="chatgpt-file"
                 type="file"
-                accept=".json"
+                accept=".json,.zip"
                 className="hidden"
                 disabled={isProcessing}
                 onChange={(e) => {
