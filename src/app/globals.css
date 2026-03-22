@@ -126,5 +126,69 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
+}
+
+/* Animated gradient for hero text */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #8b5cf6, #d946ef, #8b5cf6, #a78bfa);
+  background-size: 300% 300%;
+  animation: gradient-shift 6s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Subtle glow on cards */
+.glow-card {
+  position: relative;
+}
+.glow-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0));
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+.glow-card:hover::before {
+  opacity: 1;
+}
+
+/* Hero background orbs */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  animation: float 20s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
 }

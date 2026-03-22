@@ -1,161 +1,130 @@
-# MindStore — Architecture Design Document
+# MindStore Architecture v2 — Server-First
 
-## Product Vision
-MindStore is a personal mind layer — a storage and retrieval system for your entire cognitive context. Import everything (Obsidian, Notion, ChatGPT exports), talk to AI that learns about you, and connect your mind layer to ANY AI model via MCP.
+## Why Server-Side
+- Cross-device access (phone, laptop, tablet — same mind)
+- PostgreSQL + pgvector = industrial-strength vector search with SQL power
+- Multi-modal storage (images, audio, video metadata)
+- Community can build plugins, importers, retrieval methods
+- OAuth for AI providers — users bring their own keys
+- Proper API for any client (web, mobile, CLI, MCP)
 
-## Competitive Landscape
-- **Mem.ai** — AI note-taking, but locked to their app. No MCP. No exports.
-- **Khoj** — "AI second brain", open source, good but focused on search/automation
-- **Rewind.ai** — Records everything on screen. Privacy concerns. No portability.
-- **Personal AI** — Chatbot that learns from you. But walled garden.
-- **None of them** expose a universal MCP server that works with ANY AI client.
+## Stack
+- **Runtime:** Node.js + TypeScript
+- **Framework:** Next.js 16 (App Router) — serves both UI and API
+- **Database:** PostgreSQL + pgvector extension
+- **Search:** Triple-layer retrieval:
+  1. BM25 full-text (pg_trgm + tsvector)
+  2. Vector similarity (pgvector, cosine distance)
+  3. Hierarchical tree index (PageIndex-inspired reasoning paths)
+  4. Reciprocal Rank Fusion to combine all three
+- **Embeddings:** OpenAI text-embedding-3-small (default), pluggable
+- **Storage:** PostgreSQL for structured data, S3-compatible for files/media
+- **Auth:** NextAuth.js with OAuth (Google, GitHub, email)
+- **MCP:** Server component, stdio + HTTP transport
 
-## MindStore's Unique Edge
-1. **Universal AI connector via MCP** — works with Claude Desktop, ChatGPT, VS Code, Cursor, any MCP client
-2. **Import everything** — not just notes, but conversations, thoughts, preferences
-3. **AI that actively learns** — asks questions, fills gaps, builds a living profile
-4. **Bring your own AI** — use your existing ChatGPT/Claude subscription
-5. **Privacy-first** — self-hostable, local-first option
+## Database Schema
 
-## Technical Architecture
+### memories
+- id UUID PK
+- user_id UUID FK
+- content TEXT
+- embedding vector(1536)
+- content_type ENUM('text', 'image', 'audio', 'video', 'code', 'conversation')
+- source_type TEXT (obsidian, notion, chatgpt, claude, text, url, image, audio)
+- source_id TEXT
+- source_title TEXT
+- metadata JSONB
+- parent_id UUID (for hierarchical indexing)
+- tree_path TEXT (materialized path for tree traversal)
+- created_at TIMESTAMPTZ
+- imported_at TIMESTAMPTZ
+- tsvector tsvector (auto-generated for BM25)
 
-### Stack
-- **Runtime**: Node.js (TypeScript)
-- **Framework**: Next.js 15 (App Router) — web frontend + API routes
-- **Database**: SQLite (via better-sqlite3) — portable, zero-config
-- **Vector Store**: Built-in using sqlite-vss or custom embeddings with cosine similarity
-- **Embeddings**: OpenAI text-embedding-3-small (or local via transformers.js)
-- **MCP Server**: TypeScript MCP SDK (@modelcontextprotocol/sdk)
-- **Deployment**: Docker-ready, self-hostable, or hosted at mindstore.org
+### tree_index (PageIndex-inspired hierarchical TOC)
+- id UUID PK
+- user_id UUID FK
+- title TEXT
+- summary TEXT
+- level INT (0=root, 1=section, 2=subsection, etc.)
+- parent_id UUID
+- memory_ids UUID[] (which memories belong to this node)
+- embedding vector(1536) (embedding of the summary)
 
-### Core Modules
+### profile
+- id UUID PK
+- user_id UUID FK
+- key TEXT
+- value TEXT
+- category TEXT
+- confidence REAL
+- source TEXT
+- updated_at TIMESTAMPTZ
+- UNIQUE(user_id, key)
 
-#### 1. Import Pipeline
-```
-obsidian/ → markdown parser → chunk → embed → store
-notion/ → JSON/markdown parser → chunk → embed → store  
-chatgpt/ → conversations.json parser → chunk → embed → store
-claude/ → conversation parser → chunk → embed → store
-text/ → raw text → chunk → embed → store
-```
+### facts
+- id UUID PK
+- user_id UUID FK
+- fact TEXT
+- category TEXT
+- entities TEXT[] (extracted named entities)
+- learned_at TIMESTAMPTZ
 
-#### 2. Knowledge Store
-- **Documents Table**: id, source_type, title, content, metadata, created_at
-- **Chunks Table**: id, document_id, content, embedding (vector), position
-- **Entities Table**: id, name, type, description (people, places, concepts)
-- **Facts Table**: id, subject, predicate, object, confidence, source_chunk_id
-- **Profile Table**: id, key, value, category, confidence (learned preferences/traits)
+### connections (cross-pollination cache)
+- id UUID PK
+- user_id UUID FK
+- memory_a_id UUID FK
+- memory_b_id UUID FK
+- similarity REAL
+- surprise REAL
+- bridge_concept TEXT
+- discovered_at TIMESTAMPTZ
 
-#### 3. AI Learning Engine
-- Onboarding conversation that asks key questions
-- Passive learning from imported content
-- Active inference from conversations
-- Profile builder (preferences, personality, knowledge areas, goals)
+### contradictions (cached)
+- id UUID PK
+- user_id UUID FK
+- memory_a_id UUID FK
+- memory_b_id UUID FK
+- topic TEXT
+- description TEXT
+- detected_at TIMESTAMPTZ
 
-#### 4. Retrieval Engine
-- Semantic search (vector similarity)
-- Keyword search (full-text)
-- Temporal search (by date range)
-- Entity-based retrieval (by person, topic)
-- Context assembly (combine relevant chunks into coherent context)
+### media
+- id UUID PK
+- user_id UUID FK
+- memory_id UUID FK
+- file_type TEXT
+- file_path TEXT
+- file_size BIGINT
+- metadata JSONB (EXIF, dimensions, duration, etc.)
+- transcript TEXT (for audio/video)
+- created_at TIMESTAMPTZ
 
-#### 5. MCP Server
-Exposes MindStore as an MCP server with:
-- **Tools**: search_mind, get_profile, get_context, learn_fact, ask_about
-- **Resources**: profile://summary, knowledge://topic/{topic}, timeline://recent
-- **Prompts**: introduce_user, provide_context
+## Retrieval Pipeline (our innovation)
 
-#### 6. Web Frontend
-- Dashboard: mind stats, recent imports, knowledge map
-- Import: drag & drop files, connect services
-- Chat: talk to your mind, AI learns from conversation
-- Profile: view/edit what AI knows about you
-- Connect: MCP server config, API keys, integrations
+### Triple-Layer Fusion Retrieval
+1. **BM25 Layer:** PostgreSQL full-text search with tsvector + ts_rank_cd
+2. **Vector Layer:** pgvector cosine similarity on embeddings
+3. **Tree Layer:** Navigate hierarchical index (PageIndex-inspired) — find the right "section" first, then drill into memories
+4. **Fusion:** Reciprocal Rank Fusion (RRF) combines all three scores:
+   `score = Σ 1/(k + rank_i)` for each layer
 
-### API Design
-```
-POST /api/import          — upload files (Obsidian, Notion, ChatGPT)
-GET  /api/search          — semantic search across all knowledge
-GET  /api/profile         — get user profile/preferences
-POST /api/chat            — chat with your mind (AI learns)
-GET  /api/context         — get assembled context for a query
-POST /api/learn           — manually teach a fact
-GET  /api/stats           — mind statistics
-```
+### Why This Is Better Than Everything Else
+- BM25 alone misses semantic meaning
+- Vector alone misses exact keywords and structure
+- Tree alone is slow for simple queries
+- RRF fusion gets the best of all three — handles both "find exact phrase" and "find conceptually similar" queries
+- The tree layer adds REASONING about document structure that no other personal knowledge tool has
 
-### MCP Server Interface
-```typescript
-// Tools
-search_mind(query: string, limit?: number) → SearchResult[]
-get_profile() → UserProfile
-get_context(query: string) → AssembledContext
-learn_fact(fact: string) → void
-get_timeline(days?: number) → TimelineEntry[]
+## Community Extension Points
+- **Importers:** npm packages that implement ImporterInterface
+- **Retrievers:** plug in new retrieval methods
+- **Analyzers:** custom insight engines (like our cross-pollination, forgetting curve)
+- **MCP Tools:** community can add new MCP tools
+- **UI Widgets:** dashboard cards via plugin system
 
-// Resources  
-profile://summary → Full user profile
-knowledge://topics → List of known topics
-knowledge://topic/{name} → Everything about a topic
-timeline://recent → Recent knowledge entries
-preferences://all → User preferences
-
-// Prompts
-introduce_user → "Here's what I know about {user}..."
-provide_context → "Given the query '{query}', here's relevant context..."
-```
-
-### File Structure
-```
-mindstore/
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-├── .env.example
-├── docker-compose.yml
-├── Dockerfile
-├── README.md
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── layout.tsx
-│   │   ├── page.tsx            # Dashboard
-│   │   ├── import/page.tsx     # Import interface
-│   │   ├── chat/page.tsx       # Chat with your mind
-│   │   ├── profile/page.tsx    # View/edit profile
-│   │   ├── connect/page.tsx    # MCP config & API keys
-│   │   └── api/
-│   │       ├── import/route.ts
-│   │       ├── search/route.ts
-│   │       ├── profile/route.ts
-│   │       ├── chat/route.ts
-│   │       ├── context/route.ts
-│   │       ├── learn/route.ts
-│   │       └── stats/route.ts
-│   ├── lib/
-│   │   ├── db.ts               # SQLite database
-│   │   ├── embeddings.ts       # Embedding generation
-│   │   ├── chunker.ts          # Document chunking
-│   │   ├── search.ts           # Hybrid search engine
-│   │   ├── profile.ts          # Profile management
-│   │   ├── learning.ts         # AI learning engine
-│   │   └── context.ts          # Context assembly
-│   ├── importers/
-│   │   ├── obsidian.ts         # Obsidian vault parser
-│   │   ├── notion.ts           # Notion export parser
-│   │   ├── chatgpt.ts          # ChatGPT export parser
-│   │   ├── claude.ts           # Claude export parser
-│   │   └── text.ts             # Raw text/markdown
-│   ├── mcp/
-│   │   ├── server.ts           # MCP server implementation
-│   │   ├── tools.ts            # MCP tools
-│   │   ├── resources.ts        # MCP resources
-│   │   └── prompts.ts          # MCP prompts
-│   └── components/
-│       ├── Dashboard.tsx
-│       ├── ImportZone.tsx
-│       ├── ChatInterface.tsx
-│       ├── ProfileView.tsx
-│       ├── KnowledgeGraph.tsx
-│       └── ConnectionSetup.tsx
-└── data/
-    └── mindstore.db            # SQLite database
-```
+## Multi-Modal Support
+- **Images:** stored in media table, embeddings via CLIP or caption-then-embed
+- **Audio:** transcribe via Whisper, store transcript + audio file
+- **Video:** extract keyframes + audio transcript
+- **Code:** language-aware chunking, AST-based
+- **Conversations:** preserve turn structure, not just flat text

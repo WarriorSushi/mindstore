@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "migrate": "npx tsx src/server/migrate.ts",
     "mcp": "npx tsx src/mcp/server.ts"
   },
   "bin": {
@@ -20,11 +21,15 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.3.0",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",
+    "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "openai": "^6.32.0",
+    "postgres": "^3.4.8",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "reagraph": "^4.30.8",

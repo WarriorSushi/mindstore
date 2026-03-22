@@ -32,27 +32,32 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-24 pb-20">
+      <section className="relative max-w-6xl mx-auto px-6 pt-24 pb-20 overflow-hidden">
+        {/* Background orbs */}
+        <div className="orb w-96 h-96 bg-violet-600 top-0 -left-48" style={{ animationDelay: '0s' }} />
+        <div className="orb w-72 h-72 bg-fuchsia-600 top-20 -right-36" style={{ animationDelay: '-7s' }} />
+        <div className="orb w-64 h-64 bg-indigo-600 -bottom-32 left-1/3" style={{ animationDelay: '-14s' }} />
+
         <motion.div
           initial="hidden"
           animate="visible"
-          className="text-center max-w-3xl mx-auto"
+          className="relative text-center max-w-3xl mx-auto"
         >
-          <motion.div custom={0} variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900 text-sm text-zinc-400 mb-8">
-            <Lock className="w-3.5 h-3.5" />
+          <motion.div custom={0} variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-zinc-800 bg-zinc-900/80 backdrop-blur-sm text-sm text-zinc-400 mb-8">
+            <Lock className="w-3.5 h-3.5 text-emerald-400" />
             100% private — your data never leaves your browser
           </motion.div>
 
           <motion.h1 custom={1} variants={fadeUp} className="text-5xl sm:text-7xl font-bold tracking-tight mb-6">
             Your mind,{" "}
-            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+            <span className="hero-gradient">
               searchable.
             </span>
           </motion.h1>
 
           <motion.p custom={2} variants={fadeUp} className="text-xl text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
             Import your ChatGPT conversations, notes, and knowledge.
-            Ask anything. Get synthesized answers from <span className="text-zinc-200">your own brain</span>.
+            Ask anything. Get synthesized answers from <span className="text-zinc-200 font-medium">your own brain</span>.
           </motion.p>
 
           <motion.div custom={3} variants={fadeUp} className="flex gap-4 justify-center">
@@ -85,7 +90,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15 }}
-              className="p-6 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 transition-colors"
+              className="glow-card p-6 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 transition-all duration-300 hover:-translate-y-1"
             >
               <step.icon className="w-10 h-10 text-violet-400 mb-4" />
               <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
@@ -114,7 +119,7 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="p-5 rounded-lg border border-zinc-800/50 hover:border-zinc-700/50 transition-colors"
+              className="glow-card p-5 rounded-lg border border-zinc-800/50 hover:border-zinc-700/50 transition-all duration-300"
             >
               <feature.icon className="w-5 h-5 text-violet-400 mb-3" />
               <h3 className="font-medium mb-1">{feature.title}</h3>
@@ -126,7 +131,9 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="max-w-6xl mx-auto px-6 py-20 text-center">
-        <div className="p-12 rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950">
+        <div className="relative p-12 rounded-2xl border border-violet-500/20 bg-gradient-to-b from-violet-950/30 to-zinc-950 overflow-hidden">
+          <div className="orb w-64 h-64 bg-violet-600 -top-32 -right-32" style={{ animationDelay: '-5s' }} />
+          <div className="relative">
           <h2 className="text-3xl font-bold mb-4">Ready to search your mind?</h2>
           <p className="text-zinc-400 mb-8">Free. Private. No account needed.</p>
           <Link href="/app">
@@ -134,6 +141,7 @@ export default function LandingPage() {
               Open Mindstore <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
+          </div>
         </div>
       </section>
 
