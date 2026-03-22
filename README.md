@@ -1,104 +1,189 @@
-# 🧠 MindStore — Your Mind, Searchable
+<div align="center">
 
-**Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get answers from your own brain.**
+# 🧠 MindStore
 
-[![Live Demo](https://img.shields.io/badge/Try%20It-mindstore.frain.cloud-violet?style=for-the-badge)](https://mindstore.frain.cloud)
+**Your Mind, Connected to Every AI.**
+
+Import your ChatGPT conversations, Obsidian vault, Notion pages — then search semantically, discover hidden connections in your own thinking, and plug your knowledge into *any* AI via MCP.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
+
+[**Try It →**](https://mindstore.org) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai)
+
+</div>
 
 ---
 
-## What is MindStore?
+## The Problem
 
-MindStore is a personal knowledge layer. You import everything — ChatGPT exports, notes, files, URLs — and MindStore makes it all **searchable by meaning**, not just keywords.
+Every AI you talk to starts from zero. Your ChatGPT doesn't know what you told Claude. Your Copilot doesn't know your Obsidian notes. Your knowledge is scattered across 15 apps and none of them talk to each other.
 
-Ask your mind a question. Get synthesized answers with citations from your own knowledge.
+**MindStore fixes this.** One place for all your knowledge. One protocol (MCP) to connect it to every AI.
 
-## ✨ Features
+## What Makes MindStore Different
 
-- **📥 Import Everything** — ChatGPT conversation exports (JSON), text, markdown, files, URLs
-- **🔍 Semantic Search** — Find ideas by meaning using AI embeddings
-- **💬 Ask Your Mind** — Natural language Q&A with RAG (Retrieval-Augmented Generation)
-- **🧠 AI Interview** — Talk to AI that learns about you through conversation
-- **🔌 MCP Server** — Connect your mind to any AI (Claude, ChatGPT, Cursor) via Model Context Protocol
-- **🔒 100% Private** — Everything stays in your browser. No servers. No tracking.
-- **⚡ Instant Setup** — No account needed. Add your OpenAI API key and go.
+This isn't another note-taking app with a chatbot bolted on. MindStore has features no other knowledge tool offers:
 
-## 🚀 Quick Start
+### 🧬 Knowledge Fingerprint
+A 3D WebGL visualization of your mind's topology. See your knowledge clusters, connections between ideas, and blind spots — rendered as an interactive graph you can rotate and explore.
+
+### ⚡ Cross-Pollination Engine
+Automatically discovers unexpected bridges between distant pieces of your knowledge. *"Your note about Japanese gardening philosophy shares a structural pattern with your ChatGPT conversation about software architecture..."*
+
+### 🔴 Contradiction Detector
+Surfaces places where your own thinking conflicts. Not errors — evolution of thought. *"You said X was 'always best' in March, but argued for Y in June."*
+
+### ⏰ Forgetting Curve
+Implements Ebbinghaus spaced repetition across your **entire knowledge base**. Alerts you when knowledge is fading. *"You learned about quantum computing 47 days ago and haven't revisited it."*
+
+### 📊 Mind Diff
+*"What did I learn this week? How has my thinking on AI changed in the last 3 months?"* Track your intellectual growth over time.
+
+### 💪 Knowledge Metabolism Score
+A 0-10 fitness tracker for your brain. Measures intake rate, connection density, source diversity, and growth velocity.
+
+### 😈 Devil's Advocate Mode
+Challenges your assumptions using **your own stored knowledge**. Not generic counterarguments — actual contradicting evidence from things you've written and said.
+
+## How It Works
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  Your Data   │────▶│   MindStore   │────▶│   Any AI Client  │
+│              │     │              │     │                 │
+│ • ChatGPT    │     │ • Chunk      │     │ • Claude Desktop│
+│ • Obsidian   │     │ • Embed      │     │ • VS Code       │
+│ • Notion     │     │ • Index      │     │ • Cursor        │
+│ • Text/MD    │     │ • Connect    │     │ • ChatGPT       │
+└─────────────┘     └──────────────┘     └─────────────────┘
+```
+
+1. **Import** — Drop your ChatGPT export, Obsidian vault, Notion pages, or any text files
+2. **Index** — MindStore chunks, embeds, and indexes everything semantically
+3. **Search & Discover** — Query by meaning, find hidden connections, track your thinking over time
+4. **Connect** — Any MCP-compatible AI gets full context about you automatically
+
+## Quick Start
 
 ```bash
 git clone https://github.com/WarriorSushi/mindstore.git
 cd mindstore
 npm install
 npm run dev
+# Open http://localhost:3000
 ```
 
-Open [localhost:3000](http://localhost:3000), add your OpenAI API key, and start importing.
+Add your OpenAI API key in Settings (stays in your browser, never sent to us).
 
-## 🏗️ Architecture
+## Connect Your AI
 
-- **Next.js 16** (App Router) — Static export, zero backend
-- **IndexedDB** (Dexie) — All data stays in your browser
-- **OpenAI Embeddings** — `text-embedding-3-small` for semantic indexing
-- **Cosine Similarity** — Client-side vector search
-- **GPT-4o-mini** — RAG chat with streaming responses
-- **Framer Motion** — Smooth animations throughout
+MindStore exposes an MCP server that any AI client can connect to.
 
-## 📁 Project Structure
-
-```
-src/
-├── app/
-│   ├── page.tsx          # Landing page
-│   └── app/
-│       ├── page.tsx      # Dashboard
-│       ├── import/       # Import ChatGPT, files, text, URLs
-│       ├── chat/         # Ask your mind (RAG)
-│       ├── explore/      # Browse knowledge
-│       ├── learn/        # AI interview
-│       ├── connect/      # MCP server setup
-│       └── settings/     # API key, data management
-├── components/ui/        # Reusable UI components
-└── lib/
-    ├── db.ts             # IndexedDB schema & helpers
-    ├── openai.ts         # Embeddings & chat streaming
-    ├── search.ts         # Vector search & RAG prompt
-    ├── parsers.ts        # ChatGPT JSON, text, file parsers
-    └── utils.ts          # Utilities
-```
-
-## 🔌 MCP Integration (Coming Soon)
-
-MindStore will expose your knowledge as an MCP server, so any MCP-compatible AI client can access your mind:
-
+### Claude Desktop
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "mindstore": {
-      "url": "https://your-mindstore-instance/api/mcp"
+      "command": "npx",
+      "args": ["tsx", "src/mcp/server.ts"],
+      "env": { "MINDSTORE_DB_PATH": "~/.mindstore/mindstore.db" }
     }
   }
 }
 ```
 
-**Tools exposed**: `search_mind`, `get_profile`, `get_context`
+### VS Code / Cursor
+Add to your settings:
+```json
+{
+  "mcp": {
+    "servers": {
+      "mindstore": {
+        "command": "npx",
+        "args": ["tsx", "src/mcp/server.ts"]
+      }
+    }
+  }
+}
+```
 
-## 🛣️ Roadmap
+### MCP Tools Available
 
-- [x] ChatGPT export import
-- [x] Semantic search with embeddings
-- [x] RAG-based chat
-- [x] AI interview/learning system
-- [x] File & URL import
-- [ ] MCP server endpoint
-- [ ] Obsidian vault import
-- [ ] Notion export import
-- [ ] Knowledge graph visualization
-- [ ] Self-hosted backend option
-- [ ] Browser extension
+| Tool | Description |
+|------|-------------|
+| `search_mind` | Semantic + keyword search across all knowledge |
+| `get_context` | Assembled context for personalizing AI responses |
+| `get_profile` | User preferences, traits, goals |
+| `learn_fact` | Store new facts during conversation |
+| `get_mind_stats` | Knowledge base statistics |
+| `get_timeline` | Recent knowledge entries |
+| `get_connections` | Cross-pollination discoveries |
+| `get_contradictions` | Conflicting beliefs in your data |
+| `get_metabolism` | Knowledge metabolism score |
 
-## 📜 License
+Plus **Devil's Advocate** prompt — challenges your beliefs using your own stored knowledge.
+
+## Architecture
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── page.tsx            # Landing page
+│   ├── app/                # Main app
+│   │   ├── page.tsx        # Dashboard
+│   │   ├── import/         # File upload & import
+│   │   ├── chat/           # RAG chat interface
+│   │   ├── explore/        # Browse knowledge
+│   │   ├── learn/          # Teach your mind
+│   │   ├── fingerprint/    # 3D knowledge graph
+│   │   ├── insights/       # Consolidation reports
+│   │   ├── connect/        # MCP setup guides
+│   │   └── settings/       # API key, data management
+│   └── api/                # Server routes
+├── lib/
+│   ├── db.ts               # Dexie/IndexedDB (client-side)
+│   ├── search.ts           # Cosine similarity + RAG
+│   ├── openai.ts           # Embeddings + streaming chat
+│   ├── parsers.ts          # Import parsers
+│   └── engines/
+│       └── consolidation.ts # The brain — connections, contradictions, forgetting
+├── mcp/
+│   └── server.ts           # MCP server (SQLite + FTS5, server-side)
+└── components/ui/          # shadcn/ui components
+```
+
+**Dual architecture:**
+- **Browser app** — Dexie/IndexedDB, zero server needed, 100% private
+- **MCP server** — SQLite + FTS5, runs locally, serves any AI client
+
+## Tech Stack
+
+- **Framework:** Next.js 16, TypeScript, Tailwind CSS
+- **UI:** shadcn/ui, Framer Motion, Lucide icons
+- **Visualization:** reagraph (WebGL 3D graphs)
+- **Client Storage:** Dexie (IndexedDB)
+- **Server Storage:** SQLite + FTS5 full-text search
+- **Embeddings:** OpenAI text-embedding-3-small (BYO key)
+- **Chat:** OpenAI streaming with RAG context injection
+- **Protocol:** Model Context Protocol (MCP)
+
+## Privacy
+
+Your data never leaves your machine. The web app stores everything in your browser's IndexedDB. The MCP server stores in a local SQLite file. No accounts, no cloud, no tracking.
+
+## License
 
 MIT
 
-## 🙏 Credits
+---
 
-Built by [WarriorSushi](https://github.com/WarriorSushi) — part of [AltCorp](https://altcorp.frain.cloud).
+<div align="center">
+
+Built by [AltCorp](https://altcorp.frain.cloud)
+
+**MindStore** — because your AI should know you.
+
+</div>
