@@ -1,5 +1,24 @@
 import { v4 as uuid } from 'uuid';
-import type { Memory, Source } from './db';
+
+interface Memory {
+  id: string;
+  content: string;
+  source: string;
+  sourceId: string;
+  sourceTitle: string;
+  timestamp: Date;
+  importedAt: Date;
+  metadata: Record<string, any>;
+}
+
+interface Source {
+  id: string;
+  type: string;
+  title: string;
+  itemCount: number;
+  importedAt: Date;
+  metadata: Record<string, any>;
+}
 
 interface ChatGPTExport {
   title: string;

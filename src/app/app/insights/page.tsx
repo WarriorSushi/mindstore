@@ -5,23 +5,36 @@ import Link from 'next/link';
 import { ArrowLeft, Brain, Zap, AlertTriangle, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  findCrossConnections,
-  findContradictions,
-  getForgettingRisks,
-  getMindDiff,
-  getMetabolismScore,
-  type Connection,
-  type Contradiction,
-} from '@/lib/engines/consolidation';
-import type { Memory } from '@/lib/db';
+
+interface MemoryLike {
+  id: string;
+  content: string;
+  source: string;
+  sourceTitle: string;
+  urgency?: number;
+}
+
+interface Connection {
+  memoryA: MemoryLike;
+  memoryB: MemoryLike;
+  similarity: number;
+  bridgeConcept: string;
+  surprise: number;
+}
+
+interface Contradiction {
+  memoryA: MemoryLike;
+  memoryB: MemoryLike;
+  topic: string;
+  description: string;
+}
 
 export default function InsightsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [contradictions, setContradictions] = useState<Contradiction[]>([]);
-  const [forgetting, setForgetting] = useState<(Memory & { urgency: number })[]>([]);
-  const [metabolism, setMetabolism] = useState<Awaited<ReturnType<typeof getMetabolismScore>> | null>(null);
-  const [mindDiff, setMindDiff] = useState<Awaited<ReturnType<typeof getMindDiff>> | null>(null);
+  const [forgetting, setForgetting] = useState<(MemoryLike & { urgency: number })[]>([]);
+  const [metabolism, setMetabolism] = useState<any>(null);
+  const [mindDiff, setMindDiff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { runConsolidation(); }, []);
@@ -29,18 +42,14 @@ export default function InsightsPage() {
   async function runConsolidation() {
     setLoading(true);
     try {
-      const [conn, contra, forget, meta, diff] = await Promise.all([
-        findCrossConnections(15),
-        findContradictions(),
-        getForgettingRisks(15),
-        getMetabolismScore(),
-        getMindDiff(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
-      ]);
-      setConnections(conn);
-      setContradictions(contra);
-      setForgetting(forget);
-      setMetabolism(meta);
-      setMindDiff(diff);
+      const res = await fetch('/api/v1/insights');
+      if (!res.ok) throw new Error('Failed to fetch insights');
+      const data = await res.json();
+      setConnections(data.connections || []);
+      setContradictions(data.contradictions || []);
+      setForgetting(data.forgetting || []);
+      setMetabolism(data.metabolism || null);
+      setMindDiff(data.mindDiff || null);
     } catch (e) {
       console.error('Consolidation failed:', e);
     } finally {
@@ -55,7 +64,7 @@ export default function InsightsPage() {
           <Link href="/app" className="text-zinc-400 hover:text-zinc-200"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
             <h1 className="text-xl font-bold">🧠 Mind Insights</h1>
-            <p className="text-sm text-zinc-500">Your brain's consolidation report</p>
+            <p className="text-sm text-zinc-500">Your brain&apos;s consolidation report</p>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={runConsolidation} className="border-zinc-700">
@@ -95,7 +104,7 @@ export default function InsightsPage() {
           <div className="mb-8 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <h3 className="font-semibold flex items-center gap-2 mb-4">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              This Week's Mind Growth
+              This Week&apos;s Mind Growth
             </h3>
             <div className="flex gap-6 text-sm">
               <div>
@@ -109,7 +118,7 @@ export default function InsightsPage() {
             </div>
             {mindDiff.topNewTopics.length > 0 && (
               <div className="mt-3 flex gap-2 flex-wrap">
-                {mindDiff.topNewTopics.slice(0, 5).map(t => (
+                {mindDiff.topNewTopics.slice(0, 5).map((t: string) => (
                   <span key={t} className="bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded text-xs">{t}</span>
                 ))}
               </div>
@@ -181,7 +190,7 @@ export default function InsightsPage() {
 
           <TabsContent value="forgetting" className="space-y-4">
             <p className="text-sm text-zinc-500">
-              Knowledge you're at risk of forgetting, based on the Ebbinghaus forgetting curve.
+              Knowledge you&apos;re at risk of forgetting, based on the Ebbinghaus forgetting curve.
             </p>
             {forgetting.length === 0 ? (
               <Empty message="Nothing at risk yet. Check back after a few days." />
@@ -208,7 +217,7 @@ export default function InsightsPage() {
   );
 }
 
-function MemoryCard({ memory }: { memory: Memory }) {
+function MemoryCard({ memory }: { memory: MemoryLike }) {
   return (
     <div className="bg-zinc-800/50 rounded-lg p-3">
       <div className="flex items-center gap-2 mb-1">

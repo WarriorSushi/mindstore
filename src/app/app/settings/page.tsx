@@ -6,8 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiKey, setApiKey, clearApiKey, testApiKey } from "@/lib/openai";
-import { clearAllData, exportAllData, importBackup, getStats } from "@/lib/db";
 import { toast } from "sonner";
+
+async function fetchStats() {
+  try {
+    const res = await fetch('/api/v1/stats');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
 
 export default function SettingsPage() {
   const [key, setKey] = useState("");
@@ -19,7 +26,7 @@ export default function SettingsPage() {
     const k = getApiKey();
     setHasKey(!!k);
     if (k) setKey(k);
-    getStats().then(setStats);
+    fetchStats().then(setStats);
   }, []);
 
   const handleSaveKey = async () => {
@@ -44,15 +51,21 @@ export default function SettingsPage() {
   };
 
   const handleExport = async () => {
-    const data = await exportAllData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Backup downloaded!");
+    try {
+      const res = await fetch('/api/v1/export');
+      if (!res.ok) throw new Error('Export failed');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded!");
+    } catch (err: any) {
+      toast.error(`Export failed: ${err.message}`);
+    }
   };
 
   const handleImportBackup = () => {
@@ -65,10 +78,16 @@ export default function SettingsPage() {
       try {
         const text = await file.text();
         const data = JSON.parse(text);
-        if (!data.memories || !data.sources) throw new Error("Invalid backup format");
-        await importBackup(data);
-        getStats().then(setStats);
-        toast.success(`Restored ${data.memories.length} memories!`);
+        if (!data.memories) throw new Error("Invalid backup format");
+        const res = await fetch('/api/v1/backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Restore failed');
+        const result = await res.json();
+        fetchStats().then(setStats);
+        toast.success(`Restored ${result.imported} memories!`);
       } catch (err: any) {
         toast.error(`Import failed: ${err.message}`);
       }
@@ -79,9 +98,14 @@ export default function SettingsPage() {
   const handleClear = async () => {
     if (!confirm("Are you sure? This will delete ALL your memories. This cannot be undone.")) return;
     if (!confirm("Really sure? Export a backup first if you want to keep your data.")) return;
-    await clearAllData();
-    getStats().then(setStats);
-    toast.success("All data cleared.");
+    try {
+      const res = await fetch('/api/v1/memories', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Clear failed');
+      fetchStats().then(setStats);
+      toast.success("All data cleared.");
+    } catch (err: any) {
+      toast.error(`Clear failed: ${err.message}`);
+    }
   };
 
   return (
@@ -119,7 +143,7 @@ export default function SettingsPage() {
             )}
           </div>
           <p className="text-xs text-zinc-500">
-            Your key is stored locally in your browser. It&apos;s used to create embeddings and generate answers. We never see or store it.
+            Your key is stored locally in your browser. It&apos;s used to create embeddings and generate answers.
           </p>
         </CardContent>
       </Card>
@@ -172,7 +196,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="text-sm text-zinc-400 space-y-2">
           <p><strong className="text-zinc-200">Mindstore</strong> is your personal knowledge base. Import your ChatGPT conversations, notes, and articles, then ask questions and get synthesized answers from your own brain.</p>
-          <p>100% private. All data stays in your browser using IndexedDB. Your OpenAI API key is used only for embeddings and chat — we never see or store any of your data.</p>
+          <p>All data is stored server-side in PostgreSQL. Your OpenAI API key is stored locally in your browser and used only for embeddings and chat.</p>
           <p className="pt-2">
             Built by{" "}
             <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">

@@ -8,12 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { db } from "@/lib/db";
-import { getApiKey, getEmbeddings } from "@/lib/openai";
-import { parseChatGPTExport, createTextMemories, parseObsidianVault, parseNotionExport } from "@/lib/parsers";
+import { getApiKey } from "@/lib/openai";
 import { toast } from "sonner";
 
-type ImportState = "idle" | "parsing" | "embedding" | "storing" | "done" | "error";
+type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 
 export default function ImportPage() {
   const [state, setState] = useState<ImportState>("idle");
@@ -23,76 +21,94 @@ export default function ImportPage() {
   const [textContent, setTextContent] = useState("");
   const [urlInput, setUrlInput] = useState("");
 
-  const embedAndStore = async (
-    memories: { id: string; content: string; source: string; sourceId: string; sourceTitle: string; timestamp: Date; importedAt: Date; metadata: Record<string, any> }[],
-    sources: any[]
+  const importViaApi = async (
+    formData: FormData
   ) => {
     const apiKey = getApiKey();
-    if (!apiKey) {
+    if (!apiKey && !process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
       toast.error("No API key set. Go to Settings.");
       return;
     }
 
-    setState("embedding");
-    const contents = memories.map((m: any) => m.content);
-    const batchSize = 50;
-    const allEmbeddings: number[][] = [];
+    setState("uploading");
+    setProgress(50);
+    setProgressText("Uploading and processing...");
 
-    for (let i = 0; i < contents.length; i += batchSize) {
-      const batch = contents.slice(i, i + batchSize);
-      setProgress(Math.round((i / contents.length) * 100));
-      setProgressText(`Embedding ${i + 1}-${Math.min(i + batchSize, contents.length)} of ${contents.length}...`);
+    try {
+      const res = await fetch('/api/v1/import', {
+        method: 'POST',
+        headers: {
+          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
+        },
+        body: formData,
+      });
 
-      try {
-        const embeddings = await getEmbeddings(batch, apiKey);
-        allEmbeddings.push(...embeddings);
-      } catch (err: any) {
-        toast.error(`Embedding failed: ${err.message}`);
-        setState("error");
-        return;
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Import failed');
       }
+
+      const result = await res.json();
+      setState("done");
+      setProgress(100);
+      setProgressText(`Done! Added ${result.imported.chunks} memories from ${result.imported.documents} source(s).`);
+      toast.success(`Imported ${result.imported.chunks} memories!`);
+    } catch (err: any) {
+      toast.error(`Import failed: ${err.message}`);
+      setState("error");
+      setProgressText(`Error: ${err.message}`);
+    }
+  };
+
+  const importJsonViaApi = async (
+    documents: Array<{ title: string; content: string; sourceType: string; timestamp?: string }>,
+  ) => {
+    const apiKey = getApiKey();
+    if (!apiKey && !process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+      toast.error("No API key set. Go to Settings.");
+      return;
     }
 
-    setState("storing");
-    setProgressText("Saving to your mind...");
+    setState("uploading");
+    setProgress(50);
+    setProgressText("Uploading and processing...");
 
-    const fullMemories = memories.map((m: any, i: number) => ({
-      ...m,
-      embedding: allEmbeddings[i],
-    }));
+    try {
+      const res = await fetch('/api/v1/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
+        },
+        body: JSON.stringify({ documents }),
+      });
 
-    await db.memories.bulkPut(fullMemories);
-    await db.sources.bulkPut(sources);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Import failed');
+      }
 
-    setState("done");
-    setProgress(100);
-    setProgressText(`Done! Added ${memories.length} memories from ${sources.length} source(s).`);
-    toast.success(`Imported ${memories.length} memories!`);
+      const result = await res.json();
+      setState("done");
+      setProgress(100);
+      setProgressText(`Done! Added ${result.imported.chunks} memories from ${result.imported.documents} source(s).`);
+      toast.success(`Imported ${result.imported.chunks} memories!`);
+    } catch (err: any) {
+      toast.error(`Import failed: ${err.message}`);
+      setState("error");
+      setProgressText(`Error: ${err.message}`);
+    }
   };
 
   const handleChatGPTImport = useCallback(async (file: File) => {
     setState("parsing");
-    setProgressText("Parsing ChatGPT export...");
+    setProgressText("Uploading ChatGPT export...");
     setProgress(10);
 
-    try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      const data = Array.isArray(json) ? json : [json];
-      const { memories, sources } = parseChatGPTExport(data);
-
-      if (memories.length === 0) {
-        toast.error("No conversations found in this file.");
-        setState("idle");
-        return;
-      }
-
-      setProgressText(`Found ${memories.length} chunks from ${sources.length} conversations. Embedding...`);
-      await embedAndStore(memories, sources);
-    } catch (err: any) {
-      toast.error(`Parse error: ${err.message}`);
-      setState("error");
-    }
+    const formData = new FormData();
+    formData.append('files', file);
+    formData.append('source_type', 'chatgpt');
+    await importViaApi(formData);
   }, []);
 
   const handleTextImport = async () => {
@@ -101,14 +117,7 @@ export default function ImportPage() {
     setState("parsing");
     setProgressText("Processing text...");
 
-    const { memories, source } = createTextMemories(textContent, title, "text");
-    if (memories.length === 0) {
-      toast.error("Text too short to import.");
-      setState("idle");
-      return;
-    }
-
-    await embedAndStore(memories, [source]);
+    await importJsonViaApi([{ title, content: textContent, sourceType: 'text' }]);
     setTextTitle("");
     setTextContent("");
   };
@@ -117,28 +126,17 @@ export default function ImportPage() {
     if (!files || files.length === 0) return;
     setState("parsing");
 
-    const allMemories: any[] = [];
-    const allSources: any[] = [];
-
+    const formData = new FormData();
+    formData.append('source_type', 'file');
     for (const file of Array.from(files)) {
       if (!file.name.match(/\.(txt|md|markdown)$/i)) {
         toast.error(`Skipped ${file.name} — only .txt and .md files supported`);
         continue;
       }
-      setProgressText(`Reading ${file.name}...`);
-      const text = await file.text();
-      const { memories, source } = createTextMemories(text, file.name, "file");
-      allMemories.push(...memories);
-      allSources.push(source);
+      formData.append('files', file);
     }
 
-    if (allMemories.length === 0) {
-      toast.error("No importable content found.");
-      setState("idle");
-      return;
-    }
-
-    await embedAndStore(allMemories, allSources);
+    await importViaApi(formData);
   };
 
   const handleUrlImport = async () => {
@@ -147,15 +145,12 @@ export default function ImportPage() {
     setProgressText("Fetching URL...");
 
     try {
-      // Use a CORS proxy or allorigins
       const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput.trim())}`;
       const res = await fetch(proxyUrl);
       if (!res.ok) throw new Error("Failed to fetch URL");
       const html = await res.text();
 
-      // Basic HTML to text extraction
       const doc = new DOMParser().parseFromString(html, "text/html");
-      // Remove scripts and styles
       doc.querySelectorAll("script, style, nav, footer, header").forEach((el) => el.remove());
       const text = doc.body?.innerText || doc.body?.textContent || "";
 
@@ -166,10 +161,7 @@ export default function ImportPage() {
       }
 
       const title = doc.title || urlInput.trim();
-      const { memories, source } = createTextMemories(text, title, "url");
-      source.metadata = { ...source.metadata, url: urlInput.trim() };
-
-      await embedAndStore(memories, [source]);
+      await importJsonViaApi([{ title, content: text, sourceType: 'url' }]);
       setUrlInput("");
     } catch (err: any) {
       toast.error(`URL fetch failed: ${err.message}`);
@@ -182,23 +174,15 @@ export default function ImportPage() {
     setState("parsing");
     setProgressText("Reading Obsidian vault...");
 
-    const fileData: { name: string; content: string }[] = [];
+    const formData = new FormData();
+    formData.append('source_type', 'file');
     for (const file of Array.from(files)) {
       if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-        const content = await file.text();
-        fileData.push({ name: file.webkitRelativePath || file.name, content });
+        formData.append('files', file);
       }
     }
 
-    const { memories, sources } = parseObsidianVault(fileData);
-    if (memories.length === 0) {
-      toast.error("No importable notes found.");
-      setState("idle");
-      return;
-    }
-
-    setProgressText(`Found ${memories.length} chunks from ${sources.length} notes. Embedding...`);
-    await embedAndStore(memories, sources);
+    await importViaApi(formData);
   };
 
   const handleNotionImport = async (files: FileList | null) => {
@@ -206,23 +190,15 @@ export default function ImportPage() {
     setState("parsing");
     setProgressText("Reading Notion export...");
 
-    const fileData: { name: string; content: string }[] = [];
+    const formData = new FormData();
+    formData.append('source_type', 'file');
     for (const file of Array.from(files)) {
       if (file.name.endsWith('.md')) {
-        const content = await file.text();
-        fileData.push({ name: file.webkitRelativePath || file.name, content });
+        formData.append('files', file);
       }
     }
 
-    const { memories, sources } = parseNotionExport(fileData);
-    if (memories.length === 0) {
-      toast.error("No importable pages found.");
-      setState("idle");
-      return;
-    }
-
-    setProgressText(`Found ${memories.length} chunks from ${sources.length} pages. Embedding...`);
-    await embedAndStore(memories, sources);
+    await importViaApi(formData);
   };
 
   const resetState = () => {
@@ -427,6 +403,7 @@ export default function ImportPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value="obsidian" className="mt-6">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
@@ -454,7 +431,7 @@ export default function ImportPage() {
               >
                 <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
                 <p className="text-zinc-400">Drop your Obsidian .md files here</p>
-                <p className="text-sm text-zinc-600 mt-1">Supports .md and .txt — YAML frontmatter is automatically stripped</p>
+                <p className="text-sm text-zinc-600 mt-1">Supports .md and .txt</p>
               </div>
               <input
                 id="obsidian-upload"

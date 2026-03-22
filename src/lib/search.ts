@@ -1,37 +1,12 @@
-import type { Memory } from './db';
-
-export function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-export function searchMemories(
-  queryEmbedding: number[],
-  memories: Memory[],
-  topK = 10
-): (Memory & { score: number })[] {
-  const scored = memories
-    .filter(m => m.embedding && m.embedding.length > 0)
-    .map(m => ({
-      ...m,
-      score: cosineSimilarity(queryEmbedding, m.embedding),
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  return scored.slice(0, topK);
-}
+// Search utilities — server-side search is now handled by /api/v1/search
+// This file only exports the RAG prompt builder for client-side use
 
 export function buildRAGPrompt(
   query: string,
-  relevantMemories: (Memory & { score: number })[]
+  relevantMemories: Array<{ content: string; sourceTitle: string; sourceType: string; score: number; createdAt: string }>
 ): { role: string; content: string }[] {
   const context = relevantMemories
-    .map((m, i) => `[${i + 1}] Source: "${m.sourceTitle}" (${m.source}, ${m.timestamp.toLocaleDateString()})\n${m.content}`)
+    .map((m, i) => `[${i + 1}] Source: "${m.sourceTitle}" (${m.sourceType}, ${new Date(m.createdAt).toLocaleDateString()})\n${m.content}`)
     .join('\n\n---\n\n');
 
   return [

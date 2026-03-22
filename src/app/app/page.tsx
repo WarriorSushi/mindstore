@@ -7,9 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiKey, setApiKey, testApiKey } from "@/lib/openai";
-import { getStats } from "@/lib/db";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
+
+async function fetchStats() {
+  try {
+    const res = await fetch('/api/v1/stats');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
 
 export default function DashboardPage() {
   const [apiKey, setKey] = useState<string | null>(null);
@@ -23,7 +30,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setKey(getApiKey());
     setDemo(isDemoMode());
-    getStats().then(setStats);
+    fetchStats().then(setStats);
     setLoaded(true);
   }, []);
 
@@ -31,7 +38,7 @@ export default function DashboardPage() {
     setLoadingDemo(true);
     await loadDemoData();
     setDemo(true);
-    const s = await getStats();
+    const s = await fetchStats();
     setStats(s);
     setLoadingDemo(false);
     toast.success("Demo loaded! Explore 24 sample memories.");

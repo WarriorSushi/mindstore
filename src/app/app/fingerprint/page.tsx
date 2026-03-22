@@ -5,8 +5,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Brain, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { generateFingerprint } from '@/lib/engines/consolidation';
-
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
   () => import('reagraph').then(mod => mod.GraphCanvas),
@@ -14,7 +12,7 @@ const GraphCanvas = dynamic(
 );
 
 export default function FingerprintPage() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof generateFingerprint>> | null>(null);
+  const [data, setData] = useState<{ nodes: any[]; edges: any[]; clusters: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'3d' | 'stats'>('3d');
 
@@ -25,7 +23,9 @@ export default function FingerprintPage() {
   async function loadFingerprint() {
     setLoading(true);
     try {
-      const fp = await generateFingerprint();
+      const res = await fetch('/api/v1/fingerprint');
+      if (!res.ok) throw new Error('Failed');
+      const fp = await res.json();
       setData(fp);
     } catch (e) {
       console.error('Failed to generate fingerprint:', e);

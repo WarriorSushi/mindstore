@@ -4,22 +4,40 @@ import { sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = req.headers.get('x-user-id') || 'default';
 
-    const memoriesCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}::uuid`);
-    const sourcesBreakdown = await db.execute(sql`SELECT source_type, COUNT(*)::int as count FROM memories WHERE user_id = ${userId}::uuid GROUP BY source_type ORDER BY count DESC`);
-    const treeNodes = await db.execute(sql`SELECT COUNT(*)::int as count FROM tree_index WHERE user_id = ${userId}::uuid`);
-    const profileCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM profile WHERE user_id = ${userId}::uuid`);
-    const factsCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM facts WHERE user_id = ${userId}::uuid`);
-    const recentActivity = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}::uuid AND imported_at > NOW() - INTERVAL '7 days'`);
+    const memoriesCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}`);
+    const sourcesBreakdown = await db.execute(sql`
+      SELECT source_type as type, COUNT(*)::int as count 
+      FROM memories WHERE user_id = ${userId} 
+      GROUP BY source_type ORDER BY count DESC
+    `);
+    const topSources = await db.execute(sql`
+      SELECT source_type as type, source_title as title, source_id as id, COUNT(*)::int as item_count
+      FROM memories WHERE user_id = ${userId}
+      GROUP BY source_type, source_title, source_id
+      ORDER BY item_count DESC
+      LIMIT 10
+    `);
+
+    const totalMemories = (memoriesCount as any)[0]?.count || 0;
+    const byType: Record<string, number> = { chatgpt: 0, text: 0, file: 0, url: 0 };
+    for (const row of sourcesBreakdown as any[]) {
+      byType[row.type] = row.count;
+    }
+
+    const totalSources = (topSources as any[]).length;
 
     return NextResponse.json({
-      memories: (memoriesCount as any)[0]?.count || 0,
-      sources: sourcesBreakdown,
-      treeNodes: (treeNodes as any)[0]?.count || 0,
-      profileItems: (profileCount as any)[0]?.count || 0,
-      facts: (factsCount as any)[0]?.count || 0,
-      recentImports: (recentActivity as any)[0]?.count || 0,
+      totalMemories,
+      totalSources,
+      byType,
+      topSources: (topSources as any[]).map(r => ({
+        id: r.id || r.title,
+        type: r.type,
+        title: r.title || 'Untitled',
+        itemCount: r.item_count,
+      })),
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';

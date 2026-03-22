@@ -10,14 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
  * CURRENT STATUS: Placeholder / Discovery endpoint
  * 
  * ARCHITECTURE NOTE:
- * MindStore v1 stores all data client-side in IndexedDB. For MCP to work,
- * we need one of:
- * 1. A sync layer that mirrors IndexedDB to a server-side store
- * 2. A local MCP server that runs alongside the browser (e.g. via CLI)
- * 3. A hybrid approach where import happens server-side
- * 
- * For now, this endpoint serves as a discovery/info endpoint and will
- * be expanded as the architecture evolves.
+ * MindStore stores all data server-side in PostgreSQL.
+ * This endpoint serves as a discovery/info endpoint for MCP clients.
  */
 
 const MCP_SERVER_INFO = {

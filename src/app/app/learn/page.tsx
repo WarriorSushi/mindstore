@@ -6,9 +6,7 @@ import { Send, Brain, User, Loader2, Sparkles, CheckCircle2, RotateCcw } from "l
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getApiKey, getEmbeddings, streamChat } from "@/lib/openai";
-import { db, type Memory } from "@/lib/db";
 
 interface Message {
   role: "user" | "assistant";
@@ -92,31 +90,32 @@ export default function LearnPage() {
     }
   }, [messages]);
 
-  // Load saved facts count
+  // Load saved facts count from server
   useEffect(() => {
-    db.memories.where("source").equals("interview").count().then(setFactsSaved);
+    fetch('/api/v1/memories?source=text&search=Learned%3A&limit=1')
+      .then(r => r.json())
+      .then(data => setFactsSaved(data.total || 0))
+      .catch(() => {});
   }, []);
 
   const saveFact = useCallback(async (fact: LearnedFact) => {
     try {
       const content = `${fact.key}: ${fact.value}`;
       const apiKey = getApiKey();
-      let embedding: number[] = [];
-      if (apiKey) {
-        const embeddings = await getEmbeddings([content], apiKey);
-        embedding = embeddings[0] || [];
-      }
       
-      await db.memories.add({
-        id: `fact-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        content,
-        embedding,
-        source: "text" as const,
-        sourceId: `interview-${fact.category}`,
-        sourceTitle: `Learned: ${fact.key}`,
-        timestamp: new Date(),
-        importedAt: new Date(),
-        metadata: { category: fact.category, type: "learned-fact", key: fact.key, value: fact.value },
+      await fetch('/api/v1/memories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'x-openai-key': apiKey } : {}),
+        },
+        body: JSON.stringify({
+          content,
+          sourceType: 'text',
+          sourceId: `interview-${fact.category}`,
+          sourceTitle: `Learned: ${fact.key}`,
+          metadata: { category: fact.category, type: 'learned-fact', key: fact.key, value: fact.value },
+        }),
       });
       setFactsSaved(prev => prev + 1);
     } catch (e) {

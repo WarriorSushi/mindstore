@@ -7,7 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { db, type Memory, type Source } from "@/lib/db";
+
+interface Memory {
+  id: string;
+  content: string;
+  source: string;
+  sourceId: string;
+  sourceTitle: string;
+  timestamp: string;
+  importedAt: string;
+  metadata: Record<string, any>;
+}
+
+interface Source {
+  id: string;
+  type: string;
+  title: string;
+  itemCount: number;
+}
 
 const sourceIcons: Record<string, any> = {
   chatgpt: MessageCircle,
@@ -26,26 +43,40 @@ const sourceColors: Record<string, string> = {
 export default function ExplorePage() {
   const [sources, setSources] = useState<Source[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [totalMemories, setTotalMemories] = useState(0);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Memory | null>(null);
   const [visibleCount, setVisibleCount] = useState(50);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    db.sources.toArray().then(setSources);
-    db.memories.toArray().then(setMemories);
+    Promise.all([
+      fetch('/api/v1/sources').then(r => r.json()),
+      fetch('/api/v1/memories?limit=500').then(r => r.json()),
+    ]).then(([srcData, memData]) => {
+      setSources(srcData.sources || []);
+      setMemories(memData.memories || []);
+      setTotalMemories(memData.total || 0);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
-  const filtered = memories
-    .filter((m) => {
-      if (filter && m.source !== filter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return m.content.toLowerCase().includes(q) || m.sourceTitle.toLowerCase().includes(q);
-      }
-      return true;
-    })
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  // Re-fetch when search/filter changes (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const params = new URLSearchParams({ limit: '500' });
+      if (search) params.set('search', search);
+      if (filter) params.set('source', filter);
+      fetch(`/api/v1/memories?${params}`).then(r => r.json()).then(data => {
+        setMemories(data.memories || []);
+        setTotalMemories(data.total || 0);
+      }).catch(() => {});
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [search, filter]);
+
+  const filtered = memories;
 
   const topTopics = sources
     .reduce((acc, s) => {
@@ -62,7 +93,7 @@ export default function ExplorePage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Explore Your Mind</h1>
-        <p className="text-zinc-400 mt-1">{memories.length.toLocaleString()} memories from {sources.length} sources</p>
+        <p className="text-zinc-400 mt-1">{totalMemories.toLocaleString()} memories from {sources.length} sources</p>
       </div>
 
       {/* Filters */}
@@ -86,7 +117,7 @@ export default function ExplorePage() {
             All
           </Button>
           {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-            const count = memories.filter((m) => m.source === type).length;
+            const count = sources.filter((s) => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
             if (count === 0) return null;
             const Icon = sourceIcons[type];
             return (
@@ -164,9 +195,9 @@ export default function ExplorePage() {
           </Button>
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !loading && (
           <div className="text-center py-12 text-zinc-500">
-            {memories.length === 0 ? "No memories yet. Import some knowledge to get started." : "No results found."}
+            {totalMemories === 0 ? "No memories yet. Import some knowledge to get started." : "No results found."}
           </div>
         )}
       </div>

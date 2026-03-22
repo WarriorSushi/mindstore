@@ -4,9 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Brain, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { db } from "@/lib/db";
-import { getApiKey, getEmbeddings, streamChat } from "@/lib/openai";
-import { searchMemories, buildRAGPrompt } from "@/lib/search";
+import { getApiKey, streamChat } from "@/lib/openai";
 import { toast } from "sonner";
 
 interface Message {
@@ -31,7 +29,7 @@ export default function ChatPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    db.memories.count().then(setMemoryCount);
+    fetch('/api/v1/stats').then(r => r.json()).then(data => setMemoryCount(data.totalMemories || 0)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -58,12 +56,14 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      // 1. Embed the query
-      const [queryEmbedding] = await getEmbeddings([query], apiKey);
-
-      // 2. Search memories
-      const allMemories = await db.memories.toArray();
-      const results = searchMemories(queryEmbedding, allMemories, 8);
+      // Search via server API (triple-layer fusion)
+      const searchRes = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`, {
+        headers: { 'x-openai-key': apiKey },
+      });
+      
+      if (!searchRes.ok) throw new Error('Search failed');
+      const searchData = await searchRes.json();
+      const results = searchData.results || [];
 
       if (results.length === 0) {
         setMessages((prev) => [
@@ -74,8 +74,29 @@ export default function ChatPage() {
         return;
       }
 
-      // 3. Build RAG prompt and stream response
-      const ragMessages = buildRAGPrompt(query, results);
+      // Build RAG prompt
+      const context = results
+        .map((r: any, i: number) => `[${i + 1}] Source: "${r.sourceTitle}" (${r.sourceType}, ${new Date(r.createdAt).toLocaleDateString()})\n${r.content}`)
+        .join('\n\n---\n\n');
+
+      const ragMessages = [
+        {
+          role: 'system',
+          content: `You are Mindstore, a personal knowledge assistant. You answer questions based ONLY on the user's own knowledge stored in their personal database. 
+
+When answering:
+- Synthesize information across multiple sources when relevant
+- Always cite your sources using [1], [2], etc.
+- If the knowledge base doesn't contain relevant information, say so honestly
+- Be concise but thorough
+- Highlight connections between different pieces of knowledge the user might not have noticed`,
+        },
+        {
+          role: 'user',
+          content: `Here is relevant context from my personal knowledge base:\n\n${context}\n\n---\n\nMy question: ${query}`,
+        },
+      ];
+
       let fullResponse = "";
 
       setMessages((prev) => [
@@ -83,9 +104,9 @@ export default function ChatPage() {
         {
           role: "assistant",
           content: "",
-          sources: results.map((r) => ({
-            title: r.sourceTitle,
-            type: r.source,
+          sources: results.map((r: any) => ({
+            title: r.sourceTitle || '',
+            type: r.sourceType,
             score: r.score,
           })),
         },

@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { db } from "@/lib/db";
 import { toast } from "sonner";
 
 interface ConnectionConfig {
@@ -26,14 +25,15 @@ export default function ConnectPage() {
 
   useEffect(() => {
     loadStats();
-    // Set API endpoint based on current URL
     setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore.frain.cloud/api/mcp");
   }, []);
 
   async function loadStats() {
-    const memories = await db.memories.count();
-    const sources = await db.sources.count();
-    setStats({ memories, sources });
+    try {
+      const res = await fetch('/api/v1/stats');
+      const data = await res.json();
+      setStats({ memories: data.totalMemories || 0, sources: data.totalSources || 0 });
+    } catch { /* ignore */ }
   }
 
   function copyToClipboard(text: string, id: string) {
