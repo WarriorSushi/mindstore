@@ -4,17 +4,17 @@ import { sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
-    const memoriesCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}`);
+    const memoriesCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}::uuid`);
     const sourcesBreakdown = await db.execute(sql`
       SELECT source_type as type, COUNT(*)::int as count 
-      FROM memories WHERE user_id = ${userId} 
+      FROM memories WHERE user_id = ${userId}::uuid 
       GROUP BY source_type ORDER BY count DESC
     `);
     const topSources = await db.execute(sql`
       SELECT source_type as type, source_title as title, source_id as id, COUNT(*)::int as item_count
-      FROM memories WHERE user_id = ${userId}
+      FROM memories WHERE user_id = ${userId}::uuid
       GROUP BY source_type, source_title, source_id
       ORDER BY item_count DESC
       LIMIT 10

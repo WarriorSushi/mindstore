@@ -7,11 +7,11 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
     const memories = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at
-      FROM memories WHERE user_id = ${userId}
+      FROM memories WHERE user_id = ${userId}::uuid
       ORDER BY created_at
     `);
 

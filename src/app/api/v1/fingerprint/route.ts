@@ -7,12 +7,12 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
     // Get sources (grouped)
     const sourcesResult = await db.execute(sql`
       SELECT source_type as type, source_title as title, source_id as id, COUNT(*)::int as item_count
-      FROM memories WHERE user_id = ${userId}
+      FROM memories WHERE user_id = ${userId}::uuid
       GROUP BY source_type, source_title, source_id
       ORDER BY item_count DESC
     `);
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Get a sample of memories
     const memoriesResult = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, embedding
-      FROM memories WHERE user_id = ${userId}
+      FROM memories WHERE user_id = ${userId}::uuid
       ORDER BY RANDOM()
       LIMIT 100
     `);
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       const crossEdges = await db.execute(sql`
         SELECT a.id as a_id, b.id as b_id, 1 - (a.embedding <=> b.embedding) as similarity
         FROM memories a, memories b
-        WHERE a.user_id = ${userId} AND b.user_id = ${userId}
+        WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
           AND a.id < b.id
           AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
           AND 1 - (a.embedding <=> b.embedding) > 0.75

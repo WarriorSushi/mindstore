@@ -60,7 +60,7 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
     const apiKey = await getServerApiKey();
     
     const contentType = req.headers.get('content-type') || '';
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, created_at, imported_at)
         VALUES (
           ${crypto.randomUUID()},
-          ${userId},
+          ${userId}::uuid,
           ${chunk.content},
           ${embStr}::vector,
           ${chunk.sourceType},

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('q');
     const limit = parseInt(searchParams.get('limit') || '10');
     const sourceType = searchParams.get('source');
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
 

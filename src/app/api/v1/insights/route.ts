@@ -7,13 +7,13 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
     // Get memories with embeddings for analysis
     const memories = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at, embedding
       FROM memories
-      WHERE user_id = ${userId} AND embedding IS NOT NULL
+      WHERE user_id = ${userId}::uuid AND embedding IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 200
     `);
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const allMemories = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at
       FROM memories
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId}::uuid
       ORDER BY created_at DESC
     `);
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title,
         1 - (a.embedding <=> b.embedding) as similarity
       FROM memories a, memories b
-      WHERE a.user_id = ${userId} AND b.user_id = ${userId}
+      WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
         AND a.id < b.id
         AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
         AND a.source_id != b.source_id
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
         b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title
       FROM memories a, memories b
-      WHERE a.user_id = ${userId} AND b.user_id = ${userId}
+      WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
         AND a.id < b.id
         AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
         AND 1 - (a.embedding <=> b.embedding) > 0.7
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     const totalCount = mems.length;
 
     const sourcesResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT source_id)::int as count FROM memories WHERE user_id = ${userId}
+      SELECT COUNT(DISTINCT source_id)::int as count FROM memories WHERE user_id = ${userId}::uuid
     `);
     const sourceCount = (sourcesResult as any)[0]?.count || 0;
 

@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
     const body = await req.json();
     const { memories } = body;
 

@@ -9,14 +9,14 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const source = searchParams.get('source') || '';
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const conditions = [sql`user_id = ${userId}`];
+    const conditions = [sql`user_id = ${userId}::uuid`];
     if (source) conditions.push(sql`source_type = ${source}`);
     if (search) {
       conditions.push(sql`(content ILIKE ${'%' + search + '%'} OR source_title ILIKE ${'%' + search + '%'})`);
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
     const apiKey = await getServerApiKey();
     const body = await req.json();
     const { content, sourceType, sourceId, sourceTitle, metadata } = body;
@@ -101,13 +101,13 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
-    await db.execute(sql`DELETE FROM memories WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM tree_index WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM connections WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM contradictions WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM facts WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM profile WHERE user_id = ${userId}`);
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    await db.execute(sql`DELETE FROM memories WHERE user_id = ${userId}::uuid`);
+    await db.execute(sql`DELETE FROM tree_index WHERE user_id = ${userId}::uuid`);
+    await db.execute(sql`DELETE FROM connections WHERE user_id = ${userId}::uuid`);
+    await db.execute(sql`DELETE FROM contradictions WHERE user_id = ${userId}::uuid`);
+    await db.execute(sql`DELETE FROM facts WHERE user_id = ${userId}::uuid`);
+    await db.execute(sql`DELETE FROM profile WHERE user_id = ${userId}::uuid`);
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';

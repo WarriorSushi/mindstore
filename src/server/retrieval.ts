@@ -97,7 +97,7 @@ async function searchBM25(
   if (!tsQuery) return [];
 
   const conditions = [
-    sql`m.user_id = ${userId}`,
+    sql`m.user_id = ${userId}::uuid`,
     sql`to_tsvector('english', m.content) @@ to_tsquery('english', ${tsQuery})`,
   ];
 
@@ -155,7 +155,7 @@ async function searchVector(
   const embeddingStr = `[${queryEmbedding.join(',')}]`;
 
   const conditions = [
-    sql`m.user_id = ${userId}`,
+    sql`m.user_id = ${userId}::uuid`,
     sql`m.embedding IS NOT NULL`,
   ];
 
@@ -220,7 +220,7 @@ async function searchTree(
       t.level,
       1 - (t.embedding <=> ${embeddingStr}::vector) as similarity
     FROM tree_index t
-    WHERE t.user_id = ${userId} AND t.embedding IS NOT NULL
+    WHERE t.user_id = ${userId}::uuid AND t.embedding IS NOT NULL
     ORDER BY t.embedding <=> ${embeddingStr}::vector
     LIMIT 5
   `);

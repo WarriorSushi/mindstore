@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || 'default';
+    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
 
     const results = await db.execute(sql`
       SELECT 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         COUNT(*)::int as item_count,
         MAX(imported_at) as imported_at
       FROM memories
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId}::uuid
       GROUP BY source_type, source_title, source_id
       ORDER BY item_count DESC
     `);
