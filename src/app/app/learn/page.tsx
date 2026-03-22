@@ -249,7 +249,7 @@ export default function LearnPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                ⚠️ Set your OpenAI API key in <a href="/app/settings" className="underline">Settings</a> first.
+                ⚠️ Connect an AI provider in <a href="/app/settings" className="underline">Settings</a> first (Gemini is free).
               </motion.div>
             )}
 

@@ -87,12 +87,13 @@ async function searchBM25(
   dateTo?: Date,
 ): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>> {
   // Convert query to tsquery format
+  // Use OR between terms for broader recall — RRF ranking will sort quality
   const tsQuery = query
     .split(/\s+/)
     .filter(w => w.length > 1)
     .map(w => w.replace(/[^\w]/g, ''))
     .filter(Boolean)
-    .join(' & ');
+    .join(' | ');
 
   if (!tsQuery) return [];
 
