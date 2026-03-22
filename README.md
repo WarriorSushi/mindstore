@@ -67,15 +67,35 @@ Challenges your assumptions using **your own stored knowledge**. Not generic cou
 
 ## Quick Start
 
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 16 with [pgvector](https://github.com/pgvector/pgvector) extension
+- OpenAI API key (for embeddings + chat)
+
+### Setup
+
 ```bash
 git clone https://github.com/WarriorSushi/mindstore.git
 cd mindstore
 npm install
+
+# Create database
+createdb mindstore
+psql -d mindstore -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# Configure
+cp .env.example .env
+# Edit .env: set DATABASE_URL and optionally OPENAI_API_KEY
+
+# Run migrations
+npx tsx src/server/migrate.ts
+
+# Start
 npm run dev
 # Open http://localhost:3000
 ```
 
-Add your OpenAI API key in Settings (stays in your browser, never sent to us).
+Add your OpenAI API key in Settings (stored securely server-side in PostgreSQL).
 
 ## Connect Your AI
 
@@ -142,37 +162,42 @@ src/
 │   │   ├── insights/       # Consolidation reports
 │   │   ├── connect/        # MCP setup guides
 │   │   └── settings/       # API key, data management
-│   └── api/                # Server routes
+│   └── api/v1/             # Server API routes (13 endpoints)
 ├── lib/
-│   ├── db.ts               # Dexie/IndexedDB (client-side)
-│   ├── search.ts           # Cosine similarity + RAG
-│   ├── openai.ts           # Embeddings + streaming chat
+│   ├── openai.ts           # Thin API client (calls server routes)
+│   ├── search.ts           # RAG prompt builder
 │   ├── parsers.ts          # Import parsers
-│   └── engines/
-│       └── consolidation.ts # The brain — connections, contradictions, forgetting
+│   └── demo.ts             # Demo mode with sample data
+├── server/
+│   ├── db.ts               # PostgreSQL connection (Drizzle ORM)
+│   ├── schema.ts           # Database schema with pgvector
+│   ├── retrieval.ts        # Triple-layer search (BM25 + vector + tree)
+│   ├── apikey.ts           # Server-side API key management
+│   └── migrate.ts          # Database migrations
 ├── mcp/
-│   └── server.ts           # MCP server (SQLite + FTS5, server-side)
+│   └── server.ts           # MCP server (SQLite + FTS5, standalone)
 └── components/ui/          # shadcn/ui components
 ```
 
-**Dual architecture:**
-- **Browser app** — Dexie/IndexedDB, zero server needed, 100% private
-- **MCP server** — SQLite + FTS5, runs locally, serves any AI client
+**Architecture:**
+- **Web app** — Next.js with server-side API routes, PostgreSQL + pgvector
+- **MCP server** — SQLite + FTS5, runs standalone, serves any AI client
 
 ## Tech Stack
 
 - **Framework:** Next.js 16, TypeScript, Tailwind CSS
 - **UI:** shadcn/ui, Framer Motion, Lucide icons
 - **Visualization:** reagraph (WebGL 3D graphs)
-- **Client Storage:** Dexie (IndexedDB)
-- **Server Storage:** SQLite + FTS5 full-text search
+- **Database:** PostgreSQL 16 + pgvector (cosine similarity search)
+- **ORM:** Drizzle ORM
+- **Search:** Triple-layer fusion (BM25 + vector + tree index)
 - **Embeddings:** OpenAI text-embedding-3-small (BYO key)
 - **Chat:** OpenAI streaming with RAG context injection
 - **Protocol:** Model Context Protocol (MCP)
 
 ## Privacy
 
-Your data never leaves your machine. The web app stores everything in your browser's IndexedDB. The MCP server stores in a local SQLite file. No accounts, no cloud, no tracking.
+Your data stays on your own server. The web app stores everything in PostgreSQL with pgvector for semantic search. The MCP server uses a local SQLite file. Self-hosted, no tracking.
 
 ## License
 
