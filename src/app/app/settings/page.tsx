@@ -191,11 +191,11 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Info className="w-5 h-5 text-violet-400" />
-            About Mindstore
+            About MindStore
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-zinc-400 space-y-2">
-          <p><strong className="text-zinc-200">Mindstore</strong> is your personal knowledge base. Import your ChatGPT conversations, notes, and articles, then ask questions and get synthesized answers from your own brain.</p>
+          <p><strong className="text-zinc-200">MindStore</strong> is your personal knowledge base. Import your ChatGPT conversations, notes, and articles, then ask questions and get synthesized answers from your own brain.</p>
           <p>All data is stored server-side in PostgreSQL. Your OpenAI API key is stored locally in your browser and used only for embeddings and chat.</p>
           <p className="pt-2">
             Built by{" "}

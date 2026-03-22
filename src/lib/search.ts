@@ -12,7 +12,7 @@ export function buildRAGPrompt(
   return [
     {
       role: 'system',
-      content: `You are Mindstore, a personal knowledge assistant. You answer questions based ONLY on the user's own knowledge stored in their personal database. 
+      content: `You are MindStore, a personal knowledge assistant. You answer questions based ONLY on the user's own knowledge stored in their personal database. 
 
 When answering:
 - Synthesize information across multiple sources when relevant

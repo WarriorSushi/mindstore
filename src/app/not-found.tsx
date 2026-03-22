@@ -15,7 +15,7 @@ export default function NotFound() {
         </div>
         <Link href="/">
           <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 gap-2">
-            <ArrowLeft className="w-4 h-4" /> Back to Mindstore
+            <ArrowLeft className="w-4 h-4" /> Back to MindStore
           </Button>
         </Link>
       </div>

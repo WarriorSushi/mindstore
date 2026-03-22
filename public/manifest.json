@@ -1,0 +1,16 @@
+{
+  "name": "MindStore",
+  "short_name": "MindStore",
+  "description": "Your Mind, Connected to Every AI.",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

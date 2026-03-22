@@ -83,7 +83,7 @@ export default function DashboardPage() {
         <Card className="w-full max-w-lg bg-zinc-900 border-zinc-800">
           <CardHeader className="text-center">
             <Brain className="w-12 h-12 text-violet-400 mx-auto mb-4" />
-            <CardTitle className="text-2xl">Welcome to Mindstore</CardTitle>
+            <CardTitle className="text-2xl">Welcome to MindStore</CardTitle>
             <p className="text-zinc-400 mt-2">
               To get started, you&apos;ll need an OpenAI API key. Your key stays in your browser — we never see it.
             </p>

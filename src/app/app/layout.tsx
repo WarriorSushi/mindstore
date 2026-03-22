@@ -22,7 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-16 md:w-56 border-r border-zinc-800/50 bg-zinc-950 flex flex-col shrink-0">
         <Link href="/" className="h-16 flex items-center gap-2 px-4 border-b border-zinc-800/50">
           <Brain className="w-6 h-6 text-violet-400 shrink-0" />
-          <span className="font-semibold hidden md:block">Mindstore</span>
+          <span className="font-semibold hidden md:block">MindStore</span>
         </Link>
         <nav className="flex-1 py-4 px-2 space-y-1">
           {navItems.map((item) => {
