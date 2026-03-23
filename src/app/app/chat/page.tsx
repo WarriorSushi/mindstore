@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
@@ -39,6 +40,8 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const searchParams = useSearchParams();
+  const autoSentRef = useRef(false);
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -49,6 +52,20 @@ export default function ChatPage() {
     checkApiKey().then((d) => setHasAI(d.hasApiKey));
     refreshHistory();
   }, []);
+
+  // Auto-send query from ?q= param (e.g. from Explore "Ask about this")
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && !autoSentRef.current && memoryCount > 0) {
+      autoSentRef.current = true;
+      // Clear the URL param to avoid re-sending on re-render
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      window.history.replaceState(null, "", url.toString());
+      // Small delay to ensure hasAI state is resolved
+      setTimeout(() => handleSend(q), 200);
+    }
+  }, [searchParams, memoryCount]);
 
   // Auto-scroll on new messages
   useEffect(() => {

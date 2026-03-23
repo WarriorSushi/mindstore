@@ -6,6 +6,7 @@ import {
   Loader2, MessageCircle, FileText, Globe, Type, Sparkles,
   ChevronRight, Activity,
 } from 'lucide-react';
+import { PageTransition, Stagger } from '@/components/PageTransition';
 
 interface MemoryLike {
   id: string;
@@ -75,35 +76,40 @@ export default function InsightsPage() {
   ];
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <PageTransition className="space-y-6 md:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Mind Insights</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">Connections, contradictions &amp; memory health</p>
+      <Stagger>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Mind Insights</h1>
+            <p className="text-[13px] text-zinc-500 mt-0.5">Connections, contradictions &amp; memory health</p>
+          </div>
+          <button
+            onClick={runConsolidation}
+            disabled={loading}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] text-[12px] font-medium text-zinc-400 transition-all active:scale-[0.96] disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{loading ? 'Analyzing…' : 'Refresh'}</span>
+          </button>
         </div>
-        <button
-          onClick={runConsolidation}
-          disabled={loading}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] text-[12px] font-medium text-zinc-400 transition-all active:scale-[0.96] disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">{loading ? 'Analyzing…' : 'Refresh'}</span>
-        </button>
-      </div>
+      </Stagger>
 
       {/* Loading State */}
       {loading && !metabolism && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
-            <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+        <Stagger>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
+              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+            </div>
+            <p className="text-[13px] text-zinc-500">Analyzing your knowledge…</p>
           </div>
-          <p className="text-[13px] text-zinc-500">Analyzing your knowledge…</p>
-        </div>
+        </Stagger>
       )}
 
       {/* Metabolism Score Card */}
       {metabolism && (
+        <Stagger>
         <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] to-fuchsia-500/[0.04] pointer-events-none" />
           <div className="relative p-5 md:p-6">
@@ -134,11 +140,13 @@ export default function InsightsPage() {
             </div>
           </div>
         </div>
+        </Stagger>
       )}
 
       {/* Mind Growth Card */}
       {mindDiff && mindDiff.newMemories > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+        <Stagger>
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.06] to-emerald-500/[0.02] pointer-events-none" />
           <div className="relative p-4 md:p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -164,11 +172,13 @@ export default function InsightsPage() {
             )}
           </div>
         </div>
+        </Stagger>
       )}
 
       {/* Tab Selector */}
       {!loading && (
         <>
+          <Stagger>
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
             {tabs.map((t) => (
               <button
@@ -186,7 +196,9 @@ export default function InsightsPage() {
               </button>
             ))}
           </div>
+          </Stagger>
 
+          <Stagger>
           {/* Tab Content */}
           <div className="space-y-2">
             {/* ─── Connections ─── */}
@@ -313,9 +325,10 @@ export default function InsightsPage() {
               </>
             )}
           </div>
+          </Stagger>
         </>
       )}
-    </div>
+    </PageTransition>
   );
 }
 

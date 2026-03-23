@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plug, Copy, Check, ExternalLink, Brain, Terminal, Shield, Zap, Server } from "lucide-react";
 import { toast } from "sonner";
+import { PageTransition, Stagger } from "@/components/PageTransition";
 
 interface ConnectionConfig {
   name: string;
@@ -98,14 +99,17 @@ export default function ConnectPage() {
   const activeClientData = clients.find(c => c.name === activeClient)!;
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <PageTransition className="space-y-5 md:space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Connect</h1>
-        <p className="text-[13px] text-zinc-500 mt-0.5">Give any AI access to your knowledge via MCP</p>
-      </div>
+      <Stagger>
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Connect</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">Give any AI access to your knowledge via MCP</p>
+        </div>
+      </Stagger>
 
       {/* Status Banner */}
+      <Stagger>
       <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-500/[0.06] to-fuchsia-500/[0.06] border border-violet-500/15 px-4 py-3">
         <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
           <Brain className="w-4 h-4 text-violet-400" />
@@ -126,8 +130,10 @@ export default function ConnectPage() {
           {stats.memories > 0 ? "Ready" : "Empty"}
         </span>
       </div>
+      </Stagger>
 
       {/* How it Works */}
+      <Stagger>
       <div className="space-y-2.5">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">How it works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -146,8 +152,10 @@ export default function ConnectPage() {
           ))}
         </div>
       </div>
+      </Stagger>
 
       {/* Client Configs */}
+      <Stagger>
       <div className="space-y-2.5">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Connect to an AI</p>
 
@@ -251,6 +259,7 @@ export default function ConnectPage() {
           Use this endpoint for any MCP-compatible client not listed above, or for building custom integrations.
         </p>
       </div>
-    </div>
+    </Stagger>
+    </PageTransition>
   );
 }
