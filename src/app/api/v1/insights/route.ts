@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
         WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
           AND a.id < b.id
           AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
+          AND vector_dims(a.embedding) = vector_dims(b.embedding)
           AND a.source_title != b.source_title
           AND 1 - (a.embedding <=> b.embedding) BETWEEN 0.65 AND 0.95
         ORDER BY 1 - (a.embedding <=> b.embedding) DESC
@@ -125,6 +126,7 @@ export async function GET(req: NextRequest) {
         WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
           AND a.id < b.id
           AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
+          AND vector_dims(a.embedding) = vector_dims(b.embedding)
           AND 1 - (a.embedding <=> b.embedding) > 0.7
         ORDER BY 1 - (a.embedding <=> b.embedding) DESC
         LIMIT 100
@@ -181,7 +183,7 @@ export async function GET(req: NextRequest) {
     const totalCount = mems.length;
 
     const sourcesResult = await db.execute(sql`
-      SELECT COUNT(DISTINCT source_id)::int as count FROM memories WHERE user_id = ${userId}::uuid
+      SELECT COUNT(DISTINCT source_title)::int as count FROM memories WHERE user_id = ${userId}::uuid
     `);
     const sourceCount = (sourcesResult as any)[0]?.count || 0;
 

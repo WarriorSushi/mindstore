@@ -154,10 +154,12 @@ async function searchVector(
   dateTo?: Date,
 ): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>> {
   const embeddingStr = `[${queryEmbedding.join(',')}]`;
+  const embDim = queryEmbedding.length;
 
   const conditions = [
     sql`m.user_id = ${userId}::uuid`,
     sql`m.embedding IS NOT NULL`,
+    sql`vector_dims(m.embedding) = ${embDim}`,  // only compare same-dimension vectors
   ];
 
   if (sourceTypes?.length) {
@@ -210,6 +212,7 @@ async function searchTree(
   limit: number,
 ): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null; treePath: string }>> {
   const embeddingStr = `[${queryEmbedding.join(',')}]`;
+  const embDim = queryEmbedding.length;
 
   // Step 1: Find the most relevant tree nodes (sections)
   const treeNodes = await db.execute(sql`
@@ -222,6 +225,7 @@ async function searchTree(
       1 - (t.embedding <=> ${embeddingStr}::vector) as similarity
     FROM tree_index t
     WHERE t.user_id = ${userId}::uuid AND t.embedding IS NOT NULL
+      AND vector_dims(t.embedding) = ${embDim}
     ORDER BY t.embedding <=> ${embeddingStr}::vector
     LIMIT 5
   `);
@@ -244,10 +248,11 @@ async function searchTree(
       m.metadata,
       m.created_at,
       m.tree_path,
-      1 - (m.embedding <=> ${embeddingStr}::vector) as similarity
+      CASE WHEN m.embedding IS NOT NULL AND vector_dims(m.embedding) = ${embDim}
+        THEN 1 - (m.embedding <=> ${embeddingStr}::vector) ELSE 0 END as similarity
     FROM memories m
     WHERE m.id = ANY(${allMemoryIds}::uuid[])
-    ORDER BY m.embedding <=> ${embeddingStr}::vector
+    ORDER BY similarity DESC
     LIMIT ${limit}
   `);
 

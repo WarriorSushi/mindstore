@@ -1,10 +1,10 @@
 import { pgTable, uuid, text, real, integer, timestamp, jsonb, index, uniqueIndex, pgEnum, customType } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-// Custom vector type for pgvector
+// Custom vector type for pgvector — no fixed dimension so any provider (OpenAI 1536, Gemini 768, Ollama 768) works
 const vector = customType<{ data: number[]; driverData: string }>({
   dataType() {
-    return 'vector(1536)';
+    return 'vector';
   },
   toDriver(value: number[]): string {
     return `[${value.join(',')}]`;

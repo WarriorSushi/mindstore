@@ -40,7 +40,7 @@ async function migrate() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID REFERENCES users(id) NOT NULL,
       content TEXT NOT NULL,
-      embedding vector(1536),
+      embedding vector,
       content_type content_type DEFAULT 'text',
       source_type TEXT NOT NULL,
       source_id TEXT,
@@ -63,10 +63,14 @@ async function migrate() {
       level INT DEFAULT 0,
       parent_id UUID,
       memory_ids UUID[],
-      embedding vector(1536),
+      embedding vector,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // Alter existing tables to remove dimension constraint (safe to run multiple times)
+  await db.execute(sql`ALTER TABLE memories ALTER COLUMN embedding TYPE vector USING embedding::vector`);
+  await db.execute(sql`ALTER TABLE tree_index ALTER COLUMN embedding TYPE vector USING embedding::vector`);
 
   // Profile
   await db.execute(sql`
