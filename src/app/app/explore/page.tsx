@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 interface Memory {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, AlertCircle, Info, RefreshCw } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 async function fetchSettings() {

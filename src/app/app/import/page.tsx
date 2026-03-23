@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, ArrowUpRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
