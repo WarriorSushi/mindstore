@@ -4,6 +4,26 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 23:29 UTC — Landing Page Redesign (Zero framer-motion, Zero shadcn)
+- **Research**: UX consistency audit — the landing page (first page users see!) was the last major page still using legacy patterns: `framer-motion` for all animations, shadcn `Button` component (4 instances), and old card styling (`bg-zinc-900/50`, `border-zinc-800`, `bg-zinc-950`). Every app page had been modernized, but the public-facing landing page was inconsistent.
+- **Finding**: The landing page imported `motion`, `AnimatePresence` from framer-motion for fade-up animations, and `Button` from shadcn for 5 different CTA/nav buttons. These are heavy JS dependencies for animations that CSS can handle natively. The card styles (`glow-card`, `border-zinc-800`, `bg-zinc-900/50`) didn't match the unified MindStore design system used in all app pages.
+- **Implemented**:
+  - **Removed `framer-motion`** — all `motion.div`, `AnimatePresence`, and `fadeUp` variants replaced with a single CSS `@keyframes landing-fade-in` animation with staggered `animation-delay` on elements. Zero JS for animations.
+  - **Removed shadcn `Button`** — all 5 instances (`nav "Open App"`, `hero "Get Started"`, `hero "Try Demo"`, `hero "See How It Works"`, `CTA "Open MindStore"`) replaced with native `<button>` elements using the app design system (rounded-2xl, h-12, active:scale-[0.97], violet-600/500)
+  - **Updated all card styles** to match unified design system:
+    - `bg-zinc-900/50` → `bg-white/[0.02]`
+    - `border-zinc-800` → `border-white/[0.06]`
+    - `hover:border-zinc-700` → `hover:bg-white/[0.04]`
+    - All cards now `rounded-2xl` (was `rounded-xl` and `rounded-lg`)
+  - **Navbar redesigned**: Now matches the app header exactly — glass-style with `bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150`, same logo treatment (rounded-[8px] gradient icon + 15px semibold text)
+  - **Innovation feature cards** now have per-feature colored hover borders (`hover:border-violet-500/20`, `hover:border-emerald-500/20`, etc.)
+  - **How It Works cards** now have gradient background overlays matching the Dashboard stat cards pattern
+  - **Footer** updated to `border-white/[0.04]` + `text-zinc-600` styling
+  - **Also committed**: PageTransition/Stagger wrappers added to Import page and Dashboard page (were pending in work tree from prior cycles)
+  - **Background**: `bg-zinc-950` → `bg-[#0a0a0b]` matching app layout exactly
+  - Landing page is now **100% consistent** with the app design system — zero legacy patterns remain anywhere in the entire codebase
+- **Branch**: `frain/improve` (commit `de1300b`)
+
 ## 2026-03-23 23:04 UTC — Keyboard Navigation & Cross-Page Flow
 - **Research**: Power-user UX patterns from Linear, Superhuman, Notion, and Obsidian — focused on keyboard-driven navigation. Apps like Linear use j/k to move between items, Enter to open, Escape to close, and arrow keys to navigate within detail views. Superhuman's "next/prev" in email detail view keeps users in flow without returning to the list.
 - **Finding**: MindStore's Explore page had no keyboard navigation — users had to click every memory card individually. The detail modal was a dead-end: no way to go to the next memory without closing and clicking another card. No cross-page flow from Explore→Chat to ask deeper questions about a specific memory.
