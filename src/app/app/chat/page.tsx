@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Brain, User, Sparkles, ArrowUp } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
+import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 
 interface Message {
@@ -151,8 +152,10 @@ export default function ChatPage() {
                     ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
                     : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
                 }`}>
-                  <div className="text-[13px] leading-[1.6] whitespace-pre-wrap">
-                    {msg.content || (loading && i === messages.length - 1 ? (
+                  <div className="text-[13px] leading-[1.6]">
+                    {msg.content ? (
+                      <ChatMarkdown content={msg.content} />
+                    ) : (loading && i === messages.length - 1 ? (
                       <span className="flex items-center gap-2 text-zinc-500">
                         <span className="flex gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: "0ms" }} />
