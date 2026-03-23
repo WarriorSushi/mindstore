@@ -25,7 +25,7 @@ export default function ConnectPage() {
 
   useEffect(() => {
     loadStats();
-    setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore.frain.cloud/api/mcp");
+    setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore-sandy.vercel.app/api/mcp");
   }, []);
 
   async function loadStats() {
@@ -46,7 +46,7 @@ export default function ConnectPage() {
   const mcpConfig = `{
   "mcpServers": {
     "mindstore": {
-      "url": "${apiEndpoint || "https://mindstore.frain.cloud/api/mcp"}",
+      "url": "${apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}",
       "description": "Your personal MindStore — searchable knowledge from your conversations, notes, and documents"
     }
   }
@@ -58,7 +58,7 @@ export default function ConnectPage() {
       "command": "npx",
       "args": ["mindstore-mcp"],
       "env": {
-        "MINDSTORE_URL": "${apiEndpoint || "https://mindstore.frain.cloud/api/mcp"}"
+        "MINDSTORE_URL": "${apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}"
       }
     }
   }
@@ -263,12 +263,12 @@ export default function ConnectPage() {
             </h3>
             <div className="flex items-center gap-2">
               <code className="flex-1 bg-muted px-3 py-2 rounded text-xs font-mono">
-                {apiEndpoint || "https://mindstore.frain.cloud/api/mcp"}
+                {apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}
               </code>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(apiEndpoint || "https://mindstore.frain.cloud/api/mcp", "endpoint")}
+                onClick={() => copyToClipboard(apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp", "endpoint")}
               >
                 {copied === "endpoint" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               </Button>
