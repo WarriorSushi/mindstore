@@ -156,6 +156,23 @@
   animation: slideInFromRight 0.2s ease-out;
 }
 
+@keyframes slideInFromBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-in.slide-in-from-bottom {
+  animation: slideInFromBottom 0.25s ease-out;
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Animated gradient for hero text */
 @keyframes gradient-shift {
   0%, 100% { background-position: 0% 50%; }

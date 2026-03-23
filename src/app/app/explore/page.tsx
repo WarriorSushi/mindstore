@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, MessageCircle, FileText, Globe, Type, Calendar, ChevronDown } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Search, MessageCircle, FileText, Globe, Type, Calendar, ChevronDown, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Memory {
   id: string;
@@ -34,10 +31,10 @@ const sourceIcons: Record<string, any> = {
 };
 
 const sourceColors: Record<string, string> = {
-  chatgpt: "text-green-400 bg-green-400/10",
-  text: "text-violet-400 bg-violet-400/10",
-  file: "text-blue-400 bg-blue-400/10",
-  url: "text-orange-400 bg-orange-400/10",
+  chatgpt: "text-green-400 bg-green-500/10",
+  text: "text-violet-400 bg-violet-500/10",
+  file: "text-blue-400 bg-blue-500/10",
+  url: "text-orange-400 bg-orange-500/10",
 };
 
 export default function ExplorePage() {
@@ -62,7 +59,6 @@ export default function ExplorePage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  // Re-fetch when search/filter changes (debounced)
   useEffect(() => {
     const timeout = setTimeout(() => {
       const params = new URLSearchParams({ limit: '500' });
@@ -76,149 +72,135 @@ export default function ExplorePage() {
     return () => clearTimeout(timeout);
   }, [search, filter]);
 
-  const filtered = memories;
-
-  const topTopics = sources
-    .reduce((acc, s) => {
-      const title = s.title.slice(0, 40);
-      acc[title] = (acc[title] || 0) + s.itemCount;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const topTopicsSorted = Object.entries(topTopics)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 20);
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Explore Your Mind</h1>
-        <p className="text-zinc-400 mt-1">{totalMemories.toLocaleString()} memories from {sources.length} sources</p>
+        <h1 className="text-xl md:text-3xl font-bold">Explore Your Mind</h1>
+        <p className="text-zinc-400 text-xs md:text-sm mt-0.5">
+          {totalMemories.toLocaleString()} memories · {sources.length} sources
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <Input
-            placeholder="Search your knowledge..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-zinc-900 border-zinc-800"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={filter === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter(null)}
-            className={filter === null ? "bg-violet-600" : "border-zinc-700"}
-          >
-            All
-          </Button>
-          {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-            const count = sources.filter((s) => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
-            if (count === 0) return null;
-            const Icon = sourceIcons[type];
-            return (
-              <Button
-                key={type}
-                variant={filter === type ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilter(filter === type ? null : type)}
-                className={filter === type ? "bg-violet-600" : "border-zinc-700"}
-              >
-                <Icon className="w-3.5 h-3.5 mr-1" />
-                {type} ({count})
-              </Button>
-            );
-          })}
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+        <Input
+          placeholder="Search your knowledge..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-white/[0.04] border-white/[0.06] h-10 text-sm rounded-xl"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+            <X className="w-4 h-4 text-zinc-500" />
+          </button>
+        )}
       </div>
 
-      {/* Topic Cloud */}
-      {topTopicsSorted.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {topTopicsSorted.map(([topic, count]) => (
-            <Badge
-              key={topic}
-              variant="outline"
-              className="border-zinc-700 text-zinc-400 hover:border-violet-500/30 cursor-pointer transition-colors"
-              onClick={() => setSearch(topic)}
+      {/* Filter pills — scrollable */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+        <button
+          onClick={() => setFilter(null)}
+          className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            filter === null ? "bg-violet-500/15 text-violet-300 border border-violet-500/20" : "text-zinc-400 border border-white/[0.06]"
+          }`}
+        >
+          All
+        </button>
+        {(["chatgpt", "text", "file", "url"] as const).map((type) => {
+          const count = sources.filter((s) => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
+          if (count === 0) return null;
+          const Icon = sourceIcons[type];
+          return (
+            <button
+              key={type}
+              onClick={() => setFilter(filter === type ? null : type)}
+              className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                filter === type ? "bg-violet-500/15 text-violet-300 border border-violet-500/20" : "text-zinc-400 border border-white/[0.06]"
+              }`}
             >
-              {topic} ({count})
-            </Badge>
-          ))}
-        </div>
-      )}
+              <Icon className="w-3 h-3" />
+              {type} · {count}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Memory List */}
-      <div className="space-y-2">
-        {filtered.slice(0, visibleCount).map((m) => {
+      <div className="space-y-1.5">
+        {memories.slice(0, visibleCount).map((m) => {
           const Icon = sourceIcons[m.source] || FileText;
-          const colorClass = sourceColors[m.source] || "text-zinc-400 bg-zinc-400/10";
+          const colorClass = sourceColors[m.source] || "text-zinc-400 bg-zinc-500/10";
 
           return (
             <div
               key={m.id}
               onClick={() => setSelected(m)}
-              className="p-4 rounded-lg border border-zinc-800/50 bg-zinc-900/50 hover:border-zinc-700 cursor-pointer transition-colors"
+              className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer transition-all active:scale-[0.99]"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${colorClass}`}>
-                      <Icon className="w-3 h-3" />
-                      {m.source}
-                    </span>
-                    <span className="text-xs text-zinc-600 truncate">{m.sourceTitle}</span>
-                  </div>
-                  <p className="text-sm text-zinc-300 line-clamp-2">{m.content}</p>
-                </div>
-                <div className="text-xs text-zinc-600 whitespace-nowrap flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium ${colorClass}`}>
+                  <Icon className="w-2.5 h-2.5" />
+                  {m.source}
+                </span>
+                <span className="text-[11px] text-zinc-500 truncate flex-1">{m.sourceTitle}</span>
+                <span className="text-[10px] text-zinc-600 shrink-0">
                   {new Date(m.timestamp).toLocaleDateString()}
-                </div>
+                </span>
               </div>
+              <p className="text-[13px] text-zinc-300 line-clamp-2 leading-relaxed">{m.content}</p>
             </div>
           );
         })}
 
-        {filtered.length > visibleCount && (
-          <Button
-            variant="outline"
+        {memories.length > visibleCount && (
+          <button
             onClick={() => setVisibleCount((v) => v + 50)}
-            className="w-full border-zinc-700"
+            className="w-full py-2.5 rounded-xl border border-white/[0.06] text-xs text-zinc-400 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1.5"
           >
-            <ChevronDown className="w-4 h-4 mr-2" />
-            Show more ({filtered.length - visibleCount} remaining)
-          </Button>
+            <ChevronDown className="w-3.5 h-3.5" />
+            Show more ({memories.length - visibleCount} remaining)
+          </button>
         )}
 
-        {filtered.length === 0 && !loading && (
-          <div className="text-center py-12 text-zinc-500">
-            {totalMemories === 0 ? "No memories yet. Import some knowledge to get started." : "No results found."}
+        {memories.length === 0 && !loading && (
+          <div className="text-center py-16 text-zinc-500 text-sm">
+            {totalMemories === 0 ? "No memories yet. Import some knowledge to get started." : "No results match your search."}
           </div>
         )}
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg">{selected?.sourceTitle}</DialogTitle>
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
-              <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${sourceColors[selected?.source || "text"]}`}>
-                {selected?.source}
-              </span>
-              <span>{selected?.timestamp ? new Date(selected.timestamp).toLocaleString() : ""}</span>
+      {/* Detail Sheet */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
+          <div className="relative w-full md:max-w-lg max-h-[80vh] bg-zinc-950 border border-white/[0.08] rounded-t-2xl md:rounded-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+            {/* Handle bar (mobile) */}
+            <div className="md:hidden flex justify-center pt-2 pb-1">
+              <div className="w-8 h-1 rounded-full bg-white/[0.15]" />
             </div>
-          </DialogHeader>
-          <div className="whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed mt-4">
-            {selected?.content}
+
+            <div className="px-4 py-3 border-b border-white/[0.06] flex items-start justify-between">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm truncate">{selected.sourceTitle}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium ${sourceColors[selected.source]}`}>
+                    {selected.source}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleString()}</span>
+                </div>
+              </div>
+              <button onClick={() => setSelected(null)} className="p-1 hover:bg-white/[0.06] rounded-lg">
+                <X className="w-4 h-4 text-zinc-400" />
+              </button>
+            </div>
+
+            <div className="px-4 py-4 overflow-y-auto max-h-[60vh]">
+              <p className="whitespace-pre-wrap text-[13px] text-zinc-300 leading-relaxed">{selected.content}</p>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

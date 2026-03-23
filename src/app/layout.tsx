@@ -33,10 +33,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#7c3aed" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={`${geist.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100`}>
+      <body className={`${geist.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
         {children}
-        <Toaster theme="dark" />
+        <Toaster theme="dark" position="top-center" />
       </body>
     </html>
   );
