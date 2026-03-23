@@ -4,6 +4,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 20:59 UTC — Explore Deep-Linkable Search + Keyboard Shortcut
+
+- **Research**: UX flow analysis — Dashboard → Explore handoff, keyboard accessibility patterns (GitHub, Slack, Linear)
+- **Finding**: The Dashboard's quick-search "View all in Explore →" link navigates to `/app/explore?q=searchQuery`, but the Explore page never reads the `?q=` URL parameter. The search query is silently lost on navigation — a broken user flow. Additionally, Explore searches aren't shareable/bookmarkable since the URL doesn't reflect the current search state. Every major knowledge app supports `/` to focus search.
+- **Implemented**:
+  - **URL param initialization** — Explore page now reads `?q=` from URL on mount via `useSearchParams()`, pre-populating the search field. Fixes the Dashboard → Explore flow completely.
+  - **URL sync** — typing in the search bar updates the browser URL via `history.replaceState()` (no page reload, no history spam). Searches are now bookmarkable and shareable.
+  - **`/` keyboard shortcut** — pressing `/` focuses the search input instantly (like GitHub, Slack, Linear). Only fires when no input/textarea is focused and no modal is open.
+  - **`/` keyboard hint** — shows a subtle `/ ` kbd element in the search bar when it's empty (hidden on mobile, visible on sm+ screens).
+  - Added `useRef` for search input element, `useSearchParams` from next/navigation.
+- **Branch**: `frain/improve` (commit `cd9239f`)
+
+---
+
 ## 2026-03-23 19:59 UTC — Dashboard Quick-Search + shadcn Cleanup
 - **Research**: UX audit — modern knowledge apps (Notion, Obsidian, Mem) all feature prominent search on the home/dashboard page. MindStore's dashboard had no search, requiring users to navigate to Chat or Explore.
 - **Finding**: Dashboard still imported shadcn `Button` and `Input` components despite all other pages being migrated to native styled elements. Also missing a key UX pattern: inline search on the home page.
