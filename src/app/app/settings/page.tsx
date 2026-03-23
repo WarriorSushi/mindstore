@@ -19,8 +19,13 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [reindexing, setReindexing] = useState(false);
+  const [reindexStatus, setReindexStatus] = useState<any>(null);
 
-  useEffect(() => { fetchSettings().then(setSettings); fetchStats().then(setStats); }, []);
+  useEffect(() => {
+    fetchSettings().then(setSettings);
+    fetchStats().then(setStats);
+    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
+  }, []);
 
   const handleSave = async (provider: string) => {
     setSaving(provider);
@@ -91,6 +96,7 @@ export default function SettingsPage() {
       toast.error(err.message || "Reindex failed");
     }
     setReindexing(false);
+    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
   };
 
   const providers = settings?.providers || {};
@@ -108,6 +114,20 @@ export default function SettingsPage() {
           <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
           <span className="text-[12px] text-zinc-400">Active: <span className="text-violet-300 font-medium">{settings.embeddingProvider}</span></span>
         </div>
+      )}
+
+      {/* Reindex nudge */}
+      {settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
+        <button
+          onClick={handleReindex}
+          className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.06] border border-amber-500/15 px-4 py-3 hover:bg-amber-500/[0.1] transition-colors text-left"
+        >
+          <div>
+            <p className="text-[13px] text-amber-300 font-medium">⚡ {reindexStatus.withoutEmbeddings} memories need embeddings</p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Tap to enable semantic search for all your data</p>
+          </div>
+          <RefreshCw className="w-4 h-4 text-amber-400 shrink-0" />
+        </button>
       )}
 
       {/* ─── Providers ─── */}

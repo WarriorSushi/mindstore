@@ -94,6 +94,8 @@ export default function DashboardPage() {
         setHasKey(true);
         setKeyInput("");
         toast.success(`${provider.charAt(0).toUpperCase() + provider.slice(1)} connected!`);
+        // Refresh stats so dashboard shows current data
+        fetchStats().then(setStats);
       } else {
         toast.error(data.error || "Connection failed");
       }
