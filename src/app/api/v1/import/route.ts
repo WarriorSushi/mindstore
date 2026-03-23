@@ -23,7 +23,7 @@ function chunkText(text: string, maxChunkSize = 1000): string[] {
   return chunks.filter(c => c.length > 20); // skip tiny chunks
 }
 
-// ChatGPT export parser
+// ChatGPT export parser — walks the conversation tree to preserve message order
 function parseChatGPT(json: any): Array<{ title: string; content: string; timestamp: Date }> {
   const results: Array<{ title: string; content: string; timestamp: Date }> = [];
 
@@ -32,12 +32,32 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
     const messages: string[] = [];
 
     if (conv.mapping) {
-      for (const node of Object.values(conv.mapping) as any[]) {
-        const msg = node?.message;
+      // Walk the tree using parent/children links to get correct order
+      const visited = new Set<string>();
+      function walk(nodeId: string) {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+        const node = conv.mapping[nodeId];
+        if (!node) return;
+
+        const msg = node.message;
         if (msg?.content?.parts) {
           const role = msg.author?.role || 'unknown';
           const text = msg.content.parts.filter((p: any) => typeof p === 'string').join('\n');
-          if (text.trim()) messages.push(`${role}: ${text}`);
+          if (text.trim() && role !== 'system') {
+            messages.push(`${role}: ${text}`);
+          }
+        }
+
+        for (const childId of (node.children || [])) {
+          walk(childId);
+        }
+      }
+
+      // Find root nodes (no parent or parent not in mapping)
+      for (const [id, node] of Object.entries(conv.mapping) as [string, any][]) {
+        if (!node.parent || !conv.mapping[node.parent]) {
+          walk(id);
         }
       }
     }
