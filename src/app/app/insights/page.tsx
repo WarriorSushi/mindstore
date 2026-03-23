@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Brain, Zap, AlertTriangle, Clock, TrendingUp, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Brain, Zap, AlertTriangle, Clock, TrendingUp, RefreshCw,
+  Loader2, MessageCircle, FileText, Globe, Type, Sparkles,
+  ChevronRight, Activity,
+} from 'lucide-react';
 
 interface MemoryLike {
   id: string;
@@ -29,6 +30,15 @@ interface Contradiction {
   description: string;
 }
 
+type TabId = 'connections' | 'contradictions' | 'forgetting';
+
+const sourceConfig: Record<string, { icon: any; color: string }> = {
+  chatgpt: { icon: MessageCircle, color: 'text-green-400 bg-green-500/10' },
+  text: { icon: Type, color: 'text-violet-400 bg-violet-500/10' },
+  file: { icon: FileText, color: 'text-blue-400 bg-blue-500/10' },
+  url: { icon: Globe, color: 'text-orange-400 bg-orange-500/10' },
+};
+
 export default function InsightsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [contradictions, setContradictions] = useState<Contradiction[]>([]);
@@ -36,6 +46,7 @@ export default function InsightsPage() {
   const [metabolism, setMetabolism] = useState<any>(null);
   const [mindDiff, setMindDiff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabId>('connections');
 
   useEffect(() => { runConsolidation(); }, []);
 
@@ -57,183 +68,282 @@ export default function InsightsPage() {
     }
   }
 
+  const tabs: { id: TabId; icon: any; label: string; count: number; color: string }[] = [
+    { id: 'connections', icon: Zap, label: 'Connections', count: connections.length, color: 'text-amber-400' },
+    { id: 'contradictions', icon: AlertTriangle, label: 'Conflicts', count: contradictions.length, color: 'text-red-400' },
+    { id: 'forgetting', icon: Clock, label: 'Fading', count: forgetting.length, color: 'text-blue-400' },
+  ];
+
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <div className="border-b border-zinc-800/50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/app" className="text-zinc-400 hover:text-zinc-200"><ArrowLeft className="w-5 h-5" /></Link>
-          <div>
-            <h1 className="text-xl font-bold">🧠 Mind Insights</h1>
-            <p className="text-sm text-zinc-500">Your brain&apos;s consolidation report</p>
-          </div>
+    <div className="space-y-6 md:space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Mind Insights</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">Connections, contradictions &amp; memory health</p>
         </div>
-        <Button variant="outline" size="sm" onClick={runConsolidation} className="border-zinc-700">
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Consolidate
-        </Button>
+        <button
+          onClick={runConsolidation}
+          disabled={loading}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] text-[12px] font-medium text-zinc-400 transition-all active:scale-[0.96] disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">{loading ? 'Analyzing…' : 'Refresh'}</span>
+        </button>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Metabolism Score */}
-        {metabolism && (
-          <div className="mb-8 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/5 border border-zinc-800 rounded-2xl p-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-zinc-400 mb-1">Knowledge Metabolism</div>
-                <div className="text-5xl font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                  {metabolism.score}/10
+      {/* Loading State */}
+      {loading && !metabolism && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
+            <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+          </div>
+          <p className="text-[13px] text-zinc-500">Analyzing your knowledge…</p>
+        </div>
+      )}
+
+      {/* Metabolism Score Card */}
+      {metabolism && (
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] to-fuchsia-500/[0.04] pointer-events-none" />
+          <div className="relative p-5 md:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-violet-400" />
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Knowledge Metabolism</span>
                 </div>
-                <p className="text-zinc-400 mt-2 max-w-md">{metabolism.verdict}</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent leading-none">
+                    {metabolism.score}
+                  </span>
+                  <span className="text-[16px] text-zinc-600 font-medium">/10</span>
+                </div>
+                <p className="text-[13px] text-zinc-400 leading-relaxed max-w-sm">{metabolism.verdict}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-right">
-                <div>
-                  <div className="text-2xl font-bold">{metabolism.intake}</div>
-                  <div className="text-xs text-zinc-500">New this week</div>
+              <div className="flex gap-4 md:gap-6 shrink-0">
+                <div className="text-right">
+                  <p className="text-[22px] md:text-[26px] font-semibold tabular-nums">{metabolism.intake}</p>
+                  <p className="text-[10px] text-zinc-600 font-medium mt-0.5">New this week</p>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold">{metabolism.connections}</div>
-                  <div className="text-xs text-zinc-500">Connections</div>
+                <div className="text-right">
+                  <p className="text-[22px] md:text-[26px] font-semibold tabular-nums">{metabolism.connections}</p>
+                  <p className="text-[10px] text-zinc-600 font-medium mt-0.5">Connections</p>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Mind Diff */}
-        {mindDiff && mindDiff.newMemories > 0 && (
-          <div className="mb-8 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
+      {/* Mind Growth Card */}
+      {mindDiff && mindDiff.newMemories > 0 && (
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.06] to-emerald-500/[0.02] pointer-events-none" />
+          <div className="relative p-4 md:p-5">
+            <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
-              This Week&apos;s Mind Growth
-            </h3>
-            <div className="flex gap-6 text-sm">
-              <div>
-                <span className="text-2xl font-bold text-emerald-400">+{mindDiff.newMemories}</span>
-                <span className="text-zinc-500 ml-2">new memories</span>
+              <span className="text-[13px] font-medium text-zinc-300">This Week&apos;s Growth</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-baseline gap-1">
+                <span className="text-[22px] font-semibold text-emerald-400 tabular-nums">+{mindDiff.newMemories}</span>
+                <span className="text-[12px] text-zinc-500 ml-1">memories</span>
               </div>
-              <div>
-                <span className="text-2xl font-bold text-zinc-300">{mindDiff.growthRate.toFixed(1)}</span>
-                <span className="text-zinc-500 ml-2">per day</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[22px] font-semibold tabular-nums">{mindDiff.growthRate.toFixed(1)}</span>
+                <span className="text-[12px] text-zinc-500 ml-1">per day</span>
               </div>
             </div>
-            {mindDiff.topNewTopics.length > 0 && (
-              <div className="mt-3 flex gap-2 flex-wrap">
+            {mindDiff.topNewTopics?.length > 0 && (
+              <div className="mt-3 flex gap-1.5 flex-wrap">
                 {mindDiff.topNewTopics.slice(0, 5).map((t: string) => (
-                  <span key={t} className="bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded text-xs">{t}</span>
+                  <span key={t} className="text-[11px] px-2 py-[3px] rounded-lg bg-white/[0.04] border border-white/[0.06] text-zinc-400 font-medium">{t}</span>
                 ))}
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        <Tabs defaultValue="connections" className="space-y-6">
-          <TabsList className="bg-zinc-900 border border-zinc-800">
-            <TabsTrigger value="connections" className="data-[state=active]:bg-violet-600">
-              <Zap className="w-3.5 h-3.5 mr-1.5" /> Connections ({connections.length})
-            </TabsTrigger>
-            <TabsTrigger value="contradictions" className="data-[state=active]:bg-violet-600">
-              <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> Contradictions ({contradictions.length})
-            </TabsTrigger>
-            <TabsTrigger value="forgetting" className="data-[state=active]:bg-violet-600">
-              <Clock className="w-3.5 h-3.5 mr-1.5" /> Forgetting ({forgetting.length})
-            </TabsTrigger>
-          </TabsList>
+      {/* Tab Selector */}
+      {!loading && (
+        <>
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
+                  activeTab === t.id
+                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/25 shadow-sm shadow-violet-500/10'
+                    : 'text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]'
+                }`}
+              >
+                <t.icon className={`w-3 h-3 ${activeTab === t.id ? t.color : ''}`} />
+                {t.label}
+                <span className="text-[10px] opacity-60 tabular-nums">{t.count}</span>
+              </button>
+            ))}
+          </div>
 
-          <TabsContent value="connections" className="space-y-4">
-            <p className="text-sm text-zinc-500">
-              Unexpected bridges between distant pieces of your knowledge. These are ideas you might not have connected yourself.
-            </p>
-            {connections.length === 0 ? (
-              <Empty message="Import more knowledge from different sources to discover cross-pollinations." />
-            ) : (
-              connections.map((c, i) => (
-                <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm font-medium text-amber-400">
-                      Bridge: {c.bridgeConcept}
-                    </span>
-                    <span className="text-xs text-zinc-600 ml-auto">
-                      Surprise: {(c.surprise * 100).toFixed(0)}%
-                    </span>
+          {/* Tab Content */}
+          <div className="space-y-2">
+            {/* ─── Connections ─── */}
+            {activeTab === 'connections' && (
+              <>
+                <p className="text-[12px] text-zinc-500 px-1 leading-relaxed">
+                  Unexpected bridges between distant pieces of your knowledge — ideas you might not have connected.
+                </p>
+                {connections.length === 0 ? (
+                  <EmptyState message="Import more knowledge from different sources to discover cross-pollinations." />
+                ) : (
+                  <div className="space-y-2.5">
+                    {connections.map((c, i) => (
+                      <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                        {/* Bridge Header */}
+                        <div className="px-4 py-2.5 flex items-center gap-2 border-b border-white/[0.04]">
+                          <Zap className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-[12px] font-medium text-amber-300 flex-1 min-w-0 truncate">
+                            {c.bridgeConcept}
+                          </span>
+                          <span className="text-[10px] text-zinc-600 font-medium tabular-nums shrink-0">
+                            {(c.surprise * 100).toFixed(0)}% surprise
+                          </span>
+                        </div>
+                        {/* Memory Pair */}
+                        <div className="p-3 grid md:grid-cols-2 gap-2">
+                          <MemoryCard memory={c.memoryA} />
+                          <MemoryCard memory={c.memoryB} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <MemoryCard memory={c.memoryA} />
-                    <MemoryCard memory={c.memoryB} />
-                  </div>
-                </div>
-              ))
+                )}
+              </>
             )}
-          </TabsContent>
 
-          <TabsContent value="contradictions" className="space-y-4">
-            <p className="text-sm text-zinc-500">
-              Places where your own thinking might conflict. Not errors — evolution of thought.
-            </p>
-            {contradictions.length === 0 ? (
-              <Empty message="No contradictions found yet. This gets more interesting with more data." />
-            ) : (
-              contradictions.map((c, i) => (
-                <div key={i} className="bg-zinc-900/50 border border-red-900/20 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                    <span className="text-sm text-red-400">{c.description}</span>
+            {/* ─── Contradictions ─── */}
+            {activeTab === 'contradictions' && (
+              <>
+                <p className="text-[12px] text-zinc-500 px-1 leading-relaxed">
+                  Places where your thinking might conflict. Not errors — evolution of thought.
+                </p>
+                {contradictions.length === 0 ? (
+                  <EmptyState message="No contradictions found yet. This gets more interesting with more data." />
+                ) : (
+                  <div className="space-y-2.5">
+                    {contradictions.map((c, i) => (
+                      <div key={i} className="rounded-2xl border border-red-500/10 bg-white/[0.02] overflow-hidden">
+                        {/* Conflict Header */}
+                        <div className="px-4 py-2.5 flex items-center gap-2 border-b border-red-500/[0.06]">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                          <span className="text-[12px] font-medium text-red-300 flex-1 min-w-0 truncate">
+                            {c.description}
+                          </span>
+                        </div>
+                        {/* Memory Pair */}
+                        <div className="p-3 grid md:grid-cols-2 gap-2">
+                          <MemoryCard memory={c.memoryA} />
+                          <MemoryCard memory={c.memoryB} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <MemoryCard memory={c.memoryA} />
-                    <MemoryCard memory={c.memoryB} />
-                  </div>
-                </div>
-              ))
+                )}
+              </>
             )}
-          </TabsContent>
 
-          <TabsContent value="forgetting" className="space-y-4">
-            <p className="text-sm text-zinc-500">
-              Knowledge you&apos;re at risk of forgetting, based on the Ebbinghaus forgetting curve.
-            </p>
-            {forgetting.length === 0 ? (
-              <Empty message="Nothing at risk yet. Check back after a few days." />
-            ) : (
-              forgetting.map((m, i) => (
-                <div key={i} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-start gap-4">
-                  <div className="shrink-0 text-center">
-                    <div className={`text-lg font-bold ${m.urgency > 0.8 ? 'text-red-400' : m.urgency > 0.6 ? 'text-amber-400' : 'text-zinc-400'}`}>
-                      {(m.urgency * 100).toFixed(0)}%
-                    </div>
-                    <div className="text-[10px] text-zinc-600">fade risk</div>
+            {/* ─── Forgetting ─── */}
+            {activeTab === 'forgetting' && (
+              <>
+                <p className="text-[12px] text-zinc-500 px-1 leading-relaxed">
+                  Knowledge at risk of fading, based on the Ebbinghaus forgetting curve.
+                </p>
+                {forgetting.length === 0 ? (
+                  <EmptyState message="Nothing at risk yet. Check back after a few days." />
+                ) : (
+                  <div className="space-y-1.5">
+                    {forgetting.map((m, i) => {
+                      const urgencyColor = m.urgency > 0.8
+                        ? 'text-red-400 bg-red-500/10 border-red-500/15'
+                        : m.urgency > 0.6
+                          ? 'text-amber-400 bg-amber-500/10 border-amber-500/15'
+                          : 'text-blue-400 bg-blue-500/10 border-blue-500/15';
+                      const barColor = m.urgency > 0.8
+                        ? 'bg-red-500'
+                        : m.urgency > 0.6
+                          ? 'bg-amber-500'
+                          : 'bg-blue-500';
+                      const cfg = sourceConfig[m.source] || { icon: FileText, color: 'text-zinc-400 bg-zinc-500/10' };
+                      const SrcIcon = cfg.icon;
+
+                      return (
+                        <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 transition-all hover:bg-white/[0.04]">
+                          <div className="flex items-start gap-3">
+                            {/* Fade Risk Badge */}
+                            <div className={`shrink-0 w-12 h-12 rounded-xl border flex flex-col items-center justify-center ${urgencyColor}`}>
+                              <span className="text-[15px] font-bold tabular-nums leading-none">{(m.urgency * 100).toFixed(0)}</span>
+                              <span className="text-[8px] font-semibold uppercase tracking-wide opacity-70 mt-0.5">risk</span>
+                            </div>
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+                                  <SrcIcon className="w-2.5 h-2.5" />
+                                  {m.source}
+                                </span>
+                                <span className="text-[11px] text-zinc-600 truncate">{m.sourceTitle || 'Untitled'}</span>
+                              </div>
+                              <p className="text-[13px] text-zinc-300 line-clamp-2 leading-relaxed">{m.content.slice(0, 200)}</p>
+                            </div>
+                          </div>
+                          {/* Fade Bar */}
+                          <div className="mt-2.5 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${barColor} transition-all`}
+                              style={{ width: `${m.urgency * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{m.sourceTitle || 'Untitled'}</div>
-                    <div className="text-xs text-zinc-500 mt-1 line-clamp-2">{m.content.slice(0, 200)}</div>
-                  </div>
-                </div>
-              ))
+                )}
+              </>
             )}
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function MemoryCard({ memory }: { memory: MemoryLike }) {
+  const cfg = sourceConfig[memory.source] || { icon: FileText, color: 'text-zinc-400 bg-zinc-500/10' };
+  const SrcIcon = cfg.icon;
+
   return (
-    <div className="bg-zinc-800/50 rounded-lg p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs bg-zinc-700 px-1.5 py-0.5 rounded capitalize">{memory.source}</span>
-        <span className="text-xs text-zinc-500 truncate">{memory.sourceTitle}</span>
+    <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+          <SrcIcon className="w-2.5 h-2.5" />
+          {memory.source}
+        </span>
+        <span className="text-[11px] text-zinc-600 truncate flex-1">{memory.sourceTitle}</span>
       </div>
-      <p className="text-sm text-zinc-300 line-clamp-3">{memory.content.slice(0, 200)}</p>
+      <p className="text-[12px] text-zinc-400 line-clamp-3 leading-relaxed">{memory.content.slice(0, 200)}</p>
     </div>
   );
 }
 
-function Empty({ message }: { message: string }) {
+function EmptyState({ message }: { message: string }) {
   return (
-    <div className="text-center py-12 border border-dashed border-zinc-800 rounded-xl">
-      <Brain className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
-      <p className="text-zinc-500 text-sm">{message}</p>
+    <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-white/[0.08]">
+      <div className="w-10 h-10 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-3">
+        <Brain className="w-5 h-5 text-zinc-600" />
+      </div>
+      <p className="text-[13px] text-zinc-500 text-center max-w-xs">{message}</p>
     </div>
   );
 }
