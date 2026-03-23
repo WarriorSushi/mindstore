@@ -7,10 +7,8 @@ import {
   Brain, Upload, MessageSquare, Compass, Database, FileText,
   Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
-  Fingerprint, Network, TrendingUp, Zap,
+  Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
@@ -35,6 +33,9 @@ export default function DashboardPage() {
   const [loadingDemo, setLoadingDemo] = useState(false);
   const [setupTab, setSetupTab] = useState<SetupTab>("gemini");
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -52,6 +53,19 @@ export default function DashboardPage() {
       });
     }
   }, [searchParams]);
+
+  // Quick-search debounce
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    const t = setTimeout(() => {
+      fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=5`)
+        .then(r => r.json())
+        .then(d => { setSearchResults(d.results || []); setSearching(false); })
+        .catch(() => { setSearchResults([]); setSearching(false); });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const handleStartDemo = async () => {
     setLoadingDemo(true);
@@ -173,21 +187,21 @@ export default function DashboardPage() {
                   {" "}— takes 30 seconds, no credit card.
                 </p>
                 <div className="flex gap-2">
-                  <Input
+                  <input
                     type="password"
                     placeholder="AIza..."
                     value={keyInput}
                     onChange={(e) => setKeyInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("gemini")}
-                    className="bg-white/[0.04] border-white/[0.08] h-10 text-[13px] font-mono rounded-xl focus-visible:ring-blue-500/30"
+                    className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all"
                   />
-                  <Button
+                  <button
                     onClick={() => handleSaveProvider("gemini")}
                     disabled={testing || !keyInput.trim()}
-                    className="bg-blue-600 hover:bg-blue-500 h-10 rounded-xl px-5 shrink-0 font-medium text-[13px]"
+                    className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.96]"
                   >
                     {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
@@ -200,16 +214,16 @@ export default function DashboardPage() {
                   </a>
                 </p>
                 <div className="flex gap-2">
-                  <Input type="password" placeholder="sk-..." value={keyInput}
+                  <input type="password" placeholder="sk-..." value={keyInput}
                     onChange={(e) => setKeyInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("openai")}
-                    className="bg-white/[0.04] border-white/[0.08] h-10 text-[13px] font-mono rounded-xl focus-visible:ring-emerald-500/30"
+                    className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/30 transition-all"
                   />
-                  <Button onClick={() => handleSaveProvider("openai")} disabled={testing || !keyInput.trim()}
-                    className="bg-emerald-600 hover:bg-emerald-500 h-10 rounded-xl px-5 shrink-0 font-medium text-[13px]"
+                  <button onClick={() => handleSaveProvider("openai")} disabled={testing || !keyInput.trim()}
+                    className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.96]"
                   >
                     {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
@@ -221,16 +235,16 @@ export default function DashboardPage() {
                   , then run <code className="text-[11px] bg-white/[0.06] px-1.5 py-0.5 rounded-md font-mono">ollama pull nomic-embed-text</code>
                 </p>
                 <div className="flex gap-2">
-                  <Input placeholder="http://localhost:11434" value={ollamaUrl}
+                  <input placeholder="http://localhost:11434" value={ollamaUrl}
                     onChange={(e) => setOllamaUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveProvider("ollama")}
-                    className="bg-white/[0.04] border-white/[0.08] h-10 text-[13px] font-mono rounded-xl focus-visible:ring-orange-500/30"
+                    className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/30 focus:border-orange-500/30 transition-all"
                   />
-                  <Button onClick={() => handleSaveProvider("ollama")} disabled={testing || !ollamaUrl.trim()}
-                    className="bg-orange-600 hover:bg-orange-500 h-10 rounded-xl px-5 shrink-0 font-medium text-[13px]"
+                  <button onClick={() => handleSaveProvider("ollama")} disabled={testing || !ollamaUrl.trim()}
+                    className="h-10 px-5 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.96]"
                   >
                     {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Connect"}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
@@ -292,6 +306,66 @@ export default function DashboardPage() {
           {total > 0 ? `${total.toLocaleString()} memories across ${stats?.totalSources || 0} sources` : "Import knowledge to get started"}
         </p>
       </div>
+
+      {/* Quick Search */}
+      {total > 0 && (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+            <input
+              placeholder="Quick search your memories…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
+            />
+            {searchQuery ? (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/[0.06] rounded-md transition-colors">
+                <X className="w-3.5 h-3.5 text-zinc-500" />
+              </button>
+            ) : (
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">⌘K</kbd>
+            )}
+          </div>
+
+          {/* Search Results */}
+          {searchQuery.trim() && (
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              {searching ? (
+                <div className="flex items-center justify-center gap-2 py-6">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
+                  <span className="text-[12px] text-zinc-600">Searching…</span>
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="divide-y divide-white/[0.04]">
+                  {searchResults.map((r: any, i: number) => {
+                    const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                    const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };
+                    const Icon = typeIcons[r.sourceType] || FileText;
+                    const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                    return (
+                      <div key={r.memoryId || i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${color}`}>
+                            <Icon className="w-2.5 h-2.5" />
+                            {r.sourceType}
+                          </span>
+                          <span className="text-[11px] text-zinc-600 truncate">{r.sourceTitle}</span>
+                        </div>
+                        <p className="text-[12px] text-zinc-400 line-clamp-2 leading-relaxed">{r.content}</p>
+                      </div>
+                    );
+                  })}
+                  <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-violet-400 font-medium hover:bg-violet-500/5 transition-colors">
+                    View all in Explore <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-[12px] text-zinc-600">No results found</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
