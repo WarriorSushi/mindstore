@@ -1,3 +1,4 @@
+import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
@@ -7,7 +8,7 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
 
     const memories = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at

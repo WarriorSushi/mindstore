@@ -3,6 +3,7 @@ import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
+import { getUserId } from '@/server/user';
 
 /**
  * MindStore MCP Server — Streamable HTTP transport
@@ -20,6 +21,15 @@ import { generateEmbeddings } from '@/server/embeddings';
  */
 
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+// MCP tools use the auth user when available, otherwise default
+async function getMcpUserId(): Promise<string> {
+  try {
+    return await getUserId();
+  } catch {
+    return DEFAULT_USER_ID;
+  }
+}
 
 const TOOLS = [
   {
@@ -76,7 +86,7 @@ const RESOURCES = [
 
 async function toolSearchMind(args: { query: string; limit?: number; source?: string }): Promise<string> {
   const limit = Math.min(args.limit || 5, 20);
-  const userId = DEFAULT_USER_ID;
+  const userId = await getMcpUserId();
 
   // Try to get embedding for semantic search
   let embedding: number[] | null = null;
@@ -107,7 +117,7 @@ async function toolSearchMind(args: { query: string; limit?: number; source?: st
 }
 
 async function toolGetProfile(): Promise<string> {
-  const userId = DEFAULT_USER_ID;
+  const userId = await getMcpUserId();
 
   const stats = await db.execute(sql`
     SELECT 
@@ -175,7 +185,7 @@ async function resourceProfile(): Promise<string> {
 }
 
 async function resourceRecent(): Promise<string> {
-  const userId = DEFAULT_USER_ID;
+  const userId = await getMcpUserId();
 
   const recent = await db.execute(sql`
     SELECT id, content, source_type, source_title, created_at

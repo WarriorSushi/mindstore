@@ -1,10 +1,11 @@
+import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
 
     const memoriesCount = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE user_id = ${userId}::uuid`);
     const sourcesBreakdown = await db.execute(sql`

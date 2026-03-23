@@ -1,3 +1,4 @@
+import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { generateEmbeddings } from '@/server/embeddings';
@@ -9,7 +10,7 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const source = searchParams.get('source') || '';
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
     const body = await req.json();
     const { content, sourceType, sourceId, sourceTitle, metadata } = body;
 
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const singleId = searchParams.get('id');
     const sourceId = searchParams.get('source_id');

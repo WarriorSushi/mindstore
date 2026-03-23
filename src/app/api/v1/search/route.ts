@@ -1,3 +1,4 @@
+import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { retrieve } from '@/server/retrieval';
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get('q');
     const limit = parseInt(searchParams.get('limit') || '10');
     const sourceType = searchParams.get('source');
-    const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const userId = await getUserId();
 
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
 
