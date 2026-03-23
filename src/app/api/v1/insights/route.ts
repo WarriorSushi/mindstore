@@ -41,33 +41,68 @@ export async function GET(req: NextRequest) {
       embedding: r.embedding ? (typeof r.embedding === 'string' ? JSON.parse(r.embedding) : r.embedding) : null,
     })).filter(r => r.embedding);
 
-    // === Cross-connections via SQL (cosine similarity) ===
-    const connectionResults = await db.execute(sql`
-      SELECT 
-        a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
-        b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title,
-        1 - (a.embedding <=> b.embedding) as similarity
-      FROM memories a, memories b
-      WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
-        AND a.id < b.id
-        AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
-        AND a.source_id != b.source_id
-        AND 1 - (a.embedding <=> b.embedding) BETWEEN 0.65 AND 0.95
-      ORDER BY 1 - (a.embedding <=> b.embedding) DESC
-      LIMIT 15
-    `);
+    // === Cross-connections ===
+    // Try vector-based first (cosine similarity), fallback to text-based (trigram)
+    let connections: any[] = [];
+    
+    const hasEmbeddings = withEmb.length >= 2;
+    
+    if (hasEmbeddings) {
+      // Vector-based cross-connections
+      const connectionResults = await db.execute(sql`
+        SELECT 
+          a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
+          b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title,
+          1 - (a.embedding <=> b.embedding) as similarity
+        FROM memories a, memories b
+        WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
+          AND a.id < b.id
+          AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
+          AND a.source_title != b.source_title
+          AND 1 - (a.embedding <=> b.embedding) BETWEEN 0.65 AND 0.95
+        ORDER BY 1 - (a.embedding <=> b.embedding) DESC
+        LIMIT 15
+      `);
 
-    const connections = (connectionResults as any[]).map(r => {
-      const bridgeConcept = extractBridgeConcept(r.a_content, r.b_content);
-      const sourceDistance = r.a_source !== r.b_source ? 0.8 : 0.3;
-      return {
-        memoryA: { id: r.a_id, content: r.a_content, source: r.a_source, sourceTitle: r.a_title },
-        memoryB: { id: r.b_id, content: r.b_content, source: r.b_source, sourceTitle: r.b_title },
-        similarity: r.similarity,
-        bridgeConcept,
-        surprise: r.similarity * sourceDistance,
-      };
-    }).sort((a: any, b: any) => b.surprise - a.surprise);
+      connections = (connectionResults as any[]).map(r => {
+        const bridgeConcept = extractBridgeConcept(r.a_content, r.b_content);
+        const sourceDistance = r.a_source !== r.b_source ? 0.8 : 0.3;
+        return {
+          memoryA: { id: r.a_id, content: r.a_content, source: r.a_source, sourceTitle: r.a_title },
+          memoryB: { id: r.b_id, content: r.b_content, source: r.b_source, sourceTitle: r.b_title },
+          similarity: r.similarity,
+          bridgeConcept,
+          surprise: r.similarity * sourceDistance,
+        };
+      }).sort((a: any, b: any) => b.surprise - a.surprise);
+    } else {
+      // Text-based fallback: trigram similarity (pg_trgm)
+      const trigramResults = await db.execute(sql`
+        SELECT 
+          a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
+          b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title,
+          similarity(a.content, b.content) as sim
+        FROM memories a, memories b
+        WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
+          AND a.id < b.id
+          AND a.source_title != b.source_title
+          AND similarity(a.content, b.content) > 0.15
+        ORDER BY similarity(a.content, b.content) DESC
+        LIMIT 15
+      `);
+
+      connections = (trigramResults as any[]).map(r => {
+        const bridgeConcept = extractBridgeConcept(r.a_content, r.b_content);
+        const sourceDistance = r.a_source !== r.b_source ? 0.8 : 0.3;
+        return {
+          memoryA: { id: r.a_id, content: r.a_content, source: r.a_source, sourceTitle: r.a_title },
+          memoryB: { id: r.b_id, content: r.b_content, source: r.b_source, sourceTitle: r.b_title },
+          similarity: r.sim,
+          bridgeConcept,
+          surprise: r.sim * sourceDistance,
+        };
+      }).sort((a: any, b: any) => b.surprise - a.surprise);
+    }
 
     // === Contradictions ===
     const contradictionSignals = [
@@ -77,20 +112,40 @@ export async function GET(req: NextRequest) {
     ];
 
     const contradictions: any[] = [];
-    const highSimResults = await db.execute(sql`
-      SELECT 
-        a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
-        b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title
-      FROM memories a, memories b
-      WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
-        AND a.id < b.id
-        AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
-        AND 1 - (a.embedding <=> b.embedding) > 0.7
-      ORDER BY 1 - (a.embedding <=> b.embedding) DESC
-      LIMIT 100
-    `);
+    
+    // Find potential contradictions — use embeddings if available, else trigram similarity
+    let highSimPairs: any[];
+    
+    if (hasEmbeddings) {
+      const highSimResults = await db.execute(sql`
+        SELECT 
+          a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
+          b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title
+        FROM memories a, memories b
+        WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
+          AND a.id < b.id
+          AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
+          AND 1 - (a.embedding <=> b.embedding) > 0.7
+        ORDER BY 1 - (a.embedding <=> b.embedding) DESC
+        LIMIT 100
+      `);
+      highSimPairs = highSimResults as any[];
+    } else {
+      const trigramSimResults = await db.execute(sql`
+        SELECT 
+          a.id as a_id, a.content as a_content, a.source_type as a_source, a.source_title as a_title,
+          b.id as b_id, b.content as b_content, b.source_type as b_source, b.source_title as b_title
+        FROM memories a, memories b
+        WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
+          AND a.id < b.id
+          AND similarity(a.content, b.content) > 0.1
+        ORDER BY similarity(a.content, b.content) DESC
+        LIMIT 100
+      `);
+      highSimPairs = trigramSimResults as any[];
+    }
 
-    for (const r of highSimResults as any[]) {
+    for (const r of highSimPairs) {
       const aLower = r.a_content.toLowerCase();
       const bLower = r.b_content.toLowerCase();
       for (const [pos, neg] of contradictionSignals) {
