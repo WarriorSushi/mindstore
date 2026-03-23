@@ -97,11 +97,31 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * DELETE /api/v1/memories — clear all memories for user
+ * DELETE /api/v1/memories — delete memories
+ * ?id=UUID — delete single memory
+ * ?source_id=xxx — delete by source_id (e.g. demo data)
+ * no params — clear all memories for user
  */
 export async function DELETE(req: NextRequest) {
   try {
     const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
+    const { searchParams } = new URL(req.url);
+    const singleId = searchParams.get('id');
+    const sourceId = searchParams.get('source_id');
+
+    if (singleId) {
+      // Delete a single memory by ID
+      await db.execute(sql`DELETE FROM memories WHERE id = ${singleId}::uuid AND user_id = ${userId}::uuid`);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (sourceId) {
+      // Delete by source_id (e.g. demo data cleanup)
+      await db.execute(sql`DELETE FROM memories WHERE source_id = ${sourceId} AND user_id = ${userId}::uuid`);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Full wipe
     await db.execute(sql`DELETE FROM memories WHERE user_id = ${userId}::uuid`);
     await db.execute(sql`DELETE FROM tree_index WHERE user_id = ${userId}::uuid`);
     await db.execute(sql`DELETE FROM connections WHERE user_id = ${userId}::uuid`);

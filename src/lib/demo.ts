@@ -46,6 +46,7 @@ export async function loadDemoData() {
     title: m.sourceTitle,
     content: m.content,
     sourceType: m.sourceType,
+    sourceId: '__demo__',
   }));
 
   try {
@@ -64,7 +65,8 @@ export async function loadDemoData() {
 
 export async function clearDemoData() {
   try {
-    await fetch('/api/v1/memories', { method: 'DELETE' });
+    // Only delete demo memories, not user's real data
+    await fetch('/api/v1/memories?source_id=__demo__', { method: 'DELETE' });
   } catch (e) {
     console.error('Demo clear failed:', e);
   }

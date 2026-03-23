@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     const userId = req.headers.get('x-user-id') || '00000000-0000-0000-0000-000000000000';
     
     const contentType = req.headers.get('content-type') || '';
-    let documents: Array<{ title: string; content: string; sourceType: string; timestamp?: Date }> = [];
+    let documents: Array<{ title: string; content: string; sourceType: string; sourceId?: string; timestamp?: Date }> = [];
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     // Chunk all documents
     let totalChunks = 0;
-    const allChunks: Array<{ content: string; sourceType: string; sourceTitle: string; timestamp?: Date }> = [];
+    const allChunks: Array<{ content: string; sourceType: string; sourceTitle: string; sourceId?: string; timestamp?: Date }> = [];
 
     for (const doc of documents) {
       const chunks = chunkText(doc.content);
@@ -143,6 +143,7 @@ export async function POST(req: NextRequest) {
           content: chunk,
           sourceType: doc.sourceType,
           sourceTitle: doc.title,
+          sourceId: doc.sourceId,
           timestamp: doc.timestamp,
         });
       }
@@ -167,13 +168,13 @@ export async function POST(req: NextRequest) {
       if (embedding) {
         const embStr = `[${embedding.join(',')}]`;
         await db.execute(sql`
-          INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, created_at, imported_at)
-          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceTitle}, ${ts}, NOW())
+          INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, created_at, imported_at)
+          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}, NOW())
         `);
       } else {
         await db.execute(sql`
-          INSERT INTO memories (id, user_id, content, source_type, source_title, created_at, imported_at)
-          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceTitle}, ${ts}, NOW())
+          INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, created_at, imported_at)
+          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}, NOW())
         `);
       }
     }
