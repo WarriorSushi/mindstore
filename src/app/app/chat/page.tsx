@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Send, Loader2, Brain, User, Sparkles, ArrowUp } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -68,12 +69,12 @@ export default function ChatPage() {
       // If no AI provider configured, show search results directly
       if (!hasAI) {
         const searchResponse = results.map((r: any, i: number) =>
-          `**[${i + 1}] ${r.sourceTitle || 'Untitled'}** _(${r.sourceType})_\n${r.content}`
-        ).join('\n\n---\n\n');
+          `[${i + 1}] ${r.sourceTitle || 'Untitled'} (${r.sourceType})\n${r.content}`
+        ).join('\n\n');
 
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: `Here's what I found in your knowledge base:\n\n${searchResponse}\n\n_💡 Connect an AI provider in Settings for synthesized answers._`,
+          content: `Found ${results.length} relevant memories:\n\n${searchResponse}\n\n💡 Connect an AI provider in Settings for synthesized answers.`,
           sources: results.map((r: any) => ({ title: r.sourceTitle || '', type: r.sourceType, score: r.score })),
         }]);
         setLoading(false);
@@ -123,7 +124,13 @@ export default function ChatPage() {
             </div>
             <h2 className="text-[15px] font-medium text-zinc-300 mb-1">Ask your mind</h2>
             <p className="text-[12px] text-zinc-600 mb-6">
-              {memoryCount > 0 ? `Search across ${memoryCount.toLocaleString()} memories` : "Import knowledge to start"}
+              {memoryCount > 0 ? (
+                `Search across ${memoryCount.toLocaleString()} memories`
+              ) : (
+                <Link href="/app/import" className="text-violet-400 hover:text-violet-300 transition-colors">
+                  Import knowledge to start →
+                </Link>
+              )}
             </p>
             <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
               {SUGGESTIONS.map((s) => (
