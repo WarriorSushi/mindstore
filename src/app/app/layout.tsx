@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings,
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Onboarding } from "@/components/Onboarding";
+import { CommandPalette } from "@/components/CommandPalette";
 
 const navItems = [
   { href: "/app", icon: LayoutDashboard, label: "Home" },
@@ -46,6 +48,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-[100dvh] bg-[#0a0a0b]">
       {/* ════════ ONBOARDING ════════ */}
       <Onboarding />
+      {/* ════════ COMMAND PALETTE ════════ */}
+      <CommandPalette />
       {/* ════════ MOBILE HEADER ════════ */}
       <header className={cn(
         "md:hidden fixed top-0 inset-x-0 z-50 safe-top",
@@ -59,13 +63,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
         </Link>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
-          aria-label="Menu"
-        >
-          {menuOpen ? <X className="w-[18px] h-[18px]" /> : <Menu className="w-[18px] h-[18px]" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
+            aria-label="Search"
+          >
+            <Search className="w-[18px] h-[18px] text-zinc-400" />
+          </button>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
+            aria-label="Menu"
+          >
+            {menuOpen ? <X className="w-[18px] h-[18px]" /> : <Menu className="w-[18px] h-[18px]" />}
+          </button>
+        </div>
       </header>
 
       {/* ════════ MOBILE MENU OVERLAY ════════ */}
@@ -129,8 +142,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="px-4 py-3 border-t border-white/[0.04]">
-          <p className="text-[10px] text-zinc-600 font-medium tracking-wide">MINDSTORE v0.3</p>
+        <div className="px-4 py-3 border-t border-white/[0.04] space-y-2">
+          <button
+            onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+            className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-lg text-[12px] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-all"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span className="flex-1 text-left">Search</span>
+            <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px]">⌘K</kbd>
+          </button>
+          <p className="text-[10px] text-zinc-600 font-medium tracking-wide px-2.5">MINDSTORE v0.3</p>
         </div>
       </aside>
 
