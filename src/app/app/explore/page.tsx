@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X, Trash2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X, Trash2, Copy, Check, Loader2 } from "lucide-react";
+import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 
 interface Memory {
@@ -39,6 +40,30 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
+  const [copied, setCopied] = useState(false);
+
+  // Keyboard: Escape closes detail modal
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && selected) {
+        setSelected(null);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [selected]);
+
+  const handleCopy = useCallback(async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  }, []);
+
   async function deleteMemory(id: string) {
     if (!confirm("Delete this memory? This can't be undone.")) return;
     setDeleting(true);
@@ -48,6 +73,7 @@ export default function ExplorePage() {
       setMemories(prev => prev.filter(m => m.id !== id));
       setTotalMemories(prev => prev - 1);
       setSelected(null);
+      setCopied(false);
       toast.success("Memory deleted");
     } catch {
       toast.error("Failed to delete memory");
@@ -183,11 +209,30 @@ export default function ExplorePage() {
             {totalMemories === 0 ? "No memories yet" : "No results"}
           </div>
         )}
+
+        {/* Loading skeleton */}
+        {loading && memories.length === 0 && (
+          <div className="space-y-1.5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="p-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] animate-pulse">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="w-14 h-4 rounded-md bg-white/[0.06]" />
+                  <div className="flex-1 h-3.5 rounded-md bg-white/[0.04]" />
+                  <div className="w-10 h-3 rounded-md bg-white/[0.03]" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-3.5 rounded-md bg-white/[0.04] w-full" />
+                  <div className="h-3.5 rounded-md bg-white/[0.04] w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Detail Bottom Sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 z-[60]" onClick={() => { setSelected(null); setCopied(false); }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
@@ -206,14 +251,32 @@ export default function ExplorePage() {
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
                 </div>
               </div>
-              <button onClick={() => setSelected(null)} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg shrink-0">
+              <button onClick={() => { setSelected(null); setCopied(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg shrink-0">
                 <X className="w-4 h-4 text-zinc-500" />
               </button>
             </div>
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
-              <p className="whitespace-pre-wrap text-[13px] text-zinc-300 leading-[1.7]">{selected.content}</p>
+              <div className="text-[13px] text-zinc-300 leading-[1.7]">
+                <ChatMarkdown content={selected.content} />
+              </div>
             </div>
-            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-end">
+            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between">
+              <button
+                onClick={() => handleCopy(selected.content)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-green-400">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy
+                  </>
+                )}
+              </button>
               <button
                 onClick={() => deleteMemory(selected.id)}
                 disabled={deleting}
