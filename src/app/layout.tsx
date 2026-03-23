@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MindStore — Your mind, searchable.",
     description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get answers from YOUR brain. 100% private.",
-    url: "https://mindstore.org",
+    url: "https://mindstore-sandy.vercel.app",
     siteName: "MindStore",
     type: "website",
   },
