@@ -163,6 +163,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Filter out empty documents
+    documents = documents.filter(d => d.content && d.content.trim().length > 0);
+
     if (documents.length === 0) {
       return NextResponse.json({ error: 'No documents to import' }, { status: 400 });
     }
