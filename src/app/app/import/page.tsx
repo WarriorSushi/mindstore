@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileJson, FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote } from "lucide-react";
+import { Upload, FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,13 +10,13 @@ import { toast } from "sonner";
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion";
 
-const TABS: { id: Tab; label: string; icon: any }[] = [
-  { id: "chatgpt", label: "ChatGPT", icon: MessageCircle },
-  { id: "text", label: "Text", icon: Type },
-  { id: "files", label: "Files", icon: FileText },
-  { id: "url", label: "URL", icon: Globe },
-  { id: "obsidian", label: "Obsidian", icon: BookOpen },
-  { id: "notion", label: "Notion", icon: StickyNote },
+const TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
+  { id: "chatgpt", label: "ChatGPT", icon: MessageCircle, desc: "ZIP or JSON" },
+  { id: "text", label: "Text", icon: Type, desc: "Paste anything" },
+  { id: "files", label: "Files", icon: FileText, desc: ".txt, .md" },
+  { id: "url", label: "URL", icon: Globe, desc: "Extract page" },
+  { id: "obsidian", label: "Obsidian", icon: BookOpen, desc: "Vault export" },
+  { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
 ];
 
 export default function ImportPage() {
@@ -29,328 +29,255 @@ export default function ImportPage() {
   const [urlInput, setUrlInput] = useState("");
 
   const importViaApi = async (formData: FormData) => {
-    setState("uploading");
-    setProgress(50);
-    setProgressText("Uploading and processing...");
+    setState("uploading"); setProgress(50); setProgressText("Processing…");
     try {
       const res = await fetch('/api/v1/import', { method: 'POST', body: formData });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Import failed'); }
-      const result = await res.json();
-      setState("done");
-      setProgress(100);
-      setProgressText(`Added ${result.imported.chunks} memories from ${result.imported.documents} source(s).`);
-      toast.success(`Imported ${result.imported.chunks} memories!`);
-    } catch (err: any) {
-      toast.error(`Import failed: ${err.message}`);
-      setState("error");
-      setProgressText(`Error: ${err.message}`);
-    }
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+      const r = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
+      toast.success(`Imported ${r.imported.chunks} memories`);
+    } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
 
-  const importJsonViaApi = async (documents: Array<{ title: string; content: string; sourceType: string }>) => {
-    setState("uploading");
-    setProgress(50);
-    setProgressText("Processing...");
+  const importJsonViaApi = async (docs: Array<{ title: string; content: string; sourceType: string }>) => {
+    setState("uploading"); setProgress(50); setProgressText("Processing…");
     try {
-      const res = await fetch('/api/v1/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documents }),
-      });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Import failed'); }
-      const result = await res.json();
-      setState("done");
-      setProgress(100);
-      setProgressText(`Added ${result.imported.chunks} memories from ${result.imported.documents} source(s).`);
-      toast.success(`Imported ${result.imported.chunks} memories!`);
-    } catch (err: any) {
-      toast.error(`Import failed: ${err.message}`);
-      setState("error");
-      setProgressText(`Error: ${err.message}`);
-    }
+      const res = await fetch('/api/v1/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documents: docs }) });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+      const r = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
+      toast.success(`Imported ${r.imported.chunks} memories`);
+    } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
 
   const handleChatGPTImport = useCallback(async (file: File) => {
-    setState("parsing");
-    setProgressText("Uploading ChatGPT export...");
-    setProgress(10);
-    const formData = new FormData();
-    formData.append('files', file);
-    formData.append('source_type', 'chatgpt');
-    await importViaApi(formData);
+    setState("parsing"); setProgressText("Reading export…"); setProgress(10);
+    const fd = new FormData(); fd.append('files', file); fd.append('source_type', 'chatgpt');
+    await importViaApi(fd);
   }, []);
 
   const handleTextImport = async () => {
     if (!textContent.trim()) return;
-    const title = textTitle.trim() || `Note — ${new Date().toLocaleDateString()}`;
-    setState("parsing");
-    setProgressText("Processing text...");
-    await importJsonViaApi([{ title, content: textContent, sourceType: 'text' }]);
-    setTextTitle("");
-    setTextContent("");
+    await importJsonViaApi([{ title: textTitle.trim() || `Note — ${new Date().toLocaleDateString()}`, content: textContent, sourceType: 'text' }]);
+    setTextTitle(""); setTextContent("");
   };
 
   const handleFileImport = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setState("parsing");
-    const formData = new FormData();
-    formData.append('source_type', 'file');
-    for (const file of Array.from(files)) {
-      if (!file.name.match(/\.(txt|md|markdown)$/i)) {
-        toast.error(`Skipped ${file.name} — only .txt and .md files supported`);
-        continue;
-      }
-      formData.append('files', file);
-    }
-    await importViaApi(formData);
+    if (!files?.length) return; setState("parsing");
+    const fd = new FormData(); fd.append('source_type', 'file');
+    for (const f of Array.from(files)) { if (f.name.match(/\.(txt|md|markdown)$/i)) fd.append('files', f); }
+    await importViaApi(fd);
   };
 
   const handleUrlImport = async () => {
-    if (!urlInput.trim()) return;
-    setState("parsing");
-    setProgressText("Fetching URL...");
+    if (!urlInput.trim()) return; setState("parsing"); setProgressText("Fetching…");
     try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput.trim())}`;
-      const res = await fetch(proxyUrl);
-      if (!res.ok) throw new Error("Failed to fetch URL");
+      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput.trim())}`);
+      if (!res.ok) throw new Error("Fetch failed");
       const html = await res.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
-      doc.querySelectorAll("script, style, nav, footer, header").forEach((el) => el.remove());
-      const text = doc.body?.innerText || doc.body?.textContent || "";
-      if (text.trim().length < 50) { toast.error("Could not extract content."); setState("idle"); return; }
+      doc.querySelectorAll("script, style, nav, footer, header").forEach(el => el.remove());
+      const text = doc.body?.innerText || "";
+      if (text.trim().length < 50) { toast.error("No content found"); setState("idle"); return; }
       await importJsonViaApi([{ title: doc.title || urlInput, content: text, sourceType: 'url' }]);
       setUrlInput("");
-    } catch (err: any) {
-      toast.error(`URL fetch failed: ${err.message}`);
-      setState("error");
-    }
+    } catch (err: any) { toast.error(err.message); setState("error"); }
   };
 
-  const handleVaultImport = async (files: FileList | null, type: string) => {
-    if (!files || files.length === 0) return;
-    setState("parsing");
-    setProgressText(`Reading ${type} files...`);
-    const formData = new FormData();
-    formData.append('source_type', 'file');
-    for (const file of Array.from(files)) {
-      if (file.name.endsWith('.md') || file.name.endsWith('.txt')) {
-        formData.append('files', file);
-      }
-    }
-    await importViaApi(formData);
+  const handleVaultImport = async (files: FileList | null) => {
+    if (!files?.length) return; setState("parsing");
+    const fd = new FormData(); fd.append('source_type', 'file');
+    for (const f of Array.from(files)) { if (f.name.endsWith('.md') || f.name.endsWith('.txt')) fd.append('files', f); }
+    await importViaApi(fd);
   };
 
-  const resetState = () => { setState("idle"); setProgress(0); setProgressText(""); };
-  const isProcessing = state !== "idle" && state !== "done" && state !== "error";
+  const reset = () => { setState("idle"); setProgress(0); setProgressText(""); };
+  const busy = state === "parsing" || state === "uploading";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 md:space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-xl md:text-3xl font-bold">Import Knowledge</h1>
-        <p className="text-zinc-400 text-xs md:text-sm mt-0.5">Feed your mind. The more you import, the smarter it gets.</p>
+        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
+        <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
       </div>
 
-      {/* Progress Banner */}
+      {/* Progress */}
       {state !== "idle" && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2.5">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
           <div className="flex items-center gap-2.5">
             {state === "done" ? <CheckCircle className="w-4 h-4 text-green-400" /> :
-             state === "error" ? <span className="text-red-400 text-xs">✕</span> :
+             state === "error" ? <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center"><span className="text-[10px] text-red-400">!</span></div> :
              <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />}
-            <span className="text-sm">{progressText}</span>
+            <span className="text-[13px]">{progressText}</span>
           </div>
           <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
           </div>
           {(state === "done" || state === "error") && (
-            <Button variant="outline" size="sm" onClick={resetState} className="h-7 text-xs border-zinc-700">
-              Import More
-            </Button>
+            <button onClick={reset} className="text-[12px] text-violet-400 font-medium hover:text-violet-300 transition-colors">
+              Import more →
+            </button>
           )}
         </div>
       )}
 
-      {/* Tab Selector — horizontally scrollable on mobile */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+      {/* Source Selector */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all shrink-0 ${
+            className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
-                ? "bg-violet-500/15 text-violet-300 border border-violet-500/20"
-                : "text-zinc-400 border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
+                : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
             }`}
           >
-            <t.icon className="w-3.5 h-3.5" />
-            {t.label}
+            <t.icon className={`w-5 h-5 ${tab === t.id ? "text-violet-400" : "text-zinc-500"}`} />
+            <span className={`text-[11px] font-medium ${tab === t.id ? "text-violet-300" : "text-zinc-400"}`}>{t.label}</span>
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
-        {tab === "chatgpt" && (
-          <>
-            <div className="text-xs text-zinc-400 space-y-1.5">
-              <p className="font-medium text-zinc-300">How to export from ChatGPT:</p>
-              <ol className="list-decimal list-inside space-y-1 text-zinc-500">
-                <li>Go to <a href="https://chatgpt.com" target="_blank" className="text-violet-400">chatgpt.com</a></li>
-                <li>Profile → Settings → Data Controls → Export</li>
-                <li>Download ZIP from email</li>
-                <li>Drop it below</li>
-              </ol>
-            </div>
-            <DropZone
-              id="chatgpt-file"
-              accept=".json,.zip"
-              icon={<Upload className="w-8 h-8 text-zinc-600" />}
-              text="Drop ChatGPT export"
-              subtext=".zip or .json"
-              disabled={isProcessing}
-              onFile={(f) => handleChatGPTImport(f)}
-            />
-          </>
-        )}
-
-        {tab === "text" && (
-          <>
-            <Input
-              placeholder="Title (optional)"
-              value={textTitle}
-              onChange={(e) => setTextTitle(e.target.value)}
-              className="bg-zinc-800/50 border-white/[0.06] h-9 text-sm"
-            />
-            <Textarea
-              placeholder="Paste notes, articles, thoughts..."
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              rows={8}
-              className="bg-zinc-800/50 border-white/[0.06] text-sm"
-            />
-            <Button onClick={handleTextImport} disabled={isProcessing || !textContent.trim()} className="bg-violet-600 hover:bg-violet-500 h-9 text-sm">
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Import Text
-            </Button>
-          </>
-        )}
-
-        {tab === "files" && (
-          <>
-            <p className="text-xs text-zinc-500">Upload .txt or .md files. Select multiple files at once.</p>
-            <DropZone
-              id="file-upload"
-              accept=".txt,.md,.markdown"
-              multiple
-              icon={<FileText className="w-8 h-8 text-zinc-600" />}
-              text="Drop files here"
-              subtext=".txt or .md"
-              disabled={isProcessing}
-              onFiles={(f) => handleFileImport(f)}
-            />
-          </>
-        )}
-
-        {tab === "url" && (
-          <>
-            <p className="text-xs text-zinc-500">Paste a URL to extract text content.</p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="https://..."
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
-                className="bg-zinc-800/50 border-white/[0.06] h-9 text-sm"
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+        <div className="p-4 md:p-5 space-y-4">
+          {tab === "chatgpt" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1">
+                <p className="text-zinc-300 font-medium">How to export from ChatGPT</p>
+                <p>Profile → Settings → Data Controls → Export data → Download ZIP from email</p>
+              </div>
+              <DropZone
+                id="chatgpt-file" accept=".json,.zip" disabled={busy}
+                onFile={handleChatGPTImport}
+                title="Drop your ChatGPT export"
+                subtitle=".zip or .json file"
+                icon={<MessageCircle className="w-6 h-6 text-zinc-600" />}
               />
-              <Button onClick={handleUrlImport} disabled={isProcessing || !urlInput.trim()} className="bg-violet-600 hover:bg-violet-500 h-9 text-sm shrink-0">
-                {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
-              </Button>
-            </div>
-            <p className="text-[10px] text-zinc-600">Some websites may block extraction due to CORS.</p>
-          </>
-        )}
-
-        {tab === "obsidian" && (
-          <>
-            <div className="text-xs text-zinc-400 space-y-1">
-              <p className="font-medium text-zinc-300">Import from Obsidian:</p>
-              <p className="text-zinc-500">Select .md files from your vault folder.</p>
-            </div>
+            </>
+          )}
+          {tab === "text" && (
+            <>
+              <input
+                placeholder="Title (optional)"
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+              />
+              <textarea
+                placeholder="Paste notes, articles, thoughts…"
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                rows={7}
+                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all resize-none"
+              />
+              <button
+                onClick={handleTextImport}
+                disabled={busy || !textContent.trim()}
+                className="h-9 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
+              >
+                {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Import
+              </button>
+            </>
+          )}
+          {tab === "files" && (
             <DropZone
-              id="obsidian-upload"
-              accept=".md,.txt,.markdown"
-              multiple
-              icon={<BookOpen className="w-8 h-8 text-zinc-600" />}
-              text="Drop Obsidian .md files"
-              subtext="select multiple"
-              disabled={isProcessing}
-              onFiles={(f) => handleVaultImport(f, "Obsidian")}
+              id="file-upload" accept=".txt,.md,.markdown" multiple disabled={busy}
+              onFiles={handleFileImport}
+              title="Drop text files"
+              subtitle=".txt or .md — select multiple"
+              icon={<FileText className="w-6 h-6 text-zinc-600" />}
             />
-          </>
-        )}
-
-        {tab === "notion" && (
-          <>
-            <div className="text-xs text-zinc-400 space-y-1">
-              <p className="font-medium text-zinc-300">Import from Notion:</p>
-              <ol className="list-decimal list-inside space-y-0.5 text-zinc-500">
-                <li>Settings → Export → Markdown & CSV</li>
-                <li>Extract ZIP, select .md files</li>
-              </ol>
-            </div>
-            <DropZone
-              id="notion-upload"
-              accept=".md,.markdown"
-              multiple
-              icon={<StickyNote className="w-8 h-8 text-zinc-600" />}
-              text="Drop Notion .md files"
-              subtext="UUID suffixes auto-cleaned"
-              disabled={isProcessing}
-              onFiles={(f) => handleVaultImport(f, "Notion")}
-            />
-          </>
-        )}
+          )}
+          {tab === "url" && (
+            <>
+              <p className="text-[12px] text-zinc-500">Extract text from any webpage</p>
+              <div className="flex gap-2">
+                <input
+                  placeholder="https://…"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
+                  className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+                />
+                <button
+                  onClick={handleUrlImport}
+                  disabled={busy || !urlInput.trim()}
+                  className="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97]"
+                >
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
+                </button>
+              </div>
+            </>
+          )}
+          {tab === "obsidian" && (
+            <>
+              <p className="text-[12px] text-zinc-500">Select .md files from your Obsidian vault folder</p>
+              <DropZone
+                id="obsidian-upload" accept=".md,.txt,.markdown" multiple disabled={busy}
+                onFiles={(f) => handleVaultImport(f)}
+                title="Drop Obsidian files"
+                subtitle=".md files from your vault"
+                icon={<BookOpen className="w-6 h-6 text-zinc-600" />}
+              />
+            </>
+          )}
+          {tab === "notion" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1">
+                <p className="text-zinc-300 font-medium">Export from Notion</p>
+                <p>Settings → Export → Markdown & CSV → Extract ZIP → Select .md files</p>
+              </div>
+              <DropZone
+                id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
+                onFiles={(f) => handleVaultImport(f)}
+                title="Drop Notion files"
+                subtitle=".md files — UUIDs auto-cleaned"
+                icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
+              />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Reusable Drop Zone ───
-function DropZone({
-  id, accept, multiple, icon, text, subtext, disabled,
-  onFile, onFiles,
-}: {
-  id: string; accept: string; multiple?: boolean;
-  icon: React.ReactNode; text: string; subtext: string;
-  disabled: boolean;
-  onFile?: (f: File) => void;
-  onFiles?: (f: FileList) => void;
+function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subtitle, icon }: {
+  id: string; accept: string; multiple?: boolean; disabled: boolean;
+  onFile?: (f: File) => void; onFiles?: (f: FileList) => void;
+  title: string; subtitle: string; icon: React.ReactNode;
 }) {
+  const [over, setOver] = useState(false);
   return (
     <>
       <div
-        className="border-2 border-dashed border-white/[0.08] rounded-xl p-8 md:p-10 text-center hover:border-violet-500/30 transition-all cursor-pointer active:scale-[0.99]"
-        onClick={() => document.getElementById(id)?.click()}
-        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-violet-500/30", "bg-violet-500/5"); }}
-        onDragLeave={(e) => { e.currentTarget.classList.remove("border-violet-500/30", "bg-violet-500/5"); }}
+        onClick={() => !disabled && document.getElementById(id)?.click()}
+        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragLeave={() => setOver(false)}
         onDrop={(e) => {
-          e.preventDefault();
-          e.currentTarget.classList.remove("border-violet-500/30", "bg-violet-500/5");
+          e.preventDefault(); setOver(false);
           if (onFile) onFile(e.dataTransfer.files[0]);
           if (onFiles) onFiles(e.dataTransfer.files);
         }}
+        className={`flex flex-col items-center justify-center py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.99] ${
+          over
+            ? "border-violet-500/40 bg-violet-500/5"
+            : "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]"
+        }`}
       >
-        <div className="mb-2">{icon}</div>
-        <p className="text-sm text-zinc-400">{text}</p>
-        <p className="text-[11px] text-zinc-600 mt-0.5">{subtext}</p>
+        <div className="mb-2.5">{icon}</div>
+        <p className="text-[13px] text-zinc-400 font-medium">{title}</p>
+        <p className="text-[11px] text-zinc-600 mt-0.5">{subtitle}</p>
       </div>
       <input
-        id={id}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        className="hidden"
-        disabled={disabled}
+        id={id} type="file" accept={accept} multiple={multiple}
+        className="hidden" disabled={disabled}
         onChange={(e) => {
           if (onFile && e.target.files?.[0]) onFile(e.target.files[0]);
           if (onFiles && e.target.files) onFiles(e.target.files);

@@ -1,23 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Info, Loader2, Sparkles, Server } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { toast } from "sonner";
 
 async function fetchSettings() {
-  const res = await fetch('/api/v1/settings');
-  if (!res.ok) return null;
-  return res.json();
+  try { const r = await fetch('/api/v1/settings'); return r.ok ? r.json() : null; } catch { return null; }
 }
-
 async function fetchStats() {
-  const res = await fetch('/api/v1/stats');
-  if (!res.ok) return null;
-  return res.json();
+  try { const r = await fetch('/api/v1/stats'); return r.ok ? r.json() : null; } catch { return null; }
 }
 
 export default function SettingsPage() {
@@ -28,10 +19,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
 
-  useEffect(() => {
-    fetchSettings().then(setSettings);
-    fetchStats().then(setStats);
-  }, []);
+  useEffect(() => { fetchSettings().then(setSettings); fetchStats().then(setStats); }, []);
 
   const handleSave = async (provider: string) => {
     setSaving(provider);
@@ -39,34 +27,19 @@ export default function SettingsPage() {
     if (provider === 'openai') body.apiKey = openaiKey.trim();
     if (provider === 'gemini') body.geminiKey = geminiKey.trim();
     if (provider === 'ollama') body.ollamaUrl = ollamaUrl.trim();
-
-    const res = await fetch('/api/v1/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     setSaving(null);
-
     if (data.ok) {
-      toast.success(`${provider} settings saved!`);
+      toast.success(`${provider} connected`);
       setOpenaiKey(""); setGeminiKey(""); setOllamaUrl("");
       fetchSettings().then(setSettings);
-    } else {
-      toast.error(data.error || 'Failed to save');
-    }
+    } else toast.error(data.error || 'Failed');
   };
 
   const handleRemoveAll = async () => {
-    const res = await fetch('/api/v1/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'remove' }),
-    });
-    if (res.ok) {
-      toast.success("All API keys removed.");
-      fetchSettings().then(setSettings);
-    }
+    await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove' }) });
+    toast.success("Keys removed"); fetchSettings().then(setSettings);
   };
 
   const handleExport = async () => {
@@ -75,174 +48,209 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('Export failed');
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = URL.createObjectURL(blob);
       a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Backup downloaded!");
-    } catch (err: any) {
-      toast.error(`Export failed: ${err.message}`);
-    }
-  };
-
-  const handleImportBackup = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if (!data.memories) throw new Error("Invalid backup format");
-        const res = await fetch('/api/v1/backup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error('Restore failed');
-        const result = await res.json();
-        fetchStats().then(setStats);
-        toast.success(`Restored ${result.imported} memories!`);
-      } catch (err: any) {
-        toast.error(`Import failed: ${err.message}`);
-      }
-    };
-    input.click();
+      toast.success("Backup downloaded");
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleClear = async () => {
-    if (!confirm("Are you sure? This will delete ALL your memories. This cannot be undone.")) return;
-    if (!confirm("Really sure? Export a backup first if you want to keep your data.")) return;
-    try {
-      const res = await fetch('/api/v1/memories', { method: 'DELETE' });
-      if (!res.ok) throw new Error('Clear failed');
-      fetchStats().then(setStats);
-      toast.success("All data cleared.");
-    } catch (err: any) {
-      toast.error(`Clear failed: ${err.message}`);
-    }
+    if (!confirm("Delete ALL memories? This cannot be undone.")) return;
+    if (!confirm("Are you absolutely sure?")) return;
+    await fetch('/api/v1/memories', { method: 'DELETE' });
+    fetchStats().then(setStats);
+    toast.success("All data cleared");
   };
 
   const providers = settings?.providers || {};
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-zinc-400 mt-1">Configure AI providers, manage data, and more.</p>
+        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Settings</h1>
+        <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, data management</p>
       </div>
 
-      {/* Active Provider */}
+      {/* Active Provider Badge */}
       {settings?.embeddingProvider && (
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <Sparkles className="w-4 h-4 text-violet-400" />
-          Active embedding provider: <Badge variant="secondary" className="bg-violet-500/10 text-violet-400">{settings.embeddingProvider}</Badge>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
+          <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
+          <span className="text-[12px] text-zinc-400">Active: <span className="text-violet-300 font-medium">{settings.embeddingProvider}</span></span>
         </div>
       )}
 
-      {/* OpenAI */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Key className="w-5 h-5 text-emerald-400" />
-            OpenAI
-            {providers.openai?.configured && <Badge className="bg-emerald-500/10 text-emerald-400 text-xs">Connected</Badge>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-500">For embeddings (text-embedding-3-small) and chat (GPT-4o-mini).</p>
-          {providers.openai?.preview && (
-            <p className="text-sm text-zinc-400">Current: <code className="bg-zinc-800 px-2 py-0.5 rounded">{providers.openai.preview}</code></p>
-          )}
-          <div className="flex gap-2">
-            <Input type="password" placeholder="sk-..." value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} className="bg-zinc-800 border-zinc-700 font-mono" />
-            <Button onClick={() => handleSave('openai')} disabled={!openaiKey.trim() || saving === 'openai'} className="bg-emerald-600 hover:bg-emerald-500 shrink-0">
-              {saving === 'openai' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ─── Providers ─── */}
+      <div className="space-y-3">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">AI Providers</p>
 
-      {/* Gemini */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-blue-400" />
-            Google Gemini
-            {providers.gemini?.configured && <Badge className="bg-blue-500/10 text-blue-400 text-xs">Connected</Badge>}
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">Free Tier</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-500">Free embeddings (text-embedding-004) and chat (Gemini 2.0 Flash). Get a key at <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 hover:underline">aistudio.google.com</a>.</p>
-          {providers.gemini?.preview && (
-            <p className="text-sm text-zinc-400">Current: <code className="bg-zinc-800 px-2 py-0.5 rounded">{providers.gemini.preview}</code></p>
-          )}
-          <div className="flex gap-2">
-            <Input type="password" placeholder="AIza..." value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} className="bg-zinc-800 border-zinc-700 font-mono" />
-            <Button onClick={() => handleSave('gemini')} disabled={!geminiKey.trim() || saving === 'gemini'} className="bg-blue-600 hover:bg-blue-500 shrink-0">
-              {saving === 'gemini' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Gemini */}
+        <ProviderCard
+          name="Google Gemini"
+          icon={<Sparkles className="w-4 h-4" />}
+          iconColor="text-blue-400"
+          badge="Free"
+          badgeColor="text-emerald-400 bg-emerald-500/10 border-emerald-500/15"
+          connected={providers.gemini?.configured}
+          preview={providers.gemini?.preview}
+          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (e: any) => setGeminiKey(e.target.value) }}
+          onSave={() => handleSave('gemini')}
+          saving={saving === 'gemini'}
+          disabled={!geminiKey.trim()}
+          buttonColor="bg-blue-600 hover:bg-blue-500"
+        />
 
-      {/* Ollama */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Server className="w-5 h-5 text-orange-400" />
-            Ollama (Local)
-            {providers.ollama?.configured && <Badge className="bg-orange-500/10 text-orange-400 text-xs">Connected</Badge>}
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">Free & Private</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-500">Run embeddings locally with Ollama. Install from <a href="https://ollama.ai" target="_blank" className="text-orange-400 hover:underline">ollama.ai</a>, then run <code className="bg-zinc-800 px-1 rounded">ollama pull nomic-embed-text</code>.</p>
-          {providers.ollama?.url && (
-            <p className="text-sm text-zinc-400">Current: <code className="bg-zinc-800 px-2 py-0.5 rounded">{providers.ollama.url}</code></p>
-          )}
-          <div className="flex gap-2">
-            <Input placeholder="http://localhost:11434" value={ollamaUrl} onChange={(e) => setOllamaUrl(e.target.value)} className="bg-zinc-800 border-zinc-700 font-mono" />
-            <Button onClick={() => handleSave('ollama')} disabled={!ollamaUrl.trim() || saving === 'ollama'} className="bg-orange-600 hover:bg-orange-500 shrink-0">
-              {saving === 'ollama' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* OpenAI */}
+        <ProviderCard
+          name="OpenAI"
+          icon={<Key className="w-4 h-4" />}
+          iconColor="text-emerald-400"
+          badge="Paid"
+          badgeColor="text-zinc-400 bg-zinc-500/10 border-zinc-500/15"
+          connected={providers.openai?.configured}
+          preview={providers.openai?.preview}
+          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" className="text-emerald-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (e: any) => setOpenaiKey(e.target.value) }}
+          onSave={() => handleSave('openai')}
+          saving={saving === 'openai'}
+          disabled={!openaiKey.trim()}
+          buttonColor="bg-emerald-600 hover:bg-emerald-500"
+        />
 
-      {/* Data Management */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader><CardTitle className="text-lg">Data Management</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-zinc-800/50">
-            <div><div className="text-2xl font-bold">{stats?.totalMemories?.toLocaleString() || 0}</div><div className="text-sm text-zinc-500">Memories</div></div>
-            <div><div className="text-2xl font-bold">{stats?.totalSources || 0}</div><div className="text-sm text-zinc-500">Sources</div></div>
-            <div><div className="text-2xl font-bold">{stats?.byType?.chatgpt || 0}</div><div className="text-sm text-zinc-500">ChatGPT</div></div>
-            <div><div className="text-2xl font-bold">{(stats?.byType?.file || 0) + (stats?.byType?.text || 0) + (stats?.byType?.url || 0)}</div><div className="text-sm text-zinc-500">Other</div></div>
+        {/* Ollama */}
+        <ProviderCard
+          name="Ollama"
+          icon={<Server className="w-4 h-4" />}
+          iconColor="text-orange-400"
+          badge="Local"
+          badgeColor="text-orange-400 bg-orange-500/10 border-orange-500/15"
+          connected={providers.ollama?.configured}
+          preview={providers.ollama?.url}
+          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" className="text-orange-400 font-medium">Ollama ↗</a></>}
+          inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (e: any) => setOllamaUrl(e.target.value) }}
+          onSave={() => handleSave('ollama')}
+          saving={saving === 'ollama'}
+          disabled={!ollamaUrl.trim()}
+          buttonColor="bg-orange-600 hover:bg-orange-500"
+        />
+      </div>
+
+      {/* ─── Data ─── */}
+      <div className="space-y-3">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Data</p>
+
+        {/* Stats */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Memories", value: stats?.totalMemories || 0 },
+              { label: "Sources", value: stats?.totalSources || 0 },
+              { label: "ChatGPT", value: stats?.byType?.chatgpt || 0 },
+              { label: "Other", value: (stats?.byType?.file || 0) + (stats?.byType?.text || 0) + (stats?.byType?.url || 0) },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="text-[18px] md:text-[22px] font-semibold tabular-nums">{s.value.toLocaleString()}</p>
+                <p className="text-[10px] text-zinc-600 font-medium">{s.label}</p>
+              </div>
+            ))}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleExport} className="border-zinc-700"><Download className="w-4 h-4 mr-2" /> Export Backup</Button>
-            <Button variant="outline" onClick={handleImportBackup} className="border-zinc-700"><Upload className="w-4 h-4 mr-2" /> Restore Backup</Button>
-            <Button variant="outline" onClick={handleRemoveAll} className="border-zinc-700"><Key className="w-4 h-4 mr-2" /> Remove All Keys</Button>
-            <Button variant="outline" onClick={handleClear} className="border-red-900/50 text-red-400 hover:bg-red-950/50"><Trash2 className="w-4 h-4 mr-2" /> Clear All Data</Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <ActionButton icon={<Download className="w-4 h-4" />} label="Export" onClick={handleExport} />
+          <ActionButton icon={<Upload className="w-4 h-4" />} label="Restore" onClick={() => {
+            const input = document.createElement("input");
+            input.type = "file"; input.accept = ".json";
+            input.onchange = async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              try {
+                const data = JSON.parse(await file.text());
+                if (!data.memories) throw new Error("Invalid format");
+                const res = await fetch('/api/v1/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (!res.ok) throw new Error('Failed');
+                const r = await res.json();
+                fetchStats().then(setStats);
+                toast.success(`Restored ${r.imported} memories`);
+              } catch (err: any) { toast.error(err.message); }
+            };
+            input.click();
+          }} />
+          <ActionButton icon={<Key className="w-4 h-4" />} label="Remove Keys" onClick={handleRemoveAll} />
+          <ActionButton icon={<Trash2 className="w-4 h-4" />} label="Clear All" onClick={handleClear} danger />
+        </div>
+      </div>
 
       {/* About */}
-      <Card className="bg-zinc-900 border-zinc-800">
-        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Info className="w-5 h-5 text-violet-400" /> About MindStore</CardTitle></CardHeader>
-        <CardContent className="text-sm text-zinc-400 space-y-2">
-          <p><strong className="text-zinc-200">MindStore</strong> — your personal knowledge base. Import ChatGPT conversations, notes, and articles. Search semantically. Get answers from your own brain.</p>
-          <p>Supports OpenAI, Google Gemini (free), and Ollama (local) for embeddings and chat. All data stored in PostgreSQL. All AI calls server-side.</p>
-          <p className="pt-2">Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">WarriorSushi</a></p>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+        <p className="text-[12px] text-zinc-500 leading-relaxed">
+          <span className="text-zinc-300 font-medium">MindStore</span> — personal knowledge base. Import conversations, notes, and articles. Search semantically. Connect to any AI via MCP.
+        </p>
+        <p className="text-[11px] text-zinc-600 mt-2">
+          Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">WarriorSushi</a> · v0.3
+        </p>
+      </div>
     </div>
+  );
+}
+
+function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: any) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center ${iconColor}`}>
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-medium">{name}</span>
+              <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-[2px] rounded-md border ${badgeColor}`}>{badge}</span>
+              {connected && (
+                <span className="flex items-center gap-1 text-[10px] text-green-400 font-medium">
+                  <CheckCircle className="w-3 h-3" /> Connected
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <p className="text-[12px] text-zinc-500 leading-relaxed">{description}</p>
+        {preview && (
+          <p className="text-[11px] text-zinc-600">Current: <code className="bg-white/[0.06] px-1.5 py-0.5 rounded-md text-[10px]">{preview}</code></p>
+        )}
+        <div className="flex gap-2">
+          <input
+            {...inputProps}
+            className="flex-1 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+          />
+          <button
+            onClick={onSave}
+            disabled={disabled || saving}
+            className={`h-9 px-4 rounded-xl text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.96] disabled:opacity-40 ${buttonColor}`}
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center justify-center gap-2 h-10 rounded-xl border text-[12px] font-medium transition-all active:scale-[0.97] ${
+        danger
+          ? "border-red-500/20 text-red-400 hover:bg-red-500/5"
+          : "border-white/[0.06] text-zinc-400 hover:bg-white/[0.04]"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
