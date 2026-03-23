@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[search]', error);
+    return NextResponse.json({ query: '', results: [], totalResults: 0, layers: { bm25: 0, vector: 0, tree: 0 }, dbError: true });
   }
 }

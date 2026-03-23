@@ -41,10 +41,13 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('[stats]', error);
-    const isDbError = error instanceof Error && (error.message.includes('connect') || error.message.includes('password') || error.message.includes('ECONNREFUSED'));
-    if (isDbError) {
-      return NextResponse.json({ error: 'Database connection failed. Check DATABASE_URL configuration.' }, { status: 503 });
-    }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Return empty stats when DB is unavailable — don't crash the frontend
+    return NextResponse.json({
+      totalMemories: 0,
+      totalSources: 0,
+      byType: { chatgpt: 0, text: 0, file: 0, url: 0 },
+      topSources: [],
+      dbError: true,
+    });
   }
 }

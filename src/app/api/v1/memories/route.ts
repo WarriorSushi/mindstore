@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
       total,
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[memories GET]', error);
+    return NextResponse.json({ memories: [], total: 0, dbError: true });
   }
 }
 

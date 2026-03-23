@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ sources });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[sources]', error);
+    return NextResponse.json({ sources: [], dbError: true });
   }
 }
