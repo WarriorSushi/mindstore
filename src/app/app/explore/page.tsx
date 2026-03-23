@@ -37,7 +37,6 @@ export default function ExplorePage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Memory | null>(null);
-  const [visibleCount, setVisibleCount] = useState(50);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
@@ -60,7 +59,7 @@ export default function ExplorePage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
-      fetch('/api/v1/memories?limit=500').then(r => r.json()),
+      fetch('/api/v1/memories?limit=100').then(r => r.json()),
     ]).then(([srcData, memData]) => {
       setSources(srcData.sources || []);
       setMemories(memData.memories || []);
@@ -71,7 +70,7 @@ export default function ExplorePage() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const p = new URLSearchParams({ limit: '500' });
+      const p = new URLSearchParams({ limit: '100' });
       if (search) p.set('search', search);
       if (filter) p.set('source', filter);
       fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
@@ -119,7 +118,7 @@ export default function ExplorePage() {
 
       {/* Memory Cards */}
       <div className="space-y-1.5">
-        {memories.slice(0, visibleCount).map((m) => {
+        {memories.map((m) => {
           const cfg = typeConfig[m.source] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10" };
           const Icon = cfg.icon;
           return (
@@ -143,13 +142,20 @@ export default function ExplorePage() {
           );
         })}
 
-        {memories.length > visibleCount && (
+        {totalMemories > memories.length && (
           <button
-            onClick={() => setVisibleCount(v => v + 50)}
+            onClick={async () => {
+              const p = new URLSearchParams({ limit: '100', offset: String(memories.length) });
+              if (search) p.set('search', search);
+              if (filter) p.set('source', filter);
+              const res = await fetch(`/api/v1/memories?${p}`);
+              const d = await res.json();
+              setMemories(prev => [...prev, ...(d.memories || [])]);
+            }}
             className="w-full py-3 rounded-2xl border border-white/[0.06] text-[12px] text-zinc-500 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1.5 font-medium"
           >
             <ChevronDown className="w-3.5 h-3.5" />
-            {memories.length - visibleCount} more
+            Load more ({totalMemories - memories.length} remaining)
           </button>
         )}
 
