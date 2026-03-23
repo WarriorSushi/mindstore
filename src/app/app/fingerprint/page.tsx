@@ -3,12 +3,16 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Brain, ArrowLeft, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Brain, RefreshCw, Loader2 } from 'lucide-react';
+
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
   () => import('reagraph').then(mod => mod.GraphCanvas),
-  { ssr: false, loading: () => <div className="flex items-center justify-center h-full text-zinc-500">Loading 3D graph...</div> }
+  { ssr: false, loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+    </div>
+  )}
 );
 
 export default function FingerprintPage() {
@@ -16,17 +20,14 @@ export default function FingerprintPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'3d' | 'stats'>('3d');
 
-  useEffect(() => {
-    loadFingerprint();
-  }, []);
+  useEffect(() => { loadFingerprint(); }, []);
 
   async function loadFingerprint() {
     setLoading(true);
     try {
       const res = await fetch('/api/v1/fingerprint');
       if (!res.ok) throw new Error('Failed');
-      const fp = await res.json();
-      setData(fp);
+      setData(await res.json());
     } catch (e) {
       console.error('Failed to generate fingerprint:', e);
     } finally {
@@ -53,133 +54,176 @@ export default function FingerprintPage() {
   [data]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col">
+    <div className="space-y-5 md:space-y-6">
       {/* Header */}
-      <div className="border-b border-zinc-800/50 px-6 py-4 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Link href="/app" className="text-zinc-400 hover:text-zinc-200">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              <Brain className="w-5 h-5 text-violet-400" />
-              Knowledge Fingerprint
-            </h1>
-            <p className="text-sm text-zinc-500">Your mind, visualized as a living graph</p>
-          </div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Mind Map</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">Your knowledge, visualized as a living graph</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-zinc-900 rounded-lg p-0.5">
+        <div className="flex items-center gap-2 shrink-0 mt-1">
+          {/* View toggle */}
+          <div className="flex rounded-xl bg-white/[0.04] border border-white/[0.06] p-0.5">
             <button
               onClick={() => setViewMode('3d')}
-              className={`px-3 py-1.5 rounded-md text-sm transition ${viewMode === '3d' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}
+              className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
+                viewMode === '3d'
+                  ? 'bg-violet-500/15 text-violet-300 shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
             >
               3D Graph
             </button>
             <button
               onClick={() => setViewMode('stats')}
-              className={`px-3 py-1.5 rounded-md text-sm transition ${viewMode === 'stats' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}
+              className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
+                viewMode === 'stats'
+                  ? 'bg-violet-500/15 text-violet-300 shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
             >
-              Statistics
+              Stats
             </button>
           </div>
-          <Button variant="outline" size="sm" onClick={loadFingerprint} className="border-zinc-700">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+          {/* Refresh */}
+          <button
+            onClick={loadFingerprint}
+            disabled={loading}
+            className="w-8 h-8 flex items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] transition-all active:scale-[0.95] disabled:opacity-40"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-zinc-400 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 relative">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center z-10 bg-zinc-950/80">
-            <div className="text-center">
-              <Brain className="w-12 h-12 text-violet-400 animate-pulse mx-auto mb-4" />
-              <p className="text-zinc-400">Mapping your mind...</p>
+      {/* 3D Graph View */}
+      {viewMode === '3d' && (
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden relative" style={{ height: 'calc(100dvh - 220px)', minHeight: '400px' }}>
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0a0a0b]/80 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-6 h-6 text-violet-400 animate-pulse" />
+                </div>
+                <p className="text-[13px] text-zinc-400">Mapping your mind…</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {viewMode === '3d' && data && (
-          <div className="absolute inset-0">
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-zinc-500">Loading...</div>}>
-              {graphNodes.length > 0 ? (
-                <GraphCanvas
-                  nodes={graphNodes}
-                  edges={graphEdges}
-                  cameraMode="rotate"
-                  labelType="all"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-md">
-                    <Brain className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold mb-2">Your mind is empty</h2>
-                    <p className="text-zinc-500 mb-4">Import some knowledge first, then come back to see your mind fingerprint.</p>
-                    <Link href="/app/import">
-                      <Button className="bg-violet-600 hover:bg-violet-500">Import Knowledge</Button>
-                    </Link>
+          {data && graphNodes.length > 0 && (
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+              </div>
+            }>
+              <GraphCanvas
+                nodes={graphNodes}
+                edges={graphEdges}
+                cameraMode="rotate"
+                labelType="all"
+              />
+            </Suspense>
+          )}
+
+          {data && graphNodes.length === 0 && !loading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-xs px-6">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-7 h-7 text-zinc-700" />
+                </div>
+                <p className="text-[15px] font-medium text-zinc-300 mb-1">Your mind is empty</p>
+                <p className="text-[12px] text-zinc-600 leading-relaxed mb-4">
+                  Import some knowledge first, then come back to see your mind fingerprint.
+                </p>
+                <Link
+                  href="/app/import"
+                  className="inline-flex h-9 px-5 items-center rounded-xl bg-violet-600 hover:bg-violet-500 text-[13px] font-medium text-white transition-all active:scale-[0.97]"
+                >
+                  Import Knowledge
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Stats View */}
+      {viewMode === 'stats' && (
+        <div className="space-y-4">
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+            </div>
+          )}
+
+          {data && !loading && (
+            <>
+              {/* Summary stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Nodes", value: data.nodes.length, color: "text-violet-400" },
+                  { label: "Connections", value: data.edges.length, color: "text-blue-400" },
+                  { label: "Clusters", value: data.clusters.length, color: "text-emerald-400" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                    <p className={`text-[22px] md:text-[28px] font-semibold tabular-nums ${s.color}`}>
+                      {s.value.toLocaleString()}
+                    </p>
+                    <p className="text-[11px] text-zinc-600 font-medium mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Clusters */}
+              {data.clusters.length > 0 && (
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 md:p-5 space-y-4">
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">
+                    Knowledge Clusters
+                  </p>
+                  <div className="space-y-3">
+                    {data.clusters.map((c: any) => {
+                      const maxSize = Math.max(1, ...data.clusters.map((x: any) => x.size));
+                      const pct = Math.min(100, (c.size / maxSize) * 100);
+                      return (
+                        <div key={c.name} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: c.color }}
+                              />
+                              <span className="text-[13px] font-medium capitalize">{c.name}</span>
+                            </div>
+                            <span className="text-[12px] text-zinc-500 tabular-nums">{c.size} items</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700 ease-out"
+                              style={{ backgroundColor: c.color, width: `${pct}%`, opacity: 0.7 }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
-            </Suspense>
-          </div>
-        )}
 
-        {viewMode === 'stats' && data && (
-          <div className="p-8 max-w-4xl mx-auto space-y-8">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <div className="text-3xl font-bold">{data.nodes.length}</div>
-                <div className="text-sm text-zinc-500">Knowledge Nodes</div>
+              {/* About */}
+              <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-violet-500/[0.04] to-fuchsia-500/[0.02] p-4 md:p-5">
+                <p className="text-[13px] font-medium text-zinc-300 mb-2">💡 What is a Knowledge Fingerprint?</p>
+                <p className="text-[12px] text-zinc-500 leading-relaxed">
+                  Your Knowledge Fingerprint is a unique visualization of your mind's topology.
+                  Each node represents a piece of knowledge, and edges show semantic connections.
+                  Clusters reveal your areas of expertise, while isolated nodes highlight potential
+                  blind spots. As you import more knowledge, your fingerprint grows and evolves —
+                  a living map of your intellectual landscape.
+                </p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <div className="text-3xl font-bold">{data.edges.length}</div>
-                <div className="text-sm text-zinc-500">Connections</div>
-              </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-                <div className="text-3xl font-bold">{data.clusters.length}</div>
-                <div className="text-sm text-zinc-500">Knowledge Clusters</div>
-              </div>
-            </div>
-
-            {data.clusters.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Knowledge Clusters</h3>
-                <div className="space-y-3">
-                  {data.clusters.map(c => (
-                    <div key={c.name} className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.color }} />
-                      <span className="capitalize flex-1">{c.name}</span>
-                      <span className="text-zinc-500">{c.size} items</span>
-                      <div className="w-32 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            backgroundColor: c.color,
-                            width: `${Math.min(100, (c.size / Math.max(1, ...data.clusters.map(x => x.size))) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/5 border border-zinc-800 rounded-xl p-6">
-              <h3 className="font-semibold mb-2">💡 What is a Knowledge Fingerprint?</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Your Knowledge Fingerprint is a unique visualization of your mind's topology. 
-                Each node represents a piece of knowledge, and edges show semantic connections. 
-                Clusters reveal your areas of expertise, while isolated nodes highlight potential 
-                blind spots. As you import more knowledge, your fingerprint grows and evolves — 
-                a living map of your intellectual landscape.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
