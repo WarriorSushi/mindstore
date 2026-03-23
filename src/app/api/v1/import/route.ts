@@ -125,7 +125,20 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const body = await req.json();
-      documents = body.documents || [];
+      
+      if (body.documents) {
+        // Standard import format: { documents: [{ title, content, sourceType, sourceId }] }
+        documents = body.documents;
+      } else if (body.memories) {
+        // Restore from export format: { memories: [{ content, source, sourceId, sourceTitle }] }
+        documents = body.memories.map((m: any) => ({
+          title: m.sourceTitle || 'Restored',
+          content: m.content,
+          sourceType: m.source || 'text',
+          sourceId: m.sourceId || null,
+          timestamp: m.timestamp ? new Date(m.timestamp) : undefined,
+        }));
+      }
     }
 
     if (documents.length === 0) {
