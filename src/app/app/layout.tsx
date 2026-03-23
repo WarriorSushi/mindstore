@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { Onboarding } from "@/components/Onboarding";
 
 const navItems = [
   { href: "/app", icon: LayoutDashboard, label: "Home" },
@@ -43,6 +44,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-[#0a0a0b]">
+      {/* ════════ ONBOARDING ════════ */}
+      <Onboarding />
       {/* ════════ MOBILE HEADER ════════ */}
       <header className={cn(
         "md:hidden fixed top-0 inset-x-0 z-50 safe-top",
@@ -135,23 +138,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className={cn(
         "md:ml-[220px] min-h-[100dvh]",
         "pt-12 md:pt-0",  // account for mobile header
-        isChat ? "pb-[env(safe-area-inset-bottom)]" : "pb-[72px] md:pb-0",  // bottom nav space, except chat has its own
+        "pb-[52px] md:pb-0",  // bottom nav space on mobile (always visible now)
       )}>
         <div className={cn(
           "mx-auto",
-          isChat ? "h-[calc(100dvh-3rem)] md:h-[100dvh]" : "max-w-3xl px-4 py-5 md:px-8 md:py-8",
+          isChat ? "h-[calc(100dvh-3rem-52px)] md:h-[100dvh]" : "max-w-3xl px-4 py-5 md:px-8 md:py-8",
         )}>
           {children}
         </div>
       </main>
 
       {/* ════════ MOBILE BOTTOM NAV ════════ */}
-      {!isChat && (
-        <nav className={cn(
-          "md:hidden fixed bottom-0 inset-x-0 z-50 safe-bottom",
-          "bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150",
-          "border-t border-white/[0.04]",
-        )}>
+      <nav className={cn(
+        "md:hidden fixed bottom-0 inset-x-0 z-50 safe-bottom",
+        "bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150",
+        "border-t border-white/[0.04]",
+      )}>
           <div className="grid grid-cols-5 h-[52px]">
             {bottomNav.map((item) => {
               const active = pathname === item.href;
@@ -183,7 +185,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </nav>
-      )}
     </div>
   );
 }

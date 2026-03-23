@@ -185,8 +185,8 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Input Bar — sticky to bottom */}
-      <div className="border-t border-white/[0.04] bg-[#0a0a0b] px-3 py-2.5 safe-bottom">
+      {/* Input Bar — above bottom nav */}
+      <div className="border-t border-white/[0.04] bg-[#0a0a0b] px-3 py-2">
         <div className="max-w-2xl mx-auto flex items-end gap-2">
           <div className="flex-1 relative">
             <textarea
