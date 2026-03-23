@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface Memory {
   id: string;
@@ -38,6 +39,23 @@ export default function ExplorePage() {
   const [selected, setSelected] = useState<Memory | null>(null);
   const [visibleCount, setVisibleCount] = useState(50);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteMemory(id: string) {
+    if (!confirm("Delete this memory? This can't be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/v1/memories?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      setMemories(prev => prev.filter(m => m.id !== id));
+      setTotalMemories(prev => prev - 1);
+      setSelected(null);
+      toast.success("Memory deleted");
+    } catch {
+      toast.error("Failed to delete memory");
+    }
+    setDeleting(false);
+  }
 
   useEffect(() => {
     Promise.all([
@@ -169,6 +187,16 @@ export default function ExplorePage() {
             </div>
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
               <p className="whitespace-pre-wrap text-[13px] text-zinc-300 leading-[1.7]">{selected.content}</p>
+            </div>
+            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-end">
+              <button
+                onClick={() => deleteMemory(selected.id)}
+                disabled={deleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
             </div>
           </div>
         </div>
