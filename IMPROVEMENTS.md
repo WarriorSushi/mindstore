@@ -4,6 +4,25 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 18:59 UTC — Insights Page UI Redesign
+- **Research**: UI consistency audit — identifying pages still using legacy styling patterns
+- **Finding**: The Insights page was the last remaining page using old design patterns: `bg-zinc-950`, `border-zinc-800`, shadcn `Tabs`/`Button` components, `ArrowLeft` back navigation. Every other page had been updated to MindStore's unified dark UI system.
+- **Implemented**:
+  - Complete visual redesign of Insights page to match MindStore design system
+  - Removed old patterns: `bg-zinc-950` → inherits app bg, `border-zinc-800` → `border-white/[0.06]`, shadcn Tabs → custom pill-style tab selector matching Explore page filters
+  - Removed `ArrowLeft` back link — standard page header with consistent 22/28px title + description
+  - Metabolism score card: gradient overlay, massive score typography with clip-text gradient, stat cards with `tabular-nums`
+  - Mind Growth card: emerald-accented with topic badges matching the new design token system
+  - Connections tab: bridge concept header with amber accent, memory pair cards with source-type icons and colored badges
+  - Contradictions tab: red-accented conflict headers, same memory card pattern
+  - Forgetting tab: color-coded urgency badges (red >80%, amber >60%, blue otherwise), fade progress bars, source-type icons on every card
+  - Loading state: centered spinner with gradient background matching Chat/other empty states
+  - Removed shadcn `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`, `Button` dependencies from this page
+  - All pages now use 100% consistent design tokens — zero legacy styling remaining
+- **Branch**: `frain/improve` (commit `55a6be0`)
+
+---
+
 ## 2026-03-23 17:59 UTC — Chat Conversation History
 - **Research**: Chat UX patterns in knowledge management apps (ChatGPT, Notion AI, Mem, Reflect)
 - **Finding**: Every modern chat-based knowledge app persists conversations. MindStore was losing all chat history on navigation or refresh — a major UX pain point. Users expect to pick up where they left off.
