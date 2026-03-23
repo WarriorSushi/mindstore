@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, X, Trash2, Copy, Check, Loader2 } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
@@ -31,10 +32,13 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
 };
 
 export default function ExplorePage() {
+  const searchParams = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [sources, setSources] = useState<Source[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [totalMemories, setTotalMemories] = useState(0);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [filter, setFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,10 +52,29 @@ export default function ExplorePage() {
       if (e.key === "Escape" && selected) {
         setSelected(null);
       }
+      // "/" focuses search input (like GitHub, Slack)
+      if (e.key === "/" && !selected && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [selected]);
+
+  // Sync search query to URL (shallow, no navigation)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (search.trim()) {
+      url.searchParams.set("q", search.trim());
+    } else {
+      url.searchParams.delete("q");
+    }
+    // Only update if different to avoid unnecessary history entries
+    if (url.toString() !== window.location.href) {
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [search]);
 
   const handleCopy = useCallback(async (content: string) => {
     try {
@@ -138,15 +161,18 @@ export default function ExplorePage() {
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
         <input
+          ref={searchInputRef}
           placeholder="Search your knowledge…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full h-10 pl-10 pr-9 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
+          className="w-full h-10 pl-10 pr-16 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
         />
-        {search && (
+        {search ? (
           <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5">
             <X className="w-3.5 h-3.5 text-zinc-500" />
           </button>
+        ) : (
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
         )}
       </div>
 
