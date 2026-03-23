@@ -37,10 +37,11 @@ export default function DashboardPage() {
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
 
   useEffect(() => {
-    checkApiKey().then((data) => setHasKey(data.hasApiKey));
+    Promise.all([
+      checkApiKey().then((data) => setHasKey(data.hasApiKey)),
+      fetchStats().then(setStats),
+    ]).then(() => setLoaded(true));
     setDemo(isDemoMode());
-    fetchStats().then(setStats);
-    setLoaded(true);
   }, []);
 
   const searchParams = useSearchParams();
@@ -108,10 +109,14 @@ export default function DashboardPage() {
     </div>
   );
 
+  const total = stats?.totalMemories || 0;
+
   /* ═══════════════════════════════════════════
-     SETUP WIZARD — No API key yet
+     SETUP WIZARD — No API key AND no data
+     Show setup wizard only for truly new users.
+     If they already have data (e.g. imported without AI), show dashboard.
      ═══════════════════════════════════════════ */
-  if (!hasKey && !demo) {
+  if (!hasKey && !demo && total === 0) {
     return (
       <div className="min-h-[75dvh] flex items-center justify-center">
         <div className="w-full max-w-sm space-y-6">
@@ -252,7 +257,6 @@ export default function DashboardPage() {
   /* ═══════════════════════════════════════════
      MAIN DASHBOARD
      ═══════════════════════════════════════════ */
-  const total = stats?.totalMemories || 0;
   const chatgpt = stats?.byType?.chatgpt || 0;
   const notes = (stats?.byType?.file || 0) + (stats?.byType?.text || 0);
   const urls = stats?.byType?.url || 0;
@@ -267,6 +271,16 @@ export default function DashboardPage() {
             Exit
           </button>
         </div>
+      )}
+
+      {/* No AI provider banner */}
+      {!hasKey && !demo && total > 0 && (
+        <Link href="/app/settings">
+          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500/[0.06] to-cyan-500/[0.06] border border-blue-500/15 px-4 py-2.5 hover:bg-blue-500/[0.1] transition-colors">
+            <span className="text-[12px] text-blue-300 font-medium">⚡ Connect an AI provider for semantic search & chat — <span className="text-blue-400">Gemini is free</span></span>
+            <ChevronRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+          </div>
+        </Link>
       )}
 
       {/* Hero Stats */}
