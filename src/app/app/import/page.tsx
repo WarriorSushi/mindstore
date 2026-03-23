@@ -72,18 +72,22 @@ export default function ImportPage() {
   };
 
   const handleUrlImport = async () => {
-    if (!urlInput.trim()) return; setState("parsing"); setProgressText("Fetching…");
+    if (!urlInput.trim()) return; setState("parsing"); setProgressText("Fetching page…");
     try {
-      const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput.trim())}`);
-      if (!res.ok) throw new Error("Fetch failed");
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      doc.querySelectorAll("script, style, nav, footer, header").forEach(el => el.remove());
-      const text = doc.body?.innerText || "";
-      if (text.trim().length < 50) { toast.error("No content found"); setState("idle"); return; }
-      await importJsonViaApi([{ title: doc.title || urlInput, content: text, sourceType: 'url' }]);
+      // Server-side fetch — no CORS proxy needed
+      const fetchRes = await fetch('/api/v1/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+      if (!fetchRes.ok) {
+        const e = await fetchRes.json();
+        throw new Error(e.error || 'Failed to fetch URL');
+      }
+      const { title, content } = await fetchRes.json();
+      await importJsonViaApi([{ title, content, sourceType: 'url' }]);
       setUrlInput("");
-    } catch (err: any) { toast.error(err.message); setState("error"); }
+    } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
 
   const handleVaultImport = async (files: FileList | null) => {
