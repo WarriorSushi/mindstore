@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, AlertCircle, Info } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, AlertCircle, Info, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 async function fetchSettings() {
@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
+  const [reindexing, setReindexing] = useState(false);
 
   useEffect(() => { fetchSettings().then(setSettings); fetchStats().then(setStats); }, []);
 
@@ -62,6 +63,34 @@ export default function SettingsPage() {
     await fetch('/api/v1/memories', { method: 'DELETE' });
     fetchStats().then(setStats);
     toast.success("All data cleared");
+  };
+
+  const handleReindex = async () => {
+    setReindexing(true);
+    try {
+      // Check status first
+      const statusRes = await fetch('/api/v1/reindex');
+      const status = await statusRes.json();
+      if (!status.needsReindex) {
+        toast.success("All memories already have embeddings!");
+        setReindexing(false);
+        return;
+      }
+      toast(`Generating embeddings for ${status.withoutEmbeddings} memories…`);
+      // Process in batches
+      let remaining = status.withoutEmbeddings;
+      while (remaining > 0) {
+        const res = await fetch('/api/v1/reindex', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batchSize: 50 }) });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        const data = await res.json();
+        remaining = data.remaining;
+        if (remaining > 0) toast(`${data.processed} done, ${remaining} remaining…`);
+      }
+      toast.success("All memories now have embeddings! Semantic search enabled.");
+    } catch (err: any) {
+      toast.error(err.message || "Reindex failed");
+    }
+    setReindexing(false);
   };
 
   const providers = settings?.providers || {};
@@ -180,6 +209,7 @@ export default function SettingsPage() {
             input.click();
           }} />
           <ActionButton icon={<Key className="w-4 h-4" />} label="Remove Keys" onClick={handleRemoveAll} />
+          <ActionButton icon={<RefreshCw className={`w-4 h-4 ${reindexing ? "animate-spin" : ""}`} />} label={reindexing ? "Indexing…" : "Reindex"} onClick={handleReindex} />
           <ActionButton icon={<Trash2 className="w-4 h-4" />} label="Clear All" onClick={handleClear} danger />
         </div>
       </div>
