@@ -4,6 +4,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 23:04 UTC — Keyboard Navigation & Cross-Page Flow
+- **Research**: Power-user UX patterns from Linear, Superhuman, Notion, and Obsidian — focused on keyboard-driven navigation. Apps like Linear use j/k to move between items, Enter to open, Escape to close, and arrow keys to navigate within detail views. Superhuman's "next/prev" in email detail view keeps users in flow without returning to the list.
+- **Finding**: MindStore's Explore page had no keyboard navigation — users had to click every memory card individually. The detail modal was a dead-end: no way to go to the next memory without closing and clicking another card. No cross-page flow from Explore→Chat to ask deeper questions about a specific memory.
+- **Implemented**:
+  - **j/k and ↑/↓ keyboard navigation** in the Explore memory list with visual focus ring (violet border + subtle glow)
+  - **Enter to open** focused memory, **Escape to close** detail modal
+  - **Prev/Next navigation in detail modal** via ↑/↓ or j/k — with position counter (e.g. "3/47")
+  - **"Ask about this" button** in detail modal footer → navigates to Chat with memory snippet as pre-filled query
+  - **Chat page ?q= deep-link support** — auto-sends query when arriving from Explore's "Ask about this"
+  - **Keyboard hint bars** at bottom of list (j/k navigate, ↵ open, / search) and detail modal (↑↓ navigate, esc close) — desktop only
+  - **Bonus fixes**: Fixed unclosed `<Stagger>` JSX in Connect and Insights pages that caused build failures; fixed TypeScript `ease` tuple type in PageTransition component
+  - All focus states match MindStore's design system: violet-500/30 border, violet-500/[0.06] background, ring-1 ring-violet-500/20
+- **Branch**: `frain/improve` (commit `9503fc9`)
+
 ## 2026-03-23 21:59 UTC — Chat Markdown Rich Rendering
 - **Research**: AI chat UX patterns — compared how Notion, ChatGPT, Claude, and Obsidian render markdown in conversational contexts. AI responses heavily use bullet lists, numbered lists, fenced code blocks, and blockquotes — all of which MindStore's ChatMarkdown was silently dropping.
 - **Finding**: The existing ChatMarkdown only handled **bold**, *italic*, `inline code`, links, and headings. Lists rendered as plain text with literal `- ` prefixes. Code blocks with triple backticks were ignored entirely. This made AI chat responses look broken and unprofessional.
