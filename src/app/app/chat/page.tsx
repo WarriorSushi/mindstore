@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Brain, User, Sparkles, ArrowUp } from "lucide-react";
-import { streamChat } from "@/lib/openai";
+import { streamChat, checkApiKey } from "@/lib/openai";
 import { toast } from "sonner";
 
 interface Message {
@@ -23,11 +23,13 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [memoryCount, setMemoryCount] = useState(0);
+  const [hasAI, setHasAI] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetch('/api/v1/stats').then(r => r.json()).then(d => setMemoryCount(d.totalMemories || 0)).catch(() => {});
+    checkApiKey().then(d => setHasAI(d.hasApiKey));
   }, []);
 
   useEffect(() => {
@@ -58,6 +60,21 @@ export default function ChatPage() {
 
       if (results.length === 0) {
         setMessages(prev => [...prev, { role: "assistant", content: "I couldn't find anything relevant in your knowledge base. Try importing more content or rephrasing your question." }]);
+        setLoading(false);
+        return;
+      }
+
+      // If no AI provider configured, show search results directly
+      if (!hasAI) {
+        const searchResponse = results.map((r: any, i: number) =>
+          `**[${i + 1}] ${r.sourceTitle || 'Untitled'}** _(${r.sourceType})_\n${r.content}`
+        ).join('\n\n---\n\n');
+
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `Here's what I found in your knowledge base:\n\n${searchResponse}\n\n_💡 Connect an AI provider in Settings for synthesized answers._`,
+          sources: results.map((r: any) => ({ title: r.sourceTitle || '', type: r.sourceType, score: r.score })),
+        }]);
         setLoading(false);
         return;
       }
