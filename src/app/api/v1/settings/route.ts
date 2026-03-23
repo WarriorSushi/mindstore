@@ -42,8 +42,20 @@ export async function GET() {
       embeddingProvider: embConfig?.provider || null,
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[settings GET]', error);
+    // Return a safe fallback when DB is unavailable — check env vars only
+    return NextResponse.json({
+      hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY),
+      apiKeyPreview: null,
+      source: null,
+      providers: {
+        openai: { configured: !!process.env.OPENAI_API_KEY, preview: process.env.OPENAI_API_KEY ? 'env' : null },
+        gemini: { configured: !!process.env.GEMINI_API_KEY, preview: process.env.GEMINI_API_KEY ? 'env' : null },
+        ollama: { configured: !!process.env.OLLAMA_URL, url: process.env.OLLAMA_URL || null },
+      },
+      embeddingProvider: null,
+      dbError: true,
+    });
   }
 }
 

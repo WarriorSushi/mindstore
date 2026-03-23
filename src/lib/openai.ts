@@ -5,9 +5,13 @@
 
 /** Check if an API key is configured server-side */
 export async function checkApiKey(): Promise<{ hasApiKey: boolean; apiKeyPreview: string | null }> {
-  const res = await fetch('/api/v1/settings');
-  if (!res.ok) return { hasApiKey: false, apiKeyPreview: null };
-  return res.json();
+  try {
+    const res = await fetch('/api/v1/settings');
+    if (!res.ok) return { hasApiKey: false, apiKeyPreview: null };
+    return res.json();
+  } catch {
+    return { hasApiKey: false, apiKeyPreview: null };
+  }
 }
 
 /** Save an API key (sent to server, stored in DB) */

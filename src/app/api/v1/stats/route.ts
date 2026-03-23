@@ -40,7 +40,11 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[stats]', error);
+    const isDbError = error instanceof Error && (error.message.includes('connect') || error.message.includes('password') || error.message.includes('ECONNREFUSED'));
+    if (isDbError) {
+      return NextResponse.json({ error: 'Database connection failed. Check DATABASE_URL configuration.' }, { status: 503 });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
