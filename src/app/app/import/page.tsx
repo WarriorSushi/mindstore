@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote } from "lucide-react";
 import { toast } from "sonner";
+import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion";
@@ -123,15 +124,18 @@ export default function ImportPage() {
   const busy = state === "parsing" || state === "uploading";
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <PageTransition className="space-y-5 md:space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
-        <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
-      </div>
+      <Stagger>
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
+        </div>
+      </Stagger>
 
       {/* Progress */}
       {state !== "idle" && (
+        <Stagger>
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
           <div className="flex items-center gap-2.5">
             {state === "done" ? <CheckCircle className="w-4 h-4 text-green-400" /> :
@@ -148,9 +152,11 @@ export default function ImportPage() {
             </button>
           )}
         </div>
+        </Stagger>
       )}
 
       {/* Source Selector */}
+      <Stagger>
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {TABS.map((t) => (
           <button
@@ -167,8 +173,10 @@ export default function ImportPage() {
           </button>
         ))}
       </div>
+      </Stagger>
 
       {/* Tab Content */}
+      <Stagger>
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
         <div className="p-4 md:p-5 space-y-4">
           {tab === "chatgpt" && (
@@ -270,7 +278,8 @@ export default function ImportPage() {
           )}
         </div>
       </div>
-    </div>
+      </Stagger>
+    </PageTransition>
   );
 }
 

@@ -12,6 +12,7 @@ import {
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
+import { PageTransition, Stagger } from "@/components/PageTransition";
 
 async function fetchStats() {
   try {
@@ -278,179 +279,195 @@ export default function DashboardPage() {
   const urls = stats?.byType?.url || 0;
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <PageTransition className="space-y-6 md:space-y-8">
       {/* Demo Banner */}
       {demo && (
-        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-violet-500/[0.08] to-fuchsia-500/[0.08] border border-violet-500/20 px-4 py-2.5">
-          <span className="text-[12px] text-violet-300 font-medium">✨ Demo mode — sample data</span>
-          <button onClick={handleExitDemo} className="text-[11px] text-violet-400 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors">
-            Exit
-          </button>
-        </div>
+        <Stagger>
+          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-violet-500/[0.08] to-fuchsia-500/[0.08] border border-violet-500/20 px-4 py-2.5">
+            <span className="text-[12px] text-violet-300 font-medium">✨ Demo mode — sample data</span>
+            <button onClick={handleExitDemo} className="text-[11px] text-violet-400 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors">
+              Exit
+            </button>
+          </div>
+        </Stagger>
       )}
 
       {/* No AI provider banner */}
       {!hasKey && !demo && total > 0 && (
-        <Link href="/app/settings">
-          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500/[0.06] to-cyan-500/[0.06] border border-blue-500/15 px-4 py-2.5 hover:bg-blue-500/[0.1] transition-colors">
-            <span className="text-[12px] text-blue-300 font-medium">⚡ Connect an AI provider for semantic search & chat — <span className="text-blue-400">Gemini is free</span></span>
-            <ChevronRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-          </div>
-        </Link>
+        <Stagger>
+          <Link href="/app/settings">
+            <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500/[0.06] to-cyan-500/[0.06] border border-blue-500/15 px-4 py-2.5 hover:bg-blue-500/[0.1] transition-colors">
+              <span className="text-[12px] text-blue-300 font-medium">⚡ Connect an AI provider for semantic search & chat — <span className="text-blue-400">Gemini is free</span></span>
+              <ChevronRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            </div>
+          </Link>
+        </Stagger>
       )}
 
       {/* Hero Stats */}
-      <div className="space-y-1">
-        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Your Mind</h1>
-        <p className="text-[13px] text-zinc-500">
-          {total > 0 ? `${total.toLocaleString()} memories across ${stats?.totalSources || 0} sources` : "Import knowledge to get started"}
-        </p>
-      </div>
+      <Stagger>
+        <div className="space-y-1">
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Your Mind</h1>
+          <p className="text-[13px] text-zinc-500">
+            {total > 0 ? `${total.toLocaleString()} memories across ${stats?.totalSources || 0} sources` : "Import knowledge to get started"}
+          </p>
+        </div>
+      </Stagger>
 
       {/* Quick Search */}
       {total > 0 && (
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-            <input
-              placeholder="Quick search your memories…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
-            />
-            {searchQuery ? (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/[0.06] rounded-md transition-colors">
-                <X className="w-3.5 h-3.5 text-zinc-500" />
-              </button>
-            ) : (
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">⌘K</kbd>
-            )}
-          </div>
-
-          {/* Search Results */}
-          {searchQuery.trim() && (
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-              {searching ? (
-                <div className="flex items-center justify-center gap-2 py-6">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
-                  <span className="text-[12px] text-zinc-600">Searching…</span>
-                </div>
-              ) : searchResults.length > 0 ? (
-                <div className="divide-y divide-white/[0.04]">
-                  {searchResults.map((r: any, i: number) => {
-                    const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
-                    const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };
-                    const Icon = typeIcons[r.sourceType] || FileText;
-                    const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
-                    return (
-                      <div key={r.memoryId || i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${color}`}>
-                            <Icon className="w-2.5 h-2.5" />
-                            {r.sourceType}
-                          </span>
-                          <span className="text-[11px] text-zinc-600 truncate">{r.sourceTitle}</span>
-                        </div>
-                        <p className="text-[12px] text-zinc-400 line-clamp-2 leading-relaxed">{r.content}</p>
-                      </div>
-                    );
-                  })}
-                  <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-violet-400 font-medium hover:bg-violet-500/5 transition-colors">
-                    View all in Explore <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
+        <Stagger>
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+              <input
+                placeholder="Quick search your memories…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
+              />
+              {searchQuery ? (
+                <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/[0.06] rounded-md transition-colors">
+                  <X className="w-3.5 h-3.5 text-zinc-500" />
+                </button>
               ) : (
-                <div className="text-center py-6 text-[12px] text-zinc-600">No results found</div>
+                <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">⌘K</kbd>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Search Results */}
+            {searchQuery.trim() && (
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+                {searching ? (
+                  <div className="flex items-center justify-center gap-2 py-6">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
+                    <span className="text-[12px] text-zinc-600">Searching…</span>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="divide-y divide-white/[0.04]">
+                    {searchResults.map((r: any, i: number) => {
+                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };
+                      const Icon = typeIcons[r.sourceType] || FileText;
+                      const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                      return (
+                        <div key={r.memoryId || i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${color}`}>
+                              <Icon className="w-2.5 h-2.5" />
+                              {r.sourceType}
+                            </span>
+                            <span className="text-[11px] text-zinc-600 truncate">{r.sourceTitle}</span>
+                          </div>
+                          <p className="text-[12px] text-zinc-400 line-clamp-2 leading-relaxed">{r.content}</p>
+                        </div>
+                      );
+                    })}
+                    <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-violet-400 font-medium hover:bg-violet-500/5 transition-colors">
+                      View all in Explore <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-[12px] text-zinc-600">No results found</div>
+                )}
+              </div>
+            )}
+          </div>
+        </Stagger>
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        {[
-          { label: "Total", value: total, icon: Database, color: "from-violet-500/20 to-violet-500/5", iconColor: "text-violet-400" },
-          { label: "ChatGPT", value: chatgpt, icon: MessageCircle, color: "from-green-500/20 to-green-500/5", iconColor: "text-green-400" },
-          { label: "Notes", value: notes, icon: FileText, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400" },
-          { label: "URLs", value: urls, icon: Globe, color: "from-orange-500/20 to-orange-500/5", iconColor: "text-orange-400" },
-        ].map((s) => (
-          <div key={s.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <div className={`absolute inset-0 bg-gradient-to-b ${s.color} pointer-events-none`} />
-            <div className="relative">
-              <s.icon className={`w-4 h-4 ${s.iconColor} mb-2`} />
-              <p className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{s.value.toLocaleString()}</p>
-              <p className="text-[11px] text-zinc-500 font-medium mt-0.5">{s.label}</p>
+      <Stagger>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          {[
+            { label: "Total", value: total, icon: Database, color: "from-violet-500/20 to-violet-500/5", iconColor: "text-violet-400" },
+            { label: "ChatGPT", value: chatgpt, icon: MessageCircle, color: "from-green-500/20 to-green-500/5", iconColor: "text-green-400" },
+            { label: "Notes", value: notes, icon: FileText, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400" },
+            { label: "URLs", value: urls, icon: Globe, color: "from-orange-500/20 to-orange-500/5", iconColor: "text-orange-400" },
+          ].map((s) => (
+            <div key={s.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className={`absolute inset-0 bg-gradient-to-b ${s.color} pointer-events-none`} />
+              <div className="relative">
+                <s.icon className={`w-4 h-4 ${s.iconColor} mb-2`} />
+                <p className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{s.value.toLocaleString()}</p>
+                <p className="text-[11px] text-zinc-500 font-medium mt-0.5">{s.label}</p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Stagger>
 
       {/* Actions Grid */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
-        {[
-          { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-violet-400" },
-          { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask your mind", color: "text-blue-400" },
-          { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all", color: "text-emerald-400" },
-          { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you", color: "text-amber-400" },
-        ].map((a) => (
-          <Link key={a.href} href={a.href}>
-            <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-4 transition-all active:scale-[0.97] h-full">
-              <a.icon className={`w-5 h-5 ${a.color} mb-3 group-hover:scale-110 transition-transform`} />
-              <p className="text-[13px] font-medium">{a.label}</p>
-              <p className="text-[11px] text-zinc-600 mt-0.5">{a.desc}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <Stagger>
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
+          {[
+            { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-violet-400" },
+            { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask your mind", color: "text-blue-400" },
+            { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all", color: "text-emerald-400" },
+            { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you", color: "text-amber-400" },
+          ].map((a) => (
+            <Link key={a.href} href={a.href}>
+              <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-4 transition-all active:scale-[0.97] h-full">
+                <a.icon className={`w-5 h-5 ${a.color} mb-3 group-hover:scale-110 transition-transform`} />
+                <p className="text-[13px] font-medium">{a.label}</p>
+                <p className="text-[11px] text-zinc-600 mt-0.5">{a.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Stagger>
 
       {/* Feature Cards */}
-      <div className="space-y-2">
-        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Discover</p>
-        {[
-          { href: "/app/fingerprint", emoji: "🧬", label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL" },
-          { href: "/app/insights", emoji: "⚡", label: "Mind Insights", desc: "Connections, contradictions, metabolism" },
-          { href: "/app/connect", emoji: "🔌", label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP" },
-        ].map((f) => (
-          <Link key={f.href} href={f.href}>
-            <div className="flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3.5 transition-all active:scale-[0.98] group">
-              <span className="text-xl leading-none">{f.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-[13px] font-medium">{f.label}</p>
-                  {f.tag && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/15">
-                      {f.tag}
-                    </span>
-                  )}
+      <Stagger>
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Discover</p>
+          {[
+            { href: "/app/fingerprint", emoji: "🧬", label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL" },
+            { href: "/app/insights", emoji: "⚡", label: "Mind Insights", desc: "Connections, contradictions, metabolism" },
+            { href: "/app/connect", emoji: "🔌", label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP" },
+          ].map((f) => (
+            <Link key={f.href} href={f.href}>
+              <div className="flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3.5 transition-all active:scale-[0.98] group">
+                <span className="text-xl leading-none">{f.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] font-medium">{f.label}</p>
+                    {f.tag && (
+                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                        {f.tag}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">{f.desc}</p>
                 </div>
-                <p className="text-[11px] text-zinc-500 mt-0.5">{f.desc}</p>
+                <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
               </div>
-              <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
-            </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      </Stagger>
 
       {/* Sources */}
       {stats?.topSources?.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Sources</p>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
-            {stats.topSources.slice(0, 6).map((src: any, i: number) => (
-              <div key={src.id || i} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
-                  {src.type === 'chatgpt' ? <MessageCircle className="w-3.5 h-3.5 text-green-400" /> :
-                   src.type === 'url' ? <Globe className="w-3.5 h-3.5 text-orange-400" /> :
-                   <FileText className="w-3.5 h-3.5 text-blue-400" />}
+        <Stagger>
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Sources</p>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
+              {stats.topSources.slice(0, 6).map((src: any, i: number) => (
+                <div key={src.id || i} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
+                    {src.type === 'chatgpt' ? <MessageCircle className="w-3.5 h-3.5 text-green-400" /> :
+                     src.type === 'url' ? <Globe className="w-3.5 h-3.5 text-orange-400" /> :
+                     <FileText className="w-3.5 h-3.5 text-blue-400" />}
+                  </div>
+                  <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>
+                  <span className="text-[11px] text-zinc-600 tabular-nums font-medium shrink-0">{src.itemCount}</span>
                 </div>
-                <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>
-                <span className="text-[11px] text-zinc-600 tabular-nums font-medium shrink-0">{src.itemCount}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </Stagger>
       )}
-    </div>
+    </PageTransition>
   );
 }
