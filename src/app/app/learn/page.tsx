@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Send, Brain, User, Loader2, Sparkles, CheckCircle2, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import {
+  Send, Brain, User, Loader2, Sparkles, CheckCircle2, RotateCcw,
+  ArrowUp, GraduationCap,
+} from "lucide-react";
 import { checkApiKey, streamChat } from "@/lib/openai";
+import { ChatMarkdown } from "@/components/ChatMarkdown";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -36,7 +37,7 @@ RULES:
 1. Ask ONE question at a time. Never multiple questions.
 2. React to their answers naturally before asking the next question. Show you're listening.
 3. Go deeper on interesting things they mention. Follow the thread.
-4. After each of their responses, internally extract key facts (you'll be asked to list them).
+4. After each of their response, internally extract key facts (you'll be asked to list them).
 5. Keep it conversational, not interrogative. Like a great first date, not a job interview.
 6. After 3-4 exchanges on a subtopic, you can gently pivot to explore something new.
 7. If they give a short answer, ask a follow-up. If they give a long one, acknowledge the depth.
@@ -75,6 +76,17 @@ function parseFacts(content: string): { cleanContent: string; facts: LearnedFact
   return { cleanContent, facts };
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  preference: "text-violet-400 bg-violet-500/10 border-violet-500/15",
+  trait: "text-blue-400 bg-blue-500/10 border-blue-500/15",
+  goal: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
+  knowledge: "text-cyan-400 bg-cyan-500/10 border-cyan-500/15",
+  relationship: "text-pink-400 bg-pink-500/10 border-pink-500/15",
+  habit: "text-amber-400 bg-amber-500/10 border-amber-500/15",
+  background: "text-orange-400 bg-orange-500/10 border-orange-500/15",
+  opinion: "text-red-400 bg-red-500/10 border-red-500/15",
+};
+
 export default function LearnPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -84,14 +96,25 @@ export default function LearnPage() {
   const [factsSaved, setFactsSaved] = useState(0);
   const [hasApiKey, setHasApiKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [messages]);
 
-  // Check API key status and load saved facts count
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + "px";
+    }
+  }, [input]);
+
   useEffect(() => {
     checkApiKey().then((data) => setHasApiKey(data.hasApiKey));
     fetch('/api/v1/memories?source=text&search=Learned%3A&limit=1')
@@ -103,12 +126,9 @@ export default function LearnPage() {
   const saveFact = useCallback(async (fact: LearnedFact) => {
     try {
       const content = `${fact.key}: ${fact.value}`;
-      
       await fetch('/api/v1/memories', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content,
           sourceType: 'text',
@@ -153,6 +173,7 @@ export default function LearnPage() {
       setMessages([{ role: "assistant", content: `Error starting interview: ${err instanceof Error ? err.message : "Unknown error"}` }]);
     }
     setLoading(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
   }
 
   async function handleSend() {
@@ -166,7 +187,6 @@ export default function LearnPage() {
 
     const topic = INTERVIEW_TOPICS.find(t => t.id === selectedTopic)!;
     const systemMsg = SYSTEM_PROMPT.replace("{topic}", topic.prompt);
-    
     const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 
     try {
@@ -190,7 +210,6 @@ export default function LearnPage() {
 
       const { cleanContent, facts } = parseFacts(response);
       
-      // Save facts
       for (const fact of facts) {
         await saveFact(fact);
       }
@@ -214,140 +233,199 @@ export default function LearnPage() {
     setLoading(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }
-
-  // Topic selection screen
+  // ═══════════════════════════════════════════
+  // TOPIC SELECTION SCREEN
+  // ═══════════════════════════════════════════
   if (!selectedTopic) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="border-b border-border/50 px-6 py-3 shrink-0">
-          <h1 className="text-lg font-semibold">Teach MindStore about you</h1>
-          <p className="text-xs text-muted-foreground">
-            Have a conversation so MindStore can learn who you are. {factsSaved > 0 && `${factsSaved} facts learned so far.`}
+      <div className="space-y-6 md:space-y-8">
+        {/* Header */}
+        <div className="space-y-1">
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Learn About You</h1>
+          <p className="text-[13px] text-zinc-500">
+            Have a conversation so MindStore can learn who you are
+            {factsSaved > 0 && <> · <span className="text-violet-400 font-medium">{factsSaved} facts learned</span></>}
           </p>
         </div>
-        <div className="flex-1 overflow-auto px-6 py-8">
-          <div className="max-w-2xl mx-auto">
-            <motion.div
-              className="text-center mb-8"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Sparkles className="w-10 h-10 mx-auto text-primary mb-3" />
-              <h2 className="text-xl font-semibold mb-2">What should we talk about?</h2>
-              <p className="text-sm text-muted-foreground">Pick a topic. The AI will interview you naturally — no forms, just conversation.</p>
-            </motion.div>
 
-            {!hasApiKey && (
-              <motion.div
-                className="mb-6 p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 text-sm text-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                ⚠️ Connect an AI provider in <a href="/app/settings" className="underline">Settings</a> first (Gemini is free).
-              </motion.div>
-            )}
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              {INTERVIEW_TOPICS.map((topic, i) => (
-                <motion.button
-                  key={topic.id}
-                  onClick={() => hasApiKey && startInterview(topic.id)}
-                  className="p-4 rounded-xl border border-border/50 bg-card/50 hover:bg-card hover:border-primary/30 transition-all text-left group"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  disabled={!hasApiKey}
-                >
-                  <span className="text-2xl mb-2 block">{topic.icon}</span>
-                  <span className="font-medium text-sm group-hover:text-primary transition-colors">{topic.label}</span>
-                </motion.button>
-              ))}
-            </div>
+        {/* No API key warning */}
+        {!hasApiKey && (
+          <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.06] border border-amber-500/15 px-4 py-3">
+            <span className="text-[13px]">⚠️</span>
+            <p className="text-[12px] text-amber-300 font-medium">
+              Connect an AI provider in{" "}
+              <a href="/app/settings" className="text-amber-400 underline underline-offset-2 hover:text-white transition-colors">Settings</a>
+              {" "}first — Gemini is free
+            </p>
           </div>
+        )}
+
+        {/* Hero */}
+        <div className="text-center py-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-6 h-6 text-violet-400" />
+          </div>
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] mb-1.5">What should we talk about?</h2>
+          <p className="text-[13px] text-zinc-500">Pick a topic — the AI will interview you naturally</p>
         </div>
+
+        {/* Topic Grid */}
+        <div className="grid grid-cols-2 gap-2.5 md:gap-3">
+          {INTERVIEW_TOPICS.map((topic) => (
+            <button
+              key={topic.id}
+              onClick={() => hasApiKey && startInterview(topic.id)}
+              disabled={!hasApiKey}
+              className="group p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/20 transition-all text-left active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <span className="text-[22px] leading-none block mb-2.5">{topic.icon}</span>
+              <p className="text-[13px] font-medium group-hover:text-violet-300 transition-colors">{topic.label}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Facts summary if any */}
+        {factsSaved > 0 && (
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+              <p className="text-[12px] text-zinc-300 font-medium">MindStore knows {factsSaved} things about you</p>
+            </div>
+            <p className="text-[11px] text-zinc-600">Start another topic to teach it more</p>
+          </div>
+        )}
       </div>
     );
   }
 
-  // Interview chat screen
+  // ═══════════════════════════════════════════
+  // INTERVIEW CHAT SCREEN
+  // ═══════════════════════════════════════════
+  const currentTopic = INTERVIEW_TOPICS.find(t => t.id === selectedTopic);
+
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-border/50 px-6 py-3 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-lg font-semibold flex items-center gap-2">
-            <span>{INTERVIEW_TOPICS.find(t => t.id === selectedTopic)?.icon}</span>
-            {INTERVIEW_TOPICS.find(t => t.id === selectedTopic)?.label}
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {allFacts.length} facts learned in this session
-          </p>
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.04] shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-[16px] leading-none">{currentTopic?.icon}</span>
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium truncate">{currentTopic?.label}</p>
+            <p className="text-[10px] text-zinc-600">
+              {allFacts.length > 0 ? (
+                <span className="text-green-400">{allFacts.length} fact{allFacts.length !== 1 ? "s" : ""} learned</span>
+              ) : (
+                "Interview in progress"
+              )}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setSelectedTopic(null)} className="gap-1 text-xs">
-            <RotateCcw className="w-3 h-3" /> New Topic
-          </Button>
-        </div>
+        <button
+          onClick={() => setSelectedTopic(null)}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          New topic
+        </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-6" ref={scrollRef}>
-        <div className="max-w-2xl mx-auto py-6 space-y-6">
-          <AnimatePresence>
-            {messages.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-3 items-start"
-              >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${msg.role === "user" ? "bg-primary/20" : "bg-muted"}`}>
-                  {msg.role === "user" ? <User className="w-3.5 h-3.5" /> : <Brain className="w-3.5 h-3.5" />}
+      {/* Messages Area */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
+              {msg.role === "assistant" && (
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Brain className="w-3.5 h-3.5 text-violet-400" />
                 </div>
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div className="text-sm whitespace-pre-wrap break-words">
-                    {msg.content || (loading && i === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : null)}
+              )}
+              <div className={`max-w-[82%] space-y-2`}>
+                <div className={`${
+                  msg.role === "user"
+                    ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
+                    : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
+                }`}>
+                  <div className="text-[13px] leading-[1.6]">
+                    {msg.content ? (
+                      <ChatMarkdown content={msg.content} />
+                    ) : loading && i === messages.length - 1 ? (
+                      <span className="flex items-center gap-2 text-zinc-500">
+                        <span className="flex gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </span>
+                      </span>
+                    ) : ""}
                   </div>
-                  {msg.factsLearned && msg.factsLearned.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {msg.factsLearned.map((fact, j) => (
-                        <Badge key={j} variant="secondary" className="text-[10px] font-normal gap-1">
-                          <CheckCircle2 className="w-2.5 h-2.5 text-green-500" />
-                          {fact}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                {/* Learned facts badges */}
+                {msg.factsLearned && msg.factsLearned.length > 0 && (
+                  <div className="flex flex-wrap gap-1 px-1">
+                    {msg.factsLearned.map((fact, j) => {
+                      // Try to find the category for color coding
+                      const matchingFact = allFacts.find(f => `${f.key}: ${f.value}` === fact);
+                      const catColor = matchingFact ? (CATEGORY_COLORS[matchingFact.category] || "text-zinc-400 bg-white/[0.04] border-white/[0.06]") : "text-zinc-400 bg-white/[0.04] border-white/[0.06]";
+                      return (
+                        <span key={j} className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg border font-medium ${catColor}`}>
+                          <CheckCircle2 className="w-2.5 h-2.5 text-green-400 shrink-0" />
+                          {fact}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {msg.role === "user" && (
+                <div className="w-7 h-7 rounded-xl bg-violet-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-3.5 h-3.5 text-violet-300" />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="border-t border-border/50 px-6 py-4 shrink-0">
-        <div className="max-w-2xl mx-auto relative">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tell me about yourself..."
-            className="pr-12 min-h-[48px] max-h-[120px] resize-none"
-            rows={1}
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="absolute right-2 bottom-2 h-8 w-8"
+      {/* Fact counter floating pill */}
+      {allFacts.length > 0 && (
+        <div className="flex justify-center py-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/15">
+            <CheckCircle2 className="w-3 h-3 text-green-400" />
+            <span className="text-[11px] text-green-300 font-medium">{allFacts.length} fact{allFacts.length !== 1 ? "s" : ""} saved to memory</span>
+          </div>
+        </div>
+      )}
+
+      {/* Input Bar — matches Chat page styling */}
+      <div className="border-t border-white/[0.04] bg-[#0a0a0b] px-3 py-2">
+        <div className="max-w-2xl mx-auto flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Tell me about yourself…"
+              rows={1}
+              className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all max-h-[120px]"
+            />
+          </div>
+          <button
             onClick={handleSend}
-            disabled={!input.trim() || loading}
+            disabled={loading || !input.trim()}
+            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
           >
-            <Send className="w-4 h-4" />
-          </Button>
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <ArrowUp className="w-4 h-4 text-white" />
+            )}
+          </button>
         </div>
       </div>
     </div>
