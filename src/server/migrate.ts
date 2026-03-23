@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { sql } from 'drizzle-orm';
 
-const connectionString = process.env.DATABASE_URL || 'postgres://mindstore:mindstore123@localhost:5432/mindstore';
+const connectionString = process.env.DATABASE_URL || 'postgres://mindstore:password@localhost:5432/mindstore';
 
 async function migrate() {
   const client = postgres(connectionString);
