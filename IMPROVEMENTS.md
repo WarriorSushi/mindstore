@@ -106,6 +106,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 20:29 UTC — Explore Page UX Polish
+- **Research**: UX patterns from Notion/Obsidian detail modals — markdown rendering, keyboard shortcuts, clipboard actions
+- **Finding**: Memory detail modal was rendering plain text while Chat page used ChatMarkdown — inconsistent experience. Detail modals in Notion/Obsidian always support Escape to close and clipboard copy.
+- **Implemented**:
+  - Memory detail modal now renders content through `ChatMarkdown` (bold, italic, code, links, headings) instead of plain `<p>` text
+  - Added **Copy to clipboard** button in detail modal footer (with green checkmark confirmation state)
+  - **Escape key** now closes the detail modal (keyboard accessibility)
+  - Added **loading skeleton** — 5 animated placeholder cards shown while memories are being fetched
+  - Proper state cleanup (copied state resets) on modal close or memory deletion
+  - Imported `Copy`, `Check`, `Loader2` from lucide-react for new functionality
+- **Branch**: `frain/improve` (commit `cbf76c7`)
+
+---
+
 ## 2026-03-23 17:29 UTC — ⌘K Command Palette
 - **Research**: Modern knowledge management UX patterns (Notion, Linear, Raycast, Obsidian)
 - **Finding**: Command palette (⌘K) is the #1 power-user UX pattern across all modern knowledge apps — instant access to search + navigation from anywhere
