@@ -4,6 +4,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 21:59 UTC — Chat Markdown Rich Rendering
+- **Research**: AI chat UX patterns — compared how Notion, ChatGPT, Claude, and Obsidian render markdown in conversational contexts. AI responses heavily use bullet lists, numbered lists, fenced code blocks, and blockquotes — all of which MindStore's ChatMarkdown was silently dropping.
+- **Finding**: The existing ChatMarkdown only handled **bold**, *italic*, `inline code`, links, and headings. Lists rendered as plain text with literal `- ` prefixes. Code blocks with triple backticks were ignored entirely. This made AI chat responses look broken and unprofessional.
+- **Implemented**:
+  - **Fenced code blocks**: Triple-backtick blocks now render in a styled container with language label header and a copy-to-clipboard button (with green ✓ confirmation animation)
+  - **Bullet lists**: `-` and `*` prefixed lines render as proper lists with dot indicators and nested indent support
+  - **Numbered lists**: `1. 2. 3.` lines render with right-aligned tabular-nums numbering
+  - **Blockquotes**: `> ` prefixed lines render with violet left border accent
+  - **H1 headings**: Added `#` heading support (previously only ## and ###)
+  - **Paragraph grouping**: Consecutive non-special lines are now properly grouped into `<p>` elements instead of wrapping everything in whitespace-pre-wrap, fixing spacing issues
+  - All new elements match the MindStore dark UI design system (white/[0.06] borders, rounded-xl, violet accents)
+  - Zero new dependencies — still pure regex + React
+- **Branch**: `frain/improve` (commit `c8cb0fd`)
+
 ## 2026-03-23 20:59 UTC — Explore Deep-Linkable Search + Keyboard Shortcut
 
 - **Research**: UX flow analysis — Dashboard → Explore handoff, keyboard accessibility patterns (GitHub, Slack, Linear)
