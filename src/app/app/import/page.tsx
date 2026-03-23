@@ -97,6 +97,31 @@ export default function ImportPage() {
     await importViaApi(fd);
   };
 
+  const handleNotionImport = async (files: FileList | null) => {
+    if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
+    // Notion exports have UUIDs in filenames and content links
+    // e.g. "My Page 32 char hex.md" and "[link](Another%20Page%2032charhex)"
+    const notionIdPattern = /\s+[a-f0-9]{32}(?=\.(md|csv)$)/i;
+    const notionLinkIdPattern = /(%20)?[a-f0-9]{32}/gi;
+    const docs: Array<{ title: string; content: string; sourceType: string }> = [];
+
+    for (const f of Array.from(files)) {
+      if (!f.name.endsWith('.md') && !f.name.endsWith('.txt')) continue;
+      let text = await f.text();
+      // Clean title: remove Notion UUID from filename
+      const title = f.name.replace(notionIdPattern, '').replace(/\.(md|txt)$/, '');
+      // Clean content: remove UUIDs from internal links
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+        const cleanUrl = url.replace(notionLinkIdPattern, '');
+        return `[${label}](${cleanUrl})`;
+      });
+      docs.push({ title, content: text, sourceType: 'file' });
+    }
+
+    if (docs.length === 0) { toast.error("No .md files found"); setState("idle"); return; }
+    await importJsonViaApi(docs);
+  };
+
   const reset = () => { setState("idle"); setProgress(0); setProgressText(""); };
   const busy = state === "parsing" || state === "uploading";
 
@@ -239,7 +264,7 @@ export default function ImportPage() {
               </div>
               <DropZone
                 id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
-                onFiles={(f) => handleVaultImport(f)}
+                onFiles={(f) => handleNotionImport(f)}
                 title="Drop Notion files"
                 subtitle=".md files — UUIDs auto-cleaned"
                 icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
