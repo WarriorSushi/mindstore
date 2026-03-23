@@ -4,6 +4,27 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 19:29 UTC — Connect Page UI Redesign + Error/404 Cleanup
+- **Research**: Web search unavailable this cycle — used domain knowledge of modern PKM app UX patterns and codebase audit
+- **Finding**: The Connect page was the last major page using legacy patterns: `framer-motion` (motion.div animations), shadcn components (`Card`, `CardContent`, `CardHeader`, `CardTitle`, `Button`, `Badge`, `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`), and old CSS tokens (`text-muted-foreground`, `bg-primary/10`, `bg-card/50`, `bg-muted`). The error and 404 pages also used shadcn `Button`.
+- **Implemented**:
+  - **Connect page** — complete visual redesign:
+    - Removed `framer-motion` — CSS transitions only (consistent with all other pages)
+    - Removed all 8 shadcn component imports
+    - Replaced shadcn Tabs with pill-style client selector tabs (matching Explore page filters)
+    - Status banner: violet gradient with Brain icon + emerald/zinc ready/empty badge
+    - How it Works: 3 feature cards with colored icons (violet/blue/amber)
+    - Config snippet: dark `rounded-xl` code block with emerald-400 mono text
+    - Copy button: glass-style overlay in code block corner
+    - API Endpoint: native code element + icon-only copy button
+    - Consistent page header: 22/28px semibold + zinc-500 description
+  - **Error page** (`error.tsx`): removed shadcn `Button`, added amber-themed icon card, native styled button
+  - **404 page** (`not-found.tsx`): removed shadcn `Button`, gradient clip-text 404 number, violet-themed Brain card, dark background matching app
+  - All app pages now 100% free of shadcn Card/Button/Tabs/Badge dependencies
+- **Branch**: `frain/improve` (commit `434e1d9`)
+
+---
+
 ## 2026-03-23 18:59 UTC — Insights Page UI Redesign
 - **Research**: UI consistency audit — identifying pages still using legacy styling patterns
 - **Finding**: The Insights page was the last remaining page using old design patterns: `bg-zinc-950`, `border-zinc-800`, shadcn `Tabs`/`Button` components, `ArrowLeft` back navigation. Every other page had been updated to MindStore's unified dark UI system.
