@@ -204,7 +204,7 @@ export default function ChatPage() {
           <button
             onClick={() => handleSend()}
             disabled={loading || !input.trim()}
-            className="w-9 h-9 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90 mb-[3px]"
+            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <ArrowUp className="w-4 h-4 text-white" />}
           </button>
