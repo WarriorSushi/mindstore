@@ -7,7 +7,13 @@ import JSZip from 'jszip';
 
 // Chunking — intelligent paragraph/sentence splitting
 function chunkText(text: string, maxChunkSize = 1000): string[] {
-  const paragraphs = text.split(/\n{2,}/);
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  
+  // Short content — don't split, return as-is
+  if (trimmed.length <= maxChunkSize) return [trimmed];
+  
+  const paragraphs = trimmed.split(/\n{2,}/);
   const chunks: string[] = [];
   let current = '';
 
@@ -20,7 +26,8 @@ function chunkText(text: string, maxChunkSize = 1000): string[] {
   }
   if (current.trim()) chunks.push(current.trim());
 
-  return chunks.filter(c => c.length > 20); // skip tiny chunks
+  // Filter out whitespace-only fragments from splitting, but keep short meaningful text
+  return chunks.filter(c => c.trim().length > 0);
 }
 
 // ChatGPT export parser — walks the conversation tree to preserve message order
