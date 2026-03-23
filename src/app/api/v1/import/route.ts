@@ -6,6 +6,20 @@ import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 import JSZip from 'jszip';
 
+/**
+ * Clean a filename into a readable title.
+ * Strips file extensions, Notion UUIDs (32-char hex), and path prefixes.
+ * "My Page abc123def456789012345678901234.md" → "My Page"
+ */
+function cleanTitle(filename: string): string {
+  return filename
+    .replace(/^.*[\/\\]/, '')           // strip path
+    .replace(/\.(md|txt|markdown)$/i, '') // strip extension
+    .replace(/\s+[a-f0-9]{20,}$/i, '')  // strip Notion-style hex ID suffix (20+ hex chars)
+    .replace(/\s+[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, '') // strip standard UUID
+    .trim() || filename;
+}
+
 // Chunking — intelligent paragraph/sentence splitting
 function chunkText(text: string, maxChunkSize = 1000): string[] {
   const trimmed = text.trim();
@@ -117,7 +131,7 @@ export async function POST(req: NextRequest) {
                 documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
               } catch { /* skip non-ChatGPT JSON files in ZIP */ }
             } else if (filename.endsWith('.md') || filename.endsWith('.txt')) {
-              documents.push({ title: filename.replace(/^.*\//, ''), content: entryText, sourceType: sourceType || 'file' });
+              documents.push({ title: cleanTitle(filename), content: entryText, sourceType: sourceType || 'file' });
             }
           }
         } else {
@@ -127,7 +141,7 @@ export async function POST(req: NextRequest) {
             const parsed = parseChatGPT(JSON.parse(text));
             documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
           } else {
-            documents.push({ title: file.name, content: text, sourceType });
+            documents.push({ title: cleanTitle(file.name), content: text, sourceType });
           }
         }
       }
