@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
         WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
           AND a.id < b.id
           AND a.source_title != b.source_title
-          AND similarity(a.content, b.content) > 0.1
+          AND similarity(a.content, b.content) > 0.08
         ORDER BY similarity(a.content, b.content) DESC
         LIMIT 15
       `);
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
         FROM memories a, memories b
         WHERE a.user_id = ${userId}::uuid AND b.user_id = ${userId}::uuid
           AND a.id < b.id
-          AND similarity(a.content, b.content) > 0.1
+          AND similarity(a.content, b.content) > 0.08
         ORDER BY similarity(a.content, b.content) DESC
         LIMIT 100
       `);
