@@ -25,6 +25,25 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 18:29 UTC — Learn Page UI Redesign
+- **Research**: UI consistency audit across all MindStore pages
+- **Finding**: Learn page was the last page using old styling patterns (border-border, bg-card, text-muted-foreground, framer-motion) while every other page had been updated to the unified dark UI system
+- **Implemented**:
+  - Complete visual redesign of Learn page to match MindStore's dark UI system
+  - Replaced all old CSS patterns: `border-border/50` → `border-white/[0.06]`, `bg-card` → `bg-white/[0.02]`, `text-muted-foreground` → `text-zinc-500`
+  - Removed `framer-motion` dependency (CSS transitions only, consistent with all other pages)
+  - Interview chat now uses same message bubble styling as Chat page (violet user bubbles, rounded-[20px], Brain avatar)
+  - Added category-colored fact badges — 8 distinct colors per fact type (preference=violet, trait=blue, goal=emerald, habit=amber, etc.)
+  - Topic selection grid matches Dashboard action card styling
+  - Chat input bar matches Chat page exactly (rounded-2xl textarea, violet ArrowUp send button)
+  - Added floating fact counter pill showing saved facts during interview
+  - Auto-resize textarea + auto-focus after interview starts
+  - AI responses now render through ChatMarkdown for proper formatting
+  - Consistent page header (22/28px semibold, tracking-[-0.03em])
+- **Branch**: `frain/improve` (commit `126fd07`)
+
+---
+
 ## 2026-03-23 17:29 UTC — ⌘K Command Palette
 - **Research**: Modern knowledge management UX patterns (Notion, Linear, Raycast, Obsidian)
 - **Finding**: Command palette (⌘K) is the #1 power-user UX pattern across all modern knowledge apps — instant access to search + navigation from anywhere
