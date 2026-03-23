@@ -70,13 +70,33 @@ export default function ExplorePage() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const p = new URLSearchParams({ limit: '100' });
-      if (search) p.set('search', search);
-      if (filter) p.set('source', filter);
-      fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
-        setMemories(d.memories || []);
-        setTotalMemories(d.total || 0);
-      }).catch(() => {});
+      if (search) {
+        // Use BM25 full-text search for queries (better relevance than ILIKE)
+        const p = new URLSearchParams({ q: search, limit: '100' });
+        if (filter) p.set('source', filter);
+        fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
+          const results = (d.results || []).map((r: any) => ({
+            id: r.memoryId,
+            content: r.content,
+            source: r.sourceType,
+            sourceId: '',
+            sourceTitle: r.sourceTitle || '',
+            timestamp: r.createdAt,
+            importedAt: r.createdAt,
+            metadata: r.metadata || {},
+          }));
+          setMemories(results);
+          setTotalMemories(d.totalResults || results.length);
+        }).catch(() => {});
+      } else {
+        // No search query — list all memories
+        const p = new URLSearchParams({ limit: '100' });
+        if (filter) p.set('source', filter);
+        fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
+          setMemories(d.memories || []);
+          setTotalMemories(d.total || 0);
+        }).catch(() => {});
+      }
     }, 300);
     return () => clearTimeout(t);
   }, [search, filter]);
