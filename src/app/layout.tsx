@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "MindStore — Your mind, searchable.",
     description: "Import your ChatGPT conversations, notes, and knowledge. Self-hosted and AI-powered.",
   },
-  metadataBase: new URL("https://mindstore.org"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore-sandy.vercel.app"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
