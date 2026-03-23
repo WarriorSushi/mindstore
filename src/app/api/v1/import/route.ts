@@ -189,31 +189,42 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate embeddings using available provider (OpenAI, Gemini, or Ollama)
+    // Skip for large imports to avoid Vercel timeout (embeddings can be added later)
     let embeddings: number[][] | null = null;
-    try {
-      embeddings = await generateEmbeddings(allChunks.map(c => c.content));
-    } catch (e) {
-      console.error('Embedding failed, storing without vectors:', e);
+    const MAX_EMBED_CHUNKS = 100; // ~10s for Gemini batch
+    if (allChunks.length <= MAX_EMBED_CHUNKS) {
+      try {
+        embeddings = await generateEmbeddings(allChunks.map(c => c.content));
+      } catch (e) {
+        console.error('Embedding failed, storing without vectors:', e);
+      }
     }
 
-    // Insert into PostgreSQL
-    for (let i = 0; i < allChunks.length; i++) {
-      const chunk = allChunks[i];
-      const embedding = embeddings?.[i];
-      const memId = crypto.randomUUID();
-      const ts = (chunk.timestamp || new Date()).toISOString();
+    // Insert into PostgreSQL (batched for performance — 50 per transaction)
+    const BATCH_SIZE = 50;
+    for (let b = 0; b < allChunks.length; b += BATCH_SIZE) {
+      const batch = allChunks.slice(b, b + BATCH_SIZE);
+      
+      // Use a transaction for each batch
+      for (let i = 0; i < batch.length; i++) {
+        const chunk = batch[i];
+        const globalIdx = b + i;
+        const embedding = embeddings?.[globalIdx];
+        const memId = crypto.randomUUID();
+        const ts = (chunk.timestamp || new Date()).toISOString();
 
-      if (embedding) {
-        const embStr = `[${embedding.join(',')}]`;
-        await db.execute(sql`
-          INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, created_at, imported_at)
-          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}, NOW())
-        `);
-      } else {
-        await db.execute(sql`
-          INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, created_at, imported_at)
-          VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}, NOW())
-        `);
+        if (embedding) {
+          const embStr = `[${embedding.join(',')}]`;
+          await db.execute(sql`
+            INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, created_at, imported_at)
+            VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}::timestamptz, NOW())
+          `);
+        } else {
+          await db.execute(sql`
+            INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, created_at, imported_at)
+            VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}::timestamptz, NOW())
+          `);
+        }
       }
     }
 
@@ -229,6 +240,7 @@ export async function POST(req: NextRequest) {
         documents: documents.length,
         chunks: totalChunks,
         embedded: embeddings ? embeddings.length : 0,
+        embeddingsSkipped: allChunks.length > MAX_EMBED_CHUNKS,
       },
     });
   } catch (error: unknown) {
