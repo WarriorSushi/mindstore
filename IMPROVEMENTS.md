@@ -4,6 +4,28 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-23 19:59 UTC — Dashboard Quick-Search + shadcn Cleanup
+- **Research**: UX audit — modern knowledge apps (Notion, Obsidian, Mem) all feature prominent search on the home/dashboard page. MindStore's dashboard had no search, requiring users to navigate to Chat or Explore.
+- **Finding**: Dashboard still imported shadcn `Button` and `Input` components despite all other pages being migrated to native styled elements. Also missing a key UX pattern: inline search on the home page.
+- **Implemented**:
+  - **Quick-search bar** on Dashboard — appears when user has memories (total > 0):
+    - Search icon + `⌘K` keyboard hint + clear button
+    - 250ms debounced search via `/api/v1/search?limit=5`
+    - Results panel showing top 5 matches with source-type badges & icons (chatgpt=green, file=blue, url=orange, text=violet)
+    - Content preview with 2-line clamp
+    - "View all in Explore →" link passes query param for deeper search
+    - Loading spinner state
+    - Empty state message
+  - **Removed shadcn dependencies** from Dashboard:
+    - `import { Button } from "@/components/ui/button"` → native `<button>`
+    - `import { Input } from "@/components/ui/input"` → native `<input>`
+    - All 3 provider Connect buttons (Gemini/OpenAI/Ollama) converted
+    - Consistent focus ring colors per provider (blue/emerald/orange)
+  - Added `Search`, `X`, `ArrowRight`, `Type` to icon imports
+- **Branch**: `frain/improve` (commit `ef47094`)
+
+---
+
 ## 2026-03-23 19:29 UTC — Connect Page UI Redesign + Error/404 Cleanup
 - **Research**: Web search unavailable this cycle — used domain knowledge of modern PKM app UX patterns and codebase audit
 - **Finding**: The Connect page was the last major page using legacy patterns: `framer-motion` (motion.div animations), shadcn components (`Card`, `CardContent`, `CardHeader`, `CardTitle`, `Button`, `Badge`, `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`), and old CSS tokens (`text-muted-foreground`, `bg-primary/10`, `bg-card/50`, `bg-muted`). The error and 404 pages also used shadcn `Button`.
