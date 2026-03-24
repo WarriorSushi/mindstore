@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -241,6 +241,11 @@ export default function ExplorePage() {
 
   // ── Pin/Unpin memory ──────────────────
   const [pinning, setPinning] = useState(false);
+
+  // Related memories state
+  const [relatedMemories, setRelatedMemories] = useState<Array<{ id: string; title: string; type: string; score: number; preview: string }>>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const relatedAbortRef = useRef<AbortController | null>(null);
   const togglePin = useCallback(async (memory: Memory) => {
     if (pinning) return;
     setPinning(true);
@@ -265,6 +270,96 @@ export default function ExplorePage() {
     }
     setPinning(false);
   }, [pinning, selected]);
+
+  // Fetch related memories when detail view opens
+  useEffect(() => {
+    if (!selected) {
+      setRelatedMemories([]);
+      setRelatedLoading(false);
+      return;
+    }
+
+    // Abort previous request
+    if (relatedAbortRef.current) relatedAbortRef.current.abort();
+    const controller = new AbortController();
+    relatedAbortRef.current = controller;
+
+    setRelatedLoading(true);
+    setRelatedMemories([]);
+
+    // Use first 200 chars of content + title as search query for semantic similarity
+    const searchQuery = (selected.sourceTitle ? selected.sourceTitle + " " : "") +
+      selected.content.slice(0, 200).replace(/\n/g, " ");
+
+    fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=6`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        if (controller.signal.aborted) return;
+        const results = (data.results || [])
+          // Filter out the current memory itself
+          .filter((r: any) => r.id !== selected.id)
+          .slice(0, 4)
+          .map((r: any) => ({
+            id: r.id,
+            title: r.sourceTitle || "Untitled",
+            type: r.sourceType || "text",
+            score: r.score || 0,
+            preview: (r.content || "").slice(0, 100).replace(/\n/g, " ").trim(),
+          }));
+        setRelatedMemories(results);
+        setRelatedLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setRelatedLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selected?.id]);
+
+  // Navigate to a related memory
+  const openRelatedMemory = useCallback((relatedId: string) => {
+    const mem = memories.find(m => m.id === relatedId);
+    if (mem) {
+      // Memory is already loaded in the list — select it directly
+      const idx = memories.indexOf(mem);
+      setSelected(mem);
+      setSelectedIndex(idx);
+      setFocusedIndex(idx);
+      setCopied(false);
+      setEditing(false);
+      setEditContent("");
+      setEditTitle("");
+    } else {
+      // Memory isn't in the current filtered list — fetch all memories and search
+      fetch(`/api/v1/memories?limit=2000`)
+        .then(r => r.json())
+        .then(data => {
+          const found = (data.memories || []).find((m: any) => m.id === relatedId);
+          if (found) {
+            const m: Memory = {
+              id: found.id,
+              content: found.content,
+              source: found.source,
+              sourceId: found.sourceId,
+              sourceTitle: found.sourceTitle || "Untitled",
+              timestamp: found.timestamp,
+              importedAt: found.importedAt,
+              metadata: found.metadata || {},
+              pinned: found.pinned || false,
+            };
+            setSelected(m);
+            setSelectedIndex(-1);
+            setCopied(false);
+            setEditing(false);
+          } else {
+            toast.error("Memory not found");
+          }
+        })
+        .catch(() => toast.error("Could not load memory"));
+    }
+  }, [memories]);
 
   // Keyboard: j/k to navigate list, Enter to open, Escape to close, ↑↓ in modal
   useEffect(() => {
@@ -989,6 +1084,69 @@ export default function ExplorePage() {
                 </div>
               )}
             </div>
+
+            {/* Related Memories — semantic connections */}
+            {!editing && (relatedLoading || relatedMemories.length > 0) && (
+              <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Sparkles className="w-3 h-3 text-violet-400/70" />
+                  <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+                    Related memories
+                  </span>
+                  {relatedLoading && (
+                    <Loader2 className="w-2.5 h-2.5 text-zinc-600 animate-spin ml-1" />
+                  )}
+                </div>
+                {relatedMemories.length > 0 ? (
+                  <div className="space-y-1">
+                    {relatedMemories.map((rel) => {
+                      const Icon = typeConfig[rel.type]?.icon || FileText;
+                      const colors = typeConfig[rel.type]?.color || "text-zinc-400 bg-zinc-500/10";
+                      const scorePercent = Math.round(rel.score * 100);
+                      return (
+                        <button
+                          key={rel.id}
+                          onClick={() => openRelatedMemory(rel.id)}
+                          className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
+                        >
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${colors.split(" ").filter(c => !c.startsWith("text-")).join(" ")}`}>
+                            <Icon className={`w-3 h-3 ${colors.split(" ")[0]}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] text-zinc-300 font-medium truncate group-hover/rel:text-white transition-colors">
+                              {rel.title}
+                            </p>
+                            <p className="text-[11px] text-zinc-600 truncate mt-0.5">
+                              {rel.preview || "No preview"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 opacity-60 group-hover/rel:opacity-100 transition-opacity">
+                            <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-violet-500/50"
+                                style={{ width: `${Math.max(scorePercent, 10)}%` }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-5 text-right">
+                              {scorePercent}%
+                            </span>
+                            <ExternalLink className="w-2.5 h-2.5 text-zinc-700 group-hover/rel:text-violet-400 transition-colors" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : relatedLoading ? (
+                  <div className="flex items-center gap-2 py-2 px-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-white/[0.04] animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-2/3 bg-white/[0.04] rounded animate-pulse" />
+                      <div className="h-2.5 w-1/2 bg-white/[0.03] rounded animate-pulse" />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Footer — different buttons for view vs edit mode */}
             <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
