@@ -21,6 +21,14 @@ export async function GET(req: NextRequest) {
       LIMIT 10
     `);
 
+    // Recent memories — last 5 added
+    const recentMemories = await db.execute(sql`
+      SELECT id, content, source_type, source_title, created_at
+      FROM memories WHERE user_id = ${userId}::uuid
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+
     const totalMemories = (memoriesCount as any)[0]?.count || 0;
     const byType: Record<string, number> = { chatgpt: 0, text: 0, file: 0, url: 0 };
     for (const row of sourcesBreakdown as any[]) {
@@ -38,6 +46,13 @@ export async function GET(req: NextRequest) {
         type: r.type,
         title: r.title || 'Untitled',
         itemCount: r.item_count,
+      })),
+      recentMemories: (recentMemories as any[]).map(r => ({
+        id: r.id,
+        content: r.content?.slice(0, 120) || '',
+        sourceType: r.source_type,
+        sourceTitle: r.source_title || 'Untitled',
+        createdAt: r.created_at,
       })),
     });
   } catch (error: unknown) {

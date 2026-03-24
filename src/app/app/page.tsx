@@ -8,6 +8,7 @@ import {
   Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
+  Clock,
 } from "lucide-react";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
@@ -417,6 +418,47 @@ export default function DashboardPage() {
         </div>
       </Stagger>
 
+      {/* Recent Activity */}
+      {stats?.recentMemories?.length > 0 && (
+        <Stagger>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Recent Activity</p>
+              <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
+                View all →
+              </Link>
+            </div>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
+              {stats.recentMemories.map((mem: any, i: number) => {
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };
+                const Icon = typeIcons[mem.sourceType] || FileText;
+                const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                return (
+                  <Link key={mem.id || i} href={`/app/explore?q=${encodeURIComponent(mem.content.slice(0, 40))}`}>
+                    <div className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${color.split(' ').slice(1).join(' ')}`}>
+                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-[12px] font-medium text-zinc-300 truncate">{mem.sourceTitle}</p>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed">{mem.content}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 mt-1">
+                        <Clock className="w-2.5 h-2.5 text-zinc-700" />
+                        <span className="text-[10px] text-zinc-600 whitespace-nowrap">{formatRelativeTime(mem.createdAt)}</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </Stagger>
+      )}
+
       {/* Feature Cards */}
       <Stagger>
         <div className="space-y-2">
@@ -470,4 +512,18 @@ export default function DashboardPage() {
       )}
     </PageTransition>
   );
+}
+
+/** Format a timestamp to relative time */
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
