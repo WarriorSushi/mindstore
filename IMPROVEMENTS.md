@@ -584,3 +584,21 @@ _Automated 30-min improvement cycles by Frain_
   - **No backend changes** — leverages existing stats API data
   - **Design**: amber-tinted gradient cards complement the pinning feature's amber color palette, creating visual consistency across Explore and Dashboard
 - **Branch**: `frain/improve` (commit `ba293bb`)
+
+## 2026-03-24 13:59 UTC — 14-Day Activity Chart on Dashboard
+- **Research**: UX patterns from Obsidian (activity graph), GitHub (contribution heatmap), and Duolingo (streak counter). Knowledge management apps that show activity patterns keep users engaged and motivated. MindStore's dashboard showed stat cards and recent activity list, but had no temporal visualization of knowledge growth.
+- **Finding**: The stats API had no temporal data at all — just total counts and recent items. Users had no way to see their knowledge-building patterns over time, making it impossible to answer "am I consistently adding to my knowledge base?"
+- **Implemented**:
+  - **Backend**: Added `dailyActivity` query to `/api/v1/stats` — aggregates memory creation counts by day for the last 14 days, with a `buildDailyActivity()` helper that fills in zero-count days for a complete 14-day array
+  - **Frontend**: `ActivityChart` component on dashboard between Stat Cards and Pinned Memories:
+    - 14 vertical bars showing daily import counts, proportionally scaled to max
+    - Today's bar highlighted with violet gradient + shadow glow
+    - Hover tooltips showing exact count and date for each day
+    - Hover state: bar brightens to `violet-400/60`
+    - Zero-count days shown as 2px dim bars for visual continuity
+    - 🔥 Streak counter — shows consecutive active days (e.g. "🔥 5-day streak")
+    - Date labels at start, middle, and end of the 14-day range
+    - Header with BarChart3 icon, "ACTIVITY · 14 days" label, total memories added count
+    - Only renders when there's actual activity data (zero visual noise for inactive users)
+  - **Design**: Matches MindStore's design language — dark rounded cards, violet gradients, zinc-toned typography, smooth transitions
+- **Branch**: `frain/improve` (commit `b5ede6c`)
