@@ -4,6 +4,39 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 17:29 UTC — Obsidian Vault Importer Plugin (Phase 2, Plugin #12)
+- **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2), PDF/EPUB (#9), YouTube (#3), Browser Bookmarks (#6) are done. Obsidian Vault Importer (#12) is next — the 5th plugin in the build order.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/obsidian-importer`):
+    - **ZIP upload**: Uses JSZip to extract `.md` files from vault ZIP. Skips `.obsidian/`, `.trash/`, `__MACOSX/`, hidden files.
+    - **Vault root stripping**: Auto-detects and removes the common vault root folder prefix (e.g. "MyVault/folder/note.md" → "folder/note.md").
+    - **YAML frontmatter parser**: Handles tags (array + inline `[...]`), aliases, dates, booleans, numbers, strings. Supports multi-line arrays with `- item` syntax.
+    - **Wikilink extraction**: `[[Note]]`, `[[Note|Display Text]]` — excludes embedded files `![[file]]`. Resolves via alias map.
+    - **Inline tag extraction**: `#tag`, `#nested/tag` — skips code blocks and headings. Combined with frontmatter tags (deduplicated).
+    - **Heading extraction**: Detects all `#`-`######` headings for structure-aware chunking.
+    - **Smart chunking**: Splits large notes at heading boundaries (4000 char max). Preserves section context headers. Small notes stay as single memories.
+    - **Content formatting**: Converts wikilinks to readable text, adds metadata header (folder path, tags, date, aliases, linked notes).
+    - **Graph import**: Wikilinks stored as connections in `connections` table with `bridge_concept: 'wikilink'` and `similarity: 0.8`. Alias resolution for link targets.
+    - **Batch embeddings**: Generates embeddings in batches of 50, up to 300 chunks max.
+    - **Preview mode**: Returns vault stats (total notes, words, tags, wikilinks, folders, orphans), tag cloud with counts, folder tree, most-linked notes (by backlink count), sample notes with preview, graph connectivity stats (connected notes, avg links/note).
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **Import page UI** — full preview-then-import workflow:
+    - Drop zone accepts `.zip` files with violet Gem icon accent
+    - Preview card with vault stats: note count, word count, folder count, date range
+    - Graph stats bar: wikilink count, connected notes, orphan count, links-per-note average
+    - Tag cloud with count badges (violet-themed, shows top 12 + overflow count)
+    - Folder list with folder icons and counts
+    - Most-linked notes section showing backlink counts (emerald accent)
+    - Sample notes list with link count, word count, folder path, tag preview
+    - Violet import button showing note count
+    - "Change" button to re-select file
+  - **Source type recognition**: Added `obsidian` source type across the entire app:
+    - Dashboard: recent activity, pinned memories, sources section — Gem icon with violet accent
+    - Explore: type config with Gem icon and violet color
+    - Import: history section with obsidian type icons
+  - **Plugin registry**: obsidian-importer excluded from dynamic plugin tabs to prevent duplicates
+- **Branch**: `frain/improve` (commit `b28e200`)
+
 ## 2026-03-24 15:59 UTC — PDF/EPUB Document Parser Plugin (Phase 2, Plugin #9)
 - **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2) was done last cycle, PDF/EPUB (#9) is next in the build order.
 - **Finding**: The PDF/EPUB parser backend existed but had a critical build error — pdf-parse v2 uses a class-based `PDFParse` API instead of the v1 default export function. The backend was committed but the build was broken. Additionally, the import page had no UI tab for PDF/EPUB — users would have had to manually install the plugin from the store first, then it would appear as a dynamic tab. Not a good UX for a core importer.
