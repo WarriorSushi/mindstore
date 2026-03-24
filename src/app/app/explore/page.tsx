@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -51,6 +51,11 @@ export default function ExplorePage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
     if (!selected || memories.length === 0) return;
@@ -72,6 +77,78 @@ export default function ExplorePage() {
     const query = encodeURIComponent(`Tell me more about this from my knowledge: "${snippet}${memory.content.length > 300 ? '…' : ''}"`);
     router.push(`/app/chat?q=${query}`);
   }, [router]);
+
+  // ── Multi-select helpers ──────────────────
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(memories.map(m => m.id)));
+  }, [memories]);
+
+  const deselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (!confirm(`Delete ${count} memor${count === 1 ? 'y' : 'ies'}? This can't be undone.`)) return;
+    setBatchDeleting(true);
+    let deleted = 0;
+    const ids = Array.from(selectedIds);
+    // Delete in parallel batches of 10
+    for (let i = 0; i < ids.length; i += 10) {
+      const batch = ids.slice(i, i + 10);
+      const results = await Promise.allSettled(
+        batch.map(id => fetch(`/api/v1/memories?id=${id}`, { method: 'DELETE' }))
+      );
+      deleted += results.filter(r => r.status === 'fulfilled').length;
+    }
+    setMemories(prev => prev.filter(m => !selectedIds.has(m.id)));
+    setTotalMemories(prev => prev - deleted);
+    exitSelectMode();
+    setBatchDeleting(false);
+    toast.success(`Deleted ${deleted} memor${deleted === 1 ? 'y' : 'ies'}`);
+  }, [selectedIds, exitSelectMode]);
+
+  const handleBatchExport = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const selected = memories.filter(m => selectedIds.has(m.id));
+    const md = selected.map(m => {
+      const date = new Date(m.timestamp).toLocaleDateString();
+      return `## ${m.sourceTitle || 'Untitled'}\n*${m.source} · ${date}*\n\n${m.content}`;
+    }).join('\n\n---\n\n');
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mindstore-export-${selectedIds.size}-memories.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast.success(`Exported ${selectedIds.size} memor${selectedIds.size === 1 ? 'y' : 'ies'}`);
+  }, [selectedIds, memories]);
+
+  const handleBatchCopy = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const selected = memories.filter(m => selectedIds.has(m.id));
+    const text = selected.map(m => {
+      return `[${m.source}] ${m.sourceTitle || 'Untitled'}\n${m.content}`;
+    }).join('\n\n---\n\n');
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`Copied ${selectedIds.size} memor${selectedIds.size === 1 ? 'y' : 'ies'} to clipboard`);
+    });
+  }, [selectedIds, memories]);
 
   // Keyboard: j/k to navigate list, Enter to open, Escape to close, ↑↓ in modal
   useEffect(() => {
@@ -104,6 +181,35 @@ export default function ExplorePage() {
       if (e.key === "/" && !isInput) {
         e.preventDefault();
         searchInputRef.current?.focus();
+        return;
+      }
+
+      // Escape exits select mode
+      if (e.key === "Escape" && selectMode) {
+        e.preventDefault();
+        exitSelectMode();
+        return;
+      }
+
+      // "s" toggles select mode (like Gmail)
+      if (e.key === "s" && !isInput && !selectMode) {
+        e.preventDefault();
+        setSelectMode(true);
+        return;
+      }
+
+      // Space toggles selection of focused item in select mode
+      if (e.key === " " && !isInput && selectMode && focusedIndex >= 0 && memories[focusedIndex]) {
+        e.preventDefault();
+        toggleSelect(memories[focusedIndex].id);
+        return;
+      }
+
+      // "a" selects all in select mode
+      if (e.key === "a" && !isInput && selectMode && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        if (selectedIds.size === memories.length) deselectAll();
+        else selectAll();
         return;
       }
 
@@ -141,7 +247,7 @@ export default function ExplorePage() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selected, focusedIndex, memories, navigateMemory]);
+  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll]);
 
   // Reset focused index when memories change
   useEffect(() => {
@@ -239,9 +345,25 @@ export default function ExplorePage() {
     <PageTransition className="space-y-4 md:space-y-6">
       {/* Header */}
       <Stagger>
-        <div>
-          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Explore</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">{totalMemories.toLocaleString()} memories · {sources.length} sources</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Explore</h1>
+            <p className="text-[13px] text-zinc-500 mt-0.5">{totalMemories.toLocaleString()} memories · {sources.length} sources</p>
+          </div>
+          {memories.length > 0 && (
+            <button
+              onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+              className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium transition-all active:scale-[0.96] ${
+                selectMode
+                  ? "text-violet-300 bg-violet-500/10"
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+              }`}
+              title={selectMode ? "Exit select mode (Esc)" : "Select memories (s)"}
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{selectMode ? "Cancel" : "Select"}</span>
+            </button>
+          )}
         </div>
       </Stagger>
 
@@ -279,23 +401,100 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
+      {/* ═══ Selection Toolbar ═══ */}
+      {selectMode && (
+        <div className="sticky top-12 md:top-0 z-20 -mx-4 px-4 py-2 bg-[#0a0a0b]/90 backdrop-blur-xl border-b border-white/[0.06]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => selectedIds.size === memories.length ? deselectAll() : selectAll()}
+                className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96] shrink-0"
+              >
+                {selectedIds.size === memories.length ? (
+                  <CheckSquare className="w-3.5 h-3.5 text-violet-400" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+                {selectedIds.size === memories.length ? "Deselect all" : "Select all"}
+              </button>
+              {selectedIds.size > 0 && (
+                <span className="text-[11px] text-violet-400 font-medium tabular-nums shrink-0">
+                  {selectedIds.size} selected
+                </span>
+              )}
+            </div>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleBatchCopy}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+                  title="Copy selected"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span className="hidden sm:inline">Copy</span>
+                </button>
+                <button
+                  onClick={handleBatchExport}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+                  title="Export selected as Markdown"
+                >
+                  <Download className="w-3 h-3" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+                <button
+                  onClick={handleBatchDelete}
+                  disabled={batchDeleting}
+                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
+                  title="Delete selected"
+                >
+                  {batchDeleting ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3 h-3" />
+                  )}
+                  <span className="hidden sm:inline">{batchDeleting ? "Deleting…" : "Delete"}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Memory Cards */}
       <div ref={listRef} className="space-y-1.5">
         {memories.map((m, idx) => {
           const cfg = typeConfig[m.source] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10" };
           const Icon = cfg.icon;
           const isFocused = focusedIndex === idx;
+          const isSelected = selectedIds.has(m.id);
           return (
             <button
               key={m.id}
-              onClick={() => { setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false); }}
+              onClick={() => {
+                if (selectMode) {
+                  toggleSelect(m.id);
+                } else {
+                  setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false);
+                }
+              }}
               className={`w-full text-left p-3.5 rounded-2xl border transition-all active:scale-[0.99] ${
-                isFocused
+                isSelected
+                  ? "border-violet-500/30 bg-violet-500/[0.08] ring-1 ring-violet-500/20"
+                  : isFocused
                   ? "border-violet-500/30 bg-violet-500/[0.06] ring-1 ring-violet-500/20"
                   : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
               }`}
             >
               <div className="flex items-center gap-2 mb-1.5">
+                {selectMode && (
+                  <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
+                    isSelected
+                      ? "bg-violet-500 border-violet-500"
+                      : "border-white/[0.15] bg-white/[0.02]"
+                  }`}>
+                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                )}
                 <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
                   <Icon className="w-2.5 h-2.5" />
                   {m.source}
@@ -305,7 +504,7 @@ export default function ExplorePage() {
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
               </div>
-              <p className="text-[13px] text-zinc-300 line-clamp-2 leading-relaxed">{m.content}</p>
+              <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
             </button>
           );
         })}
@@ -349,6 +548,22 @@ export default function ExplorePage() {
               <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">/</kbd>
               search
             </span>
+            <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">s</kbd>
+              {selectMode ? "select mode" : "select"}
+            </span>
+            {selectMode && (
+              <>
+                <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                  <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">␣</kbd>
+                  toggle
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                  <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">a</kbd>
+                  all
+                </span>
+              </>
+            )}
           </div>
         )}
 
