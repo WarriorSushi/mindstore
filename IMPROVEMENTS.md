@@ -4,6 +4,23 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 03:29 UTC — Enhanced Command Palette: Quick Actions & Recent Chats
+- **Research**: Command palette UX patterns from Linear, Raycast, Notion, Superhuman — modern command palettes aren't just search boxes. They're action hubs: search content, navigate pages, AND execute quick actions (new chat, export, import). Linear's ⌘K shows recent items when empty. Raycast groups results by type with section headers. Superhuman's ⌘K has instant actions with keyword matching.
+- **Finding**: MindStore's ⌘K Command Palette could only do two things: search memories and navigate to pages. No quick actions (users had to navigate to a page first, then find the button). No recent items (the palette opened empty with just a page list). No section grouping. This made it feel like a basic nav menu rather than a power-user hub. Web search unavailable (quota), used domain knowledge of command palette UX patterns.
+- **Implemented**:
+  - **Quick Actions section**: 8 actions searchable by keywords — "New Chat" (start fresh conversation), "Import Text" (paste notes), "Import ChatGPT" (upload ZIP), "Import URL" (extract webpage), "Export All Data" (download JSON backup *directly from palette* — no navigation needed), "Reindex Embeddings" (navigate to settings), "Teach AI About You" (open Learn), "View Mind Map" (open 3D graph). Each action has fuzzy keyword matching (e.g. typing "backup" finds Export, typing "web" finds Import URL).
+  - **Recent Chats section**: When the palette opens with no query, shows the last 4 conversations from localStorage with title, message count, and relative timestamps. Clicking a recent chat navigates to Chat page and loads that conversation via custom event dispatch.
+  - **Section grouping**: Items are now grouped under labeled section headers — "Memories" (search results), "Quick Actions" (with ⚡ icon), "Recent Chats" (with 🕐 icon), "Navigate"/"Pages" (page links). Much easier to scan than a flat list.
+  - **Custom event bridge**: Command palette dispatches `mindstore:new-chat` and `mindstore:load-chat` custom events. Chat page listens for these events and triggers `handleNewChat()` or `handleLoadConversation(id)` — enabling cross-component communication without prop drilling or global state.
+  - **Direct export action**: The "Export All Data" action fetches `/api/v1/export`, creates a Blob, and triggers download — all without leaving the current page. Shows toast on success/failure.
+  - **Color-coded search result icons**: Memory search results now use source-type-specific icon colors (green for ChatGPT, blue for files, orange for URLs, violet for text) — consistent with Explore page.
+  - **Result count in footer**: Shows "N results" counter in the bottom-right of the palette.
+  - **Better empty state**: When query matches nothing, shows "No results for…" with a help hint ("Try searching for memories, pages, or actions").
+  - **Updated placeholder**: "Search, navigate, or run actions…" — tells users the palette can do more than just search.
+- **Branch**: `frain/improve` (commit `af68ff0`)
+
+---
+
 ## 2026-03-24 02:59 UTC — Suggested Follow-Up Questions in Chat
 - **Research**: AI chat UX patterns from ChatGPT, Perplexity, Gemini, Claude — all modern AI chat apps generate contextual follow-up questions after responses to drive engagement and help users explore their knowledge deeper. MindStore's chat had no suggested follow-ups — after an answer, the user had to think of the next question entirely on their own.
 - **Finding**: The Chat page had great UX (stop/regenerate, source citations, copy, scroll FAB) but lacked the "what to ask next" pattern. In knowledge management, follow-up suggestions are even more valuable than in general chat because users often don't know what connections exist in their own data.
