@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool, Layers,
+  Heart, Target, PenTool, Layers, FileEdit, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +44,8 @@ const NAV_ITEMS = [
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
   { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
+  { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
+  { href: "/app/prep", icon: Users, label: "Conversation Prep", desc: "Brief me before any meeting" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -361,6 +363,30 @@ export function CommandPalette() {
         keywords: ["flashcard", "flashcards", "study", "learn", "review", "spaced", "repetition", "anki", "cards", "quiz", "deck", "memorize"],
         action: () => {
           router.push("/app/flashcards");
+          setOpen(false);
+        },
+      },
+      {
+        id: "blog-writer",
+        icon: FileEdit,
+        iconColor: "text-teal-400",
+        label: "Write Blog Post",
+        desc: "Generate a blog post from your stored knowledge",
+        keywords: ["blog", "write", "post", "article", "draft", "publish", "content", "writing", "generate", "essay"],
+        action: () => {
+          router.push("/app/blog");
+          setOpen(false);
+        },
+      },
+      {
+        id: "conversation-prep",
+        icon: Users,
+        iconColor: "text-sky-400",
+        label: "Conversation Prep",
+        desc: "Brief me before a meeting about a person, company, or topic",
+        keywords: ["prep", "prepare", "meeting", "briefing", "conversation", "person", "company", "brief", "talking", "points"],
+        action: () => {
+          router.push("/app/prep");
           setOpen(false);
         },
       },

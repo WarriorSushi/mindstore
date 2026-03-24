@@ -365,14 +365,17 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'conversation-prep': {
     slug: 'conversation-prep',
     name: 'Conversation Prep',
-    description: 'Get briefed before a meeting. "What do I know about this person/topic?"',
+    description: 'Get briefed before a meeting. "What do I know about this person/topic?" — structured briefing with talking points.',
     version: '1.0.0',
-    type: 'mcp',
+    type: 'extension',
     category: 'action',
-    icon: 'UserCheck',
+    icon: 'Users',
     author: 'MindStore',
-    capabilities: ['read:memories', 'read:embeddings', 'chat:generate'],
+    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'prep', title: 'Prep', icon: 'Users', showInSidebar: true }],
+    },
     mcpTools: [{
       name: 'prepare_briefing',
       description: 'Generate a comprehensive briefing about a person or topic from your knowledge',
