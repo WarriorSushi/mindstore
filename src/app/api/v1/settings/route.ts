@@ -40,6 +40,7 @@ export async function GET() {
         },
       },
       embeddingProvider: embConfig?.provider || null,
+      chatProvider: config.chat_provider || null,
     });
   } catch (error: unknown) {
     console.error('[settings GET]', error);
@@ -54,6 +55,7 @@ export async function GET() {
         ollama: { configured: !!process.env.OLLAMA_URL, url: process.env.OLLAMA_URL || null },
       },
       embeddingProvider: null,
+      chatProvider: null,
       dbError: true,
     });
   }
@@ -107,6 +109,16 @@ export async function POST(req: NextRequest) {
     // Save preferred embedding provider
     if (body.embeddingProvider) {
       await upsertSetting('embedding_provider', body.embeddingProvider);
+    }
+
+    // Save preferred chat provider
+    if (body.chatProvider) {
+      if (body.chatProvider === 'auto') {
+        // Remove the preference to use auto-detect
+        await db.execute(sql`DELETE FROM settings WHERE key = 'chat_provider'`);
+      } else {
+        await upsertSetting('chat_provider', body.chatProvider);
+      }
     }
 
     return NextResponse.json({ ok: true, message: 'Settings saved' });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
@@ -21,9 +21,14 @@ export default function SettingsPage() {
   const [stats, setStats] = useState<any>(null);
   const [reindexing, setReindexing] = useState(false);
   const [reindexStatus, setReindexStatus] = useState<any>(null);
+  const [chatProvider, setChatProvider] = useState<string>("auto");
+  const [savingChat, setSavingChat] = useState(false);
 
   useEffect(() => {
-    fetchSettings().then(setSettings);
+    fetchSettings().then((s) => {
+      setSettings(s);
+      if (s?.chatProvider) setChatProvider(s.chatProvider);
+    });
     fetchStats().then(setStats);
     fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
   }, []);
@@ -98,6 +103,27 @@ export default function SettingsPage() {
     }
     setReindexing(false);
     fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
+  };
+
+  const handleSetChatProvider = async (provider: string) => {
+    setChatProvider(provider);
+    setSavingChat(true);
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatProvider: provider }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(provider === 'auto' ? 'Chat provider set to auto-detect' : `Chat will use ${provider}`);
+      } else {
+        toast.error(data.error || 'Failed');
+      }
+    } catch {
+      toast.error('Failed to save preference');
+    }
+    setSavingChat(false);
   };
 
   const providers = settings?.providers || {};
@@ -194,6 +220,59 @@ export default function SettingsPage() {
         />
       </div>
       </Stagger>
+
+      {/* ─── Chat Provider Preference ─── */}
+      {settings?.hasApiKey && (
+        <Stagger>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Chat Provider</p>
+            {savingChat && <Loader2 className="w-3 h-3 text-violet-400 animate-spin" />}
+          </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
+            <p className="text-[12px] text-zinc-500 leading-relaxed px-1 pb-1">
+              Choose which AI handles your chat conversations
+            </p>
+            <ChatProviderOption
+              name="Auto-detect"
+              description="Uses first available provider"
+              icon={<Zap className="w-3.5 h-3.5" />}
+              iconColor="text-amber-400"
+              active={chatProvider === 'auto'}
+              onClick={() => handleSetChatProvider('auto')}
+              available={true}
+            />
+            <ChatProviderOption
+              name="Google Gemini"
+              description="gemini-2.0-flash-lite · fast & free"
+              icon={<Sparkles className="w-3.5 h-3.5" />}
+              iconColor="text-blue-400"
+              active={chatProvider === 'gemini'}
+              onClick={() => handleSetChatProvider('gemini')}
+              available={!!providers.gemini?.configured}
+            />
+            <ChatProviderOption
+              name="OpenAI"
+              description="gpt-4o-mini · high quality"
+              icon={<Key className="w-3.5 h-3.5" />}
+              iconColor="text-emerald-400"
+              active={chatProvider === 'openai'}
+              onClick={() => handleSetChatProvider('openai')}
+              available={!!providers.openai?.configured}
+            />
+            <ChatProviderOption
+              name="Ollama"
+              description="llama3.2 · 100% local & private"
+              icon={<Server className="w-3.5 h-3.5" />}
+              iconColor="text-orange-400"
+              active={chatProvider === 'ollama'}
+              onClick={() => handleSetChatProvider('ollama')}
+              available={!!providers.ollama?.configured}
+            />
+          </div>
+        </div>
+        </Stagger>
+      )}
 
       {/* ─── Data ─── */}
       <Stagger>
@@ -314,6 +393,44 @@ function ActionButton({ icon, label, onClick, danger }: { icon: React.ReactNode;
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+function ChatProviderOption({ name, description, icon, iconColor, active, onClick, available }: {
+  name: string; description: string; icon: React.ReactNode; iconColor: string;
+  active: boolean; onClick: () => void; available: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!available}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98] ${
+        active
+          ? "bg-violet-500/[0.08] border border-violet-500/25 ring-1 ring-violet-500/15"
+          : available
+            ? "border border-transparent hover:bg-white/[0.04] hover:border-white/[0.06]"
+            : "border border-transparent opacity-35 cursor-not-allowed"
+      }`}
+    >
+      <div className={`w-7 h-7 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0 ${iconColor}`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-[13px] font-medium ${active ? "text-white" : available ? "text-zinc-300" : "text-zinc-500"}`}>{name}</span>
+          {!available && <span className="text-[9px] text-zinc-600 font-medium uppercase tracking-wide">Not connected</span>}
+        </div>
+        <span className="text-[11px] text-zinc-600">{description}</span>
+      </div>
+      {active && (
+        <div className="w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
+          <CheckCircle className="w-3.5 h-3.5 text-white" />
+        </div>
+      )}
+      {!active && available && (
+        <div className="w-5 h-5 rounded-full border border-white/[0.1] shrink-0" />
+      )}
     </button>
   );
 }
