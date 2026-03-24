@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings,
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
-  Search,
+  Search, Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Onboarding } from "@/components/Onboarding";
 import { CommandPalette } from "@/components/CommandPalette";
 import { GlobalDropZone } from "@/components/GlobalDropZone";
+import { KeyboardShortcuts, openKeyboardShortcuts } from "@/components/KeyboardShortcuts";
 
 const navItems = [
   { href: "/app", icon: LayoutDashboard, label: "Home" },
@@ -53,6 +54,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <CommandPalette />
       {/* ════════ GLOBAL DROP ZONE ════════ */}
       <GlobalDropZone />
+      {/* ════════ KEYBOARD SHORTCUTS HELP ════════ */}
+      <KeyboardShortcuts />
       {/* ════════ MOBILE HEADER ════════ */}
       <header className={cn(
         "md:hidden fixed top-0 inset-x-0 z-50 safe-top",
@@ -153,6 +156,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Search className="w-3.5 h-3.5" />
             <span className="flex-1 text-left">Search</span>
             <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px]">⌘K</kbd>
+          </button>
+          <button
+            onClick={() => openKeyboardShortcuts()}
+            className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-lg text-[12px] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-all"
+          >
+            <Keyboard className="w-3.5 h-3.5" />
+            <span className="flex-1 text-left">Shortcuts</span>
+            <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px]">?</kbd>
           </button>
           <p className="text-[10px] text-zinc-600 font-medium tracking-wide px-2.5">MINDSTORE v0.3</p>
         </div>
