@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send, Brain, User, Loader2, Sparkles, CheckCircle2, RotateCcw,
-  ArrowUp, GraduationCap,
+  ArrowUp, GraduationCap, ChevronsDown,
 } from "lucide-react";
 import { checkApiKey, streamChat } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -97,15 +97,39 @@ export default function LearnPage() {
   const [hasApiKey, setHasApiKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const isNearBottomRef = useRef(true);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && isNearBottomRef.current) {
       scrollRef.current.scrollTo({
         top: scrollRef.current.scrollHeight,
         behavior: "smooth",
       });
     }
   }, [messages]);
+
+  // Detect scroll position for "scroll to bottom" button
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!el) return;
+      const threshold = 120;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+      isNearBottomRef.current = nearBottom;
+      setShowScrollBtn(!nearBottom && messages.length > 0);
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [messages.length]);
+
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -385,6 +409,21 @@ export default function LearnPage() {
           ))}
         </div>
       </div>
+
+      {/* Scroll to Bottom FAB */}
+      {showScrollBtn && (
+        <div className="relative">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+            <button
+              onClick={scrollToBottom}
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-[#1a1a1d] border border-white/[0.1] shadow-lg shadow-black/40 text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-[#222225] hover:border-white/[0.15] transition-all active:scale-[0.95] backdrop-blur-sm"
+            >
+              <ChevronsDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Scroll down</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Fact counter floating pill */}
       {allFacts.length > 0 && (

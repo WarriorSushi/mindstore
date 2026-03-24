@@ -7,6 +7,7 @@ import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
+  ChevronsDown,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -43,6 +44,8 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchParams = useSearchParams();
   const autoSentRef = useRef(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const isNearBottomRef = useRef(true);
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -68,13 +71,38 @@ export default function ChatPage() {
     }
   }, [searchParams, memoryCount]);
 
-  // Auto-scroll on new messages
+  // Auto-scroll on new messages (only when near bottom)
   useEffect(() => {
+    if (isNearBottomRef.current) {
+      scrollRef.current?.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages]);
+
+  // Detect scroll position for "scroll to bottom" button
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!el) return;
+      const threshold = 120;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+      isNearBottomRef.current = nearBottom;
+      setShowScrollBtn(!nearBottom && messages.length > 0);
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [messages.length]);
+
+  /** Scroll to the bottom of the chat */
+  const scrollToBottom = useCallback(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -539,6 +567,21 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ Scroll to Bottom FAB ═══ */}
+      {showScrollBtn && (
+        <div className="relative">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+            <button
+              onClick={scrollToBottom}
+              className="flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-[#1a1a1d] border border-white/[0.1] shadow-lg shadow-black/40 text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-[#222225] hover:border-white/[0.15] transition-all active:scale-[0.95] backdrop-blur-sm"
+            >
+              <ChevronsDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">New messages</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Input Bar ═══ */}
       <div className="border-t border-white/[0.04] bg-[#0a0a0b] px-3 py-2">
