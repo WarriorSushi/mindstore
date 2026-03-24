@@ -35,14 +35,16 @@ export async function removeApiKey(): Promise<void> {
   });
 }
 
-/** Stream chat via server-side proxy */
+/** Stream chat via server-side proxy (supports AbortController for cancellation) */
 export async function* streamChat(
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  signal?: AbortSignal,
 ): AsyncGenerator<string> {
   const res = await fetch('/api/v1/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages }),
+    signal,
   });
 
   if (!res.ok) {
@@ -54,24 +56,29 @@ export async function* streamChat(
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-        try {
-          const json = JSON.parse(line.slice(6));
-          const delta = json.choices?.[0]?.delta?.content;
-          if (delta) yield delta;
-        } catch {
-          // skip
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) yield delta;
+          } catch {
+            // skip
+          }
         }
       }
     }
+  } finally {
+    // Ensure reader is released even on abort
+    try { reader.cancel(); } catch {}
   }
 }

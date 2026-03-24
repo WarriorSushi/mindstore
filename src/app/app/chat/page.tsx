@@ -7,7 +7,7 @@ import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
-  ChevronsDown,
+  ChevronsDown, Square, RotateCcw,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -44,8 +44,10 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchParams = useSearchParams();
   const autoSentRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const isNearBottomRef = useRef(true);
+  const lastQueryRef = useRef<string>("");
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -178,6 +180,7 @@ export default function ChatPage() {
       setConversationId(cid);
     }
 
+    lastQueryRef.current = query;
     setInput("");
     const newMessages: ChatMessage[] = [
       ...messages,
@@ -186,9 +189,14 @@ export default function ChatPage() {
     setMessages(newMessages);
     setLoading(true);
 
+    // Create AbortController for this request
+    const abortController = new AbortController();
+    abortRef.current = abortController;
+
     try {
       const searchRes = await fetch(
-        `/api/v1/search?q=${encodeURIComponent(query)}&limit=8`
+        `/api/v1/search?q=${encodeURIComponent(query)}&limit=8`,
+        { signal: abortController.signal }
       );
       if (!searchRes.ok) throw new Error("Search failed");
       const { results = [] } = await searchRes.json();
@@ -204,6 +212,7 @@ export default function ChatPage() {
         ];
         setMessages(updated);
         setLoading(false);
+        abortRef.current = null;
         return;
       }
 
@@ -230,6 +239,7 @@ export default function ChatPage() {
         ];
         setMessages(updated);
         setLoading(false);
+        abortRef.current = null;
         return;
       }
 
@@ -266,7 +276,7 @@ export default function ChatPage() {
       ];
       setMessages(withPlaceholder);
 
-      for await (const chunk of streamChat(ragMessages)) {
+      for await (const chunk of streamChat(ragMessages, abortController.signal)) {
         fullResponse += chunk;
         setMessages((prev) => {
           const u = [...prev];
@@ -275,15 +285,50 @@ export default function ChatPage() {
         });
       }
     } catch (err: any) {
-      toast.error(err.message);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Error: ${err.message}` },
-      ]);
+      if (err.name === "AbortError") {
+        // User stopped generation — keep whatever was streamed so far
+        setMessages((prev) => {
+          const u = [...prev];
+          const last = u[u.length - 1];
+          if (last && last.role === "assistant" && !last.content) {
+            // If nothing was streamed, add a stopped message
+            u[u.length - 1] = { ...last, content: "_Generation stopped._" };
+          }
+          return u;
+        });
+      } else {
+        toast.error(err.message);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${err.message}` },
+        ]);
+      }
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   };
+
+  /** Stop the current streaming response */
+  const handleStop = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+  }, []);
+
+  /** Regenerate the last assistant response */
+  const handleRegenerate = useCallback(() => {
+    if (loading || messages.length < 2) return;
+    // Find the last user message
+    const lastUserIdx = messages.map((m, i) => ({ role: m.role, i })).filter(x => x.role === "user").pop();
+    if (!lastUserIdx) return;
+    const query = messages[lastUserIdx.i].content;
+    // Remove the last assistant response
+    const trimmed = messages.slice(0, lastUserIdx.i);
+    setMessages(trimmed);
+    // Re-send with the same query
+    setTimeout(() => handleSend(query), 50);
+  }, [loading, messages]);
 
   const [copiedChat, setCopiedChat] = useState(false);
 
@@ -585,34 +630,54 @@ export default function ChatPage() {
 
       {/* ═══ Input Bar ═══ */}
       <div className="border-t border-white/[0.04] bg-[#0a0a0b] px-3 py-2">
-        <div className="max-w-2xl mx-auto flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Ask anything…"
-              rows={1}
-              className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all max-h-[120px]"
-            />
-          </div>
-          <button
-            onClick={() => handleSend()}
-            disabled={loading || !input.trim()}
-            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
-          >
+        <div className="max-w-2xl mx-auto">
+          {/* Regenerate button — shows after last assistant message when not loading */}
+          {!loading && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
+            <div className="flex justify-center mb-2">
+              <button
+                onClick={handleRegenerate}
+                className="flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-medium text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:bg-white/[0.06] transition-all active:scale-[0.95]"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Regenerate
+              </button>
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Ask anything…"
+                rows={1}
+                className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all max-h-[120px]"
+              />
+            </div>
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <button
+                onClick={handleStop}
+                className="w-10 h-10 rounded-full bg-zinc-700 hover:bg-zinc-600 flex items-center justify-center transition-all shrink-0 active:scale-90 ring-1 ring-white/[0.1]"
+                title="Stop generating"
+              >
+                <Square className="w-3.5 h-3.5 text-white fill-white" />
+              </button>
             ) : (
-              <ArrowUp className="w-4 h-4 text-white" />
+              <button
+                onClick={() => handleSend()}
+                disabled={!input.trim()}
+                className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
+              >
+                <ArrowUp className="w-4 h-4 text-white" />
+              </button>
             )}
-          </button>
+          </div>
         </div>
       </div>
     </div>
