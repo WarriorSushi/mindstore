@@ -4,6 +4,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 06:59 UTC — Ollama Streaming Chat Support (Complete Local LLM Parity)
+- **Research**: Codebase audit — compared the three-provider support across embeddings vs chat. Web search unavailable (quota).
+- **Finding**: **Critical functional gap** — The chat API route (`/api/v1/chat/route.ts`) only supported OpenAI and Gemini for streaming chat, but **NOT Ollama** — even though the embeddings system (`embeddings.ts`) and settings page both fully support Ollama as a provider. Users who configured Ollama could generate embeddings and search, but clicking "chat" would fail with "No API key configured" — because the settings endpoint's `hasApiKey` check didn't include `ollama_url`, and the chat route had no `streamOllama()` function.
+- **Implemented**:
+  - **New `streamOllama()` function** in `/api/v1/chat/route.ts`: Streams chat via Ollama's `/api/chat` endpoint. Ollama uses NDJSON streaming (one JSON object per line: `{"message":{"content":"token"},"done":false}`), which is transformed to OpenAI-compatible SSE format (`data: {"choices":[{"delta":{"content":"token"}}]}`) so the existing client-side `streamChat()` generator works without any changes.
+  - **Provider priority with explicit override**: Reads `chat_provider` from settings DB. If explicitly set (e.g. `chat_provider: "ollama"`), that provider is used first. Otherwise falls back to auto-detect chain: OpenAI → Gemini → Ollama.
+  - **Graceful connection errors**: If Ollama is unreachable (e.g. not running), returns a clear 502 error: "Cannot connect to Ollama at http://localhost:11434. Is it running?" — much better than a generic fetch crash.
+  - **Settings `hasApiKey` fix**: The `/api/v1/settings` GET endpoint now includes `config.ollama_url` and `process.env.OLLAMA_URL` in the `hasApiKey` boolean. This fixes the chat page's `hasAI` state — previously Ollama-only users saw "Connect an AI provider" even though they had one configured.
+  - **Default model**: Uses `llama3.2` as the default Ollama chat model (widely available, good quality, fast).
+  - **Zero client-side changes needed**: The existing `streamChat()` generator in `lib/openai.ts` already parses OpenAI-compatible SSE, so Ollama chat "just works" through the same pipeline.
+  - **Complete parity**: All three providers (OpenAI, Gemini, Ollama) now work identically across both embeddings AND chat. MindStore is truly usable as a 100% local/offline knowledge base.
+- **Also committed**: Chat conversation rename feature (double-click title or pencil icon in history panel).
+- **Branch**: `frain/improve` (commits `b0de58e`, `7f4cd40`)
+
 ## 2026-03-24 05:59 UTC — Global Drag-and-Drop File Import
 - **Research**: Drag-and-drop UX patterns from Notion, Slack, Discord, Gmail — all modern productivity apps allow dropping files anywhere in the app, not just on dedicated upload areas. MindStore's Import page had per-tab DropZone components, but users had to navigate to the Import page first. Web search unavailable (quota), used domain knowledge of file import UX patterns.
 - **Finding**: MindStore had drag-and-drop support only within the Import page's DropZone components. Users on Chat, Explore, Dashboard, or any other page had no way to quickly import a file without navigating away. This breaks the flow — especially for power users who want to "drop and go" like in Slack or Notion.
