@@ -4,6 +4,27 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 10:29 UTC — Save Chat Response to Memory (Knowledge Loop)
+- **Research**: Internal UX audit — compared MindStore's chat experience to Mem.ai, Notion AI, and Reflect. A core pattern in modern PKM apps is the "knowledge loop": you search/chat your knowledge → get a synthesized insight → save that insight back as new knowledge. MindStore had no way to capture AI-generated answers back into the knowledge base. Users would get great synthesized responses but couldn't persist them without manually copy-pasting into Import.
+- **Finding**: The chat message hover UI only showed a Copy button. Assistant messages needed a Save action to close the knowledge loop. This is a signature feature that differentiates true PKM tools from simple chatbots.
+- **Implemented**:
+  - **MessageActions component**: New hover-action bar for assistant messages with two buttons:
+    - **Copy** (existing behavior, preserved)
+    - **Save to Memory** (new): BookmarkPlus icon with "Save" label
+  - **Save workflow**:
+    - Extracts the preceding user question as context for the memory title (prefixed with 💡)
+    - POSTs to `/api/v1/import` as a `text` type document
+    - Shows loading spinner during save, green checkmark on success
+    - Toast notification with chunk count + "Find it in Explore" description
+    - Button transitions to "Saved" state after success (prevents double-saves)
+  - **Design details**:
+    - Hover state: violet accent (bg-violet-500/10, border-violet-500/20) — matches app palette
+    - Saved state: emerald accent (bg-emerald-500/10) for clear success feedback
+    - Responsive: icon-only on mobile, icon + "Save" label on desktop (hidden via sm:inline)
+    - Shadow, border, and rounded-lg match existing Copy button aesthetics
+  - User messages retain the original single Copy button on the left side
+- **Branch**: `frain/improve` (commit `f55012f`)
+
 ## 2026-03-24 09:59 UTC — Content Stats Bar in Explore Detail Modal
 - **Research**: UX audit against Notion, Obsidian, Medium, Mem, Apple Notes. Every serious knowledge management app shows content metadata (word count, reading time) when viewing a document. MindStore's Explore detail modal showed only source type, title, and date — no content-level stats. Users had no way to gauge memory size or reading commitment before diving in.
 - **Finding**: The detail modal had a header and content area, but the gap between them was an unused opportunity. Adding a stats bar in that space follows Notion's document info pattern and Medium's reading time convention, both of which are proven UX patterns users intuitively understand.
