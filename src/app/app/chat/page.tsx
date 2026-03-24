@@ -7,7 +7,7 @@ import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
-  ChevronsDown, Square, RotateCcw,
+  ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -24,12 +24,42 @@ import {
   clearAllConversations,
 } from "@/lib/chat-history";
 
-const SUGGESTIONS = [
-  "What topics have I explored most?",
-  "Summarize my key interests",
-  "What did I learn recently?",
-  "Connections between my ideas?",
+const SUGGESTION_GROUPS = [
+  {
+    icon: Search,
+    color: "text-blue-400 bg-blue-500/10",
+    items: [
+      "What topics have I explored most?",
+      "Summarize my key interests",
+    ],
+  },
+  {
+    icon: Lightbulb,
+    color: "text-amber-400 bg-amber-500/10",
+    items: [
+      "What did I learn recently?",
+      "Connections between my ideas?",
+    ],
+  },
+  {
+    icon: TrendingUp,
+    color: "text-emerald-400 bg-emerald-500/10",
+    items: [
+      "How have my ideas evolved?",
+      "What patterns do you see?",
+    ],
+  },
 ];
+
+/** Time-aware greeting */
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return "Late night thinking";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  if (h < 21) return "Good evening";
+  return "Late night thinking";
+}
 
 /** Generate follow-up question suggestions based on conversation context */
 async function generateFollowUps(
@@ -113,6 +143,7 @@ export default function ChatPage() {
   const lastQueryRef = useRef<string>("");
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [followUpsLoading, setFollowUpsLoading] = useState(false);
+  const [thinking, setThinking] = useState(false); // true while waiting for first token
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -359,8 +390,10 @@ export default function ChatPage() {
         },
       ];
       setMessages(withPlaceholder);
+      setThinking(true);
 
       for await (const chunk of streamChat(ragMessages, abortController.signal)) {
+        if (fullResponse.length === 0) setThinking(false);
         fullResponse += chunk;
         setMessages((prev) => {
           const u = [...prev];
@@ -368,6 +401,7 @@ export default function ChatPage() {
           return u;
         });
       }
+      setThinking(false);
 
       // Generate follow-up suggestions in background
       if (fullResponse.length > 20) {
@@ -388,6 +422,7 @@ export default function ChatPage() {
     } catch (err: any) {
       if (err.name === "AbortError") {
         // User stopped generation — keep whatever was streamed so far
+        setThinking(false);
         setFollowUps([]);
         setFollowUpsLoading(false);
         if (followUpAbortRef.current) followUpAbortRef.current.abort();
@@ -409,6 +444,7 @@ export default function ChatPage() {
       }
     } finally {
       setLoading(false);
+      setThinking(false);
       abortRef.current = null;
     }
   };
@@ -597,15 +633,15 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center h-full px-6 pb-8">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
-              <Sparkles className="w-5 h-5 text-violet-400" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-3 ring-1 ring-violet-500/10">
+              <Brain className="w-6 h-6 text-violet-400" />
             </div>
-            <h2 className="text-[15px] font-medium text-zinc-300 mb-1">
-              Ask your mind
+            <h2 className="text-[17px] font-semibold text-zinc-200 mb-0.5 tracking-[-0.01em]">
+              {getGreeting()}
             </h2>
-            <p className="text-[12px] text-zinc-600 mb-6">
+            <p className="text-[13px] text-zinc-500 mb-6">
               {memoryCount > 0 ? (
-                `Search across ${memoryCount.toLocaleString()} memories`
+                `${memoryCount.toLocaleString()} memories ready to explore`
               ) : (
                 <Link
                   href="/app/import"
@@ -615,15 +651,28 @@ export default function ChatPage() {
                 </Link>
               )}
             </p>
-            <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleSend(s)}
-                  className="text-left text-[12px] leading-snug p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] text-zinc-500 transition-all active:scale-[0.97]"
-                >
-                  {s}
-                </button>
+
+            {/* Categorized suggestions */}
+            <div className="w-full max-w-sm space-y-3">
+              {SUGGESTION_GROUPS.map((group, gi) => (
+                <div key={gi} className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${group.color.split(" ").slice(1).join(" ")}`}>
+                      <group.icon className={`w-3 h-3 ${group.color.split(" ")[0]}`} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {group.items.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => handleSend(s)}
+                        className="text-left text-[12px] leading-snug p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.1] text-zinc-400 transition-all active:scale-[0.97]"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
 
@@ -679,20 +728,21 @@ export default function ChatPage() {
                         <ChatMarkdown content={msg.content} />
                       ) : loading && i === messages.length - 1 ? (
                         <span className="flex items-center gap-2 text-zinc-500">
-                          <span className="flex gap-1">
+                          <span className="flex gap-[3px] items-center">
                             <span
-                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                              style={{ animationDelay: "0ms" }}
+                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }}
                             />
                             <span
-                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                              style={{ animationDelay: "150ms" }}
+                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }}
                             />
                             <span
-                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                              style={{ animationDelay: "300ms" }}
+                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }}
                             />
                           </span>
+                          <span className="text-[11px] text-zinc-600">Generating…</span>
                         </span>
                       ) : (
                         ""
@@ -716,6 +766,25 @@ export default function ChatPage() {
                 )}
               </div>
             ))}
+
+            {/* Thinking indicator — shown while searching before assistant placeholder appears */}
+            {loading && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
+              <div className="flex gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Brain className="w-3.5 h-3.5 text-violet-400" />
+                </div>
+                <div className="rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-3">
+                  <span className="flex items-center gap-2">
+                    <span className="flex gap-[3px] items-center">
+                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                    </span>
+                    <span className="text-[11px] text-zinc-600">Searching memories…</span>
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Follow-up suggestions — shown after last assistant message */}
             {!loading && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
