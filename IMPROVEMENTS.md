@@ -4,6 +4,32 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 15:59 UTC — PDF/EPUB Document Parser Plugin (Phase 2, Plugin #9)
+- **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2) was done last cycle, PDF/EPUB (#9) is next in the build order.
+- **Finding**: The PDF/EPUB parser backend existed but had a critical build error — pdf-parse v2 uses a class-based `PDFParse` API instead of the v1 default export function. The backend was committed but the build was broken. Additionally, the import page had no UI tab for PDF/EPUB — users would have had to manually install the plugin from the store first, then it would appear as a dynamic tab. Not a good UX for a core importer.
+- **Implemented**:
+  - **Fixed pdf-parse v2 API**: Rewrote `parsePDF()` to use the class-based `PDFParse` constructor with `getText()` and `getInfo()` methods instead of the old default function call. Added proper `destroy()` cleanup.
+  - **Full Import Page integration** — PDF/EPUB and Kindle are now **built-in tabs** (not dynamic plugin tabs):
+    - Added to `BASE_TABS` array with proper icons (`FileBox` for PDF/EPUB, `BookOpenCheck` for Kindle)
+    - 8-column responsive grid (`grid-cols-4 md:grid-cols-8`) to accommodate all import sources
+    - Dynamic plugin tabs now filter out kindle-importer and pdf-epub-parser to prevent duplicates
+  - **PDF/EPUB tab UI** — full preview-then-import workflow:
+    - Drop zone accepts `.pdf` and `.epub` files
+    - Preview mode shows: title, author, format badge, page count, word count, section count, reading time, chunk count
+    - Section-by-section breakdown with level-based color coding (blue=chapter, violet=section, zinc=subsection)
+    - Word/char counts per section for transparency
+    - Blue-themed import button showing document title and memory count
+    - "Change file" option to re-select
+  - **Auto-install on first use**: Both Kindle and PDF/EPUB API routes now auto-install the plugin into the DB on first use. No manual trip to the plugin store needed — just drop a file and go.
+  - **Source type recognition**: Added `document` and `kindle` source types across the entire app:
+    - Dashboard: recent activity, pinned memories, and sources section
+    - Explore: type config with proper icons and colors
+    - Import: history section with type icons
+  - **EPUB support**: Chapter extraction via epub2, HTML-to-text conversion preserving headings and lists, TOC title resolution, temp file management
+  - **PDF structure detection**: ALL CAPS headings, Chapter/Section/Part markers, numbered headings (1., 1.1, IV.), short title-like lines surrounded by blank lines
+  - **Smart chunking**: Section-boundary-aware chunking (4000 char max), splits at paragraph boundaries, preserves document context headers
+- **Branch**: `frain/improve` (commit `5fd50b2`)
+
 ## 2026-03-24 13:29 UTC — Enhanced Source Cards in Chat (Perplexity-style)
 - **Research**: Internal UX audit — compared MindStore's chat source citations against Perplexity, Phind, Google AI Overviews, and ChatGPT's RAG implementations. Every modern RAG chat interface shows source previews inline so users can verify what the AI actually retrieved. MindStore's source cards only showed title + score bar — no content preview, no citation numbering, and no way to click through to the source memory.
 - **Finding**: The search API already returned full content for each result, but the chat page was discarding it — only passing `title`, `type`, and `score` to the `SourceCards` component. The `[1]`, `[2]` citation numbers in AI responses had no visual counterpart in the source cards, making it hard to match citations to sources.
