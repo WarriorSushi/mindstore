@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -35,6 +35,15 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
 };
 
+const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
+  { id: "newest", label: "Newest first", icon: ArrowDownNarrowWide },
+  { id: "oldest", label: "Oldest first", icon: ArrowUpNarrowWide },
+  { id: "alpha-asc", label: "Title A → Z", icon: ArrowDownAZ },
+  { id: "alpha-desc", label: "Title Z → A", icon: ArrowUpAZ },
+  { id: "longest", label: "Longest first", icon: AlignLeft },
+  { id: "shortest", label: "Shortest first", icon: AlignRight },
+];
+
 export default function ExplorePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -46,6 +55,8 @@ export default function ExplorePage() {
   const [totalMemories, setTotalMemories] = useState(0);
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [filter, setFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Memory | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -340,7 +351,7 @@ export default function ExplorePage() {
   // Reset focused index when memories change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [search, filter]);
+  }, [search, filter, sortBy]);
 
   // Sync search query to URL (shallow, no navigation)
   useEffect(() => {
@@ -388,7 +399,7 @@ export default function ExplorePage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
-      fetch('/api/v1/memories?limit=100').then(r => r.json()),
+      fetch(`/api/v1/memories?limit=100&sort=${sortBy}`).then(r => r.json()),
     ]).then(([srcData, memData]) => {
       setSources(srcData.sources || []);
       setMemories(memData.memories || []);
@@ -423,7 +434,7 @@ export default function ExplorePage() {
       } else {
         // No search query — list all memories
         setSearchLayers(null);
-        const p = new URLSearchParams({ limit: '100' });
+        const p = new URLSearchParams({ limit: '100', sort: sortBy });
         if (filter) p.set('source', filter);
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
           setMemories(d.memories || []);
@@ -432,21 +443,21 @@ export default function ExplorePage() {
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [search, filter]);
+  }, [search, filter, sortBy]);
 
   // ── Infinite scroll with Intersection Observer ──────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || memories.length >= totalMemories || search) return;
     setLoadingMore(true);
     try {
-      const p = new URLSearchParams({ limit: '100', offset: String(memories.length) });
+      const p = new URLSearchParams({ limit: '100', offset: String(memories.length), sort: sortBy });
       if (filter) p.set('source', filter);
       const res = await fetch(`/api/v1/memories?${p}`);
       const d = await res.json();
       setMemories(prev => [...prev, ...(d.memories || [])]);
     } catch { /* ignore */ }
     setLoadingMore(false);
-  }, [loadingMore, memories.length, totalMemories, search, filter]);
+  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -512,16 +523,62 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
-      {/* Filters */}
+      {/* Filters + Sort */}
       <Stagger>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
-          <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
-          {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-            const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
-            if (count === 0) return null;
-            const Icon = typeConfig[type]?.icon || FileText;
-            return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
-          })}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
+            <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
+            {(["chatgpt", "text", "file", "url"] as const).map((type) => {
+              const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
+              if (count === 0) return null;
+              const Icon = typeConfig[type]?.icon || FileText;
+              return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
+            })}
+          </div>
+
+          {/* Sort Dropdown */}
+          {!search.trim() && memories.length > 0 && (
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setSortMenuOpen(!sortMenuOpen)}
+                className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-full text-[11px] font-medium transition-all active:scale-[0.95] ${
+                  sortMenuOpen
+                    ? "bg-violet-500/15 text-violet-300 border border-violet-500/25"
+                    : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
+                }`}
+              >
+                <ArrowUpDown className="w-3 h-3" />
+                <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.id === sortBy)?.label || 'Sort'}</span>
+              </button>
+
+              {sortMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1.5 z-40 w-44 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                    <div className="py-1">
+                      {SORT_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => { setSortBy(opt.id); setSortMenuOpen(false); }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors ${
+                            sortBy === opt.id
+                              ? "text-violet-300 bg-violet-500/10"
+                              : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
+                          }`}
+                        >
+                          <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-violet-400" : "text-zinc-600"}`} />
+                          <span className="flex-1">{opt.label}</span>
+                          {sortBy === opt.id && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </Stagger>
 

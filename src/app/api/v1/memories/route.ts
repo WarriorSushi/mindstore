@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    const sort = searchParams.get('sort') || 'newest';
+
     const conditions = [sql`user_id = ${userId}::uuid`];
     if (source) conditions.push(sql`source_type = ${source}`);
     if (search) {
@@ -25,11 +27,20 @@ export async function GET(req: NextRequest) {
 
     const where = sql.join(conditions, sql` AND `);
 
+    // Dynamic sort order
+    const orderClause =
+      sort === 'oldest' ? sql`ORDER BY created_at ASC` :
+      sort === 'alpha-asc' ? sql`ORDER BY LOWER(COALESCE(source_title, '')) ASC, created_at DESC` :
+      sort === 'alpha-desc' ? sql`ORDER BY LOWER(COALESCE(source_title, '')) DESC, created_at DESC` :
+      sort === 'longest' ? sql`ORDER BY LENGTH(content) DESC, created_at DESC` :
+      sort === 'shortest' ? sql`ORDER BY LENGTH(content) ASC, created_at DESC` :
+      sql`ORDER BY created_at DESC`;
+
     const results = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at
       FROM memories
       WHERE ${where}
-      ORDER BY created_at DESC
+      ${orderClause}
       LIMIT ${limit} OFFSET ${offset}
     `);
 
