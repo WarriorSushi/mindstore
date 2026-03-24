@@ -4,6 +4,21 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 02:29 UTC — Multi-Select & Batch Operations for Explore
+- **Research**: Bulk action patterns from Notion, Gmail, Obsidian, Apple Notes — every major knowledge app supports selecting multiple items and performing batch operations (delete, export, copy). MindStore's Explore page only supported single-item actions — no way to bulk-delete imports gone wrong or export a selection. Web search was unavailable (quota), used domain knowledge of modern UX patterns.
+- **Finding**: The Explore page had individual delete per memory via the detail modal, but no multi-select capability. Users who imported large ChatGPT exports or file batches had no efficient way to curate or clean up. No batch export either — the only export was a full database dump from Settings.
+- **Implemented**:
+  - **Select mode toggle**: Header button (CheckSquare icon) enters select mode; also triggered by pressing `s` on keyboard
+  - **Per-card checkboxes**: In select mode, each memory card shows a rounded checkbox. Selected cards get a violet highlight ring (`border-violet-500/30 bg-violet-500/[0.08] ring-1 ring-violet-500/20`). Clicking a card in select mode toggles its selection instead of opening detail.
+  - **Sticky selection toolbar**: Appears at top when in select mode. Shows "Select all" / "Deselect all" toggle + selection count. Stays visible on scroll with `sticky top-12 md:top-0 z-20 bg-[#0a0a0b]/90 backdrop-blur-xl`.
+  - **Batch delete**: Deletes selected memories in parallel batches of 10 for speed. Confirmation dialog shows count. Updates local state immediately after deletion.
+  - **Batch export**: Downloads selected memories as a formatted Markdown file (`## Title\n*source · date*\n\ncontent`) with `---` dividers between entries.
+  - **Batch copy**: Copies all selected memories to clipboard as formatted text with source labels and content.
+  - **Full keyboard flow**: `s` enters select mode → `j/k` navigate → `Space` toggles selection on focused item → `a` selects/deselects all → `Escape` exits select mode
+  - **Updated keyboard hints**: Bottom hint bar now shows `s` for select, and in select mode shows additional `␣` (toggle) and `a` (all) shortcuts
+  - **Design consistency**: Checkbox uses `rounded-[5px]` with violet fill when checked, matching iOS/macOS checkbox patterns. All toolbar buttons use same `h-7 px-2.5 rounded-lg` pattern as other action buttons in the app.
+- **Branch**: `frain/improve` (commit `aee7d56`)
+
 ## 2026-03-24 01:59 UTC — Stop Generating + Regenerate Response in Chat
 - **Research**: Modern AI chat UX patterns (ChatGPT, Claude, Gemini) — every major AI chat app provides a "stop generating" button during streaming and a "regenerate" option after responses. MindStore's chat was missing both: users had no way to cancel a slow/bad response or retry generation.
 - **Finding**: The `streamChat()` function had no `AbortController` support — once a request started, it ran to completion with no cancellation. The send button showed a spinner during loading but offered no interactivity. After a response, the only option was to type a new message.
