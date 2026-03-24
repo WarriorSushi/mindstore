@@ -4,6 +4,30 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 11:29 UTC — Keyboard Shortcuts Help Modal
+- **Research**: Internal UX audit — power-user keyboard discoverability. GitHub, Gmail, Linear, Notion, and Superhuman all provide a `?` keyboard shortcut that opens a comprehensive shortcuts reference modal. MindStore now has 15+ keyboard shortcuts across different pages (⌘K, j/k, ↵, /, s, p, e, a, ␣, Esc, etc.) but no unified reference — users had to discover them through the hint bars at the bottom of Explore or guess from muscle memory.
+- **Finding**: Shortcuts were scattered and hidden. Explore had keyboard hint bars at the bottom of the list and detail modal, but Chat, Import, Learn, and the global ⌘K shortcut had no discoverability. The "?" shortcut for help is a universal convention that every serious keyboard-driven app supports.
+- **Implemented**:
+  - **New `KeyboardShortcuts` component** (`src/components/KeyboardShortcuts.tsx`):
+    - Press `?` anywhere (when not in an input/textarea) to toggle the modal
+    - Also accessible via the custom event `mindstore:open-shortcuts` for programmatic opening
+    - **Context-aware grouping**: shortcuts organized by page context:
+      - 🌐 **Global** (always shown): ⌘K command palette, ? shortcuts
+      - 🧭 **Explore** (12 shortcuts): /, j/k, ↵, Esc, e, p, s, ␣, a, ↑↓, ⌘↵
+      - 💬 **Chat** (3 shortcuts): ↵ send, ⇧↵ new line, Esc close history
+      - 🎓 **Learn** (2 shortcuts): ↵ send, ⇧↵ new line
+      - 📥 **Import** (1 shortcut): ↵ submit URL
+    - **Current page highlighting**: when on a specific page (e.g. Explore), that group is highlighted with violet accent styling and a "Current page" badge — so users see their most relevant shortcuts first
+    - **Design**: dark glass modal (bg-[#111113]) with rounded-2xl, 22px kbd key badges with mono font, divide-y section layout, purple accent for highlighted groups
+    - **Animations**: CSS-only `ks-fade-in` backdrop + `ks-scale-in` modal entry (scale 0.95 → 1 + translateY spring)
+    - Auto-closes on route change and Escape key
+    - Escape handler uses capture phase to prevent conflicts with other Escape listeners
+  - **Sidebar shortcut**: New "Shortcuts" button in the desktop sidebar footer (below Search/⌘K), with Keyboard icon and `?` kbd hint — matches existing Search button styling exactly
+  - **Layout integration**: Added to `layout.tsx` alongside Onboarding, CommandPalette, and GlobalDropZone
+  - Added `Keyboard` to lucide-react imports in layout
+  - Exported `openKeyboardShortcuts()` utility function for programmatic access
+- **Branch**: `frain/improve` (commit `dcc9145`)
+
 ## 2026-03-24 10:29 UTC — Save Chat Response to Memory (Knowledge Loop)
 - **Research**: Internal UX audit — compared MindStore's chat experience to Mem.ai, Notion AI, and Reflect. A core pattern in modern PKM apps is the "knowledge loop": you search/chat your knowledge → get a synthesized insight → save that insight back as new knowledge. MindStore had no way to capture AI-generated answers back into the knowledge base. Users would get great synthesized responses but couldn't persist them without manually copy-pasting into Import.
 - **Finding**: The chat message hover UI only showed a Copy button. Assistant messages needed a Save action to close the knowledge loop. This is a signature feature that differentiates true PKM tools from simple chatbots.
