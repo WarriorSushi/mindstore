@@ -3,6 +3,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 
+/** Build a 14-day array of { day: 'YYYY-MM-DD', count: number } filling in zeros for missing days */
+function buildDailyActivity(rows: Array<{ day: string; count: number }>): Array<{ day: string; count: number }> {
+  const map = new Map<string, number>();
+  for (const r of rows) {
+    // Normalize date string to YYYY-MM-DD
+    const d = new Date(r.day).toISOString().slice(0, 10);
+    map.set(d, r.count);
+  }
+  const result: Array<{ day: string; count: number }> = [];
+  const now = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    result.push({ day: key, count: map.get(key) || 0 });
+  }
+  return result;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId();
@@ -35,6 +54,18 @@ export async function GET(req: NextRequest) {
       FROM memories WHERE user_id = ${userId}::uuid AND (metadata->>'pinned')::boolean = true
       ORDER BY created_at DESC
       LIMIT 10
+    `);
+
+    // Daily activity — last 14 days of import counts by day
+    const dailyActivity = await db.execute(sql`
+      SELECT
+        date_trunc('day', created_at)::date AS day,
+        COUNT(*)::int AS count
+      FROM memories
+      WHERE user_id = ${userId}::uuid
+        AND created_at >= NOW() - INTERVAL '14 days'
+      GROUP BY day
+      ORDER BY day ASC
     `);
 
     const totalMemories = (memoriesCount as any)[0]?.count || 0;
@@ -70,6 +101,7 @@ export async function GET(req: NextRequest) {
         createdAt: r.created_at,
       })),
       pinnedCount: (pinnedMemories as any[]).length,
+      dailyActivity: buildDailyActivity(dailyActivity as any[]),
     });
   } catch (error: unknown) {
     console.error('[stats]', error);

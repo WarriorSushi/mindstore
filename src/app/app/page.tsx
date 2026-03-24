@@ -8,7 +8,7 @@ import {
   Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
-  Clock, Pin,
+  Clock, Pin, BarChart3,
 } from "lucide-react";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
@@ -425,6 +425,13 @@ export default function DashboardPage() {
         </div>
       </Stagger>
 
+      {/* Activity Chart — 14-day knowledge growth */}
+      {stats?.dailyActivity?.length > 0 && total > 0 && (
+        <Stagger>
+          <ActivityChart data={stats.dailyActivity} />
+        </Stagger>
+      )}
+
       {/* Pinned Memories */}
       {stats?.pinnedMemories?.length > 0 && (
         <Stagger>
@@ -593,4 +600,101 @@ function formatRelativeTime(iso: string): string {
   if (days === 1) return "yesterday";
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/** Activity chart showing 14-day knowledge growth */
+function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }) {
+  const total = data.reduce((s, d) => s + d.count, 0);
+  const max = Math.max(...data.map((d) => d.count), 1);
+  const activeDays = data.filter((d) => d.count > 0).length;
+
+  // Calculate streak (consecutive days ending at today/yesterday)
+  let streak = 0;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].count > 0) streak++;
+    else break;
+  }
+
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  if (total === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
+          <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">
+            Activity
+          </span>
+          <span className="text-[10px] text-zinc-600">· 14 days</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {streak > 1 && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
+              🔥 {streak}-day streak
+            </span>
+          )}
+          <span className="text-[10px] text-zinc-600 tabular-nums">
+            {total} memor{total === 1 ? "y" : "ies"} added
+          </span>
+        </div>
+      </div>
+
+      {/* Bar chart */}
+      <div className="flex items-end gap-[3px] h-16 relative">
+        {data.map((d, i) => {
+          const height = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0;
+          const isToday = i === data.length - 1;
+          const date = new Date(d.day);
+          const dayLabel = date.toLocaleDateString(undefined, { weekday: "short" });
+          const dateLabel = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          const isHovered = hoveredIdx === i;
+
+          return (
+            <div
+              key={d.day}
+              className="flex-1 flex flex-col items-center justify-end h-full relative group"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              {/* Tooltip */}
+              {isHovered && d.count > 0 && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10 px-2 py-1 rounded-lg bg-[#1a1a1d] border border-white/[0.1] shadow-lg shadow-black/40 whitespace-nowrap pointer-events-none">
+                  <span className="text-[10px] font-medium text-zinc-300">{d.count}</span>
+                  <span className="text-[10px] text-zinc-600 ml-1">{dateLabel}</span>
+                </div>
+              )}
+              {/* Bar */}
+              <div
+                className={`w-full rounded-t-[3px] rounded-b-[1px] transition-all duration-200 ${
+                  d.count === 0
+                    ? "bg-white/[0.03] min-h-[2px]"
+                    : isToday
+                      ? "bg-gradient-to-t from-violet-500 to-violet-400 shadow-sm shadow-violet-500/20"
+                      : isHovered
+                        ? "bg-violet-400/60"
+                        : "bg-violet-500/30"
+                }`}
+                style={{ height: d.count > 0 ? `${height}%` : "2px" }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Day labels (show first, middle, and last) */}
+      <div className="flex justify-between px-0.5">
+        {[0, 6, 13].map((idx) => {
+          const d = new Date(data[idx]?.day || "");
+          return (
+            <span key={idx} className="text-[9px] text-zinc-700 tabular-nums">
+              {d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
