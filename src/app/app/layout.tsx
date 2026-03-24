@@ -20,7 +20,7 @@ const navItems = [
   { href: "/app/import", icon: Upload, label: "Import" },
   { href: "/app/explore", icon: Compass, label: "Explore" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn" },
-  { href: "/app/fingerprint", icon: Fingerprint, label: "Mind Map" },
+  { href: "/app/mindmap", icon: Network, label: "Mind Map" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights" },
   { href: "/app/plugins", icon: Puzzle, label: "Plugins" },
   { href: "/app/connect", icon: Network, label: "Connect AI" },

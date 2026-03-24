@@ -37,7 +37,8 @@ const NAV_ITEMS = [
   { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge" },
   { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all memories" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you" },
-  { href: "/app/fingerprint", icon: Fingerprint, label: "Mind Map", desc: "3D knowledge topology" },
+  { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
+  { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
   { href: "/app/settings", icon: Settings, label: "Settings", desc: "Providers & data" },
@@ -287,13 +288,13 @@ export function CommandPalette() {
       },
       {
         id: "mind-map",
-        icon: Fingerprint,
+        icon: Network,
         iconColor: "text-sky-400",
         label: "View Mind Map",
-        desc: "3D knowledge topology",
-        keywords: ["map", "3d", "graph", "topology", "fingerprint", "visual", "cluster"],
+        desc: "Topic clusters & knowledge topology",
+        keywords: ["map", "mind", "graph", "topology", "visual", "cluster", "topics"],
         action: () => {
-          router.push("/app/fingerprint");
+          router.push("/app/mindmap");
           setOpen(false);
         },
       },

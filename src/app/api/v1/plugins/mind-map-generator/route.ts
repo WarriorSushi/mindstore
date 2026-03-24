@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     // ─── Fetch all memories with embeddings ────────────────────
     const memoriesResult = await db.execute(sql`
       SELECT id, content, source_type, source_title, embedding, created_at,
-             metadata, pinned
+             metadata
       FROM memories
       WHERE user_id = ${userId}::uuid AND embedding IS NOT NULL
       ORDER BY created_at DESC
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       sourceTitle: m.source_title || 'Untitled',
       embedding: parseEmbedding(m.embedding),
       createdAt: m.created_at,
-      pinned: m.pinned,
+      pinned: !!(m.metadata && (m.metadata as any).pinned),
       metadata: m.metadata || {},
     })).filter(m => m.embedding && m.embedding.length > 0);
 
