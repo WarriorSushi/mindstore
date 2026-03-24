@@ -4,7 +4,28 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
-## 2026-03-23 23:29 UTC — Landing Page Redesign (Zero framer-motion, Zero shadcn)
+## 2026-03-23 23:59 UTC — Chat Source Citations, Message Copy & Toast Styling
+- **Research**: RAG chat UX patterns from Perplexity, You.com, ChatGPT — how modern AI apps present source citations and enable conversation reuse. Web search was unavailable (quota), used domain knowledge of PKM/RAG UX best practices.
+- **Finding**: MindStore's chat source citations were tiny pills showing truncated 20-char titles — no source type indication, no relevance score, no expandability. Users couldn't tell which sources were most relevant or what type they were. Also: no way to copy individual messages or export a full conversation. Toast notifications used Sonner's default dark theme, inconsistent with MindStore's glass-morphism design system.
+- **Implemented**:
+  - **Expandable source cards** (Perplexity-style): Sources now show as structured cards with:
+    - Color-coded type icon (green=ChatGPT, blue=file, orange=URL, violet=text)
+    - Full title (truncated at card width, not at 20 chars)
+    - Relevance score bar + percentage (visual mini progress bar)
+    - Shows 2 sources by default, "+N more" button to expand all
+    - "Sources · N" header with count
+  - **Per-message copy button**: Hover any message bubble to reveal a floating copy button (positioned bottom-left for assistant messages, bottom-right for user messages). Uses group hover with smooth opacity transition, dark glass background to stand out.
+  - **Conversation copy/export**: New copy button in chat top bar (appears when messages exist). Copies entire conversation as formatted markdown with `**You**:` / `**MindStore**:` headers and `---` dividers between messages. Shows green check confirmation + toast.
+  - **Toast notifications restyled**: Custom `toastOptions.style` on Sonner `<Toaster>`:
+    - Background: `#111113` (matches app modals)
+    - Border: `rgba(255,255,255,0.06)` (matches card borders)
+    - Border radius: `16px` (rounded-2xl, matches all cards)
+    - Box shadow: deep `0 8px 32px rgba(0,0,0,0.5)` (matches floating panels)
+    - Backdrop blur: `12px` (glass effect matching header/nav)
+    - Font: 13px/500 weight (matches all UI text)
+- **Branch**: `frain/improve` (commit `d674dde`)
+
+---
 - **Research**: UX consistency audit — the landing page (first page users see!) was the last major page still using legacy patterns: `framer-motion` for all animations, shadcn `Button` component (4 instances), and old card styling (`bg-zinc-900/50`, `border-zinc-800`, `bg-zinc-950`). Every app page had been modernized, but the public-facing landing page was inconsistent.
 - **Finding**: The landing page imported `motion`, `AnimatePresence` from framer-motion for fade-up animations, and `Button` from shadcn for 5 different CTA/nav buttons. These are heavy JS dependencies for animations that CSS can handle natively. The card styles (`glow-card`, `border-zinc-800`, `bg-zinc-900/50`) didn't match the unified MindStore design system used in all app pages.
 - **Implemented**:
