@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool, Layers, FileEdit, Users,
+  Heart, Target, PenTool, Layers, FileEdit, Users, Route,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +46,7 @@ const NAV_ITEMS = [
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
   { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
   { href: "/app/prep", icon: Users, label: "Conversation Prep", desc: "Brief me before any meeting" },
+  { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Structured learning plans from your knowledge" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -387,6 +388,18 @@ export function CommandPalette() {
         keywords: ["prep", "prepare", "meeting", "briefing", "conversation", "person", "company", "brief", "talking", "points"],
         action: () => {
           router.push("/app/prep");
+          setOpen(false);
+        },
+      },
+      {
+        id: "learning-paths",
+        icon: Route,
+        iconColor: "text-teal-400",
+        label: "Learning Paths",
+        desc: "Structured learning plans based on your knowledge gaps",
+        keywords: ["learn", "learning", "path", "curriculum", "study", "course", "plan", "skill", "education", "roadmap", "gap"],
+        action: () => {
+          router.push("/app/paths");
           setOpen(false);
         },
       },
