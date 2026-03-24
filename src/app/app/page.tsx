@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
@@ -58,13 +59,13 @@ export default function DashboardPage() {
 
   // Quick-search debounce
   useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    if (!searchQuery.trim()) { setSearchResults([]); setSearchLayers(null); return; }
     setSearching(true);
     const t = setTimeout(() => {
       fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=5`)
         .then(r => r.json())
-        .then(d => { setSearchResults(d.results || []); setSearching(false); })
-        .catch(() => { setSearchResults([]); setSearching(false); });
+        .then(d => { setSearchResults(d.results || []); setSearchLayers(d.layers || null); setSearching(false); })
+        .catch(() => { setSearchResults([]); setSearchLayers(null); setSearching(false); });
     }, 250);
     return () => clearTimeout(t);
   }, [searchQuery]);
@@ -346,6 +347,32 @@ export default function DashboardPage() {
                   </div>
                 ) : searchResults.length > 0 ? (
                   <div className="divide-y divide-white/[0.04]">
+                    {/* Search layers indicator */}
+                    {searchLayers && (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.01]">
+                        <span className="text-[10px] text-zinc-600 font-medium">Powered by</span>
+                        <div className="flex items-center gap-1.5">
+                          {searchLayers.bm25 > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                              🔤 Keyword
+                            </span>
+                          )}
+                          {searchLayers.vector > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                              🧠 Semantic
+                            </span>
+                          )}
+                          {searchLayers.tree > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                              🌳 Structure
+                            </span>
+                          )}
+                          {!searchLayers.vector && !searchLayers.tree && (
+                            <span className="text-[9px] text-zinc-600 italic">Connect AI for deeper search</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {searchResults.map((r: any, i: number) => {
                       const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
                       const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
@@ -16,6 +17,8 @@ interface Memory {
   timestamp: string;
   importedAt: string;
   metadata: Record<string, any>;
+  layers?: Record<string, any>;
+  score?: number;
 }
 
 interface Source {
@@ -65,6 +68,7 @@ export default function ExplorePage() {
 
   // Infinite scroll state
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Navigate to adjacent memory in detail view
@@ -409,12 +413,16 @@ export default function ExplorePage() {
             timestamp: r.createdAt,
             importedAt: r.createdAt,
             metadata: r.metadata || {},
+            layers: r.layers || {},
+            score: r.score || 0,
           }));
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
+          setSearchLayers(d.layers || null);
         }).catch(() => {});
       } else {
         // No search query — list all memories
+        setSearchLayers(null);
         const p = new URLSearchParams({ limit: '100' });
         if (filter) p.set('source', filter);
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
@@ -516,6 +524,37 @@ export default function ExplorePage() {
           })}
         </div>
       </Stagger>
+
+      {/* Search Intelligence Indicators */}
+      {search.trim() && searchLayers && !loading && (
+        <Stagger>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-zinc-600 font-medium">Search layers</span>
+            <div className="flex items-center gap-1.5">
+              {searchLayers.bm25 > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                  🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                </span>
+              )}
+              {searchLayers.vector > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                  🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                </span>
+              )}
+              {searchLayers.tree > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                  🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                </span>
+              )}
+            </div>
+            {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
+              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-violet-400 transition-colors italic">
+                Connect AI for semantic search →
+              </Link>
+            )}
+          </div>
+        </Stagger>
+      )}
 
       {/* ═══ Selection Toolbar ═══ */}
       {selectMode && (
@@ -619,6 +658,16 @@ export default function ExplorePage() {
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
+                {/* Layer indicators per result (when searching) */}
+                {search.trim() && m.layers && (
+                  <span className="flex items-center gap-[3px] shrink-0 ml-0.5" title={
+                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
+                  }>
+                    {m.layers.bm25 && <span className="w-[5px] h-[5px] rounded-full bg-blue-400/70" />}
+                    {m.layers.vector && <span className="w-[5px] h-[5px] rounded-full bg-violet-400/70" />}
+                    {m.layers.tree && <span className="w-[5px] h-[5px] rounded-full bg-emerald-400/70" />}
+                  </span>
+                )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
             </button>
