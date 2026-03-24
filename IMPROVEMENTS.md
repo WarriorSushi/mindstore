@@ -4,6 +4,48 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 20:29 UTC — Knowledge Gaps Analyzer Plugin (Phase 3, Plugin #14)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), and Sentiment Timeline (#18) are done. Knowledge Gaps Analyzer (#14) is the **fifth Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/knowledge-gaps`):
+    - **K-Means++ clustering**: Clusters up to 500 memories by embedding similarity into topics (up to 12 configurable). Same robust k-means++ initialization as other Analysis plugins.
+    - **Five gap detection types**:
+      - **Sparse topic**: Clusters with very few memories relative to total — areas needing depth.
+      - **Bridge gap**: Topics that are moderately similar (55-75% cosine similarity) but lack connecting knowledge — hidden relationships to explore.
+      - **Stale knowledge**: Topics with no activity in 30+ days and average age >60 days — potentially outdated.
+      - **Single-source**: Topics where all memories come from one source type — lacking diverse perspectives.
+      - **Isolated topic**: Topics with low similarity to all other topics — knowledge islands disconnected from the rest of the graph.
+    - **Density scoring**: Each topic classified as deep/moderate/thin/sparse based on memory count, proportion of total, and coherence score. Deep = 10+ memories, 8%+ proportion, 70%+ coherence.
+    - **Coherence analysis**: Average cosine similarity of all members to cluster centroid — measures how tightly related a topic's memories are.
+    - **Coverage map**: Returns proportional data for treemap visualization — size, density, gap status per topic.
+    - **AI-powered suggestions**: `?action=suggest` queries OpenAI/Gemini to recommend 5 adjacent topics to explore based on current gaps and knowledge distribution.
+    - **Topic metadata**: Keywords via TF-IDF extraction, source type breakdown, average age, recent activity flag, preview memories.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Gaps page** (`/app/gaps`) — interactive knowledge coverage visualization:
+    - **Squarified treemap** (Canvas): Proportional topic cells sized by memory count. Color-coded by topic. Dashed rose borders on cells with detected gaps. Hover highlights with increased opacity. Click to open topic detail. Labels with memory count and density badge.
+    - **Stats bar**: 5 stat cards — topic count, gaps found (amber-highlighted when high), deep topics, thin/sparse count, avg coherence percentage.
+    - **Gap cards**: Expandable cards with severity badges (high/medium/low), type icons (Link2 for bridge, Eye for sparse, Clock for stale, Layers for single-source, Compass for isolated). Expanded view shows AI suggestion text and related topic links.
+    - **Topic density sidebar**: All topics listed with proportional progress bars, colored by density level. Click to select topic.
+    - **"What to Learn Next" panel**: AI-generated learning suggestions with topic name, reason, and which existing topic it connects to. "Generate" button triggers API call.
+    - **Stale knowledge panel**: Lists topics with no recent updates and days-since-last-activity.
+    - **Topic detail modal**: Full topic inspection — keywords as teal pills, source breakdown with progress bars, activity age, related gaps list, clickable sample memories linking to Explore.
+    - **Empty state**: Target icon, insufficient data message, import CTA button.
+    - **Loading/error states**: Centered spinner with analysis description, error with retry.
+    - **Design**: OLED black base, teal primary accent, treemap with per-topic colors (no violet/purple/fuchsia). Rose for gaps/sparse, amber for warnings, emerald for deep coverage. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`.
+  - **Navigation updates**:
+    - Sidebar: "Gaps" entry with Target icon between Sentiment and Insights
+    - Command Palette: "View Knowledge Gaps" action with keywords (gaps, blind, spots, missing, coverage, sparse, bridge, stale)
+  - **Zero new dependencies**: Pure Canvas rendering, squarified treemap algorithm, k-means in TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ✅ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Writing Style Analyzer (#17) — the final Analysis plugin in Phase 3
+- **Branch**: `frain/improve` (commit `90cc7a6`)
+
 ## 2026-03-24 19:59 UTC — Sentiment Timeline Plugin (Phase 3, Plugin #18)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), and Topic Evolution Timeline (#16) are done. Sentiment Timeline (#18) is the **fourth Analysis plugin**.
 - **Implemented**:
