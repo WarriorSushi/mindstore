@@ -4,6 +4,40 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 22:29 UTC — Conversation Prep Plugin + Blog Draft Generator (Phase 4, Plugins #23 & #19)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Flashcard Maker (#20).
+- **Implemented**:
+
+### Conversation Prep (#23) — NEW
+  - **Full backend API route** (`/api/v1/plugins/conversation-prep`):
+    - **Multi-query RAG retrieval**: 5 search queries per subject for comprehensive knowledge coverage. Person queries search conversations/meetings/projects. Company queries search business/product/partnership. Deduplicates across all queries.
+    - **AI-powered structured briefing**: Generates 7 sections — Overview, Key Facts, History & Timeline, Related Topics, Talking Points, Questions to Ask, Preparation Notes
+    - **4 subject types**: Person, Company, Project, Topic — each with type-specific search strategies
+    - **Follow-up questions**: Ask deeper questions about any briefing — re-searches knowledge + uses briefing context for more specific answers
+    - **Briefing history**: Stores up to 50 past briefings. List, view, delete.
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **Full frontend page** (`/app/prep`) — 3 views:
+    - **Home view**: Quick prep bar (type subject → hit Enter → instant briefing), past briefings list with type-colored icons (sky/emerald/amber/teal), source count, section count
+    - **Create view**: Type picker (Person/Company/Project/Topic as icon cards), subject input with type-specific placeholders, optional context textarea, generate button with loading state
+    - **Detail view**: Subject header with type badge, color-coded briefing sections with matching icons (User/ListChecks/Clock/Network/MessageCircle/HelpCircle/ClipboardList), bullet points with colored dots, follow-up question input with Send button, follow-up answer display
+  - **Navigation**: Added to sidebar (Users icon), Command Palette (⌘K searchable by "prep", "meeting", "briefing", "conversation", "person"), plugin registry updated to extension type
+  - **Design**: OLED black, 7 section accent colors cycling (teal/sky/emerald/amber/rose/cyan/orange), zero violet/purple/fuchsia
+
+### Blog Draft Generator (#19) — Previously untracked, now committed
+  - **Full backend**: RAG-powered blog generation, 5 writing styles × 4 tones, AI topic suggestions, outline generation, refinement, export (Markdown with frontmatter, styled HTML)
+  - **Full frontend**: Create view (topic input, AI suggestions, style/tone pickers, word count slider), Editor (markdown textarea + live preview toggle, title editing, status toggle, refine panel with text selection support, copy/export/save), Drafts list with status badges
+  - Fully working — was on disk but never committed
+
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ⬜ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Learning Path Generator (#24) — structured learning plans based on knowledge gaps
+- **Branch**: `frain/improve` (commit `209cc10`)
+
 ## 2026-03-24 21:29 UTC — Flashcard Maker Plugin (Phase 4, Plugin #20) — PHASE 4 STARTED! 🚀
 - **Context**: Phase 4 of the Plugin System build — Action Plugins. All 6 Phase 3 Analysis Plugins are complete. Flashcard Maker (#20) is the **first Action plugin** — the beginning of Phase 4.
 - **Implemented**:
