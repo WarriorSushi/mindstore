@@ -4,6 +4,29 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+---
+
+## 2026-03-24 07:59 UTC — Markdown Tables & Task Lists in Chat Renderer
+- **Research**: AI chat rendering patterns — ChatGPT, Claude, Gemini, and Perplexity all render markdown tables natively in chat responses. AI models frequently output comparison tables, data summaries, and structured info as markdown tables. Task lists (`- [ ]` / `- [x]`) are also common in AI-generated action plans. Web search was unavailable (quota), used domain knowledge of markdown rendering gaps.
+- **Finding**: MindStore's `ChatMarkdown` component handled bold, italic, code, code blocks, lists, blockquotes, and headings — but had **zero table support**. Markdown tables (`| Col | Col |`) rendered as broken plain text with literal pipe characters, making AI responses that use tables look unprofessional. Task lists also rendered as regular bullet lists with literal `[ ]` text.
+- **Implemented**:
+  - **Table rendering**: Full markdown table support with:
+    - Header row detection (line starting/ending with `|` followed by `|---|` separator)
+    - Column alignment parsing: `:---` = left, `:---:` = center, `---:` = right
+    - Styled header row: `bg-white/[0.04]` background, semibold `text-zinc-300`, `whitespace-nowrap`
+    - Data rows with `hover:bg-white/[0.02]` highlight and `border-white/[0.03]` dividers
+    - Horizontal scroll (`overflow-x-auto`) for wide tables on mobile
+    - Container: `rounded-xl border border-white/[0.06]` matching all card styling
+    - Inline markdown (bold, italic, code, links) fully works inside table cells
+  - **Task list rendering**: `- [ ]` / `- [x]` patterns now render with:
+    - Custom checkbox: `w-[15px] h-[15px] rounded-[4px]` — empty border or violet-500 filled with SVG checkmark
+    - Completed items: `text-zinc-500 line-through` for visual differentiation
+    - Matches existing bullet/numbered list spacing and sizing
+  - **Paragraph guard**: Updated paragraph collector to stop collecting lines when a table start is detected, preventing tables from being swallowed into paragraph text
+  - **Helper functions**: `isTableRow()`, `isTableSeparator()`, `parseAlignments()`, `parseTableCells()` — all pure functions, zero dependencies
+  - Zero new dependencies — still 100% regex + React, no markdown library needed
+- **Branch**: `frain/improve` (commit `96e26a3`)
+
 ## 2026-03-24 06:59 UTC — Ollama Streaming Chat Support (Complete Local LLM Parity)
 - **Research**: Codebase audit — compared the three-provider support across embeddings vs chat. Web search unavailable (quota).
 - **Finding**: **Critical functional gap** — The chat API route (`/api/v1/chat/route.ts`) only supported OpenAI and Gemini for streaming chat, but **NOT Ollama** — even though the embeddings system (`embeddings.ts`) and settings page both fully support Ollama as a provider. Users who configured Ollama could generate embeddings and search, but clicking "chat" would fail with "No API key configured" — because the settings endpoint's `hasApiKey` check didn't include `ollama_url`, and the chat route had no `streamOllama()` function.
