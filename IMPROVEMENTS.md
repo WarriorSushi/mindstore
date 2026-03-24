@@ -522,3 +522,20 @@ _Automated 30-min improvement cycles by Frain_
     - Fully responsive — label hidden on mobile, icon-only on small screens
   - Design: matches existing filter pill aesthetic (rounded-full, 30px height, violet active state)
 - **Branch**: `frain/improve` (commit `d95a206`)
+
+## 2026-03-24 11:59 UTC — Related Memories in Explore Detail View
+- **Research**: Internal UX audit — core PKM apps (Obsidian, Notion, Mem, Reflect, Capacities) all surface related/connected content when viewing a note. Obsidian has backlinks and outgoing links, Notion has related pages, Mem has "related notes" via AI, Reflect shows bi-directional links. MindStore's Explore detail modal showed a single memory in isolation with no way to discover connections to other stored knowledge.
+- **Finding**: The detail modal was a dead-end — users could view content, edit, pin, copy, or delete, but had no way to explore the knowledge graph from that context. This is the opposite of what a "second brain" should do. The whole point of a PKM is surfacing unexpected connections. The search API already supports semantic search, so the infrastructure existed — just no UI to surface it in-context.
+- **Implemented**:
+  - **Related Memories section** in the Explore detail modal (between content area and footer):
+    - When a memory is selected, automatically fetches 4 semantically similar memories via `/api/v1/search`
+    - Uses a combination of the memory's title + first 200 chars of content as the search query
+    - Filters out the currently viewed memory from results
+    - Each related memory shows: colored source type icon, title, content preview (100 chars), similarity score bar, and arrow icon
+    - Clicking a related memory navigates to it — if it's in the loaded list, selects directly; if not, fetches from API
+    - Loading state with skeleton animation while fetching
+    - Hidden during edit mode to keep the UI focused
+    - Request abort on memory change to prevent stale results
+  - **Design**: `Sparkles` icon header with "Related memories" label, compact card layout with hover states, score visualization bars matching the chat source cards pattern
+  - **Icons**: Added `Sparkles` and `ExternalLink` from lucide-react
+- **Branch**: `frain/improve` (commit `dd9900e`)
