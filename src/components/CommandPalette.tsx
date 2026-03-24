@@ -7,7 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
-  Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark,
+  Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +38,7 @@ const NAV_ITEMS = [
   { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all memories" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you" },
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
+  { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -295,6 +296,18 @@ export function CommandPalette() {
         keywords: ["map", "mind", "graph", "topology", "visual", "cluster", "topics"],
         action: () => {
           router.push("/app/mindmap");
+          setOpen(false);
+        },
+      },
+      {
+        id: "evolution",
+        icon: TrendingUp,
+        iconColor: "text-teal-400",
+        label: "View Topic Evolution",
+        desc: "How your interests changed over time",
+        keywords: ["evolution", "timeline", "trends", "interests", "history", "change", "growth"],
+        action: () => {
+          router.push("/app/evolution");
           setOpen(false);
         },
       },
