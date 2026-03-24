@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -51,6 +51,13 @@ export default function ExplorePage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Multi-select state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,6 +75,9 @@ export default function ExplorePage() {
       setSelectedIndex(nextIdx);
       setFocusedIndex(nextIdx);
       setCopied(false);
+      setEditing(false);
+      setEditContent("");
+      setEditTitle("");
     }
   }, [selected, selectedIndex, memories]);
 
@@ -150,6 +160,65 @@ export default function ExplorePage() {
     });
   }, [selectedIds, memories]);
 
+  // ── Edit memory ──────────────────
+  const startEditing = useCallback(() => {
+    if (!selected) return;
+    setEditContent(selected.content);
+    setEditTitle(selected.sourceTitle);
+    setEditing(true);
+    // Focus textarea after render
+    setTimeout(() => editTextareaRef.current?.focus(), 50);
+  }, [selected]);
+
+  const cancelEditing = useCallback(() => {
+    setEditing(false);
+    setEditContent("");
+    setEditTitle("");
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!selected || saving) return;
+    const trimmedContent = editContent.trim();
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedContent) { toast.error("Content can't be empty"); return; }
+
+    // Check if anything actually changed
+    const contentChanged = trimmedContent !== selected.content;
+    const titleChanged = trimmedTitle !== (selected.sourceTitle || '');
+    if (!contentChanged && !titleChanged) { setEditing(false); return; }
+
+    setSaving(true);
+    try {
+      const body: any = { id: selected.id };
+      if (contentChanged) body.content = trimmedContent;
+      if (titleChanged) body.title = trimmedTitle;
+
+      const res = await fetch('/api/v1/memories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Update failed');
+      }
+
+      // Update local state
+      const updatedMemory = {
+        ...selected,
+        content: trimmedContent,
+        sourceTitle: trimmedTitle,
+      };
+      setSelected(updatedMemory);
+      setMemories(prev => prev.map(m => m.id === selected.id ? updatedMemory : m));
+      setEditing(false);
+      toast.success("Memory updated" + (contentChanged ? " · embedding refreshed" : ""));
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save");
+    }
+    setSaving(false);
+  }, [selected, editContent, editTitle, saving]);
+
   // Keyboard: j/k to navigate list, Enter to open, Escape to close, ↑↓ in modal
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -158,17 +227,28 @@ export default function ExplorePage() {
       // ─── Detail modal open ───
       if (selected) {
         if (e.key === "Escape") {
-          setSelected(null);
-          setCopied(false);
+          if (editing) {
+            cancelEditing();
+          } else {
+            setSelected(null);
+            setCopied(false);
+            setEditing(false);
+          }
           return;
         }
-        // j/↓ = next memory, k/↑ = prev memory in detail view
-        if ((e.key === "j" || e.key === "ArrowDown") && !isInput) {
+        // "e" to start editing (when not already editing and not in an input)
+        if (e.key === "e" && !editing && !isInput) {
+          e.preventDefault();
+          startEditing();
+          return;
+        }
+        // j/↓ = next memory, k/↑ = prev memory in detail view (only when not editing)
+        if ((e.key === "j" || e.key === "ArrowDown") && !isInput && !editing) {
           e.preventDefault();
           navigateMemory('next');
           return;
         }
-        if ((e.key === "k" || e.key === "ArrowUp") && !isInput) {
+        if ((e.key === "k" || e.key === "ArrowUp") && !isInput && !editing) {
           e.preventDefault();
           navigateMemory('prev');
           return;
@@ -247,7 +327,7 @@ export default function ExplorePage() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll]);
+  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll, editing, startEditing, cancelEditing]);
 
   // Reset focused index when memories change
   useEffect(() => {
@@ -289,6 +369,7 @@ export default function ExplorePage() {
       setTotalMemories(prev => prev - 1);
       setSelected(null);
       setCopied(false);
+      setEditing(false);
       toast.success("Memory deleted");
     } catch {
       toast.error("Failed to delete memory");
@@ -589,7 +670,7 @@ export default function ExplorePage() {
 
       {/* Detail Bottom Sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => { setSelected(null); setCopied(false); }}>
+        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); } }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
@@ -599,92 +680,190 @@ export default function ExplorePage() {
               <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
             </div>
             <div className="px-5 py-3 flex items-start justify-between border-b border-white/[0.06]">
-              <div className="min-w-0 pr-3">
-                <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+              <div className="min-w-0 pr-3 flex-1">
+                {editing ? (
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Title"
+                    className="w-full text-[15px] font-semibold bg-transparent border-b border-violet-500/30 focus:border-violet-500/60 outline-none pb-0.5 transition-colors placeholder:text-zinc-600"
+                  />
+                ) : (
+                  <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+                )}
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${typeConfig[selected.source]?.color || ""}`}>
                     {selected.source}
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
+                  {editing && (
+                    <span className="text-[10px] text-violet-400 font-medium animate-pulse">Editing</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {/* Prev / Next navigation */}
-                <button
-                  onClick={() => navigateMemory('prev')}
-                  disabled={selectedIndex <= 0}
-                  className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
-                  title="Previous (↑ or k)"
-                >
-                  <ChevronUp className="w-4 h-4 text-zinc-500" />
-                </button>
-                <span className="text-[10px] text-zinc-600 tabular-nums min-w-[2.5rem] text-center">
-                  {selectedIndex + 1}/{memories.length}
-                </span>
-                <button
-                  onClick={() => navigateMemory('next')}
-                  disabled={selectedIndex >= memories.length - 1}
-                  className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
-                  title="Next (↓ or j)"
-                >
-                  <ChevronDown className="w-4 h-4 text-zinc-500" />
-                </button>
-                <button onClick={() => { setSelected(null); setCopied(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
+                {/* Prev / Next navigation (hidden during edit) */}
+                {!editing && (
+                  <>
+                    <button
+                      onClick={() => navigateMemory('prev')}
+                      disabled={selectedIndex <= 0}
+                      className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
+                      title="Previous (↑ or k)"
+                    >
+                      <ChevronUp className="w-4 h-4 text-zinc-500" />
+                    </button>
+                    <span className="text-[10px] text-zinc-600 tabular-nums min-w-[2.5rem] text-center">
+                      {selectedIndex + 1}/{memories.length}
+                    </span>
+                    <button
+                      onClick={() => navigateMemory('next')}
+                      disabled={selectedIndex >= memories.length - 1}
+                      className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
+                      title="Next (↓ or j)"
+                    >
+                      <ChevronDown className="w-4 h-4 text-zinc-500" />
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
             </div>
+
+            {/* Content area — view or edit */}
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
-              <div className="text-[13px] text-zinc-300 leading-[1.7]">
-                <ChatMarkdown content={selected.content} />
-              </div>
+              {editing ? (
+                <textarea
+                  ref={editTextareaRef}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 resize-y transition-all placeholder:text-zinc-600 font-mono"
+                  placeholder="Memory content…"
+                  onKeyDown={(e) => {
+                    // Cmd/Ctrl+Enter to save
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      saveEdit();
+                    }
+                    // Escape to cancel
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEditing();
+                    }
+                  }}
+                />
+              ) : (
+                <div className="text-[13px] text-zinc-300 leading-[1.7]">
+                  <ChatMarkdown content={selected.content} />
+                </div>
+              )}
             </div>
+
+            {/* Footer — different buttons for view vs edit mode */}
             <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleCopy(selected.content)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-green-400" />
-                      <span className="text-green-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      Copy
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => askAboutMemory(selected)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-violet-400 hover:bg-violet-500/10 transition-colors"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Ask about this
-                </button>
-              </div>
-              <button
-                onClick={() => deleteMemory(selected.id)}
-                disabled={deleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
+              {editing ? (
+                <>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={cancelEditing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <span className="text-[10px] text-zinc-700 hidden sm:inline">
+                      ⌘↵ save · Esc cancel
+                    </span>
+                  </div>
+                  <button
+                    onClick={saveEdit}
+                    disabled={saving || !editContent.trim()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-violet-600 hover:bg-violet-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleCopy(selected.content)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-green-400">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={startEditing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => askAboutMemory(selected)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-violet-400 hover:bg-violet-500/10 transition-colors"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Ask about this
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => deleteMemory(selected.id)}
+                    disabled={deleting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleting ? "Deleting…" : "Delete"}
+                  </button>
+                </>
+              )}
             </div>
             {/* Keyboard hint */}
             <div className="hidden md:flex items-center justify-center gap-3 px-5 py-2 border-t border-white/[0.04] bg-white/[0.01]">
-              <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
-                navigate
-              </span>
-              <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
-                close
-              </span>
+              {editing ? (
+                <>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘↵</kbd>
+                    save
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
+                    cancel edit
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
+                    navigate
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">e</kbd>
+                    edit
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
+                    close
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

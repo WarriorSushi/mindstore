@@ -98,6 +98,75 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * PATCH /api/v1/memories — update a memory's content (and optionally title)
+ * Body: { id: string, content?: string, title?: string }
+ * Re-generates embedding when content changes.
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const userId = await getUserId();
+    const body = await req.json();
+    const { id, content, title } = body;
+
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    if (!content && title === undefined) return NextResponse.json({ error: 'content or title required' }, { status: 400 });
+
+    // Verify ownership
+    const existing = await db.execute(
+      sql`SELECT id FROM memories WHERE id = ${id}::uuid AND user_id = ${userId}::uuid`
+    );
+    if ((existing as any[]).length === 0) {
+      return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+    }
+
+    // Update content (with re-embedding) and/or title
+    if (content) {
+      // Re-generate embedding for updated content
+      let embStr: string | null = null;
+      try {
+        const embeddings = await generateEmbeddings([content]);
+        if (embeddings && embeddings.length > 0) {
+          embStr = `[${embeddings[0].join(',')}]`;
+        }
+      } catch { /* skip embedding — still update content */ }
+
+      if (embStr && title !== undefined) {
+        await db.execute(sql`
+          UPDATE memories SET content = ${content}, embedding = ${embStr}::vector, source_title = ${title}
+          WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+        `);
+      } else if (embStr) {
+        await db.execute(sql`
+          UPDATE memories SET content = ${content}, embedding = ${embStr}::vector
+          WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+        `);
+      } else if (title !== undefined) {
+        await db.execute(sql`
+          UPDATE memories SET content = ${content}, source_title = ${title}
+          WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+        `);
+      } else {
+        await db.execute(sql`
+          UPDATE memories SET content = ${content}
+          WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+        `);
+      }
+    } else if (title !== undefined) {
+      await db.execute(sql`
+        UPDATE memories SET source_title = ${title}
+        WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      `);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[memories PATCH]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
  * DELETE /api/v1/memories — delete memories
  * ?id=UUID — delete single memory
  * ?source_id=xxx — delete by source_id (e.g. demo data)
