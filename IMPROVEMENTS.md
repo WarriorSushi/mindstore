@@ -4,6 +4,17 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 01:59 UTC — Stop Generating + Regenerate Response in Chat
+- **Research**: Modern AI chat UX patterns (ChatGPT, Claude, Gemini) — every major AI chat app provides a "stop generating" button during streaming and a "regenerate" option after responses. MindStore's chat was missing both: users had no way to cancel a slow/bad response or retry generation.
+- **Finding**: The `streamChat()` function had no `AbortController` support — once a request started, it ran to completion with no cancellation. The send button showed a spinner during loading but offered no interactivity. After a response, the only option was to type a new message.
+- **Implemented**:
+  - **AbortController in streamChat()**: Added optional `signal` parameter to the generator function, passed to `fetch()`. Added `finally` block to release the reader on abort. Graceful cleanup even on mid-stream cancellation.
+  - **Stop generating button**: During streaming, the send button transforms into a filled-square stop button (dark `bg-zinc-700` with `ring-1 ring-white/[0.1]`). Clicking it aborts the request and preserves whatever text was already streamed. If nothing was streamed yet, shows "_Generation stopped._" placeholder.
+  - **Regenerate button**: After the last assistant response, a "Regenerate" pill button (↻ icon) appears centered above the input bar. Clicking it removes the last assistant message, finds the preceding user query, and re-sends it — effectively retrying the generation with fresh context.
+  - **Input bar restructured**: Send and stop are now distinct button states (not just icon swap on the same button). Send is `bg-violet-600`, stop is `bg-zinc-700` — clear visual differentiation.
+  - **Error handling**: `AbortError` is caught separately from real errors. Abort preserves partial content; real errors still show toast + error message in chat.
+- **Branch**: `frain/improve` (commit `31088fa`)
+
 ## 2026-03-24 01:29 UTC — Scroll-to-Bottom FAB for Chat & Learn Pages
 - **Research**: Modern chat UX patterns — ChatGPT, Claude, Slack all show a floating "scroll to bottom" button when the user scrolls up in a conversation. MindStore's chat pages were missing this standard pattern.
 - **Finding**: The chat page had unconditional auto-scroll that would yank users back to the bottom whenever new streaming tokens arrived, even when they were trying to read older messages. This is a significant UX friction point.
