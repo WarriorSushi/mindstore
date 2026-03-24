@@ -420,3 +420,21 @@ _Automated 30-min improvement cycles by Frain_
   - Fully consistent with existing dashboard design system (rounded-2xl cards, divide-y, hover states)
 - **Also committed**: Previously uncommitted inline memory editing feature (PATCH API + Edit UI in Explore modal with keyboard shortcuts)
 - **Branch**: `frain/improve` (commit `e482ed4`)
+
+---
+
+## 2026-03-24 08:59 UTC — Chat Provider Preference Picker
+- **Research**: Analyzed MindStore's backend vs frontend feature parity. The chat API route (`/api/v1/chat`) already supported a `chat_provider` setting to let users choose between OpenAI, Gemini, and Ollama for chat — but there was no UI to set this preference. Users with multiple providers configured had no control over which one handled their conversations.
+- **Finding**: The backend had dead code — `chat_provider` was queried from the settings table and respected in the chat route's provider selection logic, but the Settings API didn't return it and couldn't save it. This is a classic backend-frontend disconnect. Modern PKM apps like Notion AI and Reflect let users choose their AI backend.
+- **Implemented**:
+  - **Settings API** (`/api/v1/settings`):
+    - GET now returns `chatProvider` (current preference or null)
+    - POST accepts `chatProvider` param — saves to DB, or removes preference when set to "auto"
+  - **Settings Page** — new "Chat Provider" section (only visible when at least one AI is connected):
+    - Radio-style picker with 4 options: Auto-detect (⚡), Google Gemini, OpenAI, Ollama
+    - Each option shows model name and description (e.g. "gemini-2.0-flash-lite · fast & free")
+    - Active selection highlighted with violet ring + filled radio circle
+    - Unavailable providers greyed out with "Not connected" label and disabled
+    - Instant save with loading spinner feedback + toast confirmation
+    - Fully matches existing Settings page design system (rounded-2xl cards, zinc/violet palette)
+- **Branch**: `frain/improve` (commit `9438b7b`)
