@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool,
+  Heart, Target, PenTool, Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +43,7 @@ const NAV_ITEMS = [
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
   { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
+  { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -348,6 +349,18 @@ export function CommandPalette() {
         keywords: ["writing", "style", "vocabulary", "readability", "tone", "words", "sentences", "grade", "flesch", "complexity", "phrases"],
         action: () => {
           router.push("/app/writing");
+          setOpen(false);
+        },
+      },
+      {
+        id: "flashcards",
+        icon: Layers,
+        iconColor: "text-teal-400",
+        label: "Study Flashcards",
+        desc: "Spaced repetition flashcards from your knowledge",
+        keywords: ["flashcard", "flashcards", "study", "learn", "review", "spaced", "repetition", "anki", "cards", "quiz", "deck", "memorize"],
+        action: () => {
+          router.push("/app/flashcards");
           setOpen(false);
         },
       },

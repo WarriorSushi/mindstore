@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings,
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
-  Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool,
+  Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -25,6 +25,7 @@ const navItems = [
   { href: "/app/sentiment", icon: Heart, label: "Sentiment" },
   { href: "/app/gaps", icon: Target, label: "Gaps" },
   { href: "/app/writing", icon: PenTool, label: "Writing" },
+  { href: "/app/flashcards", icon: Layers, label: "Flashcards" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights" },
   { href: "/app/plugins", icon: Puzzle, label: "Plugins" },
   { href: "/app/connect", icon: Network, label: "Connect AI" },
