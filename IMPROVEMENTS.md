@@ -4,6 +4,73 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 21:29 UTC — Flashcard Maker Plugin (Phase 4, Plugin #20) — PHASE 4 STARTED! 🚀
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. All 6 Phase 3 Analysis Plugins are complete. Flashcard Maker (#20) is the **first Action plugin** — the beginning of Phase 4.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/flashcard-maker`):
+    - **Deck management**: Create, list, delete decks with color coding (8 colors: teal, sky, emerald, amber, cyan, rose, lime, orange). Decks stored in plugin config JSONB — zero DB migrations needed.
+    - **AI-powered flashcard generation**: Multi-provider support (OpenAI, Gemini, Ollama, OpenRouter, Custom API). Generates Q&A pairs from memory content with:
+      - Front (question), back (answer), hint (keyword nudge), tags, source memory reference
+      - Topic-based search or random memory selection (15 memories max)
+      - Structured JSON extraction with markdown fence stripping and regex fallback
+      - Temperature 0.3 for consistent, factual card generation
+    - **SM-2 SuperMemo spaced repetition algorithm**:
+      - Ease factor: starts at 2.5, adapts based on performance (min 1.3)
+      - Interval growth: 1 day → 6 days → EF-scaled exponential growth
+      - Grade 0-5 system: grades 0-2 = fail (reset interval to 1d), grades 3-5 = correct (advance interval)
+      - Tracks: easeFactor, interval, repetitions, nextReview, lastReview per card
+    - **Review session API**: Returns due cards (nextReview ≤ now) sorted by urgency + up to 10 new cards (never reviewed)
+    - **Stats API**: Total cards, due count, mastered count (5+ consecutive correct), review streak (consecutive days with activity), mastery distribution (new/learning/reviewing/mastered)
+    - **Card CRUD**: Save generated cards to deck, delete individual cards, review-card with SM-2 state update
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **New Flashcards page** (`/app/flashcards`) — full interactive spaced repetition system:
+    - **Decks view (main)**:
+      - Deck list with color-coded icon cards, card count, due count (amber), mastered count (emerald)
+      - Global stats bar: total cards, due now, mastered, streak (fire icon)
+      - Mastery progress bar: stacked bar showing new (sky) → learning (amber) → reviewing (teal) → mastered (emerald)
+      - Quick "Review" button on decks with due cards
+      - Create deck inline form with name, description, auto-assigned color
+      - Empty state with guidance text and dual CTA (Create Deck + Generate Cards)
+    - **Review mode** — immersive card study experience:
+      - Clean single-card layout with progress bar and card counter (e.g. "3 / 12")
+      - Deck name badge in header
+      - **Card flip**: Large question card with "Tap to reveal" prompt. Click or press Space to reveal answer
+      - **Answer reveal**: Slides in below the question with teal accent border, source title reference
+      - **Hint system**: "Show hint" toggle (press H) reveals keyword hint without full answer
+      - **6-grade response buttons**: Forgot (rose) → Barely → Hard (amber) → Okay → Good (teal) → Easy (emerald)
+      - **Full keyboard flow**: Space/Enter = reveal, 1-6 = grade, H = hint, Escape = end session
+      - Keyboard hints shown at bottom of card
+      - Tags displayed below card
+      - **Session results**: Score circle (SVG arc), percentage, correct/missed/total stats grid, "Review Again" + "Done" buttons
+    - **Generate view**:
+      - Topic search input with Enter-to-generate
+      - AI generates up to 10 flashcards with Q/A preview
+      - Remove individual generated cards (X button)
+      - Tags and hints shown inline
+      - "Save to deck" picker listing all decks with card counts
+    - **Deck detail view**:
+      - Stats bar: Due (amber), New (sky), Learning (teal), Mastered (emerald) counts
+      - Card list with status badges (New/Due/Mastered)
+      - Hover-reveal delete button per card
+      - Review button in header
+      - Back navigation
+    - **States**: Loading (teal spinner), empty (guidance with CTAs), all transitions smooth
+  - **Navigation updates**:
+    - Sidebar: "Flashcards" entry with Layers icon between Writing and Insights
+    - Command Palette: "Study Flashcards" action with keywords (flashcard, study, learn, review, spaced, repetition, anki, cards, quiz, deck, memorize)
+    - Command Palette: Flashcards page in navigation list
+  - **Design**: OLED black base, teal primary accent. Zero violet/purple/fuchsia. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`. Spring animations for answer reveal. SM-2 grade colors: rose (fail) → amber (hard) → teal (good) → emerald (easy).
+  - **Zero new dependencies**: SM-2 algorithm in pure TypeScript, all CSS animations
+- **Phase 4 Started! 🚀**: First of 6 Action Plugins now built:
+  1. ✅ Flashcard Maker (#20)
+  2. ⬜ Blog Draft Generator (#19)
+  3. ⬜ Conversation Prep (#23)
+  4. ⬜ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Blog Draft Generator (#19) — turn memories into polished blog posts
+- **Branch**: `frain/improve` (commit `c1fcefe`)
+
 ## 2026-03-24 20:59 UTC — Writing Style Analyzer Plugin (Phase 3, Plugin #17) — PHASE 3 COMPLETE! 🎉
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), Sentiment Timeline (#18), and Knowledge Gaps Analyzer (#14) are done. Writing Style Analyzer (#17) is the **sixth and final Analysis plugin** — completing Phase 3!
 - **Implemented**:
