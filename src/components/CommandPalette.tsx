@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool, Layers, FileEdit, Users, Route,
+  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,6 +47,7 @@ const NAV_ITEMS = [
   { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
   { href: "/app/prep", icon: Users, label: "Conversation Prep", desc: "Brief me before any meeting" },
   { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Structured learning plans from your knowledge" },
+  { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build professional resumes from your memories" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -400,6 +401,18 @@ export function CommandPalette() {
         keywords: ["learn", "learning", "path", "curriculum", "study", "course", "plan", "skill", "education", "roadmap", "gap"],
         action: () => {
           router.push("/app/paths");
+          setOpen(false);
+        },
+      },
+      {
+        id: "resume-builder",
+        icon: FileUser,
+        iconColor: "text-teal-400",
+        label: "Resume Builder",
+        desc: "Build a professional resume from your stored memories",
+        keywords: ["resume", "cv", "career", "job", "professional", "experience", "skills", "hire", "work", "apply", "application"],
+        action: () => {
+          router.push("/app/resume");
           setOpen(false);
         },
       },
