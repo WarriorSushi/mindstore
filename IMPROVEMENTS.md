@@ -4,6 +4,48 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 17:59 UTC — Reddit Saved Posts Importer Plugin (Phase 2, Plugin #8)
+- **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2), PDF/EPUB (#9), YouTube (#3), Browser Bookmarks (#6), Obsidian (#12) are done. Reddit Saved Posts (#8) is the **6th and final plugin** in Phase 2 — completing the Quick Wins phase!
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/reddit-saved`):
+    - **Multi-format support**: Accepts Reddit GDPR data export ZIP (with CSVs inside), standalone CSV files, or JSON exports
+    - **Robust CSV parser**: Handles quoted fields with commas, escaped quotes (`""`), newlines inside quoted fields, BOM markers — essential for Reddit exports which contain markdown/HTML in post bodies
+    - **Column name normalization**: Maps varying Reddit export column names (`date`/`created`/`created_utc`, `body`/`selftext`/`self_text`, etc.) to consistent fields. Handles both old and new Reddit export formats
+    - **Reference CSV parsing**: For `saved_posts.csv`/`saved_comments.csv` that only contain id + permalink, extracts subreddit and title from permalink URL patterns (`/r/subreddit/comments/id/title/`)
+    - **Reddit JSON format**: Parses both array format and "thing" format (`{ kind: "t3", data: { ... } }`)
+    - **Date parsing**: Handles Unix timestamps (seconds), ISO dates, and common date string formats
+    - **Content formatting**: Rich metadata headers — post title, subreddit, author, score, date. External links preserved. Reddit permalinks included as source links
+    - **Smart chunking**: 4000 char max, splits at paragraph boundaries. Multi-part labeling for long posts
+    - **Deduplication**: By Reddit post/comment ID across all files in a ZIP export
+    - **Preview mode**: Returns stats (total posts/comments, subreddit breakdown with counts, date range, top authors, average score), sample items sorted by highest score
+    - **Batch embeddings**: 50 per batch, 500 chunks max cap
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **Import page UI** — full preview-then-import workflow:
+    - New **Reddit** tab with `MessageSquare` icon and orange accent theme
+    - Drop zone accepts `.zip`, `.csv`, `.json` files with orange hover state
+    - Instructions with direct link to `reddit.com/settings/data-request`
+    - Preview card with orange icon badge: total items, posts/comments split, date range
+    - Stats bar: post count, comment count, subreddit count, average score with ArrowUpRight icon
+    - **Subreddit cloud** with orange-themed count badges (shows top 15 + overflow count)
+    - **Sample items list** with type-colored badges (posts = orange, comments = blue), showing title, subreddit, score, date, and content preview
+    - Orange import button showing total item count
+    - Grid updated to `lg:grid-cols-11` to accommodate 11 import tabs
+  - **Source type recognition**: Added `reddit` source type across the entire app:
+    - Dashboard: recent activity, pinned memories, sources section — MessageSquare icon with orange accent
+    - Explore: typeConfig with MessageSquare icon and orange color
+    - Chat: source cards with orange accent and border for Reddit sources (also added obsidian to chat which was missing)
+    - Import: history section with reddit type icon and color
+  - **Plugin registry**: `reddit-saved` excluded from dynamic plugin tabs to prevent duplicates
+- **Phase 2 Complete! 🎉**: All 6 Quick Win Import Plugins are now built:
+  1. ✅ Kindle Highlights Importer (#2)
+  2. ✅ PDF/EPUB Document Parser (#9)
+  3. ✅ YouTube Transcript Importer (#3)
+  4. ✅ Browser Bookmarks Importer (#6)
+  5. ✅ Obsidian Vault Importer (#12)
+  6. ✅ Reddit Saved Posts Importer (#8)
+- **Next**: Phase 3 — Analysis Plugins (Mind Map Generator, Contradiction Finder, Topic Evolution Timeline, Sentiment Timeline, Knowledge Gaps Analyzer, Writing Style Analyzer)
+- **Branch**: `frain/improve` (commit `2dd1418`)
+
 ## 2026-03-24 17:29 UTC — Obsidian Vault Importer Plugin (Phase 2, Plugin #12)
 - **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2), PDF/EPUB (#9), YouTube (#3), Browser Bookmarks (#6) are done. Obsidian Vault Importer (#12) is next — the 5th plugin in the build order.
 - **Implemented**:
