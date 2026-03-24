@@ -31,6 +31,68 @@ const SUGGESTIONS = [
   "Connections between my ideas?",
 ];
 
+/** Generate follow-up question suggestions based on conversation context */
+async function generateFollowUps(
+  query: string,
+  answer: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  try {
+    const res = await fetch("/api/v1/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content:
+              "Generate exactly 3 short follow-up questions a user might ask next, based on the conversation. Each question should be concise (under 10 words), curious, and explore different angles. Return ONLY a JSON array of 3 strings, nothing else. Example: [\"How does this relate to X?\",\"What are the key takeaways?\",\"Any contradictions in my notes?\"]",
+          },
+          {
+            role: "user",
+            content: `User asked: "${query}"\n\nAssistant answered: "${answer.slice(0, 500)}"`,
+          },
+        ],
+      }),
+      signal,
+    });
+    if (!res.ok) return [];
+
+    // Read the streamed response fully
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let full = "";
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) full += delta;
+          } catch {}
+        }
+      }
+    }
+
+    // Extract JSON array from response
+    const match = full.match(/\[[\s\S]*?\]/);
+    if (!match) return [];
+    const parsed = JSON.parse(match[0]);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((q: any) => typeof q === "string" && q.trim().length > 0)
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -45,9 +107,12 @@ export default function ChatPage() {
   const searchParams = useSearchParams();
   const autoSentRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const followUpAbortRef = useRef<AbortController | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const isNearBottomRef = useRef(true);
   const lastQueryRef = useRef<string>("");
+  const [followUps, setFollowUps] = useState<string[]>([]);
+  const [followUpsLoading, setFollowUpsLoading] = useState(false);
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -134,6 +199,9 @@ export default function ChatPage() {
     setMessages([]);
     setConversationId(null);
     setHistoryOpen(false);
+    setFollowUps([]);
+    setFollowUpsLoading(false);
+    if (followUpAbortRef.current) followUpAbortRef.current.abort();
     inputRef.current?.focus();
   }
 
@@ -182,6 +250,7 @@ export default function ChatPage() {
 
     lastQueryRef.current = query;
     setInput("");
+    setFollowUps([]);
     const newMessages: ChatMessage[] = [
       ...messages,
       { role: "user", content: query },
@@ -284,9 +353,29 @@ export default function ChatPage() {
           return u;
         });
       }
+
+      // Generate follow-up suggestions in background
+      if (fullResponse.length > 20) {
+        setFollowUpsLoading(true);
+        // Cancel any previous follow-up request
+        if (followUpAbortRef.current) followUpAbortRef.current.abort();
+        const fuAbort = new AbortController();
+        followUpAbortRef.current = fuAbort;
+        generateFollowUps(query, fullResponse, fuAbort.signal)
+          .then((fus) => {
+            if (!fuAbort.signal.aborted) {
+              setFollowUps(fus);
+              setFollowUpsLoading(false);
+            }
+          })
+          .catch(() => setFollowUpsLoading(false));
+      }
     } catch (err: any) {
       if (err.name === "AbortError") {
         // User stopped generation — keep whatever was streamed so far
+        setFollowUps([]);
+        setFollowUpsLoading(false);
+        if (followUpAbortRef.current) followUpAbortRef.current.abort();
         setMessages((prev) => {
           const u = [...prev];
           const last = u[u.length - 1];
@@ -326,6 +415,9 @@ export default function ChatPage() {
     // Remove the last assistant response
     const trimmed = messages.slice(0, lastUserIdx.i);
     setMessages(trimmed);
+    setFollowUps([]);
+    setFollowUpsLoading(false);
+    if (followUpAbortRef.current) followUpAbortRef.current.abort();
     // Re-send with the same query
     setTimeout(() => handleSend(query), 50);
   }, [loading, messages]);
@@ -609,6 +701,31 @@ export default function ChatPage() {
                 )}
               </div>
             ))}
+
+            {/* Follow-up suggestions — shown after last assistant message */}
+            {!loading && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
+              <div className="flex gap-2 flex-wrap pl-9">
+                {followUpsLoading ? (
+                  <div className="flex items-center gap-1.5 h-7 px-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
+                    <Loader2 className="w-3 h-3 text-zinc-600 animate-spin" />
+                    <span className="text-[11px] text-zinc-600">Thinking of follow-ups…</span>
+                  </div>
+                ) : followUps.length > 0 ? (
+                  followUps.map((fu, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setFollowUps([]);
+                        handleSend(fu);
+                      }}
+                      className="text-left text-[12px] leading-snug px-3 py-1.5 rounded-full border border-violet-500/15 bg-violet-500/[0.06] text-violet-300 hover:bg-violet-500/[0.12] hover:border-violet-500/25 transition-all active:scale-[0.97] max-w-[280px] truncate"
+                    >
+                      {fu}
+                    </button>
+                  ))
+                ) : null}
+              </div>
+            )}
           </div>
         )}
       </div>
