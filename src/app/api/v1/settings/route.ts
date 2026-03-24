@@ -20,8 +20,8 @@ export async function GET() {
     const embConfig = await getEmbeddingConfig();
 
     return NextResponse.json({
-      // Legacy compat
-      hasApiKey: !!(config.openai_api_key || config.gemini_api_key || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY),
+      // Legacy compat — now includes Ollama as a valid AI provider
+      hasApiKey: !!(config.openai_api_key || config.gemini_api_key || config.ollama_url || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL),
       apiKeyPreview: config.openai_api_key ? `sk-...${config.openai_api_key.slice(-4)}` : null,
       source: config.openai_api_key ? 'database' : (process.env.OPENAI_API_KEY ? 'environment' : null),
       // New multi-provider
@@ -45,7 +45,7 @@ export async function GET() {
     console.error('[settings GET]', error);
     // Return a safe fallback when DB is unavailable — check env vars only
     return NextResponse.json({
-      hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY),
+      hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL),
       apiKeyPreview: null,
       source: null,
       providers: {
