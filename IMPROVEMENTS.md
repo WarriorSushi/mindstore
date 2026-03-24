@@ -4,6 +4,20 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 02:59 UTC — Suggested Follow-Up Questions in Chat
+- **Research**: AI chat UX patterns from ChatGPT, Perplexity, Gemini, Claude — all modern AI chat apps generate contextual follow-up questions after responses to drive engagement and help users explore their knowledge deeper. MindStore's chat had no suggested follow-ups — after an answer, the user had to think of the next question entirely on their own.
+- **Finding**: The Chat page had great UX (stop/regenerate, source citations, copy, scroll FAB) but lacked the "what to ask next" pattern. In knowledge management, follow-up suggestions are even more valuable than in general chat because users often don't know what connections exist in their own data.
+- **Implemented**:
+  - **`generateFollowUps()` function**: After streaming completes, makes a lightweight background API call asking the AI to generate exactly 3 short, contextual follow-up questions based on the user's query and the AI's answer. Parses JSON array from streamed response.
+  - **Follow-up pill buttons**: Displayed below the last assistant message as rounded-full chips with violet styling (`border-violet-500/15 bg-violet-500/[0.06] text-violet-300`). Truncated at 280px for long questions.
+  - **Loading state**: Shows "Thinking of follow-ups…" with spinner while generating, so users know more is coming.
+  - **Click to send**: Clicking any follow-up pill immediately clears the suggestions and sends that question as the next query — seamless conversation flow.
+  - **Proper cleanup**: Follow-ups clear on new chat, regenerate, stop generation, and when sending a new message. Uses `AbortController` so follow-up generation is cancelled if the user navigates away or starts a new interaction.
+  - **Non-blocking**: Follow-up generation runs entirely in the background — doesn't delay the main response or block the input.
+- **Branch**: `frain/improve` (commit `4f3f90f`)
+
+---
+
 ## 2026-03-24 02:29 UTC — Multi-Select & Batch Operations for Explore
 - **Research**: Bulk action patterns from Notion, Gmail, Obsidian, Apple Notes — every major knowledge app supports selecting multiple items and performing batch operations (delete, export, copy). MindStore's Explore page only supported single-item actions — no way to bulk-delete imports gone wrong or export a selection. Web search was unavailable (quota), used domain knowledge of modern UX patterns.
 - **Finding**: The Explore page had individual delete per memory via the detail modal, but no multi-select capability. Users who imported large ChatGPT exports or file batches had no efficient way to curate or clean up. No batch export either — the only export was a full database dump from Settings.
