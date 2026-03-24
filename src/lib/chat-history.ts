@@ -87,6 +87,15 @@ export function deleteConversation(id: string): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(convos));
 }
 
+/** Rename a conversation */
+export function renameConversation(id: string, title: string): void {
+  const convos = getConversations();
+  const idx = convos.findIndex((c) => c.id === id);
+  if (idx === -1) return;
+  convos[idx].title = title.trim() || "Untitled";
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(convos));
+}
+
 /** Delete all conversations */
 export function clearAllConversations(): void {
   localStorage.removeItem(STORAGE_KEY);

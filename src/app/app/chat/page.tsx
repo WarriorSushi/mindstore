@@ -7,7 +7,7 @@ import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
-  ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap,
+  ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -21,6 +21,7 @@ import {
   createConversation,
   saveConversation,
   deleteConversation,
+  renameConversation,
   clearAllConversations,
 } from "@/lib/chat-history";
 
@@ -144,6 +145,10 @@ export default function ChatPage() {
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [followUpsLoading, setFollowUpsLoading] = useState(false);
   const [thinking, setThinking] = useState(false); // true while waiting for first token
+  const [thinkingStep, setThinkingStep] = useState<"searching" | "found" | "generating" | null>(null);
+  const [searchResultCount, setSearchResultCount] = useState(0);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -247,6 +252,8 @@ export default function ChatPage() {
     setHistoryOpen(false);
     setFollowUps([]);
     setFollowUpsLoading(false);
+    setThinkingStep(null);
+    setSearchResultCount(0);
     if (followUpAbortRef.current) followUpAbortRef.current.abort();
     inputRef.current?.focus();
   }
@@ -303,6 +310,8 @@ export default function ChatPage() {
     ];
     setMessages(newMessages);
     setLoading(true);
+    setThinkingStep("searching");
+    setSearchResultCount(0);
 
     // Create AbortController for this request
     const abortController = new AbortController();
@@ -315,6 +324,14 @@ export default function ChatPage() {
       );
       if (!searchRes.ok) throw new Error("Search failed");
       const { results = [] } = await searchRes.json();
+      setSearchResultCount(results.length);
+      if (results.length > 0) {
+        setThinkingStep("found");
+        // Brief pause so user sees "Found X memories" before generating starts
+        await new Promise(r => setTimeout(r, 600));
+      } else {
+        setThinkingStep(null);
+      }
 
       if (results.length === 0) {
         const updated = [
@@ -327,6 +344,7 @@ export default function ChatPage() {
         ];
         setMessages(updated);
         setLoading(false);
+        setThinkingStep(null);
         abortRef.current = null;
         return;
       }
@@ -354,6 +372,7 @@ export default function ChatPage() {
         ];
         setMessages(updated);
         setLoading(false);
+        setThinkingStep(null);
         abortRef.current = null;
         return;
       }
@@ -391,9 +410,13 @@ export default function ChatPage() {
       ];
       setMessages(withPlaceholder);
       setThinking(true);
+      setThinkingStep("generating");
 
       for await (const chunk of streamChat(ragMessages, abortController.signal)) {
-        if (fullResponse.length === 0) setThinking(false);
+        if (fullResponse.length === 0) {
+          setThinking(false);
+          setThinkingStep(null);
+        }
         fullResponse += chunk;
         setMessages((prev) => {
           const u = [...prev];
@@ -423,6 +446,7 @@ export default function ChatPage() {
       if (err.name === "AbortError") {
         // User stopped generation — keep whatever was streamed so far
         setThinking(false);
+        setThinkingStep(null);
         setFollowUps([]);
         setFollowUpsLoading(false);
         if (followUpAbortRef.current) followUpAbortRef.current.abort();
@@ -445,6 +469,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
       setThinking(false);
+      setThinkingStep(null);
       abortRef.current = null;
     }
   };
@@ -574,11 +599,13 @@ export default function ChatPage() {
               ) : (
                 <div className="space-y-0.5">
                   {activeConversations.map((c) => (
-                    <button
+                    <div
                       key={c.id}
-                      onClick={() => handleLoadConversation(c.id)}
+                      onClick={() => {
+                        if (renamingId !== c.id) handleLoadConversation(c.id);
+                      }}
                       className={cn(
-                        "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5",
+                        "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5 cursor-pointer",
                         conversationId === c.id
                           ? "bg-violet-500/10 border border-violet-500/20"
                           : "hover:bg-white/[0.04] border border-transparent"
@@ -593,16 +620,57 @@ export default function ChatPage() {
                         )}
                       />
                       <div className="flex-1 min-w-0">
-                        <p
-                          className={cn(
-                            "text-[13px] truncate",
-                            conversationId === c.id
-                              ? "text-white font-medium"
-                              : "text-zinc-400"
-                          )}
-                        >
-                          {c.title}
-                        </p>
+                        {renamingId === c.id ? (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const trimmed = renameValue.trim();
+                              if (trimmed) {
+                                renameConversation(c.id, trimmed);
+                                refreshHistory();
+                              }
+                              setRenamingId(null);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onBlur={() => {
+                                const trimmed = renameValue.trim();
+                                if (trimmed) {
+                                  renameConversation(c.id, trimmed);
+                                  refreshHistory();
+                                }
+                                setRenamingId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                  e.stopPropagation();
+                                  setRenamingId(null);
+                                }
+                              }}
+                              className="w-full text-[13px] bg-white/[0.06] border border-violet-500/30 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-violet-500/40 text-white"
+                            />
+                          </form>
+                        ) : (
+                          <p
+                            className={cn(
+                              "text-[13px] truncate",
+                              conversationId === c.id
+                                ? "text-white font-medium"
+                                : "text-zinc-400"
+                            )}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setRenamingId(c.id);
+                              setRenameValue(c.title);
+                            }}
+                          >
+                            {c.title}
+                          </p>
+                        )}
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <Clock className="w-2.5 h-2.5 text-zinc-700" />
                           <span className="text-[10px] text-zinc-600">
@@ -613,13 +681,29 @@ export default function ChatPage() {
                           </span>
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteConversation(c.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-500/10 transition-all shrink-0"
-                      >
-                        <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
-                      </button>
-                    </button>
+                      {renamingId !== c.id && (
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenamingId(c.id);
+                              setRenameValue(c.title);
+                            }}
+                            className="p-1 rounded-lg hover:bg-white/[0.08] transition-all"
+                            title="Rename"
+                          >
+                            <Pencil className="w-2.5 h-2.5 text-zinc-600 hover:text-zinc-400" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteConversation(c.id, e)}
+                            className="p-1 rounded-lg hover:bg-red-500/10 transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -767,21 +851,49 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {/* Thinking indicator — shown while searching before assistant placeholder appears */}
+            {/* Multi-step thinking indicator — shows progress through RAG pipeline */}
             {loading && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
               <div className="flex gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
                   <Brain className="w-3.5 h-3.5 text-violet-400" />
                 </div>
                 <div className="rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-3">
-                  <span className="flex items-center gap-2">
-                    <span className="flex gap-[3px] items-center">
-                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-                      <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                  <div className="flex flex-col gap-1.5">
+                    {/* Step 1: Searching */}
+                    <span className="flex items-center gap-2">
+                      {thinkingStep === "searching" ? (
+                        <span className="flex gap-[3px] items-center">
+                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                        </span>
+                      ) : (thinkingStep === "found" || thinkingStep === "generating") ? (
+                        <Check className="w-3 h-3 text-green-400/70" />
+                      ) : null}
+                      <span className={`text-[11px] ${thinkingStep === "searching" ? "text-zinc-400" : "text-zinc-600"}`}>
+                        {thinkingStep === "searching"
+                          ? "Searching memories…"
+                          : searchResultCount > 0
+                            ? `Found ${searchResultCount} relevant ${searchResultCount === 1 ? "memory" : "memories"}`
+                            : "Searching memories…"}
+                      </span>
                     </span>
-                    <span className="text-[11px] text-zinc-600">Searching memories…</span>
-                  </span>
+                    {/* Step 2: Generating */}
+                    {(thinkingStep === "found" || thinkingStep === "generating") && (
+                      <span className="flex items-center gap-2">
+                        {thinkingStep === "generating" ? (
+                          <span className="flex gap-[3px] items-center">
+                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                          </span>
+                        ) : (
+                          <Loader2 className="w-3 h-3 text-violet-400/60 animate-spin" />
+                        )}
+                        <span className="text-[11px] text-zinc-400">Generating response…</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
