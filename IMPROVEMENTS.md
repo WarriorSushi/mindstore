@@ -438,3 +438,26 @@ _Automated 30-min improvement cycles by Frain_
     - Instant save with loading spinner feedback + toast confirmation
     - Fully matches existing Settings page design system (rounded-2xl cards, zinc/violet palette)
 - **Branch**: `frain/improve` (commit `9438b7b`)
+
+## 2026-03-24 09:29 UTC — Sort Memories in Explore
+- **Research**: Internal UX audit — every modern knowledge management app (Notion, Obsidian, Apple Notes, Mem, Reflect) provides sort controls when browsing content. MindStore's Explore page always showed memories sorted by newest first with no user control. Users with hundreds of memories had no way to find content by title alphabetically or by content length.
+- **Finding**: The Explore page had filter pills (by source type) but no sort control — a fundamental gap. The backend API also hardcoded `ORDER BY created_at DESC` with no flexibility.
+- **Implemented**:
+  - **Backend** (`/api/v1/memories`): Added `sort` query parameter supporting 6 sort modes:
+    - `newest` (default) — created_at DESC
+    - `oldest` — created_at ASC
+    - `alpha-asc` — Title A→Z (case-insensitive, falls back to created_at)
+    - `alpha-desc` — Title Z→A
+    - `longest` — Content length DESC (find most substantial memories)
+    - `shortest` — Content length ASC (find brief notes)
+  - **Frontend** (Explore page): Sort dropdown button with ArrowUpDown icon
+    - Positioned inline with filter pills (right-aligned) for clean layout
+    - Dropdown menu with 6 options, each with descriptive icon (ArrowDownNarrowWide, ArrowDownAZ, etc.)
+    - Active sort highlighted with violet accent + dot indicator
+    - Hidden during search (since search results are ranked by relevance score, not chronologically)
+    - Sort selection resets focused index and immediately refetches memories
+    - Sort persists across filter changes — infinite scroll also respects sort order
+    - Click-outside-to-close with fixed overlay
+    - Fully responsive — label hidden on mobile, icon-only on small screens
+  - Design: matches existing filter pill aesthetic (rounded-full, 30px height, violet active state)
+- **Branch**: `frain/improve` (commit `d95a206`)
