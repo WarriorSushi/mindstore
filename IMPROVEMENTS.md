@@ -4,6 +4,18 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 13:29 UTC — Enhanced Source Cards in Chat (Perplexity-style)
+- **Research**: Internal UX audit — compared MindStore's chat source citations against Perplexity, Phind, Google AI Overviews, and ChatGPT's RAG implementations. Every modern RAG chat interface shows source previews inline so users can verify what the AI actually retrieved. MindStore's source cards only showed title + score bar — no content preview, no citation numbering, and no way to click through to the source memory.
+- **Finding**: The search API already returned full content for each result, but the chat page was discarding it — only passing `title`, `type`, and `score` to the `SourceCards` component. The `[1]`, `[2]` citation numbers in AI responses had no visual counterpart in the source cards, making it hard to match citations to sources.
+- **Implemented**:
+  - **Content previews**: Each source card now shows a 2-line content preview (120 chars) below the title, giving users a transparent view of what the AI actually retrieved and reasoned from
+  - **Citation number badges**: Numbered badges [1], [2], [3] etc. appear on each source card, visually matching the `[1]`, `[2]` inline citations in AI responses — users can now trace exactly which source backs which claim
+  - **Clickable source cards**: Each source card is now wrapped in an `<a>` link that navigates to Explore with a search query for that memory. Click-through from chat → explore closes the discovery loop
+  - **Memory ID + preview pipeline**: Updated `ChatMessage` type in `chat-history.ts` to include optional `id` and `preview` fields. Both source-mapping locations in the chat handler now pass `memoryId`/`id` and a 120-char content preview
+  - **Expanded default view**: Shows 3 sources by default (up from 2) since the cards are now more informative and worth showing
+  - **Design**: Citation badge uses `bg-white/[0.06]` with tabular-nums for consistent width. Preview text is `text-[10px] text-zinc-600` with `pl-6` indentation aligned under the title. Clickable cards get enhanced hover state (`bg-white/[0.06] border-white/[0.08]`)
+- **Branch**: `frain/improve` (commit `63e5819`)
+
 ## 2026-03-24 12:59 UTC — Import History Section on Import Page
 - **Research**: Internal UX audit — compared MindStore's Import page to Notion's import flow, Obsidian's sync status, and general PKM app patterns. After importing content, users had zero feedback about what they'd already imported, how much data was in the system, or when things were last added. The Import page was a one-way "drop and forget" experience with no import log or history.
 - **Finding**: The Import page showed the import tabs and a progress bar during active imports, but once the import completed and the user navigated away, there was no record on the Import page itself. Users who wanted to know "what did I import?" or "when did I add that?" had to navigate to Explore and mentally reconstruct their import history. The sources API already returned `importedAt` timestamps and chunk counts — the data existed, just wasn't surfaced.
