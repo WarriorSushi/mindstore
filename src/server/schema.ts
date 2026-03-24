@@ -158,6 +158,33 @@ export const settings = pgTable('settings', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// === PLUGIN SYSTEM ===
+
+export const pluginTypeEnum = pgEnum('plugin_type', ['extension', 'mcp', 'prompt']);
+export const pluginStatusEnum = pgEnum('plugin_status', ['installed', 'active', 'disabled', 'error']);
+
+export const plugins = pgTable('plugins', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  slug: text('slug').unique().notNull(), // unique identifier e.g. 'kindle-importer'
+  name: text('name').notNull(),
+  description: text('description'),
+  version: text('version').default('1.0.0'),
+  type: pluginTypeEnum('type').notNull().default('extension'),
+  status: pluginStatusEnum('status').notNull().default('installed'),
+  icon: text('icon'), // lucide icon name
+  category: text('category'), // 'import', 'analysis', 'action', 'export', 'ai'
+  author: text('author').default('MindStore'),
+  config: jsonb('config').default({}), // plugin-specific settings
+  metadata: jsonb('metadata').default({}), // capabilities, hooks, routes info
+  installedAt: timestamp('installed_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  lastError: text('last_error'),
+}, (table) => [
+  index('idx_plugins_slug').on(table.slug),
+  index('idx_plugins_status').on(table.status),
+  index('idx_plugins_category').on(table.category),
+]);
+
 // API Keys (for MCP server auth)
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').defaultRandom().primaryKey(),

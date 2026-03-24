@@ -131,6 +131,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [memoryCount, setMemoryCount] = useState(0);
   const [hasAI, setHasAI] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [chatProvider, setChatProvider] = useState<string>("auto");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -157,7 +159,11 @@ export default function ChatPage() {
       .then((r) => r.json())
       .then((d) => setMemoryCount(d.totalMemories || 0))
       .catch(() => {});
-    checkApiKey().then((d) => setHasAI(d.hasApiKey));
+    checkApiKey().then((d: any) => {
+      setHasAI(d.hasApiKey);
+      if (d.chatModel) setSelectedModel(d.chatModel);
+      if (d.chatProvider) setChatProvider(d.chatProvider);
+    });
     refreshHistory();
   }, []);
 
@@ -417,7 +423,7 @@ export default function ChatPage() {
       setThinking(true);
       setThinkingStep("generating");
 
-      for await (const chunk of streamChat(ragMessages, abortController.signal)) {
+      for await (const chunk of streamChat(ragMessages, abortController.signal, selectedModel || undefined)) {
         if (fullResponse.length === 0) {
           setThinking(false);
           setThinkingStep(null);
@@ -1006,8 +1012,141 @@ export default function ChatPage() {
               </button>
             )}
           </div>
+          {/* Model selector */}
+          <div className="flex items-center gap-2 mt-1.5 px-1">
+            <ModelSelector
+              provider={chatProvider}
+              selectedModel={selectedModel}
+              onModelChange={(m) => setSelectedModel(m)}
+            />
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Model picker — compact dropdown below chat input */
+const MODEL_OPTIONS: Record<string, { label: string; models: { id: string; name: string; tag?: string }[] }> = {
+  gemini: {
+    label: "Gemini",
+    models: [
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", tag: "default" },
+      { id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", tag: "fast" },
+      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", tag: "smart" },
+    ],
+  },
+  openai: {
+    label: "OpenAI",
+    models: [
+      { id: "gpt-4o-mini", name: "GPT-4o Mini", tag: "default" },
+      { id: "gpt-4o", name: "GPT-4o", tag: "smart" },
+      { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", tag: "new" },
+      { id: "gpt-4.1", name: "GPT-4.1", tag: "new" },
+      { id: "o4-mini", name: "o4-mini", tag: "reasoning" },
+    ],
+  },
+  ollama: {
+    label: "Ollama",
+    models: [
+      { id: "llama3.2", name: "Llama 3.2", tag: "default" },
+      { id: "llama3.1", name: "Llama 3.1" },
+      { id: "mistral", name: "Mistral" },
+      { id: "gemma2", name: "Gemma 2" },
+      { id: "phi3", name: "Phi-3" },
+      { id: "qwen2.5", name: "Qwen 2.5" },
+    ],
+  },
+};
+
+function ModelSelector({ provider, selectedModel, onModelChange }: {
+  provider: string;
+  selectedModel: string;
+  onModelChange: (model: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Get available models based on provider (or show all if auto)
+  const providerKey = provider === "auto" ? null : provider;
+  const sections = providerKey
+    ? { [providerKey]: MODEL_OPTIONS[providerKey] }
+    : MODEL_OPTIONS;
+
+  // Find current model name
+  const currentName = (() => {
+    for (const section of Object.values(MODEL_OPTIONS)) {
+      const found = section.models.find((m) => m.id === selectedModel);
+      if (found) return found.name;
+    }
+    return selectedModel || "Default";
+  })();
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 h-6 px-2 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-all"
+      >
+        <Sparkles className="w-3 h-3" />
+        <span>{currentName}</span>
+        <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-zinc-900/95 backdrop-blur-lg border border-white/[0.08] shadow-2xl overflow-hidden z-50">
+          {Object.entries(sections).filter(([, s]) => s).map(([key, section]) => (
+            <div key={key}>
+              <div className="px-3 pt-2 pb-1">
+                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">{section!.label}</span>
+              </div>
+              {section!.models.map((model) => (
+                <button
+                  key={model.id}
+                  onClick={() => { onModelChange(model.id); setOpen(false); }}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors",
+                    selectedModel === model.id
+                      ? "text-violet-300 bg-violet-500/10"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
+                  )}
+                >
+                  <span className="flex-1">{model.name}</span>
+                  {model.tag && (
+                    <span className={cn(
+                      "text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                      model.tag === "default" && "text-zinc-500 bg-zinc-500/10",
+                      model.tag === "fast" && "text-blue-400 bg-blue-500/10",
+                      model.tag === "smart" && "text-amber-400 bg-amber-500/10",
+                      model.tag === "new" && "text-emerald-400 bg-emerald-500/10",
+                      model.tag === "reasoning" && "text-purple-400 bg-purple-500/10",
+                    )}>{model.tag}</span>
+                  )}
+                  {selectedModel === model.id && <Check className="w-3 h-3 text-violet-400 shrink-0" />}
+                </button>
+              ))}
+            </div>
+          ))}
+          {selectedModel && (
+            <button
+              onClick={() => { onModelChange(""); setOpen(false); }}
+              className="w-full px-3 py-1.5 text-left text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border-t border-white/[0.06]"
+            >
+              Reset to default
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

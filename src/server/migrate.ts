@@ -142,6 +142,46 @@ async function migrate() {
     )
   `);
 
+  // === PLUGIN SYSTEM ===
+  
+  // Plugin type/status enums
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE plugin_type AS ENUM ('extension', 'mcp', 'prompt');
+    EXCEPTION WHEN duplicate_object THEN null;
+    END $$
+  `);
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE plugin_status AS ENUM ('installed', 'active', 'disabled', 'error');
+    EXCEPTION WHEN duplicate_object THEN null;
+    END $$
+  `);
+
+  // Plugins table
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS plugins (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      version TEXT DEFAULT '1.0.0',
+      type plugin_type NOT NULL DEFAULT 'extension',
+      status plugin_status NOT NULL DEFAULT 'installed',
+      icon TEXT,
+      category TEXT,
+      author TEXT DEFAULT 'MindStore',
+      config JSONB DEFAULT '{}',
+      metadata JSONB DEFAULT '{}',
+      installed_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      last_error TEXT
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_slug ON plugins(slug)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category)`);
+
   // API Keys
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS api_keys (

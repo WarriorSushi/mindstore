@@ -5,18 +5,19 @@ import { sql } from 'drizzle-orm';
 /**
  * POST /api/v1/chat — streaming chat proxy
  * Supports OpenAI, Gemini, and Ollama (local) as chat backends
- * Body: { messages: [{role, content}] }
+ * Body: { messages: [{role, content}], model?: string }
+ * Model selection: pass model name to override defaults (e.g. "gpt-4o", "gemini-2.0-flash", "llama3.2")
  */
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, model } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
 
     // Get configured keys and URLs
     const settings = await db.execute(
-      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'chat_provider')`
+      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'chat_provider', 'chat_model')`
     );
     const config: Record<string, string> = {};
     for (const row of settings as any[]) {
@@ -26,26 +27,29 @@ export async function POST(req: NextRequest) {
     const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
     const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
     const ollamaUrl = config.ollama_url || process.env.OLLAMA_URL;
+    
+    // Model override: request body > saved setting > default
+    const selectedModel = model || config.chat_model || undefined;
 
     // Respect explicit chat_provider preference if set
     const preferred = config.chat_provider;
     if (preferred === 'ollama' && ollamaUrl) {
-      return streamOllama(messages, ollamaUrl);
+      return streamOllama(messages, ollamaUrl, selectedModel);
     }
     if (preferred === 'openai' && openaiKey) {
-      return streamOpenAI(messages, openaiKey);
+      return streamOpenAI(messages, openaiKey, selectedModel);
     }
     if (preferred === 'gemini' && geminiKey) {
-      return streamGemini(messages, geminiKey);
+      return streamGemini(messages, geminiKey, selectedModel);
     }
 
     // Auto-detect: try OpenAI first, then Gemini, then Ollama
     if (openaiKey) {
-      return streamOpenAI(messages, openaiKey);
+      return streamOpenAI(messages, openaiKey, selectedModel);
     } else if (geminiKey) {
-      return streamGemini(messages, geminiKey);
+      return streamGemini(messages, geminiKey, selectedModel);
     } else if (ollamaUrl) {
-      return streamOllama(messages, ollamaUrl);
+      return streamOllama(messages, ollamaUrl, selectedModel);
     } else {
       return NextResponse.json({ error: 'No AI provider configured. Add an OpenAI key, Gemini key, or Ollama URL in Settings.' }, { status: 400 });
     }
@@ -55,7 +59,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function streamOpenAI(messages: any[], apiKey: string) {
+async function streamOpenAI(messages: any[], apiKey: string, model?: string) {
+  const useModel = model || 'gpt-4o-mini';
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -63,7 +68,7 @@ async function streamOpenAI(messages: any[], apiKey: string) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: useModel,
       messages,
       stream: true,
       temperature: 0.7,
@@ -87,7 +92,7 @@ async function streamOpenAI(messages: any[], apiKey: string) {
   });
 }
 
-async function streamGemini(messages: any[], apiKey: string) {
+async function streamGemini(messages: any[], apiKey: string, model?: string) {
   // Convert OpenAI-style messages to Gemini format
   const contents = messages
     .filter((m: any) => m.role !== 'system')
@@ -99,8 +104,11 @@ async function streamGemini(messages: any[], apiKey: string) {
   const systemMsg = messages.find((m: any) => m.role === 'system');
   const systemInstruction = systemMsg ? { parts: [{ text: systemMsg.content }] } : undefined;
 
+  // Default to gemini-2.0-flash (good free tier), not flash-lite (quota issues)
+  const useModel = model || 'gemini-2.0-flash';
+
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${useModel}:streamGenerateContent?alt=sse&key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -174,7 +182,7 @@ async function streamGemini(messages: any[], apiKey: string) {
  * Ollama uses its own /api/chat endpoint with NDJSON streaming
  * We transform the output to OpenAI-compatible SSE format
  */
-async function streamOllama(messages: any[], baseUrl: string) {
+async function streamOllama(messages: any[], baseUrl: string, model?: string) {
   // Ollama expects messages in OpenAI-compatible format (role + content)
   // but uses its own /api/chat endpoint
   const ollamaMessages = messages.map((m: any) => ({
@@ -182,13 +190,15 @@ async function streamOllama(messages: any[], baseUrl: string) {
     content: m.content,
   }));
 
+  const useModel = model || 'llama3.2';
+
   let res: Response;
   try {
     res = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3.2',  // sensible default; user can customize later
+        model: useModel,
         messages: ollamaMessages,
         stream: true,
         options: {

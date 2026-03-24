@@ -244,7 +244,7 @@ export default function SettingsPage() {
             />
             <ChatProviderOption
               name="Google Gemini"
-              description="gemini-2.0-flash-lite · fast & free"
+              description="gemini-2.0-flash · fast & free"
               icon={<Sparkles className="w-3.5 h-3.5" />}
               iconColor="text-blue-400"
               active={chatProvider === 'gemini'}
