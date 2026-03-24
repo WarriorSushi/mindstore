@@ -77,7 +77,7 @@ function parseFacts(content: string): { cleanContent: string; facts: LearnedFact
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  preference: "text-violet-400 bg-violet-500/10 border-violet-500/15",
+  preference: "text-teal-400 bg-teal-500/10 border-teal-500/15",
   trait: "text-blue-400 bg-blue-500/10 border-blue-500/15",
   goal: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
   knowledge: "text-cyan-400 bg-cyan-500/10 border-cyan-500/15",
@@ -268,7 +268,7 @@ export default function LearnPage() {
           <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Learn About You</h1>
           <p className="text-[13px] text-zinc-500">
             Have a conversation so MindStore can learn who you are
-            {factsSaved > 0 && <> · <span className="text-violet-400 font-medium">{factsSaved} facts learned</span></>}
+            {factsSaved > 0 && <> · <span className="text-teal-400 font-medium">{factsSaved} facts learned</span></>}
           </p>
         </div>
 
@@ -286,8 +286,8 @@ export default function LearnPage() {
 
         {/* Hero */}
         <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="w-6 h-6 text-violet-400" />
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-6 h-6 text-teal-400" />
           </div>
           <h2 className="text-[17px] font-semibold tracking-[-0.02em] mb-1.5">What should we talk about?</h2>
           <p className="text-[13px] text-zinc-500">Pick a topic — the AI will interview you naturally</p>
@@ -300,10 +300,10 @@ export default function LearnPage() {
               key={topic.id}
               onClick={() => hasApiKey && startInterview(topic.id)}
               disabled={!hasApiKey}
-              className="group p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/20 transition-all text-left active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="group p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-teal-500/20 transition-all text-left active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="text-[22px] leading-none block mb-2.5">{topic.icon}</span>
-              <p className="text-[13px] font-medium group-hover:text-violet-300 transition-colors">{topic.label}</p>
+              <p className="text-[13px] font-medium group-hover:text-teal-300 transition-colors">{topic.label}</p>
             </button>
           ))}
         </div>
@@ -359,14 +359,14 @@ export default function LearnPage() {
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
               {msg.role === "assistant" && (
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Brain className="w-3.5 h-3.5 text-violet-400" />
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-teal-500/20 to-sky-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Brain className="w-3.5 h-3.5 text-teal-400" />
                 </div>
               )}
               <div className={`max-w-[82%] space-y-2`}>
                 <div className={`${
                   msg.role === "user"
-                    ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
+                    ? "rounded-[20px] rounded-br-md bg-teal-600 text-white px-4 py-2.5"
                     : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
                 }`}>
                   <div className="text-[13px] leading-[1.6]">
@@ -401,8 +401,8 @@ export default function LearnPage() {
                 )}
               </div>
               {msg.role === "user" && (
-                <div className="w-7 h-7 rounded-xl bg-violet-600/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <User className="w-3.5 h-3.5 text-violet-300" />
+                <div className="w-7 h-7 rounded-xl bg-teal-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <User className="w-3.5 h-3.5 text-teal-300" />
                 </div>
               )}
             </div>
@@ -451,13 +451,13 @@ export default function LearnPage() {
               }}
               placeholder="Tell me about yourself…"
               rows={1}
-              className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all max-h-[120px]"
+              className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all max-h-[120px]"
             />
           </div>
           <button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
+            className="w-10 h-10 rounded-full bg-teal-600 hover:bg-teal-500 disabled:opacity-30 disabled:hover:bg-teal-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin text-white" />

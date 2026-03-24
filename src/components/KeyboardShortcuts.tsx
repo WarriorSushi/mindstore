@@ -151,8 +151,8 @@ export function KeyboardShortcuts() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-              <Keyboard className="w-4 h-4 text-violet-400" />
+            <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/15 flex items-center justify-center">
+              <Keyboard className="w-4 h-4 text-teal-400" />
             </div>
             <div>
               <h2 className="text-[15px] font-semibold tracking-[-0.01em]">
@@ -237,13 +237,13 @@ function ShortcutSection({
         <span className="text-sm leading-none">{group.emoji}</span>
         <span
           className={`text-[11px] font-semibold uppercase tracking-[0.06em] ${
-            highlighted ? "text-violet-400" : "text-zinc-500"
+            highlighted ? "text-teal-400" : "text-zinc-500"
           }`}
         >
           {group.title}
         </span>
         {highlighted && (
-          <span className="text-[9px] px-1.5 py-[2px] rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/15 font-semibold">
+          <span className="text-[9px] px-1.5 py-[2px] rounded-md bg-teal-500/10 text-teal-400 border border-teal-500/15 font-semibold">
             Current page
           </span>
         )}
@@ -253,7 +253,7 @@ function ShortcutSection({
       <div
         className={`rounded-xl border overflow-hidden divide-y ${
           highlighted
-            ? "border-violet-500/15 divide-violet-500/10 bg-violet-500/[0.03]"
+            ? "border-teal-500/15 divide-teal-500/10 bg-teal-500/[0.03]"
             : "border-white/[0.06] divide-white/[0.04] bg-white/[0.02]"
         }`}
       >
@@ -269,7 +269,7 @@ function ShortcutSection({
                   key={ki}
                   className={`inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-md text-[11px] font-mono font-medium ${
                     highlighted
-                      ? "bg-violet-500/10 border border-violet-500/20 text-violet-300"
+                      ? "bg-teal-500/10 border border-teal-500/20 text-teal-300"
                       : "bg-white/[0.06] border border-white/[0.08] text-zinc-300"
                   }`}
                 >

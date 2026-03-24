@@ -65,7 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         "border-b border-white/[0.04]",
       )}>
         <Link href="/app" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
             <Brain className="w-4 h-4 text-white" />
           </div>
           <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
@@ -106,13 +106,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] transition-all active:scale-[0.98]",
                       active
-                        ? "bg-violet-500/12 text-white font-medium"
+                        ? "bg-teal-500/12 text-white font-medium"
                         : "text-zinc-400 active:bg-white/[0.06]"
                     )}
                   >
-                    <item.icon className={cn("w-5 h-5", active ? "text-violet-400" : "text-zinc-500")} />
+                    <item.icon className={cn("w-5 h-5", active ? "text-teal-400" : "text-zinc-500")} />
                     {item.label}
-                    {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                    {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400" />}
                   </Link>
                 );
               })}
@@ -124,7 +124,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* ════════ DESKTOP SIDEBAR ════════ */}
       <aside className="hidden md:flex w-[220px] fixed left-0 top-0 h-screen flex-col z-30 bg-[#0a0a0b] border-r border-white/[0.04]">
         <Link href="/" className="h-14 flex items-center gap-2.5 px-5 border-b border-white/[0.04]">
-          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
             <Brain className="w-4 h-4 text-white" />
           </div>
           <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
@@ -143,7 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]"
                 )}
               >
-                <item.icon className={cn("w-4 h-4", active ? "text-violet-400" : "text-zinc-500")} />
+                <item.icon className={cn("w-4 h-4", active ? "text-teal-400" : "text-zinc-500")} />
                 {item.label}
               </Link>
             );
@@ -201,11 +201,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className={cn(
                     "w-[20px] h-[20px] transition-colors",
-                    active ? "text-violet-400" : "text-zinc-600"
+                    active ? "text-teal-400" : "text-zinc-600"
                   )} />
                   <span className={cn(
                     "text-[10px] font-medium transition-colors",
-                    active ? "text-violet-400" : "text-zinc-600"
+                    active ? "text-teal-400" : "text-zinc-600"
                   )}>
                     {item.label}
                   </span>

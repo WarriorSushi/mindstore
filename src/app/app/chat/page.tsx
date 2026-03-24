@@ -558,7 +558,7 @@ export default function ChatPage() {
               className={cn(
                 "flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium transition-all active:scale-[0.96]",
                 historyOpen
-                  ? "text-violet-300 bg-violet-500/10"
+                  ? "text-teal-300 bg-teal-500/10"
                   : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
               )}
             >
@@ -618,7 +618,7 @@ export default function ChatPage() {
                       className={cn(
                         "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5 cursor-pointer",
                         conversationId === c.id
-                          ? "bg-violet-500/10 border border-violet-500/20"
+                          ? "bg-teal-500/10 border border-teal-500/20"
                           : "hover:bg-white/[0.04] border border-transparent"
                       )}
                     >
@@ -626,7 +626,7 @@ export default function ChatPage() {
                         className={cn(
                           "w-3.5 h-3.5 shrink-0 mt-0.5",
                           conversationId === c.id
-                            ? "text-violet-400"
+                            ? "text-teal-400"
                             : "text-zinc-600"
                         )}
                       />
@@ -662,7 +662,7 @@ export default function ChatPage() {
                                   setRenamingId(null);
                                 }
                               }}
-                              className="w-full text-[13px] bg-white/[0.06] border border-violet-500/30 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-violet-500/40 text-white"
+                              className="w-full text-[13px] bg-white/[0.06] border border-teal-500/30 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-500/40 text-white"
                             />
                           </form>
                         ) : (
@@ -728,8 +728,8 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center h-full px-6 pb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-3 ring-1 ring-violet-500/10">
-              <Brain className="w-6 h-6 text-violet-400" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mb-3 ring-1 ring-teal-500/10">
+              <Brain className="w-6 h-6 text-teal-400" />
             </div>
             <h2 className="text-[17px] font-semibold text-zinc-200 mb-0.5 tracking-[-0.01em]">
               {getGreeting()}
@@ -740,7 +740,7 @@ export default function ChatPage() {
               ) : (
                 <Link
                   href="/app/import"
-                  className="text-violet-400 hover:text-violet-300 transition-colors"
+                  className="text-teal-400 hover:text-teal-300 transition-colors"
                 >
                   Import knowledge to start →
                 </Link>
@@ -806,15 +806,15 @@ export default function ChatPage() {
                 className={`flex gap-2.5 group/msg ${msg.role === "user" ? "justify-end" : ""}`}
               >
                 {msg.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Brain className="w-3.5 h-3.5 text-violet-400" />
+                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-teal-500/20 to-sky-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Brain className="w-3.5 h-3.5 text-teal-400" />
                   </div>
                 )}
                 <div className="relative max-w-[82%] min-w-0">
                   <div
                     className={`overflow-hidden ${
                       msg.role === "user"
-                        ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
+                        ? "rounded-[20px] rounded-br-md bg-teal-600 text-white px-4 py-2.5"
                         : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
                     }`}
                   >
@@ -825,15 +825,15 @@ export default function ChatPage() {
                         <span className="flex items-center gap-2 text-zinc-500">
                           <span className="flex gap-[3px] items-center">
                             <span
-                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
                               style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }}
                             />
                             <span
-                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
                               style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }}
                             />
                             <span
-                              className="w-[5px] h-[5px] rounded-full bg-violet-400/60"
+                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
                               style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }}
                             />
                           </span>
@@ -865,8 +865,8 @@ export default function ChatPage() {
                   )}
                 </div>
                 {msg.role === "user" && (
-                  <div className="w-7 h-7 rounded-xl bg-violet-600/20 flex items-center justify-center shrink-0 mt-0.5">
-                    <User className="w-3.5 h-3.5 text-violet-300" />
+                  <div className="w-7 h-7 rounded-xl bg-teal-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <User className="w-3.5 h-3.5 text-teal-300" />
                   </div>
                 )}
               </div>
@@ -875,8 +875,8 @@ export default function ChatPage() {
             {/* Multi-step thinking indicator — shows progress through RAG pipeline */}
             {loading && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
               <div className="flex gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <Brain className="w-3.5 h-3.5 text-violet-400" />
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-teal-500/20 to-sky-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <Brain className="w-3.5 h-3.5 text-teal-400" />
                 </div>
                 <div className="rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-3">
                   <div className="flex flex-col gap-1.5">
@@ -884,9 +884,9 @@ export default function ChatPage() {
                     <span className="flex items-center gap-2">
                       {thinkingStep === "searching" ? (
                         <span className="flex gap-[3px] items-center">
-                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-                          <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
                         </span>
                       ) : (thinkingStep === "found" || thinkingStep === "generating") ? (
                         <Check className="w-3 h-3 text-green-400/70" />
@@ -904,12 +904,12 @@ export default function ChatPage() {
                       <span className="flex items-center gap-2">
                         {thinkingStep === "generating" ? (
                           <span className="flex gap-[3px] items-center">
-                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-                            <span className="w-[5px] h-[5px] rounded-full bg-violet-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
                           </span>
                         ) : (
-                          <Loader2 className="w-3 h-3 text-violet-400/60 animate-spin" />
+                          <Loader2 className="w-3 h-3 text-teal-400/60 animate-spin" />
                         )}
                         <span className="text-[11px] text-zinc-400">Generating response…</span>
                       </span>
@@ -935,7 +935,7 @@ export default function ChatPage() {
                         setFollowUps([]);
                         handleSend(fu);
                       }}
-                      className="text-left text-[12px] leading-snug px-3 py-1.5 rounded-full border border-violet-500/15 bg-violet-500/[0.06] text-violet-300 hover:bg-violet-500/[0.12] hover:border-violet-500/25 transition-all active:scale-[0.97] max-w-[280px] truncate"
+                      className="text-left text-[12px] leading-snug px-3 py-1.5 rounded-full border border-teal-500/15 bg-teal-500/[0.06] text-teal-300 hover:bg-teal-500/[0.12] hover:border-teal-500/25 transition-all active:scale-[0.97] max-w-[280px] truncate"
                     >
                       {fu}
                     </button>
@@ -991,7 +991,7 @@ export default function ChatPage() {
                 }}
                 placeholder="Ask anything…"
                 rows={1}
-                className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all max-h-[120px]"
+                className="w-full resize-none rounded-2xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all max-h-[120px]"
               />
             </div>
             {loading ? (
@@ -1006,7 +1006,7 @@ export default function ChatPage() {
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim()}
-                className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-30 disabled:hover:bg-violet-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
+                className="w-10 h-10 rounded-full bg-teal-600 hover:bg-teal-500 disabled:opacity-30 disabled:hover:bg-teal-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
               >
                 <ArrowUp className="w-4 h-4 text-white" />
               </button>
@@ -1117,7 +1117,7 @@ function ModelSelector({ provider, selectedModel, onModelChange }: {
                   className={cn(
                     "w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors",
                     selectedModel === model.id
-                      ? "text-violet-300 bg-violet-500/10"
+                      ? "text-teal-300 bg-teal-500/10"
                       : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
                   )}
                 >
@@ -1129,10 +1129,10 @@ function ModelSelector({ provider, selectedModel, onModelChange }: {
                       model.tag === "fast" && "text-blue-400 bg-blue-500/10",
                       model.tag === "smart" && "text-amber-400 bg-amber-500/10",
                       model.tag === "new" && "text-emerald-400 bg-emerald-500/10",
-                      model.tag === "reasoning" && "text-purple-400 bg-purple-500/10",
+                      model.tag === "reasoning" && "text-rose-400 bg-rose-500/10",
                     )}>{model.tag}</span>
                   )}
-                  {selectedModel === model.id && <Check className="w-3 h-3 text-violet-400 shrink-0" />}
+                  {selectedModel === model.id && <Check className="w-3 h-3 text-teal-400 shrink-0" />}
                 </button>
               ))}
             </div>
@@ -1256,7 +1256,7 @@ function MessageActions({ content, question }: { content: string; question: stri
             ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default"
             : saving
               ? "bg-[#111113] border-white/[0.08] text-zinc-500 cursor-wait"
-              : "bg-[#111113] border-white/[0.08] text-zinc-500 hover:bg-violet-500/10 hover:border-violet-500/20 hover:text-violet-400",
+              : "bg-[#111113] border-white/[0.08] text-zinc-500 hover:bg-teal-500/10 hover:border-teal-500/20 hover:text-teal-400",
         )}
         title={saved ? "Saved to memory" : "Save to memory"}
       >
@@ -1286,12 +1286,12 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
     chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
     file: "text-blue-400 bg-blue-500/10 border-blue-500/15",
     url: "text-orange-400 bg-orange-500/10 border-orange-500/15",
-    text: "text-violet-400 bg-violet-500/10 border-violet-500/15",
+    text: "text-teal-400 bg-teal-500/10 border-teal-500/15",
     kindle: "text-amber-400 bg-amber-500/10 border-amber-500/15",
     document: "text-blue-400 bg-blue-500/10 border-blue-500/15",
     youtube: "text-red-400 bg-red-500/10 border-red-500/15",
     bookmark: "text-sky-400 bg-sky-500/10 border-sky-500/15",
-    obsidian: "text-violet-400 bg-violet-500/10 border-violet-500/15",
+    obsidian: "text-teal-400 bg-teal-500/10 border-teal-500/15",
     reddit: "text-orange-400 bg-orange-500/10 border-orange-500/15",
   };
 
@@ -1345,7 +1345,7 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
                   <div className="flex items-center gap-1.5 shrink-0">
                     <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-violet-500/60 transition-all"
+                        className="h-full rounded-full bg-teal-500/60 transition-all"
                         style={{ width: `${Math.max(scorePercent, 8)}%` }}
                       />
                     </div>

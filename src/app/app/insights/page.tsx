@@ -35,7 +35,7 @@ type TabId = 'connections' | 'contradictions' | 'forgetting';
 
 const sourceConfig: Record<string, { icon: any; color: string }> = {
   chatgpt: { icon: MessageCircle, color: 'text-green-400 bg-green-500/10' },
-  text: { icon: Type, color: 'text-violet-400 bg-violet-500/10' },
+  text: { icon: Type, color: 'text-teal-400 bg-teal-500/10' },
   file: { icon: FileText, color: 'text-blue-400 bg-blue-500/10' },
   url: { icon: Globe, color: 'text-orange-400 bg-orange-500/10' },
 };
@@ -99,8 +99,8 @@ export default function InsightsPage() {
       {loading && !metabolism && (
         <Stagger>
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4">
-              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mb-4">
+              <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
             </div>
             <p className="text-[13px] text-zinc-500">Analyzing your knowledge…</p>
           </div>
@@ -111,16 +111,16 @@ export default function InsightsPage() {
       {metabolism && (
         <Stagger>
         <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] to-fuchsia-500/[0.04] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/[0.08] to-sky-500/[0.04] pointer-events-none" />
           <div className="relative p-5 md:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-violet-400" />
+                  <Activity className="w-4 h-4 text-teal-400" />
                   <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Knowledge Metabolism</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent leading-none">
+                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] bg-gradient-to-r from-teal-400 to-sky-400 bg-clip-text text-transparent leading-none">
                     {metabolism.score}
                   </span>
                   <span className="text-[16px] text-zinc-600 font-medium">/10</span>
@@ -186,7 +186,7 @@ export default function InsightsPage() {
                 onClick={() => setActiveTab(t.id)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
                   activeTab === t.id
-                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/25 shadow-sm shadow-violet-500/10'
+                    ? 'bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10'
                     : 'text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]'
                 }`}
               >

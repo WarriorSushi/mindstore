@@ -140,9 +140,9 @@ export default function SettingsPage() {
       {/* Active Provider Badge */}
       {settings?.embeddingProvider && (
         <Stagger>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
-            <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-[12px] text-zinc-400">Active: <span className="text-violet-300 font-medium">{settings.embeddingProvider}</span></span>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-500/5 border border-teal-500/15">
+            <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+            <span className="text-[12px] text-zinc-400">Active: <span className="text-teal-300 font-medium">{settings.embeddingProvider}</span></span>
           </div>
         </Stagger>
       )}
@@ -227,7 +227,7 @@ export default function SettingsPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Chat Provider</p>
-            {savingChat && <Loader2 className="w-3 h-3 text-violet-400 animate-spin" />}
+            {savingChat && <Loader2 className="w-3 h-3 text-teal-400 animate-spin" />}
           </div>
           <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5">
             <p className="text-[12px] text-zinc-500 leading-relaxed px-1 pb-1">
@@ -331,7 +331,7 @@ export default function SettingsPage() {
           <span className="text-zinc-300 font-medium">MindStore</span> — personal knowledge base. Import conversations, notes, and articles. Search semantically. Connect to any AI via MCP.
         </p>
         <p className="text-[11px] text-zinc-600 mt-2">
-          Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">WarriorSushi</a> · v0.3
+          Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-teal-400 hover:underline">WarriorSushi</a> · v0.3
         </p>
       </div>
       </Stagger>
@@ -366,7 +366,7 @@ function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, pre
         <div className="flex gap-2">
           <input
             {...inputProps}
-            className="flex-1 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+            className="flex-1 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
           />
           <button
             onClick={onSave}
@@ -407,7 +407,7 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
       disabled={!available}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all active:scale-[0.98] ${
         active
-          ? "bg-violet-500/[0.08] border border-violet-500/25 ring-1 ring-violet-500/15"
+          ? "bg-teal-500/[0.08] border border-teal-500/25 ring-1 ring-teal-500/15"
           : available
             ? "border border-transparent hover:bg-white/[0.04] hover:border-white/[0.06]"
             : "border border-transparent opacity-35 cursor-not-allowed"
@@ -424,7 +424,7 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
         <span className="text-[11px] text-zinc-600">{description}</span>
       </div>
       {active && (
-        <div className="w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center shrink-0">
+        <div className="w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
           <CheckCircle className="w-3.5 h-3.5 text-white" />
         </div>
       )}

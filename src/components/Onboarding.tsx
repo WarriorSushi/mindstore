@@ -8,8 +8,8 @@ const ONBOARDING_KEY = "mindstore_onboarding_done";
 const slides = [
   {
     emoji: "🧠",
-    gradient: "from-violet-600 via-violet-500 to-fuchsia-500",
-    bg: "bg-violet-500/[0.03]",
+    gradient: "from-teal-600 via-teal-500 to-sky-500",
+    bg: "bg-teal-500/[0.03]",
     title: "Your mind,\nsearchable.",
     body: "Every conversation you've had with AI, every note you've written — it's all knowledge. MindStore makes it findable.",
   },
@@ -36,7 +36,7 @@ const slides = [
   },
   {
     emoji: "🔌",
-    gradient: "from-rose-400 via-pink-500 to-violet-500",
+    gradient: "from-rose-400 via-pink-500 to-teal-500",
     bg: "bg-rose-500/[0.03]",
     title: "Give any AI\nyour context.",
     body: "One-click MCP setup. Claude, Cursor, VS Code — they all get access to what you know. Your mind becomes their memory.",
@@ -199,7 +199,7 @@ export function Onboarding() {
             onClick={next}
             className={`w-full h-[52px] rounded-2xl font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-all active:scale-[0.97] ${
               isLast
-                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/20"
+                ? "bg-gradient-to-r from-teal-600 to-sky-600 hover:from-teal-500 hover:to-sky-500 text-white shadow-lg shadow-teal-500/20"
                 : "bg-white/[0.08] hover:bg-white/[0.12] text-white"
             }`}
           >

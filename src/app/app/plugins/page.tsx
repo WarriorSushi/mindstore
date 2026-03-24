@@ -65,18 +65,18 @@ function PluginIcon({ name, className }: { name: string; className?: string }) {
 const CATEGORIES: { key: string; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
   { key: 'all', label: 'All', icon: Puzzle, color: 'text-zinc-400' },
   { key: 'import', label: 'Import', icon: Upload, color: 'text-blue-400' },
-  { key: 'analysis', label: 'Analysis', icon: BarChart3, color: 'text-violet-400' },
+  { key: 'analysis', label: 'Analysis', icon: BarChart3, color: 'text-teal-400' },
   { key: 'action', label: 'Action', icon: Zap, color: 'text-amber-400' },
   { key: 'export', label: 'Export', icon: FolderDown, color: 'text-emerald-400' },
-  { key: 'ai', label: 'AI', icon: Cpu, color: 'text-fuchsia-400' },
+  { key: 'ai', label: 'AI', icon: Cpu, color: 'text-sky-400' },
 ];
 
 const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
   import: { bg: 'bg-blue-500/[0.06]', border: 'border-blue-500/20', text: 'text-blue-400', dot: 'bg-blue-400' },
-  analysis: { bg: 'bg-violet-500/[0.06]', border: 'border-violet-500/20', text: 'text-violet-400', dot: 'bg-violet-400' },
+  analysis: { bg: 'bg-teal-500/[0.06]', border: 'border-teal-500/20', text: 'text-teal-400', dot: 'bg-teal-400' },
   action: { bg: 'bg-amber-500/[0.06]', border: 'border-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-400' },
   export: { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-  ai: { bg: 'bg-fuchsia-500/[0.06]', border: 'border-fuchsia-500/20', text: 'text-fuchsia-400', dot: 'bg-fuchsia-400' },
+  ai: { bg: 'bg-sky-500/[0.06]', border: 'border-sky-500/20', text: 'text-sky-400', dot: 'bg-sky-400' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -274,7 +274,7 @@ export default function PluginsPage() {
                 onClick={() => setFilter(f)}
                 className={`h-[30px] px-2.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all ${
                   filter === f
-                    ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                    ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
                     : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
                 }`}
               >
@@ -366,7 +366,7 @@ export default function PluginsPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); pluginAction(plugin.slug, 'install'); }}
                           disabled={!!isActioning}
-                          className="h-7 px-3 rounded-lg bg-violet-500/10 border border-violet-500/20 text-[12px] font-medium text-violet-400 hover:bg-violet-500/15 hover:border-violet-500/30 active:scale-[0.97] transition-all disabled:opacity-50"
+                          className="h-7 px-3 rounded-lg bg-teal-500/10 border border-teal-500/20 text-[12px] font-medium text-teal-400 hover:bg-teal-500/15 hover:border-teal-500/30 active:scale-[0.97] transition-all disabled:opacity-50"
                         >
                           {isActioning ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -463,7 +463,7 @@ export default function PluginsPage() {
                             <button
                               onClick={() => pluginAction(plugin.slug, 'install')}
                               disabled={!!isActioning}
-                              className="h-8 px-4 rounded-lg bg-violet-600 text-[12px] font-medium text-white hover:bg-violet-500 active:scale-[0.97] transition-all flex items-center gap-1.5 disabled:opacity-50"
+                              className="h-8 px-4 rounded-lg bg-teal-600 text-[12px] font-medium text-white hover:bg-teal-500 active:scale-[0.97] transition-all flex items-center gap-1.5 disabled:opacity-50"
                             >
                               {actionLoading === `${plugin.slug}:install` ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

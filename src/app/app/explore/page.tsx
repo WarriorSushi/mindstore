@@ -31,14 +31,14 @@ interface Source {
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   chatgpt: { icon: MessageCircle, color: "text-green-400 bg-green-500/10" },
-  text: { icon: Type, color: "text-violet-400 bg-violet-500/10" },
+  text: { icon: Type, color: "text-teal-400 bg-teal-500/10" },
   file: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
   url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
   kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10" },
   document: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
   youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10" },
   bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10" },
-  obsidian: { icon: Gem, color: "text-violet-400 bg-violet-500/10" },
+  obsidian: { icon: Gem, color: "text-teal-400 bg-teal-500/10" },
   reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10" },
 };
 
@@ -628,7 +628,7 @@ export default function ExplorePage() {
               onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
               className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium transition-all active:scale-[0.96] ${
                 selectMode
-                  ? "text-violet-300 bg-violet-500/10"
+                  ? "text-teal-300 bg-teal-500/10"
                   : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
               }`}
               title={selectMode ? "Exit select mode (Esc)" : "Select memories (s)"}
@@ -649,7 +649,7 @@ export default function ExplorePage() {
             placeholder="Search your knowledge…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-16 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
+            className="w-full h-10 pl-10 pr-16 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
           />
           {search ? (
             <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5">
@@ -687,7 +687,7 @@ export default function ExplorePage() {
                 onClick={() => setSortMenuOpen(!sortMenuOpen)}
                 className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-full text-[11px] font-medium transition-all active:scale-[0.95] ${
                   sortMenuOpen
-                    ? "bg-violet-500/15 text-violet-300 border border-violet-500/25"
+                    ? "bg-teal-500/15 text-teal-300 border border-teal-500/25"
                     : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
                 }`}
               >
@@ -706,14 +706,14 @@ export default function ExplorePage() {
                           onClick={() => { setSortBy(opt.id); setSortMenuOpen(false); }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors ${
                             sortBy === opt.id
-                              ? "text-violet-300 bg-violet-500/10"
+                              ? "text-teal-300 bg-teal-500/10"
                               : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
                           }`}
                         >
-                          <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-violet-400" : "text-zinc-600"}`} />
+                          <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-teal-400" : "text-zinc-600"}`} />
                           <span className="flex-1">{opt.label}</span>
                           {sortBy === opt.id && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
                           )}
                         </button>
                       ))}
@@ -738,7 +738,7 @@ export default function ExplorePage() {
                 </span>
               )}
               {searchLayers.vector > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
                   🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
                 </span>
               )}
@@ -749,7 +749,7 @@ export default function ExplorePage() {
               )}
             </div>
             {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
-              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-violet-400 transition-colors italic">
+              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
                 Connect AI for semantic search →
               </Link>
             )}
@@ -767,14 +767,14 @@ export default function ExplorePage() {
                 className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96] shrink-0"
               >
                 {selectedIds.size === memories.length ? (
-                  <CheckSquare className="w-3.5 h-3.5 text-violet-400" />
+                  <CheckSquare className="w-3.5 h-3.5 text-teal-400" />
                 ) : (
                   <Square className="w-3.5 h-3.5" />
                 )}
                 {selectedIds.size === memories.length ? "Deselect all" : "Select all"}
               </button>
               {selectedIds.size > 0 && (
-                <span className="text-[11px] text-violet-400 font-medium tabular-nums shrink-0">
+                <span className="text-[11px] text-teal-400 font-medium tabular-nums shrink-0">
                   {selectedIds.size} selected
                 </span>
               )}
@@ -835,9 +835,9 @@ export default function ExplorePage() {
               }}
               className={`w-full text-left p-3.5 rounded-2xl border transition-all active:scale-[0.99] ${
                 isSelected
-                  ? "border-violet-500/30 bg-violet-500/[0.08] ring-1 ring-violet-500/20"
+                  ? "border-teal-500/30 bg-teal-500/[0.08] ring-1 ring-teal-500/20"
                   : isFocused
-                  ? "border-violet-500/30 bg-violet-500/[0.06] ring-1 ring-violet-500/20"
+                  ? "border-teal-500/30 bg-teal-500/[0.06] ring-1 ring-teal-500/20"
                   : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
               }`}
             >
@@ -845,7 +845,7 @@ export default function ExplorePage() {
                 {selectMode && (
                   <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
                     isSelected
-                      ? "bg-violet-500 border-violet-500"
+                      ? "bg-teal-500 border-teal-500"
                       : "border-white/[0.15] bg-white/[0.02]"
                   }`}>
                     {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
@@ -868,7 +868,7 @@ export default function ExplorePage() {
                     [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
                   }>
                     {m.layers.bm25 && <span className="w-[5px] h-[5px] rounded-full bg-blue-400/70" />}
-                    {m.layers.vector && <span className="w-[5px] h-[5px] rounded-full bg-violet-400/70" />}
+                    {m.layers.vector && <span className="w-[5px] h-[5px] rounded-full bg-teal-400/70" />}
                     {m.layers.tree && <span className="w-[5px] h-[5px] rounded-full bg-emerald-400/70" />}
                   </span>
                 )}
@@ -883,7 +883,7 @@ export default function ExplorePage() {
           <div ref={sentinelRef} className="flex items-center justify-center py-4">
             {loadingMore ? (
               <div className="flex items-center gap-2 text-[12px] text-zinc-500">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-400" />
                 Loading more…
               </div>
             ) : (
@@ -974,7 +974,7 @@ export default function ExplorePage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     placeholder="Title"
-                    className="w-full text-[15px] font-semibold bg-transparent border-b border-violet-500/30 focus:border-violet-500/60 outline-none pb-0.5 transition-colors placeholder:text-zinc-600"
+                    className="w-full text-[15px] font-semibold bg-transparent border-b border-teal-500/30 focus:border-teal-500/60 outline-none pb-0.5 transition-colors placeholder:text-zinc-600"
                   />
                 ) : (
                   <div className="flex items-center gap-2 min-w-0">
@@ -990,7 +990,7 @@ export default function ExplorePage() {
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
                   {editing && (
-                    <span className="text-[10px] text-violet-400 font-medium animate-pulse">Editing</span>
+                    <span className="text-[10px] text-teal-400 font-medium animate-pulse">Editing</span>
                   )}
                 </div>
               </div>
@@ -1069,7 +1069,7 @@ export default function ExplorePage() {
                   ref={editTextareaRef}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 resize-y transition-all placeholder:text-zinc-600 font-mono"
+                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 resize-y transition-all placeholder:text-zinc-600 font-mono"
                   placeholder="Memory content…"
                   onKeyDown={(e) => {
                     // Cmd/Ctrl+Enter to save
@@ -1095,7 +1095,7 @@ export default function ExplorePage() {
             {!editing && (relatedLoading || relatedMemories.length > 0) && (
               <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="w-3 h-3 text-violet-400/70" />
+                  <Sparkles className="w-3 h-3 text-teal-400/70" />
                   <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
                     Related memories
                   </span>
@@ -1129,14 +1129,14 @@ export default function ExplorePage() {
                           <div className="flex items-center gap-1.5 shrink-0 opacity-60 group-hover/rel:opacity-100 transition-opacity">
                             <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-violet-500/50"
+                                className="h-full rounded-full bg-teal-500/50"
                                 style={{ width: `${Math.max(scorePercent, 10)}%` }}
                               />
                             </div>
                             <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-5 text-right">
                               {scorePercent}%
                             </span>
-                            <ExternalLink className="w-2.5 h-2.5 text-zinc-700 group-hover/rel:text-violet-400 transition-colors" />
+                            <ExternalLink className="w-2.5 h-2.5 text-zinc-700 group-hover/rel:text-teal-400 transition-colors" />
                           </div>
                         </button>
                       );
@@ -1172,7 +1172,7 @@ export default function ExplorePage() {
                   <button
                     onClick={saveEdit}
                     disabled={saving || !editContent.trim()}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-violet-600 hover:bg-violet-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-teal-600 hover:bg-teal-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
                   >
                     {saving ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1229,7 +1229,7 @@ export default function ExplorePage() {
                     </button>
                     <button
                       onClick={() => askAboutMemory(selected)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-violet-400 hover:bg-violet-500/10 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-teal-400 hover:bg-teal-500/10 transition-colors"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       Ask about this
@@ -1296,7 +1296,7 @@ function FilterPill({ active, onClick, label, count, icon }: {
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
         active
-          ? "bg-violet-500/15 text-violet-300 border border-violet-500/25 shadow-sm shadow-violet-500/10"
+          ? "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10"
           : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
       }`}
     >

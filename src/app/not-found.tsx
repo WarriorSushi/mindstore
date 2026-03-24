@@ -7,8 +7,8 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
       <div className="text-center space-y-6 px-6">
-        <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center mx-auto">
-          <Brain className="w-7 h-7 text-violet-400/60" />
+        <div className="w-16 h-16 rounded-2xl bg-teal-500/10 border border-teal-500/15 flex items-center justify-center mx-auto">
+          <Brain className="w-7 h-7 text-teal-400/60" />
         </div>
         <div>
           <h1 className="text-[48px] md:text-[64px] font-bold tracking-[-0.04em] bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent">404</h1>

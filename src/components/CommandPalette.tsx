@@ -53,7 +53,7 @@ const typeIcons: Record<string, typeof FileText> = {
 
 const typeColors: Record<string, string> = {
   chatgpt: "text-green-400",
-  text: "text-violet-400",
+  text: "text-teal-400",
   file: "text-blue-400",
   url: "text-orange-400",
   kindle: "text-amber-400",
@@ -187,7 +187,7 @@ export function CommandPalette() {
       {
         id: "new-chat",
         icon: Plus,
-        iconColor: "text-violet-400",
+        iconColor: "text-teal-400",
         label: "New Chat",
         desc: "Start a fresh conversation",
         keywords: ["new", "chat", "conversation", "ask", "fresh"],
@@ -202,7 +202,7 @@ export function CommandPalette() {
       {
         id: "import-text",
         icon: Type,
-        iconColor: "text-violet-400",
+        iconColor: "text-teal-400",
         label: "Import Text",
         desc: "Paste notes or text content",
         keywords: ["import", "text", "paste", "note", "write"],
@@ -288,7 +288,7 @@ export function CommandPalette() {
       {
         id: "mind-map",
         icon: Fingerprint,
-        iconColor: "text-fuchsia-400",
+        iconColor: "text-sky-400",
         label: "View Mind Map",
         desc: "3D knowledge topology",
         keywords: ["map", "3d", "graph", "topology", "fingerprint", "visual", "cluster"],
@@ -458,7 +458,7 @@ export function CommandPalette() {
         >
           {/* Search Input */}
           <div className="flex items-center gap-3 px-4 h-12 border-b border-white/[0.06]">
-            <Search className={`w-4 h-4 shrink-0 ${searching ? "text-violet-400 animate-pulse" : "text-zinc-500"}`} />
+            <Search className={`w-4 h-4 shrink-0 ${searching ? "text-teal-400 animate-pulse" : "text-zinc-500"}`} />
             <input
               ref={inputRef}
               value={query}
@@ -497,12 +497,12 @@ export function CommandPalette() {
                     onMouseEnter={() => setActiveIndex(item.globalIndex)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
                       activeIndex === item.globalIndex
-                        ? "bg-violet-500/10 text-white"
+                        ? "bg-teal-500/10 text-white"
                         : "text-zinc-400 hover:bg-white/[0.04]"
                     }`}
                   >
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                      activeIndex === item.globalIndex ? "bg-violet-500/15 text-violet-400" : "bg-white/[0.04] text-zinc-500"
+                      activeIndex === item.globalIndex ? "bg-teal-500/15 text-teal-400" : "bg-white/[0.04] text-zinc-500"
                     }`}>
                       {item.icon}
                     </div>
@@ -518,7 +518,7 @@ export function CommandPalette() {
                       </kbd>
                     )}
                     {activeIndex === item.globalIndex && !item.shortcut && (
-                      <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                      <ArrowRight className="w-3.5 h-3.5 text-teal-400 shrink-0" />
                     )}
                   </button>
                 ))}
@@ -537,9 +537,9 @@ export function CommandPalette() {
             {searching && results.length === 0 && (
               <div className="px-4 py-6 text-center">
                 <div className="flex items-center justify-center gap-2 text-[12px] text-zinc-600">
-                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}

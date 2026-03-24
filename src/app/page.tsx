@@ -30,7 +30,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/[0.04]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
               <Brain className="w-4 h-4 text-white" />
             </div>
             <span className="font-semibold text-[15px] tracking-[-0.01em]">
@@ -50,11 +50,11 @@ export default function LandingPage() {
       <section className="relative pt-32 pb-24 md:pt-40 md:pb-32 overflow-hidden">
         {/* Background orbs */}
         <div
-          className="orb w-96 h-96 bg-violet-600 top-0 -left-48"
+          className="orb w-96 h-96 bg-teal-600 top-0 -left-48"
           style={{ animationDelay: "0s" }}
         />
         <div
-          className="orb w-72 h-72 bg-fuchsia-600 top-20 -right-36"
+          className="orb w-72 h-72 bg-sky-600 top-20 -right-36"
           style={{ animationDelay: "-7s" }}
         />
         <div
@@ -97,12 +97,12 @@ export default function LandingPage() {
             style={{ animationDelay: "0.4s" }}
           >
             <Link href="/app">
-              <button className="h-12 px-8 rounded-2xl bg-violet-600 hover:bg-violet-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-violet-500/20">
+              <button className="h-12 px-8 rounded-2xl bg-teal-600 hover:bg-teal-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20">
                 Get Started — Free
               </button>
             </Link>
             <Link href="/app?demo=true">
-              <button className="h-12 px-8 rounded-2xl border border-violet-500/30 bg-violet-500/[0.06] hover:bg-violet-500/[0.12] text-[15px] font-medium text-violet-300 transition-all active:scale-[0.97]">
+              <button className="h-12 px-8 rounded-2xl border border-teal-500/30 bg-teal-500/[0.06] hover:bg-teal-500/[0.12] text-[15px] font-medium text-teal-300 transition-all active:scale-[0.97]">
                 🎯 Try Demo
               </button>
             </Link>
@@ -130,8 +130,8 @@ export default function LandingPage() {
           {[
             {
               icon: Upload,
-              color: "text-violet-400",
-              bg: "from-violet-500/15 to-violet-500/5",
+              color: "text-teal-400",
+              bg: "from-teal-500/15 to-teal-500/5",
               title: "1. Import",
               desc: "Drop your ChatGPT export, paste notes, upload files. MindStore ingests everything.",
             },
@@ -176,7 +176,7 @@ export default function LandingPage() {
       {/* ═══════ INNOVATION FEATURES ═══════ */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
         <div className="text-center mb-14">
-          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-violet-500/10 text-violet-400 border border-violet-500/15 mb-4">
+          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-teal-500/10 text-teal-400 border border-teal-500/15 mb-4">
             Innovation Layer
           </span>
           <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
@@ -193,8 +193,8 @@ export default function LandingPage() {
               icon: Fingerprint,
               title: "Knowledge Fingerprint",
               desc: "3D WebGL visualization of your mind's topology. See clusters, connections, and blind spots in an interactive graph.",
-              color: "text-violet-400",
-              border: "hover:border-violet-500/20",
+              color: "text-teal-400",
+              border: "hover:border-teal-500/20",
             },
             {
               icon: Shuffle,
@@ -228,8 +228,8 @@ export default function LandingPage() {
               icon: Swords,
               title: "Devil's Advocate",
               desc: "Challenges your assumptions using your own stored knowledge. Real contradicting evidence, not generic counterarguments.",
-              color: "text-fuchsia-400",
-              border: "hover:border-fuchsia-500/20",
+              color: "text-sky-400",
+              border: "hover:border-sky-500/20",
             },
           ].map((feature) => (
             <div
@@ -296,7 +296,7 @@ export default function LandingPage() {
               key={feature.title}
               className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all duration-300"
             >
-              <feature.icon className="w-5 h-5 text-violet-400 mb-3" />
+              <feature.icon className="w-5 h-5 text-teal-400 mb-3" />
               <h3 className="text-[14px] font-semibold mb-1">
                 {feature.title}
               </h3>
@@ -310,9 +310,9 @@ export default function LandingPage() {
 
       {/* ═══════ CTA ═══════ */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-        <div className="relative overflow-hidden rounded-3xl border border-violet-500/15 bg-gradient-to-b from-violet-500/[0.06] to-transparent p-10 md:p-16 text-center">
+        <div className="relative overflow-hidden rounded-3xl border border-teal-500/15 bg-gradient-to-b from-teal-500/[0.06] to-transparent p-10 md:p-16 text-center">
           <div
-            className="orb w-64 h-64 bg-violet-600 -top-32 -right-32"
+            className="orb w-64 h-64 bg-teal-600 -top-32 -right-32"
             style={{ animationDelay: "-5s" }}
           />
           <div className="relative">
@@ -323,7 +323,7 @@ export default function LandingPage() {
               Free. Private. Self-hosted.
             </p>
             <Link href="/app">
-              <button className="h-12 px-10 rounded-2xl bg-violet-600 hover:bg-violet-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-violet-500/20 flex items-center gap-2 mx-auto">
+              <button className="h-12 px-10 rounded-2xl bg-teal-600 hover:bg-teal-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20 flex items-center gap-2 mx-auto">
                 Open MindStore
                 <ArrowRight className="w-4 h-4" />
               </button>

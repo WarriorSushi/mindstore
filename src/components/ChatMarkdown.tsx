@@ -162,7 +162,7 @@ function parseBlocks(content: string): React.ReactNode[] {
       elements.push(
         <blockquote
           key={key++}
-          className="border-l-2 border-violet-500/30 pl-3 py-0.5 text-[13px] text-zinc-400 leading-relaxed"
+          className="border-l-2 border-teal-500/30 pl-3 py-0.5 text-[13px] text-zinc-400 leading-relaxed"
         >
           {quoteLines.map((ql, qi) => (
             <span key={qi}>
@@ -374,7 +374,7 @@ function TaskList({ items }: { items: { checked: boolean; content: string }[] })
           <span
             className={`w-[15px] h-[15px] rounded-[4px] border mt-[3px] shrink-0 flex items-center justify-center ${
               item.checked
-                ? "bg-violet-500 border-violet-500 text-white"
+                ? "bg-teal-500 border-teal-500 text-white"
                 : "border-zinc-600 bg-transparent"
             }`}
           >
@@ -434,7 +434,7 @@ function parseInline(text: string): React.ReactNode[] {
       nodes.push(
         <code
           key={match.index}
-          className="bg-white/[0.06] text-violet-300 px-1.5 py-[1px] rounded-md text-[12px] font-mono"
+          className="bg-white/[0.06] text-teal-300 px-1.5 py-[1px] rounded-md text-[12px] font-mono"
         >
           {match[5]}
         </code>
@@ -447,7 +447,7 @@ function parseInline(text: string): React.ReactNode[] {
           href={match[7]}
           target="_blank"
           rel="noopener"
-          className="text-violet-400 hover:underline"
+          className="text-teal-400 hover:underline"
         >
           {match[6]}
         </a>

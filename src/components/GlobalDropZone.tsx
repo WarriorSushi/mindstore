@@ -198,11 +198,11 @@ export function GlobalDropZone() {
             {/* Animated ring */}
             <div className="relative">
               <div
-                className="absolute inset-0 rounded-3xl bg-violet-500/20 blur-2xl"
+                className="absolute inset-0 rounded-3xl bg-teal-500/20 blur-2xl"
                 style={{ animation: "gdz-pulse 2s ease-in-out infinite" }}
               />
-              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 border-2 border-dashed border-violet-400/50 flex items-center justify-center">
-                <Upload className="w-8 h-8 text-violet-300" style={{ animation: "gdz-bounce 1.5s ease-in-out infinite" }} />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500/30 to-sky-500/30 border-2 border-dashed border-teal-400/50 flex items-center justify-center">
+                <Upload className="w-8 h-8 text-teal-300" style={{ animation: "gdz-bounce 1.5s ease-in-out infinite" }} />
               </div>
             </div>
             <div className="text-center">
@@ -218,8 +218,8 @@ export function GlobalDropZone() {
 
         {state === "importing" && (
           <>
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/20 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 border border-teal-500/20 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
             </div>
             <div className="text-center">
               <p className="text-[17px] font-semibold text-white tracking-[-0.01em]">

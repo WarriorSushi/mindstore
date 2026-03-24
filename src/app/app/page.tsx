@@ -141,7 +141,7 @@ export default function DashboardPage() {
         <div className="w-full max-w-sm space-y-6">
           {/* Logo + Heading */}
           <div className="text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/20">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center mx-auto shadow-lg shadow-teal-500/20">
               <Brain className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -285,9 +285,9 @@ export default function DashboardPage() {
       {/* Demo Banner */}
       {demo && (
         <Stagger>
-          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-violet-500/[0.08] to-fuchsia-500/[0.08] border border-violet-500/20 px-4 py-2.5">
-            <span className="text-[12px] text-violet-300 font-medium">✨ Demo mode — sample data</span>
-            <button onClick={handleExitDemo} className="text-[11px] text-violet-400 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors">
+          <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-teal-500/[0.08] to-sky-500/[0.08] border border-teal-500/20 px-4 py-2.5">
+            <span className="text-[12px] text-teal-300 font-medium">✨ Demo mode — sample data</span>
+            <button onClick={handleExitDemo} className="text-[11px] text-teal-400 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors">
               Exit
             </button>
           </div>
@@ -326,7 +326,7 @@ export default function DashboardPage() {
                 placeholder="Quick search your memories…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 transition-all"
+                className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
               />
               {searchQuery ? (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/[0.06] rounded-md transition-colors">
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                             </span>
                           )}
                           {searchLayers.vector > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                            <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
                               🧠 Semantic
                             </span>
                           )}
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                     )}
                     {searchResults.map((r: any, i: number) => {
                       const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
-                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
+                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                       const Icon = typeIcons[r.sourceType] || FileText;
                       const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
                       return (
@@ -391,7 +391,7 @@ export default function DashboardPage() {
                         </div>
                       );
                     })}
-                    <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-violet-400 font-medium hover:bg-violet-500/5 transition-colors">
+                    <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-teal-400 font-medium hover:bg-teal-500/5 transition-colors">
                       View all in Explore <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
@@ -408,7 +408,7 @@ export default function DashboardPage() {
       <Stagger>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {[
-            { label: "Total", value: total, icon: Database, color: "from-violet-500/20 to-violet-500/5", iconColor: "text-violet-400" },
+            { label: "Total", value: total, icon: Database, color: "from-teal-500/20 to-teal-500/5", iconColor: "text-teal-400" },
             { label: "ChatGPT", value: chatgpt, icon: MessageCircle, color: "from-green-500/20 to-green-500/5", iconColor: "text-green-400" },
             { label: "Notes", value: notes, icon: FileText, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400" },
             { label: "URLs", value: urls, icon: Globe, color: "from-orange-500/20 to-orange-500/5", iconColor: "text-orange-400" },
@@ -449,7 +449,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
                 const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -476,7 +476,7 @@ export default function DashboardPage() {
       <Stagger>
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
           {[
-            { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-violet-400" },
+            { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-teal-400" },
             { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask your mind", color: "text-blue-400" },
             { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all", color: "text-emerald-400" },
             { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you", color: "text-amber-400" },
@@ -505,7 +505,7 @@ export default function DashboardPage() {
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {stats.recentMemories.map((mem: any, i: number) => {
                 const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -549,7 +549,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <p className="text-[13px] font-medium">{f.label}</p>
                     {f.tag && (
-                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-teal-500/10 text-teal-400 border border-teal-500/15">
                         {f.tag}
                       </span>
                     )}
@@ -574,7 +574,7 @@ export default function DashboardPage() {
                   <div className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
                     {src.type === 'chatgpt' ? <MessageCircle className="w-3.5 h-3.5 text-green-400" /> :
                      src.type === 'url' ? <Globe className="w-3.5 h-3.5 text-orange-400" /> :
-                     src.type === 'obsidian' ? <Gem className="w-3.5 h-3.5 text-violet-400" /> :
+                     src.type === 'obsidian' ? <Gem className="w-3.5 h-3.5 text-teal-400" /> :
                      src.type === 'bookmark' ? <Bookmark className="w-3.5 h-3.5 text-sky-400" /> :
                      src.type === 'reddit' ? <MessageSquare className="w-3.5 h-3.5 text-orange-400" /> :
                      <FileText className="w-3.5 h-3.5 text-blue-400" />}
@@ -627,7 +627,7 @@ function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <BarChart3 className="w-3.5 h-3.5 text-violet-400" />
+          <BarChart3 className="w-3.5 h-3.5 text-teal-400" />
           <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">
             Activity
           </span>
@@ -675,10 +675,10 @@ function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }
                   d.count === 0
                     ? "bg-white/[0.03] min-h-[2px]"
                     : isToday
-                      ? "bg-gradient-to-t from-violet-500 to-violet-400 shadow-sm shadow-violet-500/20"
+                      ? "bg-gradient-to-t from-teal-500 to-teal-400 shadow-sm shadow-teal-500/20"
                       : isHovered
-                        ? "bg-violet-400/60"
-                        : "bg-violet-500/30"
+                        ? "bg-teal-400/60"
+                        : "bg-teal-500/30"
                 }`}
                 style={{ height: d.count > 0 ? `${height}%` : "2px" }}
               />

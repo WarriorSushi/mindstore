@@ -10,7 +10,7 @@ const GraphCanvas = dynamic(
   () => import('reagraph').then(mod => mod.GraphCanvas),
   { ssr: false, loading: () => (
     <div className="flex items-center justify-center h-full">
-      <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+      <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
     </div>
   )}
 );
@@ -68,7 +68,7 @@ export default function FingerprintPage() {
               onClick={() => setViewMode('3d')}
               className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
                 viewMode === '3d'
-                  ? 'bg-violet-500/15 text-violet-300 shadow-sm'
+                  ? 'bg-teal-500/15 text-teal-300 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -78,7 +78,7 @@ export default function FingerprintPage() {
               onClick={() => setViewMode('stats')}
               className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
                 viewMode === 'stats'
-                  ? 'bg-violet-500/15 text-violet-300 shadow-sm'
+                  ? 'bg-teal-500/15 text-teal-300 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -102,8 +102,8 @@ export default function FingerprintPage() {
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0a0a0b]/80 backdrop-blur-sm">
               <div className="text-center">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center mx-auto mb-3">
-                  <Brain className="w-6 h-6 text-violet-400 animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/10 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-6 h-6 text-teal-400 animate-pulse" />
                 </div>
                 <p className="text-[13px] text-zinc-400">Mapping your mind…</p>
               </div>
@@ -113,7 +113,7 @@ export default function FingerprintPage() {
           {data && graphNodes.length > 0 && (
             <Suspense fallback={
               <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+                <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
               </div>
             }>
               <GraphCanvas
@@ -137,7 +137,7 @@ export default function FingerprintPage() {
                 </p>
                 <Link
                   href="/app/import"
-                  className="inline-flex h-9 px-5 items-center rounded-xl bg-violet-600 hover:bg-violet-500 text-[13px] font-medium text-white transition-all active:scale-[0.97]"
+                  className="inline-flex h-9 px-5 items-center rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97]"
                 >
                   Import Knowledge
                 </Link>
@@ -152,7 +152,7 @@ export default function FingerprintPage() {
         <div className="space-y-4">
           {loading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+              <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
             </div>
           )}
 
@@ -161,7 +161,7 @@ export default function FingerprintPage() {
               {/* Summary stats */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Nodes", value: data.nodes.length, color: "text-violet-400" },
+                  { label: "Nodes", value: data.nodes.length, color: "text-teal-400" },
                   { label: "Connections", value: data.edges.length, color: "text-blue-400" },
                   { label: "Clusters", value: data.clusters.length, color: "text-emerald-400" },
                 ].map((s) => (
@@ -210,7 +210,7 @@ export default function FingerprintPage() {
               )}
 
               {/* About */}
-              <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-violet-500/[0.04] to-fuchsia-500/[0.02] p-4 md:p-5">
+              <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-teal-500/[0.04] to-sky-500/[0.02] p-4 md:p-5">
                 <p className="text-[13px] font-medium text-zinc-300 mb-2">💡 What is a Knowledge Fingerprint?</p>
                 <p className="text-[12px] text-zinc-500 leading-relaxed">
                   Your Knowledge Fingerprint is a unique visualization of your mind's topology.

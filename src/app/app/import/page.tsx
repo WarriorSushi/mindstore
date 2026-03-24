@@ -551,14 +551,14 @@ export default function ImportPage() {
           <div className="flex items-center gap-2.5">
             {state === "done" ? <CheckCircle className="w-4 h-4 text-green-400" /> :
              state === "error" ? <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center"><span className="text-[10px] text-red-400">!</span></div> :
-             <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />}
+             <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
             <span className="text-[13px]">{progressText}</span>
           </div>
           <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-gradient-to-r from-teal-500 to-sky-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
           </div>
           {(state === "done" || state === "error") && (
-            <button onClick={reset} className="text-[12px] text-violet-400 font-medium hover:text-violet-300 transition-colors">
+            <button onClick={reset} className="text-[12px] text-teal-400 font-medium hover:text-teal-300 transition-colors">
               Import more →
             </button>
           )}
@@ -575,12 +575,12 @@ export default function ImportPage() {
             onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
             className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
-                ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
+                ? "bg-teal-500/10 border-teal-500/25 shadow-sm shadow-teal-500/10"
                 : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
             }`}
           >
-            <t.icon className={`w-5 h-5 ${tab === t.id ? "text-violet-400" : "text-zinc-500"}`} />
-            <span className={`text-[11px] font-medium ${tab === t.id ? "text-violet-300" : "text-zinc-400"}`}>{t.label}</span>
+            <t.icon className={`w-5 h-5 ${tab === t.id ? "text-teal-400" : "text-zinc-500"}`} />
+            <span className={`text-[11px] font-medium ${tab === t.id ? "text-teal-300" : "text-zinc-400"}`}>{t.label}</span>
           </button>
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
@@ -633,19 +633,19 @@ export default function ImportPage() {
                 placeholder="Title (optional)"
                 value={textTitle}
                 onChange={(e) => setTextTitle(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+                className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
               />
               <textarea
                 placeholder="Paste notes, articles, thoughts…"
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 rows={7}
-                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all resize-none"
+                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all resize-none"
               />
               <button
                 onClick={handleTextImport}
                 disabled={busy || !textContent.trim()}
-                className="h-9 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
+                className="h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
               >
                 {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Import
@@ -670,12 +670,12 @@ export default function ImportPage() {
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
-                  className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition-all"
+                  className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
                 />
                 <button
                   onClick={handleUrlImport}
                   disabled={busy || !urlInput.trim()}
-                  className="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97]"
+                  className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97]"
                 >
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
                 </button>
@@ -694,12 +694,12 @@ export default function ImportPage() {
                 <div className="space-y-3">
                   <label
                     className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                      ${obParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-violet-500/30 hover:bg-violet-500/[0.03]'}`}
+                      ${obParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-teal-500/30 hover:bg-teal-500/[0.03]'}`}
                   >
                     {obParsing ? (
-                      <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+                      <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
                     ) : (
-                      <Gem className="w-6 h-6 text-violet-400" />
+                      <Gem className="w-6 h-6 text-teal-400" />
                     )}
                     <span className="text-[12px] text-zinc-400 font-medium">
                       {obParsing ? 'Parsing vault…' : 'Drop vault.zip or click to browse'}
@@ -724,8 +724,8 @@ export default function ImportPage() {
                   {/* Stats card */}
                   <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
                     <div className="px-4 py-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-violet-500/[0.08] border border-violet-500/15 flex items-center justify-center shrink-0">
-                        <Gem className="w-5 h-5 text-violet-400" />
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/[0.08] border border-teal-500/15 flex items-center justify-center shrink-0">
+                        <Gem className="w-5 h-5 text-teal-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-semibold text-zinc-200 tabular-nums">
@@ -748,7 +748,7 @@ export default function ImportPage() {
                     <div className="border-t border-white/[0.04] px-4 py-2.5">
                       <div className="flex items-center gap-4 text-[11px]">
                         <div className="flex items-center gap-1.5">
-                          <Link2 className="w-3 h-3 text-violet-400/60" />
+                          <Link2 className="w-3 h-3 text-teal-400/60" />
                           <span className="text-zinc-400">{obPreview.graphPreview.totalLinks} wikilinks</span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -774,7 +774,7 @@ export default function ImportPage() {
                           {obPreview.stats.topTags.slice(0, 12).map((t: any, i: number) => (
                             <span
                               key={i}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/[0.06] border border-violet-500/10 text-[10px] text-violet-300/80"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-500/[0.06] border border-teal-500/10 text-[10px] text-teal-300/80"
                             >
                               #{t.tag}
                               <span className="text-zinc-600 tabular-nums">{t.count}</span>
@@ -801,7 +801,7 @@ export default function ImportPage() {
                               key={i}
                               className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] text-[10px] text-zinc-400"
                             >
-                              <FolderOpen className="w-2.5 h-2.5 text-violet-400/50" />
+                              <FolderOpen className="w-2.5 h-2.5 text-teal-400/50" />
                               {f.path}
                               <span className="text-zinc-600 tabular-nums">{f.count}</span>
                             </span>
@@ -838,7 +838,7 @@ export default function ImportPage() {
                             key={i}
                             className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
                           >
-                            <span className="text-[10px] text-violet-400/60 font-mono tabular-nums w-4 text-right shrink-0">{i + 1}</span>
+                            <span className="text-[10px] text-teal-400/60 font-mono tabular-nums w-4 text-right shrink-0">{i + 1}</span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <p className="text-[11px] text-zinc-300 truncate">{n.name}</p>
@@ -861,7 +861,7 @@ export default function ImportPage() {
                   <button
                     onClick={handleObImport}
                     disabled={busy}
-                    className="w-full h-11 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
                     {busy ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1051,12 +1051,12 @@ export default function ImportPage() {
                             section.level === 1
                               ? 'bg-blue-500/[0.08] border border-blue-500/15'
                               : section.level === 2
-                              ? 'bg-violet-500/[0.06] border border-violet-500/10'
+                              ? 'bg-teal-500/[0.06] border border-teal-500/10'
                               : 'bg-white/[0.03] border border-white/[0.06]'
                           }`}>
                             <span className={`text-[10px] font-mono tabular-nums ${
                               section.level === 1 ? 'text-blue-400' :
-                              section.level === 2 ? 'text-violet-400' : 'text-zinc-500'
+                              section.level === 2 ? 'text-teal-400' : 'text-zinc-500'
                             }`}>
                               {i + 1}
                             </span>
@@ -1570,7 +1570,7 @@ export default function ImportPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-zinc-600 tabular-nums">{totalMemories.toLocaleString()} total memories</span>
-                <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-violet-400 font-medium transition-colors flex items-center gap-0.5">
+                <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-teal-400 font-medium transition-colors flex items-center gap-0.5">
                   <Compass className="w-3 h-3" />
                   <span className="hidden sm:inline">Explore all</span>
                 </Link>
@@ -1583,12 +1583,12 @@ export default function ImportPage() {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
                   url: "text-orange-400 bg-orange-500/10",
-                  text: "text-violet-400 bg-violet-500/10",
+                  text: "text-teal-400 bg-teal-500/10",
                   kindle: "text-amber-400 bg-amber-500/10",
                   document: "text-blue-400 bg-blue-500/10",
                   youtube: "text-red-400 bg-red-500/10",
                   bookmark: "text-sky-400 bg-sky-500/10",
-                  obsidian: "text-violet-400 bg-violet-500/10",
+                  obsidian: "text-teal-400 bg-teal-500/10",
                   reddit: "text-orange-400 bg-orange-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
@@ -1618,7 +1618,7 @@ export default function ImportPage() {
             </div>
             {importHistory.length > 8 && (
               <div className="text-center">
-                <Link href="/app/explore" className="text-[11px] text-violet-400 hover:text-violet-300 font-medium transition-colors">
+                <Link href="/app/explore" className="text-[11px] text-teal-400 hover:text-teal-300 font-medium transition-colors">
                   View all {importHistory.length} sources in Explore →
                 </Link>
               </div>
@@ -1677,7 +1677,7 @@ function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subt
         }}
         className={`flex flex-col items-center justify-center py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.99] ${
           over
-            ? "border-violet-500/40 bg-violet-500/5"
+            ? "border-teal-500/40 bg-teal-500/5"
             : "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]"
         }`}
       >

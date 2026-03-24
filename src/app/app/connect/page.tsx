@@ -110,9 +110,9 @@ export default function ConnectPage() {
 
       {/* Status Banner */}
       <Stagger>
-      <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-500/[0.06] to-fuchsia-500/[0.06] border border-violet-500/15 px-4 py-3">
-        <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-          <Brain className="w-4 h-4 text-violet-400" />
+      <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-teal-500/[0.06] to-sky-500/[0.06] border border-teal-500/15 px-4 py-3">
+        <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center shrink-0">
+          <Brain className="w-4 h-4 text-teal-400" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-medium">Your Mind Layer</p>
@@ -138,7 +138,7 @@ export default function ConnectPage() {
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">How it works</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {[
-            { icon: Server, title: "MCP Protocol", desc: "MindStore exposes your knowledge as an MCP server that any compatible AI can query", color: "text-violet-400" },
+            { icon: Server, title: "MCP Protocol", desc: "MindStore exposes your knowledge as an MCP server that any compatible AI can query", color: "text-teal-400" },
             { icon: Shield, title: "You Control Access", desc: "Only AI clients you explicitly configure get access. Revoke anytime.", color: "text-blue-400" },
             { icon: Zap, title: "Instant Context", desc: "AI gets relevant context from YOUR knowledge — not generic training data", color: "text-amber-400" },
           ].map((item) => (
@@ -167,7 +167,7 @@ export default function ConnectPage() {
               onClick={() => setActiveClient(c.name)}
               className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
                 activeClient === c.name
-                  ? "bg-violet-500/15 text-violet-300 border border-violet-500/25 shadow-sm shadow-violet-500/10"
+                  ? "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10"
                   : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
               }`}
             >
