@@ -4,6 +4,44 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 18:29 UTC — Mind Map Generator Plugin (Phase 3, Plugin #13)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. All 6 Phase 2 Quick Win Import Plugins are complete. Mind Map Generator (#13) is the **first Analysis plugin** — the beginning of Phase 3.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/mind-map-generator`):
+    - **K-Means++ clustering**: Clusters up to 500 memories by semantic embedding similarity. Uses k-means++ initialization (weighted random seeding by distance) for better convergence. Configurable `maxTopics` (default 12) and `maxDepth` (default 3).
+    - **Hierarchical topic extraction**: Builds a tree: Root → Topics → Subtopics. Large topics (6+ memories) get sub-clustered automatically. Each node has memory count, coherence score, source type breakdown.
+    - **Topic labeling**: Extracts topic labels via document-frequency keyword analysis. Strategy cascade: (1) if >60% from same source, use source title; (2) extract top 2-3 distinctive keywords; (3) fallback to first memory content.
+    - **Cross-topic connections**: Detects relationships between topic clusters via centroid cosine similarity (threshold >0.6). Surfaces hidden bridges between knowledge areas.
+    - **Coherence scoring**: Each cluster gets a coherence score (average similarity to centroid) — shows how tightly related its memories are.
+    - **Source breakdown per topic**: Counts memories by source type (chatgpt, file, url, text, kindle, obsidian, reddit, etc.) for each topic.
+    - **Preview memories**: Returns up to 8 simplified memories per topic with id, title, preview, source type, pinned status.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+    - **Fixed pinned field**: Uses `metadata->>'pinned'` instead of non-existent `pinned` column.
+  - **New Mind Map page** (`/app/mindmap`) — full interactive Canvas visualization:
+    - **Radial layout engine**: Topics arranged in a circle around a central "Your Mind" root node. Node sizes proportional to memory count. 12 distinct topic colors.
+    - **Canvas rendering**: Pure HTML5 Canvas — no external visualization library. Nodes with gradient fills, glow effects on hover/select, quadratic bezier curve edges, expand/collapse indicators (+/- badges), text wrapping for labels, memory count badges.
+    - **Interaction**: Click topic → detail panel. Click topic with children → expand subtopics. Drag canvas to pan. Scroll wheel to zoom (mouse-position-aware scaling). Zoom controls (in/out/reset). Scale indicator.
+    - **Topic detail panel**: Slide-in panel showing topic label, memory count, coherence, subtopic count. Keywords as colored pills. Source breakdown with progress bars. Subtopic list. Sample memories with source icons, click-through to Explore.
+    - **Topic legend**: Desktop overlay listing all topics with color dots, names, and counts. Click to select.
+    - **Mobile**: Topic list button (since legend takes too much space).
+    - **States**: Loading (clustering spinner), error (retry button), empty (guidance message).
+    - **Cross-connections**: Dashed curved lines between related topic clusters.
+    - **Design**: OLED black canvas, color-coded nodes, glass-morphism panels, violet accent, spring animations for panel entrance.
+  - **Navigation updates**:
+    - Sidebar: "Mind Map" now routes to `/app/mindmap` with Network icon
+    - Old Fingerprint (3D graph) remains accessible at `/app/fingerprint`
+    - Command palette: "View Mind Map" → `/app/mindmap`, new "3D Graph" entry → `/app/fingerprint`
+  - **Zero new dependencies**: Pure Canvas rendering, k-means in pure TypeScript, no D3.js or external visualization library
+- **Phase 3 Started! 🚀**: First of 6 Analysis Plugins now built:
+  1. ✅ Mind Map Generator (#13)
+  2. ⬜ Contradiction Finder (#15)
+  3. ⬜ Topic Evolution Timeline (#16)
+  4. ⬜ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Contradiction Finder (#15) — scan memories for conflicting beliefs and inconsistencies
+- **Branch**: `frain/improve` (commit `6d3ae85`)
+
 ## 2026-03-24 17:59 UTC — Reddit Saved Posts Importer Plugin (Phase 2, Plugin #8)
 - **Context**: Phase 2 of the Plugin System build — Quick Win Import Plugins. Kindle (#2), PDF/EPUB (#9), YouTube (#3), Browser Bookmarks (#6), Obsidian (#12) are done. Reddit Saved Posts (#8) is the **6th and final plugin** in Phase 2 — completing the Quick Wins phase!
 - **Implemented**:
