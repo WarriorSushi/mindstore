@@ -4,6 +4,38 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 18:59 UTC — Contradiction Finder Plugin (Phase 3, Plugin #15)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) is done. Contradiction Finder (#15) is the **second Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/contradiction-finder`):
+    - **AI-powered contradiction detection**: Finds candidate memory pairs via cosine similarity (0.60–0.95 range), then verifies each pair with an AI model to distinguish real contradictions from evolution of thought, different contexts, or complementary perspectives.
+    - **Multi-provider AI**: Supports OpenAI, Gemini, Ollama, OpenRouter, and Custom API endpoints — uses whichever is configured. Low-temperature (0.1) for consistent analysis. Structured JSON output parsing with markdown fence handling.
+    - **Keyword fallback**: When no AI provider is available, falls back to expanded keyword-based detection with 17 signal pairs (always/never, recommend/avoid, true/false, etc.) — more comprehensive than the old 7-pair system.
+    - **Batch processing**: Processes candidate pairs in batches of 5 with `Promise.allSettled` for rate limit compliance. Caps at 80 candidates and 20 verified contradictions per scan.
+    - **Deduplication**: Checks both direction orderings (A↔B, B↔A) before inserting new contradictions.
+    - **Three actions**: `scan` (run new analysis), `results` (get cached results), `resolve` (dismiss/keep-a/keep-b).
+    - **Resolution workflow**: "Dismiss" removes the contradiction record. "Keep A" deletes memory B and removes the contradiction. "Keep B" deletes memory A. Ownership verified before any mutation.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **Enhanced Insights page** — complete contradiction tab overhaul:
+    - **Deep Scan button**: Red-accented action button in the contradictions tab header triggers AI-powered analysis. Shows spinner during scan, toast notifications with results.
+    - **Scan message bar**: Displays scan results summary (e.g. "Found 3 new contradictions across 80 memory pairs").
+    - **Expandable contradiction cards**: Click to expand/collapse. Header shows topic label, description, detection date. Expanded view shows side-by-side memory comparison.
+    - **Memory labels (A/B)**: Corner badges distinguish the two conflicting memories. Each card shows source type icon, source title, content preview (300 chars, 4-line clamp), and creation date.
+    - **Resolution actions**: "Not a conflict" (dismiss), "Keep A", "Keep B" buttons with teal accent. Loading spinner during resolution. Cancel button to collapse actions. Toast confirmation on resolve.
+    - **Parallel data loading**: Insights page now fetches `/api/v1/insights` and `/api/v1/plugins/contradiction-finder?action=results` in parallel, separating the general insights from the plugin-powered contradiction data.
+    - **Custom empty state**: Shield icon for clean-knowledge state, Loader2 spinner when scanning.
+    - **Extended sourceConfig**: Added kindle, document, obsidian, reddit source types with proper icons and colors.
+  - **Zero new dependencies**: Uses existing AI provider infrastructure from the chat system.
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ⬜ Topic Evolution Timeline (#16)
+  4. ⬜ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Topic Evolution Timeline (#16) — visualize how interests changed over time
+- **Branch**: `frain/improve` (commit `711dc19`)
+
 ## 2026-03-24 18:29 UTC — Mind Map Generator Plugin (Phase 3, Plugin #13)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. All 6 Phase 2 Quick Win Import Plugins are complete. Mind Map Generator (#13) is the **first Analysis plugin** — the beginning of Phase 3.
 - **Implemented**:
