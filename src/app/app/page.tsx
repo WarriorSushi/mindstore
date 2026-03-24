@@ -374,8 +374,8 @@ export default function DashboardPage() {
                       </div>
                     )}
                     {searchResults.map((r: any, i: number) => {
-                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem };
-                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10" };
+                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
+                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                       const Icon = typeIcons[r.sourceType] || FileText;
                       const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
                       return (
@@ -448,8 +448,8 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10" };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -504,8 +504,8 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {stats.recentMemories.map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10" };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-violet-400 bg-violet-500/10", reddit: "text-orange-400 bg-orange-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -576,6 +576,7 @@ export default function DashboardPage() {
                      src.type === 'url' ? <Globe className="w-3.5 h-3.5 text-orange-400" /> :
                      src.type === 'obsidian' ? <Gem className="w-3.5 h-3.5 text-violet-400" /> :
                      src.type === 'bookmark' ? <Bookmark className="w-3.5 h-3.5 text-sky-400" /> :
+                     src.type === 'reddit' ? <MessageSquare className="w-3.5 h-3.5 text-orange-400" /> :
                      <FileText className="w-3.5 h-3.5 text-blue-400" />}
                   </div>
                   <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>

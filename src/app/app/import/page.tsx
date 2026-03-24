@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks";
+type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit";
 
 interface PluginTab {
   slug: string;
@@ -27,6 +27,7 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "pdf-epub", label: "PDF/EPUB", icon: FileBox, desc: "Documents" },
   { id: "youtube", label: "YouTube", icon: PlayCircle, desc: "Transcripts" },
   { id: "bookmarks", label: "Bookmarks", icon: Bookmark, desc: "Browser" },
+  { id: "reddit", label: "Reddit", icon: MessageSquare, desc: "Saved posts" },
 ];
 
 // Plugin icon mapping — maps manifest icon names to actual components
@@ -76,6 +77,10 @@ export default function ImportPage() {
   // ─── Obsidian-specific state ──────────────────────────────
   const [obPreview, setObPreview] = useState<any>(null);
   const [obParsing, setObParsing] = useState(false);
+
+  // ─── Reddit-specific state ───────────────────────────────
+  const [rdPreview, setRdPreview] = useState<any>(null);
+  const [rdParsing, setRdParsing] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -451,6 +456,56 @@ export default function ImportPage() {
     }
   };
 
+  // ─── REDDIT IMPORT HANDLERS ───────────────────────────────
+
+  const handleRdPreview = async (file: File) => {
+    setRdParsing(true);
+    setRdPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/reddit-saved', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse Reddit export');
+      }
+      const data = await res.json();
+      setRdPreview({ ...data, file });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRdParsing(false);
+    }
+  };
+
+  const handleRdImport = async () => {
+    if (!rdPreview?.file) return;
+    setState("uploading"); setProgress(30);
+    setProgressText(`Importing ${rdPreview.stats.totalItems} Reddit items…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', rdPreview.file);
+      const res = await fetch('/api/v1/plugins/reddit-saved', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`${imported.totalItems} items → ${imported.chunks} memories (${imported.totalPosts} posts, ${imported.totalComments} comments)`);
+      toast.success(`Imported ${imported.totalItems} Reddit items`, {
+        description: `${imported.chunks} memories · ${imported.totalPosts} posts · ${imported.totalComments} comments`,
+      });
+      setRdPreview(null);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -513,11 +568,11 @@ export default function ImportPage() {
 
       {/* Source Selector */}
       <Stagger>
-      <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-2">
         {BASE_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); }}
+            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
             className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
                 ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
@@ -530,14 +585,14 @@ export default function ImportPage() {
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
         {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer'].includes(pt.slug))
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved'].includes(pt.slug))
           .map((pt) => {
           const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
           const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
           return (
             <button
               key={pt.slug}
-              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); }}
+              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
               className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
                 tab === tabId
                   ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
@@ -1327,6 +1382,178 @@ export default function ImportPage() {
               )}
             </>
           )}
+
+          {/* ─── Reddit Tab ──────────────────────────────── */}
+          {tab === "reddit" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Reddit Saved Posts</p>
+                <p>Upload your Reddit data export to import saved posts and comments.</p>
+                <p className="text-zinc-600">
+                  <a href="https://www.reddit.com/settings/data-request" target="_blank" rel="noopener noreferrer" className="text-orange-400/70 hover:text-orange-400 transition-colors">
+                    reddit.com/settings/data-request
+                  </a>
+                  {" "}→ Download → Upload ZIP
+                </p>
+              </div>
+
+              {!rdPreview ? (
+                <div className="space-y-3">
+                  <label
+                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                      ${rdParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-orange-500/30 hover:bg-orange-500/[0.03]'}`}
+                  >
+                    {rdParsing ? (
+                      <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
+                    ) : (
+                      <MessageSquare className="w-6 h-6 text-orange-400" />
+                    )}
+                    <span className="text-[12px] text-zinc-400 font-medium">
+                      {rdParsing ? 'Parsing Reddit export…' : 'Drop Reddit export or click to browse'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      ZIP from Reddit data export · Also accepts CSV or JSON files
+                    </span>
+                    <input
+                      type="file"
+                      accept=".zip,.csv,.json"
+                      className="hidden"
+                      disabled={rdParsing || busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleRdPreview(f);
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Stats card */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/[0.08] border border-orange-500/15 flex items-center justify-center shrink-0">
+                        <MessageSquare className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-zinc-200 tabular-nums">
+                          {rdPreview.stats.totalItems.toLocaleString()} items found
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          {rdPreview.stats.totalPosts} post{rdPreview.stats.totalPosts !== 1 ? 's' : ''} · {rdPreview.stats.totalComments} comment{rdPreview.stats.totalComments !== 1 ? 's' : ''}
+                          {rdPreview.stats.dateRange.oldest && ` · ${rdPreview.stats.dateRange.oldest} – ${rdPreview.stats.dateRange.newest}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setRdPreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    {/* Stats bar */}
+                    <div className="border-t border-white/[0.04] px-4 py-2.5">
+                      <div className="flex items-center gap-4 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="w-3 h-3 text-orange-400/60" />
+                          <span className="text-zinc-400">{rdPreview.stats.totalPosts} posts</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <MessageSquare className="w-3 h-3 text-blue-400/60" />
+                          <span className="text-zinc-400">{rdPreview.stats.totalComments} comments</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-zinc-600">{rdPreview.stats.subreddits.length} subreddits</span>
+                        </div>
+                        {rdPreview.stats.avgScore > 0 && (
+                          <div className="flex items-center gap-1.5 ml-auto">
+                            <ArrowUpRight className="w-3 h-3 text-emerald-400/60" />
+                            <span className="text-zinc-600">avg {rdPreview.stats.avgScore} pts</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Subreddits */}
+                    {rdPreview.stats.subreddits?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">
+                          Subreddits
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {rdPreview.stats.subreddits.slice(0, 15).map((s: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/[0.06] border border-orange-500/10 text-[10px] text-orange-300/80"
+                            >
+                              r/{s.name}
+                              <span className="text-zinc-600 tabular-nums">{s.count}</span>
+                            </span>
+                          ))}
+                          {rdPreview.stats.subreddits.length > 15 && (
+                            <span className="text-[10px] text-zinc-600 self-center">
+                              +{rdPreview.stats.subreddits.length - 15} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sample items */}
+                    {rdPreview.sampleItems?.length > 0 && (
+                      <div className="border-t border-white/[0.04] max-h-[220px] overflow-y-auto">
+                        {rdPreview.sampleItems.map((item: any, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
+                          >
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              item.type === 'comment'
+                                ? 'bg-blue-500/[0.08] border border-blue-500/15'
+                                : 'bg-orange-500/[0.08] border border-orange-500/15'
+                            }`}>
+                              {item.type === 'comment' ? (
+                                <MessageSquare className="w-3 h-3 text-blue-400" />
+                              ) : (
+                                <FileText className="w-3 h-3 text-orange-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] text-zinc-300 truncate">{item.title}</p>
+                              <p className="text-[10px] text-zinc-600 truncate">
+                                r/{item.subreddit}
+                                {item.score > 0 && ` · ${item.score} pts`}
+                                {item.date && ` · ${item.date}`}
+                              </p>
+                              {item.preview && (
+                                <p className="text-[10px] text-zinc-600 truncate mt-0.5 italic">
+                                  {item.preview}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleRdImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <MessageSquare className="w-4 h-4" />
+                    )}
+                    Import {rdPreview.stats.totalItems.toLocaleString()} Reddit Items
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
       </Stagger>
@@ -1351,7 +1578,7 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
@@ -1362,6 +1589,7 @@ export default function ImportPage() {
                   youtube: "text-red-400 bg-red-500/10",
                   bookmark: "text-sky-400 bg-sky-500/10",
                   obsidian: "text-violet-400 bg-violet-500/10",
+                  reddit: "text-orange-400 bg-orange-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";

@@ -39,6 +39,7 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10" },
   bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10" },
   obsidian: { icon: Gem, color: "text-violet-400 bg-violet-500/10" },
+  reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10" },
 };
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
