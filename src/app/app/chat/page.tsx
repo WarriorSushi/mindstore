@@ -799,15 +799,15 @@ export default function ChatPage() {
                     <Brain className="w-3.5 h-3.5 text-violet-400" />
                   </div>
                 )}
-                <div className="relative max-w-[82%]">
+                <div className="relative max-w-[82%] min-w-0">
                   <div
-                    className={`${
+                    className={`overflow-hidden ${
                       msg.role === "user"
                         ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
                         : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
                     }`}
                   >
-                    <div className="text-[13px] leading-[1.6]">
+                    <div className="text-[13px] leading-[1.6] break-words [overflow-wrap:anywhere]">
                       {msg.content ? (
                         <ChatMarkdown content={msg.content} />
                       ) : loading && i === messages.length - 1 ? (

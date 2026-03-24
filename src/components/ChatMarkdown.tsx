@@ -13,7 +13,7 @@ export function ChatMarkdown({ content }: { content: string }) {
   if (!content) return null;
 
   const blocks = parseBlocks(content);
-  return <div className="space-y-1.5">{blocks}</div>;
+  return <div className="space-y-1.5 break-words [overflow-wrap:anywhere]">{blocks}</div>;
 }
 
 /** Parse content into block-level elements */
