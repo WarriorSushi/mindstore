@@ -1,15 +1,22 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion";
+type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle";
 
-const TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
+interface PluginTab {
+  slug: string;
+  label: string;
+  icon: string;
+  desc: string;
+}
+
+const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "chatgpt", label: "ChatGPT", icon: MessageCircle, desc: "ZIP or JSON" },
   { id: "text", label: "Text", icon: Type, desc: "Paste anything" },
   { id: "files", label: "Files", icon: FileText, desc: ".txt, .md" },
@@ -17,6 +24,11 @@ const TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "obsidian", label: "Obsidian", icon: BookOpen, desc: "Vault export" },
   { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
 ];
+
+// Plugin icon mapping — maps manifest icon names to actual components
+const PLUGIN_ICON_MAP: Record<string, any> = {
+  BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle,
+};
 
 interface ImportSource {
   id: string;
@@ -37,6 +49,11 @@ export default function ImportPage() {
   const [importHistory, setImportHistory] = useState<ImportSource[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [totalMemories, setTotalMemories] = useState(0);
+  const [pluginTabs, setPluginTabs] = useState<PluginTab[]>([]);
+  
+  // ─── Kindle-specific state ───────────────────────────────
+  const [kindlePreview, setKindlePreview] = useState<any>(null);
+  const [kindleParsing, setKindleParsing] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -62,6 +79,26 @@ export default function ImportPage() {
   }, []);
 
   useEffect(() => { refreshHistory(); }, [refreshHistory]);
+
+  // Fetch installed import plugins to add their tabs dynamically
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/v1/plugins?category=import&installed=true');
+        if (!res.ok) return;
+        const data = await res.json();
+        const importPlugins = (data.plugins || [])
+          .filter((p: any) => p.status === 'active' && p.slug)
+          .map((p: any) => ({
+            slug: p.slug,
+            label: p.name?.replace(/\s*(Importer|Import|Plugin)$/i, '') || p.slug,
+            icon: p.icon || 'Puzzle',
+            desc: p.description?.substring(0, 20) || '',
+          }));
+        setPluginTabs(importPlugins);
+      } catch {}
+    })();
+  }, []);
 
   const importViaApi = async (formData: FormData) => {
     setState("uploading"); setProgress(50); setProgressText("Processing…");
@@ -134,6 +171,56 @@ export default function ImportPage() {
     await importViaApi(fd);
   };
 
+  // ─── KINDLE IMPORT HANDLERS ────────────────────────────────
+
+  const handleKindlePreview = async (file: File) => {
+    setKindleParsing(true);
+    setKindlePreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/kindle-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse clippings file');
+      }
+      const data = await res.json();
+      setKindlePreview({ ...data, file }); // Keep file ref for actual import
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setKindleParsing(false);
+    }
+  };
+
+  const handleKindleImport = async () => {
+    if (!kindlePreview?.file) return;
+    setState("uploading"); setProgress(30);
+    setProgressText(`Importing ${kindlePreview.totalHighlights} highlights from ${kindlePreview.totalBooks} books…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', kindlePreview.file);
+      const res = await fetch('/api/v1/plugins/kindle-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`${imported.highlights} highlights from ${imported.books} book${imported.books !== 1 ? 's' : ''}${imported.duplicatesRemoved > 0 ? ` (${imported.duplicatesRemoved} duplicates removed)` : ''}`);
+      toast.success(`Imported ${imported.highlights} Kindle highlights`, {
+        description: `${imported.books} books → ${imported.chunks} memories`,
+      });
+      setKindlePreview(null);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -197,10 +284,10 @@ export default function ImportPage() {
       {/* Source Selector */}
       <Stagger>
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-        {TABS.map((t) => (
+        {BASE_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => { setTab(t.id); setKindlePreview(null); }}
             className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
                 ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
@@ -211,6 +298,26 @@ export default function ImportPage() {
             <span className={`text-[11px] font-medium ${tab === t.id ? "text-violet-300" : "text-zinc-400"}`}>{t.label}</span>
           </button>
         ))}
+        {/* Plugin tabs — dynamically rendered when plugins are installed */}
+        {pluginTabs.map((pt) => {
+          const tabId = pt.slug.replace('-importer', '').replace('-import', '') as Tab;
+          const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
+          return (
+            <button
+              key={pt.slug}
+              onClick={() => { setTab(tabId); setKindlePreview(null); }}
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
+                tab === tabId
+                  ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
+                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+              }`}
+            >
+              <PluginTabIcon className={`w-5 h-5 ${tab === tabId ? "text-amber-400" : "text-zinc-500"}`} />
+              <span className={`text-[11px] font-medium ${tab === tabId ? "text-amber-300" : "text-zinc-400"}`}>{pt.label}</span>
+              <span className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider">plugin</span>
+            </button>
+          );
+        })}
       </div>
       </Stagger>
 
@@ -315,6 +422,95 @@ export default function ImportPage() {
               />
             </>
           )}
+          {tab === "kindle" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Kindle Highlights</p>
+                <p>Find <code className="text-[11px] text-amber-400/80 bg-amber-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">My Clippings.txt</code> on your Kindle:</p>
+                <p className="text-zinc-600">Connect Kindle → Open drive → Documents → My Clippings.txt</p>
+              </div>
+              
+              {!kindlePreview ? (
+                <DropZone
+                  id="kindle-upload" accept=".txt" disabled={busy || kindleParsing}
+                  onFile={handleKindlePreview}
+                  title={kindleParsing ? "Parsing highlights…" : "Drop My Clippings.txt"}
+                  subtitle={kindleParsing ? "Grouping by book…" : ".txt file from your Kindle"}
+                  icon={kindleParsing
+                    ? <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+                    : <BookOpen className="w-6 h-6 text-zinc-600" />
+                  }
+                />
+              ) : (
+                <div className="space-y-4">
+                  {/* Preview summary */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium text-white">
+                          {kindlePreview.totalHighlights} highlights found
+                        </p>
+                        <p className="text-[12px] text-zinc-500 mt-0.5">
+                          from {kindlePreview.totalBooks} book{kindlePreview.totalBooks !== 1 ? 's' : ''}
+                          {kindlePreview.duplicatesRemoved > 0 && (
+                            <span className="text-amber-400/70"> · {kindlePreview.duplicatesRemoved} duplicates removed</span>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setKindlePreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                      >
+                        Change file
+                      </button>
+                    </div>
+
+                    {/* Book list */}
+                    <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+                      {kindlePreview.books.map((book: any, i: number) => (
+                        <div
+                          key={i}
+                          className="group flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.02] transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/[0.08] border border-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                            <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-zinc-200 truncate">
+                              {book.title}
+                            </p>
+                            <p className="text-[11px] text-zinc-600 mt-0.5">
+                              {book.author} · {book.highlightCount} highlight{book.highlightCount !== 1 ? 's' : ''}
+                              {book.noteCount > 0 && ` · ${book.noteCount} note${book.noteCount !== 1 ? 's' : ''}`}
+                            </p>
+                            {book.preview?.[0] && (
+                              <p className="text-[11px] text-zinc-600 mt-1 line-clamp-2 italic">
+                                "{book.preview[0].content}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleKindleImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-amber-500/90 hover:bg-amber-500 disabled:opacity-40 text-[13px] font-semibold text-black transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <BookOpen className="w-4 h-4" />
+                    )}
+                    Import {kindlePreview.totalHighlights} Highlights from {kindlePreview.totalBooks} Book{kindlePreview.totalBooks !== 1 ? 's' : ''}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
       </Stagger>
@@ -339,12 +535,13 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
                   url: "text-orange-400 bg-orange-500/10",
                   text: "text-violet-400 bg-violet-500/10",
+                  kindle: "text-amber-400 bg-amber-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";
