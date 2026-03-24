@@ -124,6 +124,21 @@ export default function ChatPage() {
     refreshHistory();
   }, []);
 
+  // Listen for Command Palette events (new-chat, load-chat)
+  useEffect(() => {
+    function onNewChat() { handleNewChat(); }
+    function onLoadChat(e: Event) {
+      const id = (e as CustomEvent).detail?.id;
+      if (id) handleLoadConversation(id);
+    }
+    window.addEventListener("mindstore:new-chat", onNewChat);
+    window.addEventListener("mindstore:load-chat", onLoadChat);
+    return () => {
+      window.removeEventListener("mindstore:new-chat", onNewChat);
+      window.removeEventListener("mindstore:load-chat", onLoadChat);
+    };
+  }, []);
+
   // Auto-send query from ?q= param (e.g. from Explore "Ask about this")
   useEffect(() => {
     const q = searchParams.get("q");
