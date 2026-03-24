@@ -4,6 +4,22 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 09:59 UTC — Content Stats Bar in Explore Detail Modal
+- **Research**: UX audit against Notion, Obsidian, Medium, Mem, Apple Notes. Every serious knowledge management app shows content metadata (word count, reading time) when viewing a document. MindStore's Explore detail modal showed only source type, title, and date — no content-level stats. Users had no way to gauge memory size or reading commitment before diving in.
+- **Finding**: The detail modal had a header and content area, but the gap between them was an unused opportunity. Adding a stats bar in that space follows Notion's document info pattern and Medium's reading time convention, both of which are proven UX patterns users intuitively understand.
+- **Implemented**:
+  - **Content Stats Bar** between header and content in the Explore detail modal:
+    - **Word count** with # icon — count of whitespace-separated tokens
+    - **Character count** — total characters for length-at-a-glance
+    - **Reading time** with BookOpen icon — estimated at 225 WPM (standard reading speed), minimum 1 minute
+    - **Import date** with Clock icon — shows when the memory was imported (only if different from the content's original timestamp), giving temporal context for when knowledge entered MindStore
+  - Stats bar is hidden during edit mode (not relevant while editing)
+  - Dot separators between stats items for clean visual rhythm
+  - Subtle styling: `text-[10px] text-zinc-600` with `bg-white/[0.01]` background, matching existing design system
+  - Tooltips on hover for each stat with more detail
+  - New lucide imports: `Clock`, `Hash`, `BookOpen`
+- **Branch**: `frain/improve` (commit `882b041`)
+
 ---
 
 ## 2026-03-24 07:59 UTC — Markdown Tables & Task Lists in Chat Renderer
