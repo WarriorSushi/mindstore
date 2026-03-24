@@ -7,7 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
-  Brain, BookOpen, StickyNote, Link2, Sparkles,
+  Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +48,7 @@ const typeIcons: Record<string, typeof FileText> = {
   text: Type,
   file: FileText,
   url: Globe,
+  bookmark: Bookmark,
 };
 
 const typeColors: Record<string, string> = {
@@ -55,6 +56,10 @@ const typeColors: Record<string, string> = {
   text: "text-violet-400",
   file: "text-blue-400",
   url: "text-orange-400",
+  kindle: "text-amber-400",
+  document: "text-blue-400",
+  youtube: "text-red-400",
+  bookmark: "text-sky-400",
 };
 
 /** Load recent conversations from localStorage for the palette */

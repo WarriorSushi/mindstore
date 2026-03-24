@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -36,6 +36,8 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
   kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10" },
   document: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
+  youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10" },
+  bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10" },
 };
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub";
+type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks";
 
 interface PluginTab {
   slug: string;
@@ -25,11 +25,13 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
   { id: "kindle", label: "Kindle", icon: BookOpenCheck, desc: "Highlights" },
   { id: "pdf-epub", label: "PDF/EPUB", icon: FileBox, desc: "Documents" },
+  { id: "youtube", label: "YouTube", icon: PlayCircle, desc: "Transcripts" },
+  { id: "bookmarks", label: "Bookmarks", icon: Bookmark, desc: "Browser" },
 ];
 
 // Plugin icon mapping — maps manifest icon names to actual components
 const PLUGIN_ICON_MAP: Record<string, any> = {
-  BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle,
+  BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle, PlayCircle, Bookmark,
 };
 
 interface ImportSource {
@@ -60,6 +62,16 @@ export default function ImportPage() {
   // ─── PDF/EPUB-specific state ────────────────────────────
   const [docPreview, setDocPreview] = useState<any>(null);
   const [docParsing, setDocParsing] = useState(false);
+
+  // ─── YouTube-specific state ─────────────────────────────
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytPreview, setYtPreview] = useState<any>(null);
+  const [ytLoading, setYtLoading] = useState(false);
+
+  // ─── Bookmarks-specific state ─────────────────────────────
+  const [bmPreview, setBmPreview] = useState<any>(null);
+  const [bmParsing, setBmParsing] = useState(false);
+  const [bmFetchContent, setBmFetchContent] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -278,6 +290,113 @@ export default function ImportPage() {
     }
   };
 
+  // ─── YouTube handlers ──────────────────────────────────
+  const handleYtPreview = async () => {
+    const url = ytUrl.trim();
+    if (!url) return;
+    setYtLoading(true);
+    setYtPreview(null);
+    try {
+      const res = await fetch('/api/v1/plugins/youtube-transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, action: 'preview' }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to fetch transcript');
+      }
+      const data = await res.json();
+      setYtPreview(data);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setYtLoading(false);
+    }
+  };
+
+  const handleYtImport = async () => {
+    if (!ytPreview) return;
+    setState("uploading"); setProgress(30);
+    const { video, transcript } = ytPreview;
+    setProgressText(`Importing "${video.title}" — ${transcript.totalChunks} segments…`);
+    try {
+      const res = await fetch('/api/v1/plugins/youtube-transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${video.videoId}` }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`"${imported.video.title}" — ${imported.totalWords.toLocaleString()} words → ${imported.chunks} memories`);
+      toast.success(`Imported ${imported.video.title}`, {
+        description: `${imported.totalWords.toLocaleString()} words · ${imported.chunks} memories · ${imported.video.channel}`,
+      });
+      setYtPreview(null);
+      setYtUrl("");
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
+  // ─── Bookmarks handlers ──────────────────────────────────
+  const handleBmPreview = async (file: File) => {
+    setBmParsing(true);
+    setBmPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/browser-bookmarks', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse bookmarks');
+      }
+      const data = await res.json();
+      setBmPreview({ ...data, file });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBmParsing(false);
+    }
+  };
+
+  const handleBmImport = async () => {
+    if (!bmPreview?.file) return;
+    setState("uploading"); setProgress(30);
+    setProgressText(`Importing ${bmPreview.stats.totalBookmarks} bookmarks${bmFetchContent ? ' (fetching content…)' : ''}…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', bmPreview.file);
+      fd.append('fetchContent', bmFetchContent ? 'true' : 'false');
+      const res = await fetch('/api/v1/plugins/browser-bookmarks', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`${imported.totalBookmarks} bookmarks imported${imported.withContent ? ` (${imported.withContent} with content)` : ''}`);
+      toast.success(`Imported ${imported.totalBookmarks} bookmarks`, {
+        description: `${imported.stats.totalFolders} folders · ${imported.embedded || 0} embedded`,
+      });
+      setBmPreview(null);
+      setBmFetchContent(false);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -340,11 +459,11 @@ export default function ImportPage() {
 
       {/* Source Selector */}
       <Stagger>
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
         {BASE_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); }}
+            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); }}
             className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
                 ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
@@ -357,14 +476,14 @@ export default function ImportPage() {
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
         {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser'].includes(pt.slug))
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks'].includes(pt.slug))
           .map((pt) => {
           const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
           const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
           return (
             <button
               key={pt.slug}
-              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); }}
+              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); }}
               className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
                 tab === tabId
                   ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
@@ -685,6 +804,295 @@ export default function ImportPage() {
               )}
             </>
           )}
+          {tab === "youtube" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import YouTube Transcripts</p>
+                <p>Paste a YouTube URL to extract the full transcript as searchable knowledge.</p>
+                <p className="text-zinc-600">Supports youtube.com, youtu.be, and shorts links</p>
+              </div>
+
+              {!ytPreview ? (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={ytUrl}
+                      onChange={(e) => setYtUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !ytLoading && handleYtPreview()}
+                      disabled={ytLoading}
+                      className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-red-500/30 transition-all disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleYtPreview}
+                      disabled={ytLoading || !ytUrl.trim()}
+                      className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97] flex items-center gap-2"
+                    >
+                      {ytLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <PlayCircle className="w-4 h-4" />
+                      )}
+                      {ytLoading ? "Fetching…" : "Preview"}
+                    </button>
+                  </div>
+                  {ytLoading && (
+                    <div className="flex items-center gap-2 text-[12px] text-zinc-500 px-1">
+                      <Loader2 className="w-3 h-3 animate-spin text-red-400" />
+                      <span>Extracting transcript from YouTube…</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Video preview card */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+                    {/* Thumbnail + metadata */}
+                    <div className="flex gap-3 p-3">
+                      <div className="relative w-[140px] h-[79px] rounded-lg overflow-hidden shrink-0 bg-zinc-900">
+                        <img
+                          src={ytPreview.video.thumbnailUrl}
+                          alt={ytPreview.video.title}
+                          className="w-full h-full object-cover"
+                        />
+                        {ytPreview.video.duration && (
+                          <span className="absolute bottom-1 right-1 text-[10px] font-mono font-medium bg-black/80 text-white px-1.5 py-0.5 rounded">
+                            {ytPreview.video.duration}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-zinc-200 line-clamp-2 leading-snug">
+                          {ytPreview.video.title}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 mt-1">
+                          {ytPreview.video.channel}
+                        </p>
+                        {ytPreview.video.publishDate && (
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            {ytPreview.video.publishDate}
+                          </p>
+                        )}
+                        <a
+                          href={ytPreview.video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] text-red-400/70 hover:text-red-400 mt-1 transition-colors"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          Watch on YouTube
+                        </a>
+                      </div>
+                      <button
+                        onClick={() => { setYtPreview(null); }}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors self-start shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    {/* Transcript stats */}
+                    <div className="flex items-center gap-3 px-3 py-2 border-t border-white/[0.04] text-[11px] text-zinc-500">
+                      <span><strong className="text-zinc-400 tabular-nums">{ytPreview.transcript.totalWords.toLocaleString()}</strong> words</span>
+                      <span className="text-zinc-700">·</span>
+                      <span><strong className="text-zinc-400 tabular-nums">{ytPreview.transcript.totalSegments.toLocaleString()}</strong> segments</span>
+                      <span className="text-zinc-700">·</span>
+                      <span>{ytPreview.transcript.readingTime} read</span>
+                      <span className="text-zinc-700">·</span>
+                      <span><strong className="text-zinc-400 tabular-nums">{ytPreview.transcript.totalChunks}</strong> {ytPreview.transcript.totalChunks === 1 ? 'memory' : 'memories'}</span>
+                    </div>
+                  </div>
+
+                  {/* Chunk preview */}
+                  {ytPreview.transcript.chunks.length > 0 && (
+                    <div className="space-y-1.5 max-h-[240px] overflow-y-auto pr-1">
+                      {ytPreview.transcript.chunks.map((chunk: any, i: number) => (
+                        <div
+                          key={i}
+                          className="group flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.02] transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-red-500/[0.08] border border-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[11px] font-mono font-semibold text-red-400 tabular-nums">{i + 1}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-mono text-red-400/70 tabular-nums">{chunk.startTimestamp}–{chunk.endTimestamp}</span>
+                              <span className="text-[10px] text-zinc-600">{chunk.wordCount.toLocaleString()} words</span>
+                            </div>
+                            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 leading-relaxed">
+                              {chunk.preview}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Transcript preview text */}
+                  {ytPreview.transcript.preview && (
+                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-3">
+                      <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">Transcript Preview</p>
+                      <p className="text-[12px] text-zinc-500 leading-relaxed line-clamp-4">
+                        {ytPreview.transcript.preview}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleYtImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <PlayCircle className="w-4 h-4" />
+                    )}
+                    Import {ytPreview.transcript.totalWords.toLocaleString()} Words — {ytPreview.transcript.totalChunks} {ytPreview.transcript.totalChunks === 1 ? 'Memory' : 'Memories'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ─── Bookmarks Tab ──────────────────────────── */}
+          {tab === "bookmarks" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Browser Bookmarks</p>
+                <p>Upload your bookmarks HTML export from Chrome, Firefox, Safari, Edge, Brave, or Arc.</p>
+                <p className="text-zinc-600">Folder structure and dates are preserved</p>
+              </div>
+
+              {!bmPreview ? (
+                <div className="space-y-3">
+                  <label
+                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                      ${bmParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-sky-500/30 hover:bg-sky-500/[0.03]'}`}
+                  >
+                    {bmParsing ? (
+                      <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
+                    ) : (
+                      <Bookmark className="w-6 h-6 text-sky-400" />
+                    )}
+                    <span className="text-[12px] text-zinc-400 font-medium">
+                      {bmParsing ? 'Parsing bookmarks…' : 'Drop bookmarks.html or click to browse'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      Chrome: ⋮ → Bookmarks → Export · Firefox: Library → Export · Safari: File → Export
+                    </span>
+                    <input
+                      type="file"
+                      accept=".html,.htm"
+                      className="hidden"
+                      disabled={bmParsing || busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleBmPreview(f);
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Stats card */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/[0.08] border border-sky-500/15 flex items-center justify-center shrink-0">
+                        <Bookmark className="w-5 h-5 text-sky-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-zinc-200 tabular-nums">
+                          {bmPreview.stats.totalBookmarks.toLocaleString()} bookmarks
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          {bmPreview.stats.totalFolders} folders
+                          {bmPreview.stats.oldestDate && ` · ${bmPreview.stats.oldestDate} – ${bmPreview.stats.newestDate}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setBmPreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    {/* Top folders */}
+                    {bmPreview.stats.topFolders?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">Top Folders</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {bmPreview.stats.topFolders.map((f: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] text-[10px] text-zinc-400"
+                            >
+                              <FolderOpen className="w-2.5 h-2.5 text-sky-400/60" />
+                              {f.name}
+                              <span className="text-zinc-600 tabular-nums">{f.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sample bookmarks */}
+                    {bmPreview.sampleBookmarks?.length > 0 && (
+                      <div className="border-t border-white/[0.04] max-h-[200px] overflow-y-auto">
+                        {bmPreview.sampleBookmarks.slice(0, 6).map((b: any, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
+                          >
+                            <span className="text-[10px] text-sky-400/60 font-mono tabular-nums w-4 text-right shrink-0">{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] text-zinc-300 truncate">{b.title}</p>
+                              <p className="text-[10px] text-zinc-600 truncate">{b.domain} · {b.folder}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fetch content toggle */}
+                  <label className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.06] cursor-pointer hover:bg-white/[0.03] transition-colors">
+                    <div className="relative shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={bmFetchContent}
+                        onChange={(e) => setBmFetchContent(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-8 h-[18px] rounded-full bg-zinc-700 peer-checked:bg-sky-600 transition-colors" />
+                      <div className="absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform peer-checked:translate-x-[14px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] text-zinc-300 font-medium">Fetch page content</p>
+                      <p className="text-[10px] text-zinc-600">Downloads and extracts text from each URL. Takes longer but makes bookmarks fully searchable.</p>
+                    </div>
+                  </label>
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleBmImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Bookmark className="w-4 h-4" />
+                    )}
+                    Import {bmPreview.stats.totalBookmarks.toLocaleString()} Bookmarks
+                    {bmFetchContent && ' + Content'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
       </Stagger>
@@ -709,7 +1117,7 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
@@ -717,6 +1125,8 @@ export default function ImportPage() {
                   text: "text-violet-400 bg-violet-500/10",
                   kindle: "text-amber-400 bg-amber-500/10",
                   document: "text-blue-400 bg-blue-500/10",
+                  youtube: "text-red-400 bg-red-500/10",
+                  bookmark: "text-sky-400 bg-sky-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";

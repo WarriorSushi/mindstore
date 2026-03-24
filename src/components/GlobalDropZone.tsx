@@ -34,6 +34,7 @@ export function GlobalDropZone() {
       // Categorize files
       const chatgptFiles: File[] = [];
       const textFiles: File[] = [];
+      const bookmarkFiles: File[] = [];
       const unsupported: string[] = [];
 
       for (const file of Array.from(files)) {
@@ -42,15 +43,17 @@ export function GlobalDropZone() {
           chatgptFiles.push(file);
         } else if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".markdown")) {
           textFiles.push(file);
+        } else if (name.endsWith(".html") || name.endsWith(".htm")) {
+          bookmarkFiles.push(file);
         } else {
           unsupported.push(file.name);
         }
       }
 
-      if (chatgptFiles.length === 0 && textFiles.length === 0) {
+      if (chatgptFiles.length === 0 && textFiles.length === 0 && bookmarkFiles.length === 0) {
         setState("error");
         setImportResult(
-          `Unsupported file${unsupported.length > 1 ? "s" : ""}: ${unsupported.slice(0, 3).join(", ")}${unsupported.length > 3 ? "…" : ""}. Supported: .json, .zip, .txt, .md`
+          `Unsupported file${unsupported.length > 1 ? "s" : ""}: ${unsupported.slice(0, 3).join(", ")}${unsupported.length > 3 ? "…" : ""}. Supported: .json, .zip, .txt, .md, .html`
         );
         setTimeout(() => { setState("idle"); setImportResult(""); }, 3500);
         return;
@@ -89,6 +92,20 @@ export function GlobalDropZone() {
         const r = await res.json();
         totalChunks += r.imported.chunks;
         totalDocs += r.imported.documents;
+      }
+
+      // Import bookmark HTML files
+      for (const file of bookmarkFiles) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/v1/plugins/browser-bookmarks", { method: "POST", body: fd });
+        if (!res.ok) {
+          const e = await res.json();
+          throw new Error(e.error || `Failed to import ${file.name}`);
+        }
+        const r = await res.json();
+        totalChunks += r.imported.totalBookmarks;
+        totalDocs += 1;
       }
 
       setState("done");
@@ -193,7 +210,7 @@ export function GlobalDropZone() {
                 Drop to import
               </p>
               <p className="text-[13px] text-zinc-400 mt-1">
-                .json, .zip, .txt, .md files
+                .json, .zip, .txt, .md, .html files
               </p>
             </div>
           </>
