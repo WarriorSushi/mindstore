@@ -336,3 +336,19 @@ _Automated 30-min improvement cycles by Frain_
   - Refresh button uses standard icon button pattern (rounded-xl, border-white/[0.06])
   - **All 9 app pages now use 100% unified design system** — zero legacy styling remaining anywhere
 - **Branch**: `frain/improve` (commit `318bbee`)
+
+---
+
+## 2026-03-24 04:59 UTC — Dashboard Recent Activity Timeline
+- **Research**: Internal UX audit — modern PKM apps (Notion, Obsidian, Reflect) all show recent activity on their home/dashboard pages. MindStore's dashboard showed stats and actions but no sense of *when* things were added or what was recently imported.
+- **Finding**: The dashboard felt static — no temporal context. Users couldn't see their latest additions without navigating to Explore. Notion's home page, Obsidian's "Recent files", and Reflect's timeline all surface recent items prominently.
+- **Implemented**:
+  - Stats API (`/api/v1/stats`) now returns `recentMemories` — the 5 most recently created memories with id, content preview (120 chars), source type, title, and `created_at` timestamp
+  - New **"Recent Activity"** section on the Dashboard between Actions Grid and Discover
+  - Each entry shows: colored source type icon, source title, content preview (1-line truncated), and relative timestamp with clock icon
+  - Clicking a recent memory navigates to Explore with a search query for that content
+  - "View all →" link navigates to the full Explore page
+  - `formatRelativeTime()` helper: "just now", "Xm ago", "Xh ago", "yesterday", "Xd ago", or short date
+  - Fully consistent with existing dashboard design system (rounded-2xl cards, divide-y, hover states)
+- **Also committed**: Previously uncommitted inline memory editing feature (PATCH API + Edit UI in Explore modal with keyboard shortcuts)
+- **Branch**: `frain/improve` (commit `e482ed4`)
