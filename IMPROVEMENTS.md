@@ -4,6 +4,19 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 01:29 UTC — Scroll-to-Bottom FAB for Chat & Learn Pages
+- **Research**: Modern chat UX patterns — ChatGPT, Claude, Slack all show a floating "scroll to bottom" button when the user scrolls up in a conversation. MindStore's chat pages were missing this standard pattern.
+- **Finding**: The chat page had unconditional auto-scroll that would yank users back to the bottom whenever new streaming tokens arrived, even when they were trying to read older messages. This is a significant UX friction point.
+- **Implemented**:
+  - Added `showScrollBtn` state and `isNearBottomRef` to both Chat and Learn pages
+  - Scroll listener detects when user is >120px from bottom → shows floating button
+  - Auto-scroll now only activates when user is already near the bottom (respects reading position)
+  - Floating pill button: `ChevronsDown` icon, rounded-full, dark glass style with `bg-[#1a1a1d]`, border, shadow
+  - Shows "New messages" text on desktop (hidden on mobile for space)
+  - Smooth scroll animation on click, with active:scale press feedback
+  - Applied consistently to both Chat page and Learn interview page
+- **Branch**: `frain/improve` (commit `ac41fe2`)
+
 ## 2026-03-24 00:59 UTC — Settings Page Entrance Animations
 - **Research**: Internal UX consistency audit — compared all 9 app pages for animation parity
 - **Finding**: Settings was the **only** app page that didn't use `PageTransition` and `Stagger` components. Every other page (Dashboard, Explore, Chat, Connect, Import, Learn, Fingerprint, Insights) had smooth staggered entrance animations, but Settings snapped in instantly — creating a jarring inconsistency when navigating.
