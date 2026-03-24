@@ -35,6 +35,7 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   file: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
   url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
   kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10" },
+  document: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
 };
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [

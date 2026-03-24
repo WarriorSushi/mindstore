@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle";
+type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub";
 
 interface PluginTab {
   slug: string;
@@ -23,6 +23,8 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "url", label: "URL", icon: Globe, desc: "Extract page" },
   { id: "obsidian", label: "Obsidian", icon: BookOpen, desc: "Vault export" },
   { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
+  { id: "kindle", label: "Kindle", icon: BookOpenCheck, desc: "Highlights" },
+  { id: "pdf-epub", label: "PDF/EPUB", icon: FileBox, desc: "Documents" },
 ];
 
 // Plugin icon mapping — maps manifest icon names to actual components
@@ -54,6 +56,10 @@ export default function ImportPage() {
   // ─── Kindle-specific state ───────────────────────────────
   const [kindlePreview, setKindlePreview] = useState<any>(null);
   const [kindleParsing, setKindleParsing] = useState(false);
+
+  // ─── PDF/EPUB-specific state ────────────────────────────
+  const [docPreview, setDocPreview] = useState<any>(null);
+  const [docParsing, setDocParsing] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -221,6 +227,57 @@ export default function ImportPage() {
     }
   };
 
+  // ─── PDF/EPUB IMPORT HANDLERS ──────────────────────────────
+
+  const handleDocPreview = async (file: File) => {
+    setDocParsing(true);
+    setDocPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/pdf-epub-parser', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse document');
+      }
+      const data = await res.json();
+      setDocPreview({ ...data, file });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDocParsing(false);
+    }
+  };
+
+  const handleDocImport = async () => {
+    if (!docPreview?.file) return;
+    setState("uploading"); setProgress(30);
+    const doc = docPreview.document;
+    setProgressText(`Importing "${doc.title}" — ${doc.totalChapters} sections…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', docPreview.file);
+      const res = await fetch('/api/v1/plugins/pdf-epub-parser', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`"${imported.title}" — ${imported.sections} sections → ${imported.chunks} memories`);
+      toast.success(`Imported ${imported.title}`, {
+        description: `${imported.words.toLocaleString()} words · ${imported.chunks} memories · ~${imported.readingTime}min read`,
+      });
+      setDocPreview(null);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -283,11 +340,11 @@ export default function ImportPage() {
 
       {/* Source Selector */}
       <Stagger>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
         {BASE_TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => { setTab(t.id); setKindlePreview(null); }}
+            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); }}
             className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
               tab === t.id
                 ? "bg-violet-500/10 border-violet-500/25 shadow-sm shadow-violet-500/10"
@@ -298,14 +355,16 @@ export default function ImportPage() {
             <span className={`text-[11px] font-medium ${tab === t.id ? "text-violet-300" : "text-zinc-400"}`}>{t.label}</span>
           </button>
         ))}
-        {/* Plugin tabs — dynamically rendered when plugins are installed */}
-        {pluginTabs.map((pt) => {
-          const tabId = pt.slug.replace('-importer', '').replace('-import', '') as Tab;
+        {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
+        {pluginTabs
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser'].includes(pt.slug))
+          .map((pt) => {
+          const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
           const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
           return (
             <button
               key={pt.slug}
-              onClick={() => { setTab(tabId); setKindlePreview(null); }}
+              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); }}
               className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
                 tab === tabId
                   ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
@@ -511,6 +570,121 @@ export default function ImportPage() {
               )}
             </>
           )}
+          {tab === "pdf-epub" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import PDF & EPUB Documents</p>
+                <p>Smart parsing preserves chapter structure, headings, and section boundaries.</p>
+                <p className="text-zinc-600">Up to 50MB · Scanned PDFs (image-only) not supported</p>
+              </div>
+
+              {!docPreview ? (
+                <DropZone
+                  id="doc-upload" accept=".pdf,.epub" disabled={busy || docParsing}
+                  onFile={handleDocPreview}
+                  title={docParsing ? "Parsing document…" : "Drop a PDF or EPUB file"}
+                  subtitle={docParsing ? "Detecting structure…" : ".pdf or .epub — up to 50MB"}
+                  icon={docParsing
+                    ? <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                    : <FileBox className="w-6 h-6 text-zinc-600" />
+                  }
+                />
+              ) : (
+                <div className="space-y-4">
+                  {/* Document preview */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium text-white">
+                          {docPreview.document.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {docPreview.document.author && (
+                            <span className="text-[12px] text-zinc-500">{docPreview.document.author}</span>
+                          )}
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400/70 bg-blue-500/[0.06] px-1.5 py-0.5 rounded-md">
+                            {docPreview.document.format}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setDocPreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                      >
+                        Change file
+                      </button>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+                      {docPreview.document.totalPages && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          {docPreview.document.totalPages} pages
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Hash className="w-3 h-3" />
+                        {docPreview.document.totalWords.toLocaleString()} words
+                      </span>
+                      <span>{docPreview.document.totalChapters} section{docPreview.document.totalChapters !== 1 ? 's' : ''}</span>
+                      <span>~{docPreview.estimatedReadingTime}min read</span>
+                      <span>→ {docPreview.chunks} chunk{docPreview.chunks !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    {/* Sections list */}
+                    <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
+                      {docPreview.sections.map((section: any, i: number) => (
+                        <div
+                          key={i}
+                          className="group flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-white/[0.02] transition-colors"
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                            section.level === 1
+                              ? 'bg-blue-500/[0.08] border border-blue-500/15'
+                              : section.level === 2
+                              ? 'bg-violet-500/[0.06] border border-violet-500/10'
+                              : 'bg-white/[0.03] border border-white/[0.06]'
+                          }`}>
+                            <span className={`text-[10px] font-mono tabular-nums ${
+                              section.level === 1 ? 'text-blue-400' :
+                              section.level === 2 ? 'text-violet-400' : 'text-zinc-500'
+                            }`}>
+                              {i + 1}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[12px] font-medium truncate ${
+                              section.level === 1 ? 'text-zinc-200' : 'text-zinc-400'
+                            }`}>
+                              {section.title}
+                            </p>
+                            <p className="text-[10px] text-zinc-600 mt-0.5">
+                              {section.wordCount.toLocaleString()} words · {section.charCount.toLocaleString()} chars
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleDocImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-blue-500/90 hover:bg-blue-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FileBox className="w-4 h-4" />
+                    )}
+                    Import "{docPreview.document.title}" — {docPreview.chunks} Memories
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
       </Stagger>
@@ -535,13 +709,14 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
                   url: "text-orange-400 bg-orange-500/10",
                   text: "text-violet-400 bg-violet-500/10",
                   kindle: "text-amber-400 bg-amber-500/10",
+                  document: "text-blue-400 bg-blue-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";

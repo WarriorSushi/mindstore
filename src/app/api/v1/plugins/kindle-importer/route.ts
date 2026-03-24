@@ -208,16 +208,36 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
     
-    // Check if plugin is installed and active
-    const [plugin] = await db
+    // Check if plugin is installed — auto-install if not
+    let [plugin] = await db
       .select()
       .from(schema.plugins)
       .where(eq(schema.plugins.slug, 'kindle-importer'))
       .limit(1);
     
-    if (!plugin || plugin.status !== 'active') {
+    if (!plugin) {
+      // Auto-install on first use (built-in plugin)
+      [plugin] = await db
+        .insert(schema.plugins)
+        .values({
+          slug: 'kindle-importer',
+          name: 'Kindle Highlights',
+          description: 'Import your Kindle highlights and notes.',
+          version: '1.0.0',
+          type: 'extension',
+          status: 'active',
+          icon: 'BookOpen',
+          category: 'import',
+          author: 'MindStore',
+          config: { dedup: true },
+          metadata: {},
+        })
+        .returning();
+    }
+    
+    if (plugin.status === 'disabled') {
       return NextResponse.json(
-        { error: 'Kindle Importer plugin is not installed or active' },
+        { error: 'Kindle Importer plugin is disabled. Enable it in the Plugins page.' },
         { status: 403 }
       );
     }
