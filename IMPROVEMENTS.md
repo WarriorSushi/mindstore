@@ -4,6 +4,43 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 22:59 UTC — Learning Path Generator Plugin (Phase 4, Plugin #24)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Conversation Prep (#23) and Blog Draft Generator (#19).
+- **Implemented**:
+
+### Learning Path Generator (#24) — NEW
+  - **Full backend API route** (`/api/v1/plugins/learning-paths`):
+    - **Multi-query RAG knowledge assessment**: Searches existing memories about the requested topic via 3 queries (topic, fundamentals, advanced). Generates embeddings for semantic search. Deduplicates results. Up to 15 related memories surfaced as "existing knowledge" context for the AI curriculum designer.
+    - **AI-powered curriculum generation**: Creates structured learning paths with 8-15 nodes, each with:
+      - Title, description, estimated minutes, depth level (beginner/intermediate/advanced)
+      - Node type: concept (theory), practice (hands-on), project (build something), reading (study), milestone (checkpoint)
+      - Resource suggestions (articles, videos, books, exercises, tools)
+      - Dependency tracking between nodes (prerequisites)
+      - Related memory linking — connects nodes to user's existing knowledge
+    - **6 API actions**: list, get, suggestions, generate, update-progress, add-note, delete
+    - **AI topic suggestions**: Analyzes 30 most recent memories to suggest 6 personalized learning topics with difficulty ratings and time estimates
+    - **Progress tracking**: Node-level completion with timestamps, path-level progress (0-100%), estimated remaining time
+    - **Personal notes**: Add/edit notes per learning node for personal annotations
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 20 paths per user, auto-install on first use
+  - **Full frontend page** (`/app/paths`) — 3 views:
+    - **Home view**: Quick generate bar (type topic → Enter → instant path), AI suggestion cards (2-col grid with difficulty + time + reason), existing paths list with SVG progress rings (teal/emerald)
+    - **Create view**: Topic input with autofocus, optional context textarea, suggestion chips (click to populate topic), "Generate Learning Path" button with Sparkles icon and loading state
+    - **Detail view**: Progress bar (% complete, remaining hours, Trophy on completion), "What you already know" section (sky-tinted, shows related memories), timeline-style node list with vertical connector lines
+    - **Node UI**: Circle/CheckCircle toggle for completion, type-colored icons (BookOpen/Code/Rocket/FileText/Trophy), depth badges (emerald/sky/amber), time estimates, note indicators, related memory count
+    - **Expanded node**: Full description, resources with emoji type indicators and external links, related memories, inline note editor (textarea with save/cancel), completion timestamp
+    - **Design**: OLED black, teal primary, sky/emerald/amber accents for depth, zero violet/purple/fuchsia, glass borders (white/[0.06]), smooth transitions
+  - **Navigation**: Sidebar entry ("Learn Paths" with Route icon), Command Palette action (searchable by learn/path/curriculum/study/course/roadmap/gap), Command Palette nav list entry
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Resume Builder (#22) — build a resume/CV from professional memories
+- **Branch**: `frain/improve` (commit `596ea00`)
+
 ## 2026-03-24 22:29 UTC — Conversation Prep Plugin + Blog Draft Generator (Phase 4, Plugins #23 & #19)
 - **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Flashcard Maker (#20).
 - **Implemented**:
