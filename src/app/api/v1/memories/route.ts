@@ -18,23 +18,28 @@ export async function GET(req: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const sort = searchParams.get('sort') || 'newest';
+    const pinnedOnly = searchParams.get('pinned') === 'true';
 
     const conditions = [sql`user_id = ${userId}::uuid`];
     if (source) conditions.push(sql`source_type = ${source}`);
     if (search) {
       conditions.push(sql`(content ILIKE ${'%' + search + '%'} OR source_title ILIKE ${'%' + search + '%'})`);
     }
+    if (pinnedOnly) {
+      conditions.push(sql`(metadata->>'pinned')::boolean = true`);
+    }
 
     const where = sql.join(conditions, sql` AND `);
 
-    // Dynamic sort order
+    // Dynamic sort order — pinned items always float to top (unless filtering pinned-only)
+    const pp = pinnedOnly ? '' : 'COALESCE((metadata->>\'pinned\')::boolean, false) DESC,';
     const orderClause =
-      sort === 'oldest' ? sql`ORDER BY created_at ASC` :
-      sort === 'alpha-asc' ? sql`ORDER BY LOWER(COALESCE(source_title, '')) ASC, created_at DESC` :
-      sort === 'alpha-desc' ? sql`ORDER BY LOWER(COALESCE(source_title, '')) DESC, created_at DESC` :
-      sort === 'longest' ? sql`ORDER BY LENGTH(content) DESC, created_at DESC` :
-      sort === 'shortest' ? sql`ORDER BY LENGTH(content) ASC, created_at DESC` :
-      sql`ORDER BY created_at DESC`;
+      sort === 'oldest' ? sql.raw(`ORDER BY ${pp} created_at ASC`) :
+      sort === 'alpha-asc' ? sql.raw(`ORDER BY ${pp} LOWER(COALESCE(source_title, '')) ASC, created_at DESC`) :
+      sort === 'alpha-desc' ? sql.raw(`ORDER BY ${pp} LOWER(COALESCE(source_title, '')) DESC, created_at DESC`) :
+      sort === 'longest' ? sql.raw(`ORDER BY ${pp} LENGTH(content) DESC, created_at DESC`) :
+      sort === 'shortest' ? sql.raw(`ORDER BY ${pp} LENGTH(content) ASC, created_at DESC`) :
+      sql.raw(`ORDER BY ${pp} created_at DESC`);
 
     const results = await db.execute(sql`
       SELECT id, content, source_type, source_id, source_title, metadata, created_at, imported_at
@@ -48,16 +53,20 @@ export async function GET(req: NextRequest) {
     const total = (countResult as any)[0]?.count || 0;
 
     return NextResponse.json({
-      memories: (results as any[]).map(r => ({
-        id: r.id,
-        content: r.content,
-        source: r.source_type,
-        sourceId: r.source_id,
-        sourceTitle: r.source_title || '',
-        timestamp: r.created_at,
-        importedAt: r.imported_at,
-        metadata: r.metadata || {},
-      })),
+      memories: (results as any[]).map(r => {
+        const meta = r.metadata || {};
+        return {
+          id: r.id,
+          content: r.content,
+          source: r.source_type,
+          sourceId: r.source_id,
+          sourceTitle: r.source_title || '',
+          timestamp: r.created_at,
+          importedAt: r.imported_at,
+          metadata: meta,
+          pinned: meta.pinned === true,
+        };
+      }),
       total,
     });
   } catch (error: unknown) {
@@ -117,17 +126,31 @@ export async function PATCH(req: NextRequest) {
   try {
     const userId = await getUserId();
     const body = await req.json();
-    const { id, content, title } = body;
+    const { id, content, title, pinned } = body;
 
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    if (!content && title === undefined) return NextResponse.json({ error: 'content or title required' }, { status: 400 });
+    if (!content && title === undefined && pinned === undefined) return NextResponse.json({ error: 'content, title, or pinned required' }, { status: 400 });
 
     // Verify ownership
     const existing = await db.execute(
-      sql`SELECT id FROM memories WHERE id = ${id}::uuid AND user_id = ${userId}::uuid`
+      sql`SELECT id, metadata FROM memories WHERE id = ${id}::uuid AND user_id = ${userId}::uuid`
     );
     if ((existing as any[]).length === 0) {
       return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
+    }
+
+    // Handle pin/unpin via metadata JSONB (no schema migration needed)
+    if (pinned !== undefined && !content && title === undefined) {
+      // Pin-only update: merge pinned flag into existing metadata
+      const existingMeta = (existing as any[])[0]?.metadata || {};
+      const updatedMeta = { ...existingMeta, pinned: !!pinned };
+      if (!pinned) delete updatedMeta.pinned; // Remove flag when unpinning to keep metadata clean
+      const metaStr = JSON.stringify(updatedMeta);
+      await db.execute(sql`
+        UPDATE memories SET metadata = ${metaStr}::jsonb
+        WHERE id = ${id}::uuid AND user_id = ${userId}::uuid
+      `);
+      return NextResponse.json({ ok: true, pinned: !!pinned });
     }
 
     // Update content (with re-embedding) and/or title

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -19,6 +19,7 @@ interface Memory {
   metadata: Record<string, any>;
   layers?: Record<string, any>;
   score?: number;
+  pinned?: boolean;
 }
 
 interface Source {
@@ -238,6 +239,33 @@ export default function ExplorePage() {
     setSaving(false);
   }, [selected, editContent, editTitle, saving]);
 
+  // ── Pin/Unpin memory ──────────────────
+  const [pinning, setPinning] = useState(false);
+  const togglePin = useCallback(async (memory: Memory) => {
+    if (pinning) return;
+    setPinning(true);
+    const newPinned = !memory.pinned;
+    try {
+      const res = await fetch('/api/v1/memories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: memory.id, pinned: newPinned }),
+      });
+      if (!res.ok) throw new Error('Failed to update');
+      // Update local state
+      const updatedMemory = { ...memory, pinned: newPinned, metadata: { ...memory.metadata, pinned: newPinned || undefined } };
+      if (!newPinned) delete updatedMemory.metadata.pinned;
+      setMemories(prev => prev.map(m => m.id === memory.id ? { ...m, pinned: newPinned } : m));
+      if (selected?.id === memory.id) {
+        setSelected({ ...selected, pinned: newPinned });
+      }
+      toast.success(newPinned ? "Pinned to top" : "Unpinned");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to pin");
+    }
+    setPinning(false);
+  }, [pinning, selected]);
+
   // Keyboard: j/k to navigate list, Enter to open, Escape to close, ↑↓ in modal
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -259,6 +287,12 @@ export default function ExplorePage() {
         if (e.key === "e" && !editing && !isInput) {
           e.preventDefault();
           startEditing();
+          return;
+        }
+        // "p" to toggle pin (when not editing and not in an input)
+        if (e.key === "p" && !editing && !isInput) {
+          e.preventDefault();
+          togglePin(selected);
           return;
         }
         // j/↓ = next memory, k/↑ = prev memory in detail view (only when not editing)
@@ -346,7 +380,7 @@ export default function ExplorePage() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll, editing, startEditing, cancelEditing]);
+  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll, editing, startEditing, cancelEditing, togglePin]);
 
   // Reset focused index when memories change
   useEffect(() => {
@@ -413,7 +447,7 @@ export default function ExplorePage() {
       if (search) {
         // Use BM25 full-text search for queries (better relevance than ILIKE)
         const p = new URLSearchParams({ q: search, limit: '100' });
-        if (filter) p.set('source', filter);
+        if (filter && filter !== 'pinned') p.set('source', filter);
         fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
           const results = (d.results || []).map((r: any) => ({
             id: r.memoryId,
@@ -426,6 +460,7 @@ export default function ExplorePage() {
             metadata: r.metadata || {},
             layers: r.layers || {},
             score: r.score || 0,
+            pinned: r.metadata?.pinned === true,
           }));
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
@@ -435,7 +470,8 @@ export default function ExplorePage() {
         // No search query — list all memories
         setSearchLayers(null);
         const p = new URLSearchParams({ limit: '100', sort: sortBy });
-        if (filter) p.set('source', filter);
+        if (filter && filter !== 'pinned') p.set('source', filter);
+        if (filter === 'pinned') p.set('pinned', 'true');
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
           setMemories(d.memories || []);
           setTotalMemories(d.total || 0);
@@ -451,7 +487,8 @@ export default function ExplorePage() {
     setLoadingMore(true);
     try {
       const p = new URLSearchParams({ limit: '100', offset: String(memories.length), sort: sortBy });
-      if (filter) p.set('source', filter);
+      if (filter && filter !== 'pinned') p.set('source', filter);
+      if (filter === 'pinned') p.set('pinned', 'true');
       const res = await fetch(`/api/v1/memories?${p}`);
       const d = await res.json();
       setMemories(prev => [...prev, ...(d.memories || [])]);
@@ -528,6 +565,12 @@ export default function ExplorePage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
             <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
+            <FilterPill
+              active={filter === "pinned"}
+              onClick={() => setFilter(filter === "pinned" ? null : "pinned")}
+              label="Pinned"
+              icon={<Pin className="w-3 h-3" />}
+            />
             {(["chatgpt", "text", "file", "url"] as const).map((type) => {
               const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
               if (count === 0) return null;
@@ -715,6 +758,9 @@ export default function ExplorePage() {
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
+                {m.pinned && (
+                  <Pin className="w-3 h-3 text-amber-400 shrink-0 fill-amber-400/30" />
+                )}
                 {/* Layer indicators per result (when searching) */}
                 {search.trim() && m.layers && (
                   <span className="flex items-center gap-[3px] shrink-0 ml-0.5" title={
@@ -830,7 +876,12 @@ export default function ExplorePage() {
                     className="w-full text-[15px] font-semibold bg-transparent border-b border-violet-500/30 focus:border-violet-500/60 outline-none pb-0.5 transition-colors placeholder:text-zinc-600"
                   />
                 ) : (
-                  <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+                    {selected.pinned && (
+                      <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
+                    )}
+                  </div>
                 )}
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${typeConfig[selected.source]?.color || ""}`}>
@@ -971,6 +1022,25 @@ export default function ExplorePage() {
                 <>
                   <div className="flex items-center gap-1">
                     <button
+                      onClick={() => togglePin(selected)}
+                      disabled={pinning}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+                        selected.pinned
+                          ? "text-amber-400 hover:bg-amber-500/10"
+                          : "text-zinc-400 hover:bg-white/[0.06]"
+                      }`}
+                      title={selected.pinned ? "Unpin (p)" : "Pin to top (p)"}
+                    >
+                      {pinning ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : selected.pinned ? (
+                        <PinOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Pin className="w-3.5 h-3.5" />
+                      )}
+                      {selected.pinned ? "Unpin" : "Pin"}
+                    </button>
+                    <button
                       onClick={() => handleCopy(selected.content)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
                     >
@@ -1031,6 +1101,10 @@ export default function ExplorePage() {
                     <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
                     <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
                     navigate
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">p</kbd>
+                    pin
                   </span>
                   <span className="flex items-center gap-1 text-[10px] text-zinc-700">
                     <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">e</kbd>

@@ -29,6 +29,14 @@ export async function GET(req: NextRequest) {
       LIMIT 5
     `);
 
+    // Pinned memories
+    const pinnedMemories = await db.execute(sql`
+      SELECT id, content, source_type, source_title, created_at
+      FROM memories WHERE user_id = ${userId}::uuid AND (metadata->>'pinned')::boolean = true
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
     const totalMemories = (memoriesCount as any)[0]?.count || 0;
     const byType: Record<string, number> = { chatgpt: 0, text: 0, file: 0, url: 0 };
     for (const row of sourcesBreakdown as any[]) {
@@ -54,6 +62,14 @@ export async function GET(req: NextRequest) {
         sourceTitle: r.source_title || 'Untitled',
         createdAt: r.created_at,
       })),
+      pinnedMemories: (pinnedMemories as any[]).map(r => ({
+        id: r.id,
+        content: r.content?.slice(0, 120) || '',
+        sourceType: r.source_type,
+        sourceTitle: r.source_title || 'Untitled',
+        createdAt: r.created_at,
+      })),
+      pinnedCount: (pinnedMemories as any[]).length,
     });
   } catch (error: unknown) {
     console.error('[stats]', error);
