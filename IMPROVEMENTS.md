@@ -4,6 +4,52 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 23:29 UTC — Resume Builder Plugin (Phase 4, Plugin #22)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Learning Path Generator (#24). Resume Builder is the **5th of 6 Action Plugins**.
+- **Implemented**:
+
+### Resume Builder (#22) — NEW
+  - **Full backend API route** (`/api/v1/plugins/resume-builder`):
+    - **Multi-query RAG knowledge extraction**: 5 professional search queries (`work experience`, `skills & technologies`, `education & certifications`, `projects & achievements`, `career history`) + user_facts table lookup. Deduplicates across all queries. Up to 30 relevant memories surfaced as context for the AI resume writer.
+    - **AI-powered resume generation**: Creates structured resumes with sections tailored to target role:
+      - 9 section types: header, summary, experience, education, skills, projects, certifications, languages, interests
+      - ATS-optimized content with strong action verbs and quantified achievements
+      - Uses only information from user's actual memories — no hallucinated experience
+    - **4 resume templates**:
+      - Modern — clean minimal layout for tech roles (experience → skills → projects → education)
+      - Classic — traditional chronological format (experience → education → skills → certifications)
+      - Creative — projects-first for portfolio-driven roles (projects → experience → skills → interests)
+      - Executive — leadership-focused with impact metrics (experience → certifications → education → languages)
+    - **8 API actions**: list, get, templates, generate, update, refine, add-section, reorder, delete
+    - **Per-section AI refinement**: Refine any section with custom instructions (e.g., "add more metrics", "focus on leadership", "make more concise"). AI rewrites section content while maintaining structure.
+    - **Section management**: Toggle visibility (show/hide without deleting), reorder sections up/down, add custom sections, edit content inline
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 10 resumes per user, auto-install on first use
+  - **Full frontend page** (`/app/resume`) — 4 views:
+    - **List view**: Resume cards with title, target role, template badge, section/source counts, date, content preview. Empty state with call-to-action. Delete per resume.
+    - **Create view**: Target role input with autofocus + Enter shortcut, 4 template selection cards (2-col grid) with emoji icons, section preview tags, and descriptions. Optional additional context textarea. Full-width generate button with loading state showing "Analyzing your memories and building resume..."
+    - **Edit view**: Accordion-style section list. Each section has:
+      - Type-colored icon badge (teal/sky/emerald/amber/cyan/rose)
+      - Expand/collapse with content preview when collapsed
+      - Reorder buttons (up/down chevrons)
+      - Visibility toggle (Eye/EyeOff)
+      - Expanded: rendered markdown content + action buttons (Edit, AI Refine)
+      - Edit mode: monospace textarea with save/cancel
+      - AI Refine: expandable instruction input for custom refinement prompts
+    - **Preview view**: Clean document-style rendering with teal section headers, proper markdown rendering, copy + download buttons
+    - **Export**: Copy as Markdown, Download as .md file (auto-named by target role)
+  - **Design**: OLED black, teal primary accent, type-colored section badges (9 distinct colors for 9 section types), glass borders (white/[0.06]), rounded-2xl cards, zero violet/purple/fuchsia
+  - **Navigation**: Sidebar entry ("Resume" with FileUser icon), Command Palette action (searchable by resume/cv/career/job/professional/experience/skills/hire/work/apply/application), Command Palette nav entry
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ✅ Resume Builder (#22) ← NEW
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Newsletter Writer (#21) — auto-curate weekly digests from your knowledge. This completes Phase 4!
+- **Branch**: `frain/improve` (commit `0fcfcb1`)
+
 ## 2026-03-24 22:59 UTC — Learning Path Generator Plugin (Phase 4, Plugin #24)
 - **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Conversation Prep (#23) and Blog Draft Generator (#19).
 - **Implemented**:
