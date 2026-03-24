@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -21,7 +21,7 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "text", label: "Text", icon: Type, desc: "Paste anything" },
   { id: "files", label: "Files", icon: FileText, desc: ".txt, .md" },
   { id: "url", label: "URL", icon: Globe, desc: "Extract page" },
-  { id: "obsidian", label: "Obsidian", icon: BookOpen, desc: "Vault export" },
+  { id: "obsidian", label: "Obsidian", icon: Gem, desc: "Vault ZIP" },
   { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
   { id: "kindle", label: "Kindle", icon: BookOpenCheck, desc: "Highlights" },
   { id: "pdf-epub", label: "PDF/EPUB", icon: FileBox, desc: "Documents" },
@@ -31,7 +31,7 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
 
 // Plugin icon mapping — maps manifest icon names to actual components
 const PLUGIN_ICON_MAP: Record<string, any> = {
-  BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle, PlayCircle, Bookmark,
+  BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle, PlayCircle, Bookmark, Gem,
 };
 
 interface ImportSource {
@@ -72,6 +72,10 @@ export default function ImportPage() {
   const [bmPreview, setBmPreview] = useState<any>(null);
   const [bmParsing, setBmParsing] = useState(false);
   const [bmFetchContent, setBmFetchContent] = useState(false);
+
+  // ─── Obsidian-specific state ──────────────────────────────
+  const [obPreview, setObPreview] = useState<any>(null);
+  const [obParsing, setObParsing] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -397,6 +401,56 @@ export default function ImportPage() {
     }
   };
 
+  // ─── OBSIDIAN VAULT IMPORT HANDLERS ───────────────────────
+
+  const handleObPreview = async (file: File) => {
+    setObParsing(true);
+    setObPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/obsidian-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse vault');
+      }
+      const data = await res.json();
+      setObPreview({ ...data, file });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setObParsing(false);
+    }
+  };
+
+  const handleObImport = async () => {
+    if (!obPreview?.file) return;
+    setState("uploading"); setProgress(30);
+    setProgressText(`Importing ${obPreview.stats.totalNotes} notes from Obsidian vault…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', obPreview.file);
+      const res = await fetch('/api/v1/plugins/obsidian-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`${imported.totalNotes} notes → ${imported.totalChunks} memories · ${imported.connections} connections`);
+      toast.success(`Imported ${imported.totalNotes} Obsidian notes`, {
+        description: `${imported.totalChunks} memories · ${imported.connections} connections · ${imported.tags} tags`,
+      });
+      setObPreview(null);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -476,7 +530,7 @@ export default function ImportPage() {
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
         {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks'].includes(pt.slug))
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer'].includes(pt.slug))
           .map((pt) => {
           const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
           const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
@@ -575,14 +629,194 @@ export default function ImportPage() {
           )}
           {tab === "obsidian" && (
             <>
-              <p className="text-[12px] text-zinc-500">Select .md files from your Obsidian vault folder</p>
-              <DropZone
-                id="obsidian-upload" accept=".md,.txt,.markdown" multiple disabled={busy}
-                onFiles={(f) => handleVaultImport(f)}
-                title="Drop Obsidian files"
-                subtitle=".md files from your vault"
-                icon={<BookOpen className="w-6 h-6 text-zinc-600" />}
-              />
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Obsidian Vault</p>
+                <p>ZIP your vault folder and upload it. Wikilinks, tags, and frontmatter are preserved.</p>
+                <p className="text-zinc-600">Right-click your vault folder → Compress/Send to ZIP</p>
+              </div>
+
+              {!obPreview ? (
+                <div className="space-y-3">
+                  <label
+                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                      ${obParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-violet-500/30 hover:bg-violet-500/[0.03]'}`}
+                  >
+                    {obParsing ? (
+                      <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+                    ) : (
+                      <Gem className="w-6 h-6 text-violet-400" />
+                    )}
+                    <span className="text-[12px] text-zinc-400 font-medium">
+                      {obParsing ? 'Parsing vault…' : 'Drop vault.zip or click to browse'}
+                    </span>
+                    <span className="text-[10px] text-zinc-600">
+                      Supports wikilinks, #tags, YAML frontmatter, folder structure
+                    </span>
+                    <input
+                      type="file"
+                      accept=".zip"
+                      className="hidden"
+                      disabled={obParsing || busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleObPreview(f);
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Stats card */}
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-violet-500/[0.08] border border-violet-500/15 flex items-center justify-center shrink-0">
+                        <Gem className="w-5 h-5 text-violet-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-zinc-200 tabular-nums">
+                          {obPreview.stats.totalNotes.toLocaleString()} notes
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          {obPreview.stats.totalWords.toLocaleString()} words · {obPreview.stats.totalFolders} folders
+                          {obPreview.stats.dateRange.oldest && ` · ${obPreview.stats.dateRange.oldest} – ${obPreview.stats.dateRange.newest}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setObPreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    {/* Graph stats */}
+                    <div className="border-t border-white/[0.04] px-4 py-2.5">
+                      <div className="flex items-center gap-4 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <Link2 className="w-3 h-3 text-violet-400/60" />
+                          <span className="text-zinc-400">{obPreview.graphPreview.totalLinks} wikilinks</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <GitFork className="w-3 h-3 text-emerald-400/60" />
+                          <span className="text-zinc-400">{obPreview.graphPreview.connectedNotes} connected</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-zinc-600">{obPreview.stats.orphanNotes} orphans</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <span className="text-zinc-600">{obPreview.graphPreview.avgLinksPerNote} links/note</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    {obPreview.stats.topTags?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <Tags className="w-2.5 h-2.5" /> Tags
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {obPreview.stats.topTags.slice(0, 12).map((t: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/[0.06] border border-violet-500/10 text-[10px] text-violet-300/80"
+                            >
+                              #{t.tag}
+                              <span className="text-zinc-600 tabular-nums">{t.count}</span>
+                            </span>
+                          ))}
+                          {obPreview.stats.topTags.length > 12 && (
+                            <span className="text-[10px] text-zinc-600 self-center">
+                              +{obPreview.stats.topTags.length - 12} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top folders */}
+                    {obPreview.stats.topFolders?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <FolderOpen className="w-2.5 h-2.5" /> Folders
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {obPreview.stats.topFolders.map((f: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] text-[10px] text-zinc-400"
+                            >
+                              <FolderOpen className="w-2.5 h-2.5 text-violet-400/50" />
+                              {f.path}
+                              <span className="text-zinc-600 tabular-nums">{f.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Most linked notes */}
+                    {obPreview.stats.mostLinked?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2 flex items-center gap-1">
+                          <Link2 className="w-2.5 h-2.5" /> Most Linked
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {obPreview.stats.mostLinked.slice(0, 6).map((n: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] text-[10px] text-zinc-400"
+                            >
+                              {n.name}
+                              <span className="text-emerald-400/60 tabular-nums">← {n.inLinks}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sample notes */}
+                    {obPreview.sampleNotes?.length > 0 && (
+                      <div className="border-t border-white/[0.04] max-h-[200px] overflow-y-auto">
+                        {obPreview.sampleNotes.slice(0, 6).map((n: any, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
+                          >
+                            <span className="text-[10px] text-violet-400/60 font-mono tabular-nums w-4 text-right shrink-0">{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[11px] text-zinc-300 truncate">{n.name}</p>
+                                {n.linkCount > 0 && (
+                                  <span className="text-[9px] text-emerald-400/50 shrink-0">{n.linkCount} links</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-zinc-600 truncate">
+                                {n.folder || 'Root'} · {n.wordCount} words
+                                {n.tags.length > 0 && ` · ${n.tags.map((t: string) => `#${t}`).join(' ')}`}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Import button */}
+                  <button
+                    onClick={handleObImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Gem className="w-4 h-4" />
+                    )}
+                    Import {obPreview.stats.totalNotes.toLocaleString()} Notes
+                  </button>
+                </div>
+              )}
             </>
           )}
           {tab === "notion" && (
@@ -1117,7 +1351,7 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
@@ -1127,6 +1361,7 @@ export default function ImportPage() {
                   document: "text-blue-400 bg-blue-500/10",
                   youtube: "text-red-400 bg-red-500/10",
                   bookmark: "text-sky-400 bg-sky-500/10",
+                  obsidian: "text-violet-400 bg-violet-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";
