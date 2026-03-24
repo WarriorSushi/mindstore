@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -62,6 +62,10 @@ export default function ExplorePage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
+
+  // Infinite scroll state
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
@@ -422,6 +426,37 @@ export default function ExplorePage() {
     return () => clearTimeout(t);
   }, [search, filter]);
 
+  // ── Infinite scroll with Intersection Observer ──────────────────
+  const loadMore = useCallback(async () => {
+    if (loadingMore || memories.length >= totalMemories || search) return;
+    setLoadingMore(true);
+    try {
+      const p = new URLSearchParams({ limit: '100', offset: String(memories.length) });
+      if (filter) p.set('source', filter);
+      const res = await fetch(`/api/v1/memories?${p}`);
+      const d = await res.json();
+      setMemories(prev => [...prev, ...(d.memories || [])]);
+    } catch { /* ignore */ }
+    setLoadingMore(false);
+  }, [loadingMore, memories.length, totalMemories, search, filter]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingMore && memories.length < totalMemories && !search) {
+          loadMore();
+        }
+      },
+      { rootMargin: '200px' } // trigger 200px before the sentinel is visible
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, loadingMore, memories.length, totalMemories, search]);
+
   return (
     <PageTransition className="space-y-4 md:space-y-6">
       {/* Header */}
@@ -590,21 +625,21 @@ export default function ExplorePage() {
           );
         })}
 
-        {totalMemories > memories.length && (
-          <button
-            onClick={async () => {
-              const p = new URLSearchParams({ limit: '100', offset: String(memories.length) });
-              if (search) p.set('search', search);
-              if (filter) p.set('source', filter);
-              const res = await fetch(`/api/v1/memories?${p}`);
-              const d = await res.json();
-              setMemories(prev => [...prev, ...(d.memories || [])]);
-            }}
-            className="w-full py-3 rounded-2xl border border-white/[0.06] text-[12px] text-zinc-500 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1.5 font-medium"
-          >
-            <ChevronDown className="w-3.5 h-3.5" />
-            Load more ({totalMemories - memories.length} remaining)
-          </button>
+        {/* Infinite scroll sentinel */}
+        {totalMemories > memories.length && !search && (
+          <div ref={sentinelRef} className="flex items-center justify-center py-4">
+            {loadingMore ? (
+              <div className="flex items-center gap-2 text-[12px] text-zinc-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                Loading more…
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-600">
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                {totalMemories - memories.length} more
+              </div>
+            )}
+          </div>
         )}
 
         {memories.length === 0 && !loading && (
