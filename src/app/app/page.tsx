@@ -425,6 +425,46 @@ export default function DashboardPage() {
         </div>
       </Stagger>
 
+      {/* Pinned Memories */}
+      {stats?.pinnedMemories?.length > 0 && (
+        <Stagger>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <Pin className="w-3 h-3 text-amber-400 fill-amber-400/30" />
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Pinned</p>
+                <span className="text-[10px] text-zinc-600 tabular-nums">{stats.pinnedCount || stats.pinnedMemories.length}</span>
+              </div>
+              <Link href="/app/explore?filter=pinned" className="text-[11px] text-zinc-600 hover:text-amber-400 font-medium transition-colors">
+                View all →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-violet-400 bg-violet-500/10" };
+                const Icon = typeIcons[mem.sourceType] || FileText;
+                const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                return (
+                  <Link key={mem.id || i} href={`/app/explore?q=${encodeURIComponent(mem.content.slice(0, 40))}`}>
+                    <div className="group relative flex items-start gap-3 p-3.5 rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.04] to-amber-500/[0.01] hover:from-amber-500/[0.08] hover:to-amber-500/[0.03] hover:border-amber-500/20 transition-all active:scale-[0.98]">
+                      <Pin className="absolute top-2.5 right-2.5 w-2.5 h-2.5 text-amber-500/40 fill-amber-400/20" />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ').slice(1).join(' ')}`}>
+                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium text-zinc-300 truncate group-hover:text-white transition-colors">{mem.sourceTitle}</p>
+                        <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mt-0.5">{mem.content}</p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </Stagger>
+      )}
+
       {/* Actions Grid */}
       <Stagger>
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
