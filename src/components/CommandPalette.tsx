@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target,
+  Heart, Target, PenTool,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,6 +42,7 @@ const NAV_ITEMS = [
   { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
+  { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -335,6 +336,18 @@ export function CommandPalette() {
         keywords: ["gaps", "blind", "spots", "missing", "coverage", "sparse", "bridge", "knowledge", "learn", "stale"],
         action: () => {
           router.push("/app/gaps");
+          setOpen(false);
+        },
+      },
+      {
+        id: "writing-style",
+        icon: PenTool,
+        iconColor: "text-sky-400",
+        label: "View Writing Style",
+        desc: "Vocabulary, readability, tone, and writing patterns",
+        keywords: ["writing", "style", "vocabulary", "readability", "tone", "words", "sentences", "grade", "flesch", "complexity", "phrases"],
+        action: () => {
+          router.push("/app/writing");
           setOpen(false);
         },
       },
