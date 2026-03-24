@@ -4,6 +4,25 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 05:59 UTC — Global Drag-and-Drop File Import
+- **Research**: Drag-and-drop UX patterns from Notion, Slack, Discord, Gmail — all modern productivity apps allow dropping files anywhere in the app, not just on dedicated upload areas. MindStore's Import page had per-tab DropZone components, but users had to navigate to the Import page first. Web search unavailable (quota), used domain knowledge of file import UX patterns.
+- **Finding**: MindStore had drag-and-drop support only within the Import page's DropZone components. Users on Chat, Explore, Dashboard, or any other page had no way to quickly import a file without navigating away. This breaks the flow — especially for power users who want to "drop and go" like in Slack or Notion.
+- **Implemented**:
+  - **New `GlobalDropZone` component** (`src/components/GlobalDropZone.tsx`): A window-level drag-and-drop handler that intercepts file drags anywhere in the app.
+  - **Full-screen overlay**: When dragging files over the window, a `z-[200]` overlay appears with backdrop blur, animated upload icon (CSS bounce), and pulsing glow ring — clear visual feedback that the app is ready to receive files.
+  - **Auto file type detection**: Categorizes dropped files automatically:
+    - `.json` / `.zip` → ChatGPT import (`source_type: 'chatgpt'`)
+    - `.txt` / `.md` / `.markdown` → File import (`source_type: 'file'`)
+    - Unsupported files → shows error with supported formats
+  - **Four visual states**: `hovering` (drop target with animated icon), `importing` (spinner + "Processing…"), `done` (green checkmark + result count), `error` (red alert + message)
+  - **Mixed file handling**: If a user drops a mix of `.json` and `.md` files, imports both sets and reports on any unsupported files separately
+  - **Import page guard**: Overlay is disabled on `/app/import` since that page has its own granular DropZone components per tab
+  - **Drag counter pattern**: Uses `dragCountRef` counter (increment on `dragenter`, decrement on `dragleave`) to handle the browser's notoriously tricky drag events — prevents the overlay from flickering when dragging over child elements
+  - **Auto-dismiss**: Success state auto-clears after 2.5s, error after 3.5s
+  - **CSS animations**: `gdz-fade-in`, `gdz-pulse`, `gdz-bounce`, `gdz-scale-in` — all pure CSS keyframes, no JS animation library
+  - **Integrated into app layout**: Added alongside Onboarding and CommandPalette in `layout.tsx`
+- **Branch**: `frain/improve` (commit `7b02df0`)
+
 ## 2026-03-24 05:29 UTC — Infinite Scroll on Explore Page
 - **Research**: Scroll/pagination UX patterns from Twitter, Instagram, Notion, Linear — modern apps universally use infinite scroll (via Intersection Observer) instead of manual "Load More" buttons for content lists. Infinite scroll keeps users in flow, reduces friction, and feels seamless. Web search unavailable (quota), used domain knowledge of pagination UX patterns.
 - **Finding**: The Explore page had a manual "Load More" button at the bottom of the memory list. Users had to notice it, stop scrolling, and click it to see more memories. This is a friction point — especially for users with hundreds or thousands of memories. Every major content app (Twitter, Instagram, Notion databases, Linear issue lists) auto-loads the next page as you scroll.
