@@ -539,3 +539,19 @@ _Automated 30-min improvement cycles by Frain_
   - **Design**: `Sparkles` icon header with "Related memories" label, compact card layout with hover states, score visualization bars matching the chat source cards pattern
   - **Icons**: Added `Sparkles` and `ExternalLink` from lucide-react
 - **Branch**: `frain/improve` (commit `dd9900e`)
+
+## 2026-03-24 12:29 UTC — Pinned Memories on Dashboard
+- **Research**: PKM UX audit — every major knowledge management app (Notion, Obsidian, Apple Notes, Bear, Mem, Capacities) surfaces pinned/starred/favorited items on the home screen. MindStore added pinning in a previous cycle, and the backend stats API already returned `pinnedMemories` data, but the dashboard page never used it. Users who pinned important memories had to navigate to Explore with a pinned filter to find them — defeating the purpose of quick access.
+- **Finding**: The stats API already had the infrastructure (`pinnedMemories` array, `pinnedCount`), but the dashboard `page.tsx` only rendered stat cards, quick search, action grid, recent activity, discover features, and sources. Pinned memories were invisible from the home screen.
+- **Implemented**:
+  - **Pinned Memories section** on the dashboard, positioned between stat cards and action grid for maximum prominence:
+    - Shows up to 4 pinned memories in a responsive 2-column grid (`grid-cols-1 sm:grid-cols-2`)
+    - Each card features: warm amber gradient background (`from-amber-500/[0.04]`), subtle pin icon in top-right corner, source type icon badge, title, and 2-line content preview
+    - Header with Pin icon, "PINNED" label, and count badge
+    - "View all →" link that navigates to Explore with pinned filter (`/app/explore?filter=pinned`)
+    - Click navigates to Explore with search query for the memory
+    - Hover state: amber gradient intensifies + border brightens + title goes white
+    - Only renders when `pinnedMemories.length > 0` — zero visual noise for users without pins
+  - **No backend changes** — leverages existing stats API data
+  - **Design**: amber-tinted gradient cards complement the pinning feature's amber color palette, creating visual consistency across Explore and Dashboard
+- **Branch**: `frain/improve` (commit `ba293bb`)
