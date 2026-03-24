@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart,
+  Heart, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
   { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
+  { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -322,6 +323,18 @@ export function CommandPalette() {
         keywords: ["sentiment", "mood", "emotion", "feeling", "happiness", "tone", "emotional", "positive", "negative"],
         action: () => {
           router.push("/app/sentiment");
+          setOpen(false);
+        },
+      },
+      {
+        id: "knowledge-gaps",
+        icon: Target,
+        iconColor: "text-teal-400",
+        label: "View Knowledge Gaps",
+        desc: "Blind spots, thin coverage, and missing connections",
+        keywords: ["gaps", "blind", "spots", "missing", "coverage", "sparse", "bridge", "knowledge", "learn", "stale"],
+        action: () => {
+          router.push("/app/gaps");
           setOpen(false);
         },
       },
