@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Onboarding } from "@/components/Onboarding";
 import { CommandPalette } from "@/components/CommandPalette";
+import { GlobalDropZone } from "@/components/GlobalDropZone";
 
 const navItems = [
   { href: "/app", icon: LayoutDashboard, label: "Home" },
@@ -50,6 +51,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Onboarding />
       {/* ════════ COMMAND PALETTE ════════ */}
       <CommandPalette />
+      {/* ════════ GLOBAL DROP ZONE ════════ */}
+      <GlobalDropZone />
       {/* ════════ MOBILE HEADER ════════ */}
       <header className={cn(
         "md:hidden fixed top-0 inset-x-0 z-50 safe-top",
