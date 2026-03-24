@@ -4,6 +4,17 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 00:59 UTC — Settings Page Entrance Animations
+- **Research**: Internal UX consistency audit — compared all 9 app pages for animation parity
+- **Finding**: Settings was the **only** app page that didn't use `PageTransition` and `Stagger` components. Every other page (Dashboard, Explore, Chat, Connect, Import, Learn, Fingerprint, Insights) had smooth staggered entrance animations, but Settings snapped in instantly — creating a jarring inconsistency when navigating.
+- **Implemented**:
+  - Wrapped Settings page in `<PageTransition>` with sequential `<Stagger>` sections
+  - Header, active provider badge, reindex nudge, providers section, data section, and about card all animate in with staggered delays
+  - About card upgraded from flat `bg-white/[0.02]` to subtle gradient `bg-gradient-to-b from-white/[0.03] to-white/[0.01]` for visual polish
+  - **All 9 app pages now have 100% consistent entrance animations** — zero holdouts
+  - Zero new dependencies (CSS-only animations via existing PageTransition system)
+- **Branch**: `frain/improve` (commit `69544b3`)
+
 ## 2026-03-24 00:29 UTC — Remove framer-motion: CSS-Only Animations Everywhere
 - **Research**: Performance audit — identified framer-motion as last remaining heavy JS dependency used only for simple fade/slide animations. Web search unavailable (quota), used codebase analysis to find all framer-motion imports.
 - **Finding**: Only 2 files still imported framer-motion: `PageTransition.tsx` (used across 5+ pages for staggered entrance animations) and `Onboarding.tsx` (slide transitions with AnimatePresence). The library adds ~5.8MB to node_modules and ~30KB+ gzipped to the client bundle — all for animations that CSS `@keyframes` handles natively with identical visual results.
