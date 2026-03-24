@@ -4,6 +4,18 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 05:29 UTC — Infinite Scroll on Explore Page
+- **Research**: Scroll/pagination UX patterns from Twitter, Instagram, Notion, Linear — modern apps universally use infinite scroll (via Intersection Observer) instead of manual "Load More" buttons for content lists. Infinite scroll keeps users in flow, reduces friction, and feels seamless. Web search unavailable (quota), used domain knowledge of pagination UX patterns.
+- **Finding**: The Explore page had a manual "Load More" button at the bottom of the memory list. Users had to notice it, stop scrolling, and click it to see more memories. This is a friction point — especially for users with hundreds or thousands of memories. Every major content app (Twitter, Instagram, Notion databases, Linear issue lists) auto-loads the next page as you scroll.
+- **Implemented**:
+  - **Intersection Observer**: Added a sentinel `<div>` at the bottom of the memory list, observed with `IntersectionObserver` using `rootMargin: '200px'` — this triggers the next fetch 200px before the sentinel becomes visible, so content loads before the user reaches the bottom.
+  - **`loadMore()` callback**: Fetches the next batch of 100 memories via `/api/v1/memories?limit=100&offset=N` and appends to the existing list. Guards against duplicate fetches with `loadingMore` state.
+  - **Loading indicator**: While fetching, shows a subtle "Loading more…" with a spinning violet `Loader2` icon. When not loading, shows "N more" with a `MoreHorizontal` icon so users know there's more content.
+  - **Smart guards**: Infinite scroll only activates when: (a) not already loading, (b) there are more memories to load (`memories.length < totalMemories`), and (c) the user is NOT searching (search results load all at once since they're naturally scoped by query relevance).
+  - **Cleanup**: Observer disconnects on unmount/re-render to prevent memory leaks.
+  - **No changes to API**: The existing `/api/v1/memories` endpoint already supported `limit` and `offset` parameters — purely a frontend UX improvement.
+- **Branch**: `frain/improve` (commit `6a27418`)
+
 ## 2026-03-24 03:29 UTC — Enhanced Command Palette: Quick Actions & Recent Chats
 - **Research**: Command palette UX patterns from Linear, Raycast, Notion, Superhuman — modern command palettes aren't just search boxes. They're action hubs: search content, navigate pages, AND execute quick actions (new chat, export, import). Linear's ⌘K shows recent items when empty. Raycast groups results by type with section headers. Superhuman's ⌘K has instant actions with keyword matching.
 - **Finding**: MindStore's ⌘K Command Palette could only do two things: search memories and navigate to pages. No quick actions (users had to navigate to a page first, then find the button). No recent items (the palette opened empty with just a page list). No section grouping. This made it feel like a basic nav menu rather than a power-user hub. Web search unavailable (quota), used domain knowledge of command palette UX patterns.
