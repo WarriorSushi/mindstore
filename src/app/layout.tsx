@@ -39,7 +39,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${geist.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
         {children}
-        <Toaster theme="dark" position="top-center" />
+        <Toaster
+          theme="dark"
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "#111113",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: "16px",
+              color: "#e4e4e7",
+              fontSize: "13px",
+              fontWeight: 500,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+              backdropFilter: "blur(12px)",
+            },
+          }}
+        />
       </body>
     </html>
   );

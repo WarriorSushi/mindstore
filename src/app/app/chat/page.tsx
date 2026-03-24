@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
+  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -256,6 +257,22 @@ export default function ChatPage() {
     }
   };
 
+  const [copiedChat, setCopiedChat] = useState(false);
+
+  /** Copy entire conversation as formatted markdown */
+  const handleCopyConversation = useCallback(() => {
+    if (messages.length === 0) return;
+    const md = messages.map((m) => {
+      const role = m.role === "user" ? "**You**" : "**MindStore**";
+      return `${role}:\n${m.content}`;
+    }).join("\n\n---\n\n");
+    navigator.clipboard.writeText(md).then(() => {
+      setCopiedChat(true);
+      setTimeout(() => setCopiedChat(false), 1500);
+      toast.success("Conversation copied");
+    });
+  }, [messages]);
+
   const activeConversations = conversations.filter(
     (c) => c.messages.length > 0
   );
@@ -274,6 +291,15 @@ export default function ChatPage() {
           </button>
         </div>
         <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button
+              onClick={handleCopyConversation}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+              title="Copy conversation"
+            >
+              {copiedChat ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          )}
           {activeConversations.length > 0 && (
             <button
               onClick={() => setHistoryOpen(!historyOpen)}
@@ -453,61 +479,55 @@ export default function ChatPage() {
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}
+                className={`flex gap-2.5 group/msg ${msg.role === "user" ? "justify-end" : ""}`}
               >
                 {msg.role === "assistant" && (
                   <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 flex items-center justify-center shrink-0 mt-0.5">
                     <Brain className="w-3.5 h-3.5 text-violet-400" />
                   </div>
                 )}
-                <div
-                  className={`max-w-[82%] ${
-                    msg.role === "user"
-                      ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
-                      : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
-                  }`}
-                >
-                  <div className="text-[13px] leading-[1.6]">
-                    {msg.content ? (
-                      <ChatMarkdown content={msg.content} />
-                    ) : loading && i === messages.length - 1 ? (
-                      <span className="flex items-center gap-2 text-zinc-500">
-                        <span className="flex gap-1">
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                            style={{ animationDelay: "0ms" }}
-                          />
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                            style={{ animationDelay: "150ms" }}
-                          />
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
-                            style={{ animationDelay: "300ms" }}
-                          />
-                        </span>
-                      </span>
-                    ) : (
-                      ""
-                    )}
-                  </div>
-                  {msg.sources &&
-                    msg.sources.length > 0 &&
-                    msg.content && (
-                      <div className="mt-2 pt-2 border-t border-white/[0.06]">
-                        <div className="flex flex-wrap gap-1">
-                          {msg.sources.slice(0, 3).map((s, j) => (
+                <div className="relative max-w-[82%]">
+                  <div
+                    className={`${
+                      msg.role === "user"
+                        ? "rounded-[20px] rounded-br-md bg-violet-600 text-white px-4 py-2.5"
+                        : "rounded-[20px] rounded-bl-md bg-white/[0.04] border border-white/[0.06] px-4 py-2.5"
+                    }`}
+                  >
+                    <div className="text-[13px] leading-[1.6]">
+                      {msg.content ? (
+                        <ChatMarkdown content={msg.content} />
+                      ) : loading && i === messages.length - 1 ? (
+                        <span className="flex items-center gap-2 text-zinc-500">
+                          <span className="flex gap-1">
                             <span
-                              key={j}
-                              className="text-[10px] px-2 py-[3px] rounded-full bg-white/[0.06] text-zinc-400"
-                            >
-                              {s.title.slice(0, 20)}
-                              {s.title.length > 20 ? "…" : ""}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            />
+                            <span
+                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            />
+                            <span
+                              className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            />
+                          </span>
+                        </span>
+                      ) : (
+                        ""
+                      )}
+                    </div>
+                    {msg.sources &&
+                      msg.sources.length > 0 &&
+                      msg.content && (
+                        <SourceCards sources={msg.sources} />
+                      )}
+                  </div>
+                  {/* Hover copy button */}
+                  {msg.content && (
+                    <MessageCopyButton content={msg.content} side={msg.role === "user" ? "left" : "right"} />
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-7 h-7 rounded-xl bg-violet-600/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -551,6 +571,104 @@ export default function ChatPage() {
             )}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Copy button that appears on message hover */
+function MessageCopyButton({ content, side }: { content: string; side: "left" | "right" }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(content).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      className={cn(
+        "absolute -bottom-1 opacity-0 group-hover/msg:opacity-100 transition-all",
+        "w-6 h-6 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
+        "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30",
+        side === "right" ? "right-0" : "left-0",
+      )}
+      title="Copy message"
+    >
+      {copied ? (
+        <Check className="w-3 h-3 text-green-400" />
+      ) : (
+        <Copy className="w-3 h-3 text-zinc-500" />
+      )}
+    </button>
+  );
+}
+
+/** Expandable source citations — Perplexity-style */
+function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number }> }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const typeIcons: Record<string, any> = {
+    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type,
+  };
+  const typeColors: Record<string, string> = {
+    chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
+    file: "text-blue-400 bg-blue-500/10 border-blue-500/15",
+    url: "text-orange-400 bg-orange-500/10 border-orange-500/15",
+    text: "text-violet-400 bg-violet-500/10 border-violet-500/15",
+  };
+
+  const displayed = expanded ? sources : sources.slice(0, 2);
+
+  return (
+    <div className="mt-2 pt-2 border-t border-white/[0.06]">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+          Sources · {sources.length}
+        </span>
+        {sources.length > 2 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-0.5 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+          >
+            {expanded ? "Less" : `+${sources.length - 2} more`}
+            {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+          </button>
+        )}
+      </div>
+      <div className="space-y-1">
+        {displayed.map((s, j) => {
+          const Icon = typeIcons[s.type] || FileText;
+          const colors = typeColors[s.type] || "text-zinc-400 bg-zinc-500/10 border-zinc-500/15";
+          const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
+          return (
+            <div
+              key={j}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.05] transition-colors"
+            >
+              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${colors.split(' ').slice(1).join(' ')}`}>
+                <Icon className={`w-2.5 h-2.5 ${colors.split(' ')[0]}`} />
+              </div>
+              <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0">
+                {s.title || "Untitled"}
+              </span>
+              {scorePercent != null && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="w-10 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-violet-500/60 transition-all"
+                      style={{ width: `${Math.max(scorePercent, 8)}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-6 text-right">
+                    {scorePercent}%
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
