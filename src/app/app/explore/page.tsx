@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -872,6 +872,43 @@ export default function ExplorePage() {
                 </button>
               </div>
             </div>
+
+            {/* Content Stats Bar */}
+            {!editing && selected.content && (
+              <div className="px-5 py-2 border-b border-white/[0.04] bg-white/[0.01] flex items-center gap-3 flex-wrap">
+                {(() => {
+                  const words = selected.content.trim().split(/\s+/).filter(Boolean).length;
+                  const chars = selected.content.length;
+                  const readMins = Math.max(1, Math.round(words / 225));
+                  return (
+                    <>
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${words.toLocaleString()} words`}>
+                        <Hash className="w-2.5 h-2.5 text-zinc-700" />
+                        {words.toLocaleString()} words
+                      </span>
+                      <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${chars.toLocaleString()} characters`}>
+                        {chars.toLocaleString()} chars
+                      </span>
+                      <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title="Estimated reading time at 225 wpm">
+                        <BookOpen className="w-2.5 h-2.5 text-zinc-700" />
+                        {readMins} min read
+                      </span>
+                      {selected.importedAt && selected.importedAt !== selected.timestamp && (
+                        <>
+                          <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`Imported ${new Date(selected.importedAt).toLocaleString()}`}>
+                            <Clock className="w-2.5 h-2.5 text-zinc-700" />
+                            Imported {new Date(selected.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Content area — view or edit */}
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
