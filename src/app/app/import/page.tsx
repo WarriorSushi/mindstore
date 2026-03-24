@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
@@ -17,6 +18,14 @@ const TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "notion", label: "Notion", icon: StickyNote, desc: "MD export" },
 ];
 
+interface ImportSource {
+  id: string;
+  type: string;
+  title: string;
+  itemCount: number;
+  importedAt: string;
+}
+
 export default function ImportPage() {
   const [tab, setTab] = useState<Tab>("chatgpt");
   const [state, setState] = useState<ImportState>("idle");
@@ -25,6 +34,34 @@ export default function ImportPage() {
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
   const [urlInput, setUrlInput] = useState("");
+  const [importHistory, setImportHistory] = useState<ImportSource[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [totalMemories, setTotalMemories] = useState(0);
+
+  // Fetch import history on mount
+  const refreshHistory = useCallback(async () => {
+    try {
+      const [sourcesRes, statsRes] = await Promise.all([
+        fetch('/api/v1/sources'),
+        fetch('/api/v1/stats'),
+      ]);
+      if (sourcesRes.ok) {
+        const data = await sourcesRes.json();
+        // Sort by importedAt (most recent first)
+        const sorted = (data.sources || []).sort((a: ImportSource, b: ImportSource) =>
+          new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+        );
+        setImportHistory(sorted);
+      }
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        setTotalMemories(stats.totalMemories || 0);
+      }
+    } catch {}
+    setHistoryLoading(false);
+  }, []);
+
+  useEffect(() => { refreshHistory(); }, [refreshHistory]);
 
   const importViaApi = async (formData: FormData) => {
     setState("uploading"); setProgress(50); setProgressText("Processing…");
@@ -35,6 +72,7 @@ export default function ImportPage() {
       setState("done"); setProgress(100);
       setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
       toast.success(`Imported ${r.imported.chunks} memories`);
+      refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
 
@@ -47,6 +85,7 @@ export default function ImportPage() {
       setState("done"); setProgress(100);
       setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
       toast.success(`Imported ${r.imported.chunks} memories`);
+      refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
 
@@ -279,8 +318,99 @@ export default function ImportPage() {
         </div>
       </div>
       </Stagger>
+
+      {/* Import History */}
+      {!historyLoading && importHistory.length > 0 && (
+        <Stagger>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <Package className="w-3 h-3 text-zinc-500" />
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Import History</p>
+                <span className="text-[10px] text-zinc-600 tabular-nums">{importHistory.length} source{importHistory.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-zinc-600 tabular-nums">{totalMemories.toLocaleString()} total memories</span>
+                <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-violet-400 font-medium transition-colors flex items-center gap-0.5">
+                  <Compass className="w-3 h-3" />
+                  <span className="hidden sm:inline">Explore all</span>
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
+              {importHistory.slice(0, 8).map((src, i) => {
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type };
+                const typeColors: Record<string, string> = {
+                  chatgpt: "text-green-400 bg-green-500/10",
+                  file: "text-blue-400 bg-blue-500/10",
+                  url: "text-orange-400 bg-orange-500/10",
+                  text: "text-violet-400 bg-violet-500/10",
+                };
+                const Icon = typeIcons[src.type] || FileText;
+                const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";
+                return (
+                  <Link key={src.id || i} href={`/app/explore?q=${encodeURIComponent(src.title)}`}>
+                    <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ').slice(1).join(' ')}`}>
+                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] text-zinc-300 font-medium truncate group-hover:text-white transition-colors">{src.title}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`text-[10px] font-semibold uppercase tracking-wide ${color.split(' ')[0]}`}>{src.type}</span>
+                          <span className="text-[10px] text-zinc-700">·</span>
+                          <span className="text-[10px] text-zinc-600 tabular-nums">{src.itemCount} chunk{src.itemCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Clock className="w-2.5 h-2.5 text-zinc-700" />
+                        <span className="text-[10px] text-zinc-600 whitespace-nowrap">{formatRelativeTime(src.importedAt)}</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {importHistory.length > 8 && (
+              <div className="text-center">
+                <Link href="/app/explore" className="text-[11px] text-violet-400 hover:text-violet-300 font-medium transition-colors">
+                  View all {importHistory.length} sources in Explore →
+                </Link>
+              </div>
+            )}
+          </div>
+        </Stagger>
+      )}
+
+      {/* Empty state — no imports yet */}
+      {!historyLoading && importHistory.length === 0 && state === "idle" && (
+        <Stagger>
+          <div className="rounded-2xl border border-dashed border-white/[0.06] bg-white/[0.01] p-6 text-center">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center mx-auto mb-3">
+              <Package className="w-4 h-4 text-zinc-600" />
+            </div>
+            <p className="text-[13px] text-zinc-400 font-medium">No imports yet</p>
+            <p className="text-[11px] text-zinc-600 mt-1">Choose a source above to add your first knowledge</p>
+          </div>
+        </Stagger>
+      )}
     </PageTransition>
   );
+}
+
+/** Format a timestamp to relative time */
+function formatRelativeTime(iso: string): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subtitle, icon }: {

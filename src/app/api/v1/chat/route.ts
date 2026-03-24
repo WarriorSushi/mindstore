@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 
 /**
  * POST /api/v1/chat — streaming chat proxy
- * Supports OpenAI and Gemini as chat backends
+ * Supports OpenAI, Gemini, and Ollama (local) as chat backends
  * Body: { messages: [{role, content}] }
  */
 export async function POST(req: NextRequest) {
@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
 
-    // Get configured keys
+    // Get configured keys and URLs
     const settings = await db.execute(
-      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key')`
+      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'chat_provider')`
     );
     const config: Record<string, string> = {};
     for (const row of settings as any[]) {
@@ -25,14 +25,29 @@ export async function POST(req: NextRequest) {
 
     const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
     const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
+    const ollamaUrl = config.ollama_url || process.env.OLLAMA_URL;
 
-    // Try OpenAI first, then Gemini
+    // Respect explicit chat_provider preference if set
+    const preferred = config.chat_provider;
+    if (preferred === 'ollama' && ollamaUrl) {
+      return streamOllama(messages, ollamaUrl);
+    }
+    if (preferred === 'openai' && openaiKey) {
+      return streamOpenAI(messages, openaiKey);
+    }
+    if (preferred === 'gemini' && geminiKey) {
+      return streamGemini(messages, geminiKey);
+    }
+
+    // Auto-detect: try OpenAI first, then Gemini, then Ollama
     if (openaiKey) {
       return streamOpenAI(messages, openaiKey);
     } else if (geminiKey) {
       return streamGemini(messages, geminiKey);
+    } else if (ollamaUrl) {
+      return streamOllama(messages, ollamaUrl);
     } else {
-      return NextResponse.json({ error: 'No API key configured. Add an OpenAI or Gemini key in Settings.' }, { status: 400 });
+      return NextResponse.json({ error: 'No AI provider configured. Add an OpenAI key, Gemini key, or Ollama URL in Settings.' }, { status: 400 });
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -137,6 +152,106 @@ async function streamGemini(messages: any[], apiKey: string) {
               }
             } catch { /* skip bad JSON */ }
           }
+        }
+      }
+      await writer.write(encoder.encode('data: [DONE]\n\n'));
+    } finally {
+      writer.close();
+    }
+  })();
+
+  return new NextResponse(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+/**
+ * Stream chat via Ollama (local LLM)
+ * Ollama uses its own /api/chat endpoint with NDJSON streaming
+ * We transform the output to OpenAI-compatible SSE format
+ */
+async function streamOllama(messages: any[], baseUrl: string) {
+  // Ollama expects messages in OpenAI-compatible format (role + content)
+  // but uses its own /api/chat endpoint
+  const ollamaMessages = messages.map((m: any) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3.2',  // sensible default; user can customize later
+        messages: ollamaMessages,
+        stream: true,
+        options: {
+          temperature: 0.7,
+        },
+      }),
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: `Cannot connect to Ollama at ${baseUrl}. Is it running? Error: ${err.message}` },
+      { status: 502 }
+    );
+  }
+
+  if (!res.ok) {
+    let errorMsg = 'Ollama chat failed';
+    try {
+      const err = await res.json();
+      errorMsg = err.error || errorMsg;
+    } catch { /* body may not be JSON */ }
+    return NextResponse.json(
+      { error: errorMsg },
+      { status: res.status }
+    );
+  }
+
+  // Transform Ollama NDJSON stream to OpenAI-compatible SSE format
+  // Ollama streams: {"model":"...","message":{"role":"assistant","content":"token"},"done":false}
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const data = JSON.parse(trimmed);
+            if (data.done) {
+              // Stream complete
+              continue;
+            }
+            const text = data.message?.content;
+            if (text) {
+              // Emit in OpenAI-compatible SSE format
+              const chunk = JSON.stringify({
+                choices: [{ delta: { content: text } }],
+              });
+              await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+            }
+          } catch { /* skip malformed lines */ }
         }
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'));

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download } from "lucide-react";
+import Link from "next/link";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -16,6 +17,9 @@ interface Memory {
   timestamp: string;
   importedAt: string;
   metadata: Record<string, any>;
+  layers?: Record<string, any>;
+  score?: number;
+  pinned?: boolean;
 }
 
 interface Source {
@@ -32,6 +36,15 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
 };
 
+const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
+  { id: "newest", label: "Newest first", icon: ArrowDownNarrowWide },
+  { id: "oldest", label: "Oldest first", icon: ArrowUpNarrowWide },
+  { id: "alpha-asc", label: "Title A → Z", icon: ArrowDownAZ },
+  { id: "alpha-desc", label: "Title Z → A", icon: ArrowUpAZ },
+  { id: "longest", label: "Longest first", icon: AlignLeft },
+  { id: "shortest", label: "Shortest first", icon: AlignRight },
+];
+
 export default function ExplorePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -43,6 +56,8 @@ export default function ExplorePage() {
   const [totalMemories, setTotalMemories] = useState(0);
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [filter, setFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [selected, setSelected] = useState<Memory | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -51,10 +66,22 @@ export default function ExplorePage() {
 
   const [copied, setCopied] = useState(false);
 
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
   // Multi-select state
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
+
+  // Infinite scroll state
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
@@ -68,6 +95,9 @@ export default function ExplorePage() {
       setSelectedIndex(nextIdx);
       setFocusedIndex(nextIdx);
       setCopied(false);
+      setEditing(false);
+      setEditContent("");
+      setEditTitle("");
     }
   }, [selected, selectedIndex, memories]);
 
@@ -150,6 +180,187 @@ export default function ExplorePage() {
     });
   }, [selectedIds, memories]);
 
+  // ── Edit memory ──────────────────
+  const startEditing = useCallback(() => {
+    if (!selected) return;
+    setEditContent(selected.content);
+    setEditTitle(selected.sourceTitle);
+    setEditing(true);
+    // Focus textarea after render
+    setTimeout(() => editTextareaRef.current?.focus(), 50);
+  }, [selected]);
+
+  const cancelEditing = useCallback(() => {
+    setEditing(false);
+    setEditContent("");
+    setEditTitle("");
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!selected || saving) return;
+    const trimmedContent = editContent.trim();
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedContent) { toast.error("Content can't be empty"); return; }
+
+    // Check if anything actually changed
+    const contentChanged = trimmedContent !== selected.content;
+    const titleChanged = trimmedTitle !== (selected.sourceTitle || '');
+    if (!contentChanged && !titleChanged) { setEditing(false); return; }
+
+    setSaving(true);
+    try {
+      const body: any = { id: selected.id };
+      if (contentChanged) body.content = trimmedContent;
+      if (titleChanged) body.title = trimmedTitle;
+
+      const res = await fetch('/api/v1/memories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Update failed');
+      }
+
+      // Update local state
+      const updatedMemory = {
+        ...selected,
+        content: trimmedContent,
+        sourceTitle: trimmedTitle,
+      };
+      setSelected(updatedMemory);
+      setMemories(prev => prev.map(m => m.id === selected.id ? updatedMemory : m));
+      setEditing(false);
+      toast.success("Memory updated" + (contentChanged ? " · embedding refreshed" : ""));
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save");
+    }
+    setSaving(false);
+  }, [selected, editContent, editTitle, saving]);
+
+  // ── Pin/Unpin memory ──────────────────
+  const [pinning, setPinning] = useState(false);
+
+  // Related memories state
+  const [relatedMemories, setRelatedMemories] = useState<Array<{ id: string; title: string; type: string; score: number; preview: string }>>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const relatedAbortRef = useRef<AbortController | null>(null);
+  const togglePin = useCallback(async (memory: Memory) => {
+    if (pinning) return;
+    setPinning(true);
+    const newPinned = !memory.pinned;
+    try {
+      const res = await fetch('/api/v1/memories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: memory.id, pinned: newPinned }),
+      });
+      if (!res.ok) throw new Error('Failed to update');
+      // Update local state
+      const updatedMemory = { ...memory, pinned: newPinned, metadata: { ...memory.metadata, pinned: newPinned || undefined } };
+      if (!newPinned) delete updatedMemory.metadata.pinned;
+      setMemories(prev => prev.map(m => m.id === memory.id ? { ...m, pinned: newPinned } : m));
+      if (selected?.id === memory.id) {
+        setSelected({ ...selected, pinned: newPinned });
+      }
+      toast.success(newPinned ? "Pinned to top" : "Unpinned");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to pin");
+    }
+    setPinning(false);
+  }, [pinning, selected]);
+
+  // Fetch related memories when detail view opens
+  useEffect(() => {
+    if (!selected) {
+      setRelatedMemories([]);
+      setRelatedLoading(false);
+      return;
+    }
+
+    // Abort previous request
+    if (relatedAbortRef.current) relatedAbortRef.current.abort();
+    const controller = new AbortController();
+    relatedAbortRef.current = controller;
+
+    setRelatedLoading(true);
+    setRelatedMemories([]);
+
+    // Use first 200 chars of content + title as search query for semantic similarity
+    const searchQuery = (selected.sourceTitle ? selected.sourceTitle + " " : "") +
+      selected.content.slice(0, 200).replace(/\n/g, " ");
+
+    fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=6`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        if (controller.signal.aborted) return;
+        const results = (data.results || [])
+          // Filter out the current memory itself
+          .filter((r: any) => r.id !== selected.id)
+          .slice(0, 4)
+          .map((r: any) => ({
+            id: r.id,
+            title: r.sourceTitle || "Untitled",
+            type: r.sourceType || "text",
+            score: r.score || 0,
+            preview: (r.content || "").slice(0, 100).replace(/\n/g, " ").trim(),
+          }));
+        setRelatedMemories(results);
+        setRelatedLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setRelatedLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selected?.id]);
+
+  // Navigate to a related memory
+  const openRelatedMemory = useCallback((relatedId: string) => {
+    const mem = memories.find(m => m.id === relatedId);
+    if (mem) {
+      // Memory is already loaded in the list — select it directly
+      const idx = memories.indexOf(mem);
+      setSelected(mem);
+      setSelectedIndex(idx);
+      setFocusedIndex(idx);
+      setCopied(false);
+      setEditing(false);
+      setEditContent("");
+      setEditTitle("");
+    } else {
+      // Memory isn't in the current filtered list — fetch all memories and search
+      fetch(`/api/v1/memories?limit=2000`)
+        .then(r => r.json())
+        .then(data => {
+          const found = (data.memories || []).find((m: any) => m.id === relatedId);
+          if (found) {
+            const m: Memory = {
+              id: found.id,
+              content: found.content,
+              source: found.source,
+              sourceId: found.sourceId,
+              sourceTitle: found.sourceTitle || "Untitled",
+              timestamp: found.timestamp,
+              importedAt: found.importedAt,
+              metadata: found.metadata || {},
+              pinned: found.pinned || false,
+            };
+            setSelected(m);
+            setSelectedIndex(-1);
+            setCopied(false);
+            setEditing(false);
+          } else {
+            toast.error("Memory not found");
+          }
+        })
+        .catch(() => toast.error("Could not load memory"));
+    }
+  }, [memories]);
+
   // Keyboard: j/k to navigate list, Enter to open, Escape to close, ↑↓ in modal
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -158,17 +369,34 @@ export default function ExplorePage() {
       // ─── Detail modal open ───
       if (selected) {
         if (e.key === "Escape") {
-          setSelected(null);
-          setCopied(false);
+          if (editing) {
+            cancelEditing();
+          } else {
+            setSelected(null);
+            setCopied(false);
+            setEditing(false);
+          }
           return;
         }
-        // j/↓ = next memory, k/↑ = prev memory in detail view
-        if ((e.key === "j" || e.key === "ArrowDown") && !isInput) {
+        // "e" to start editing (when not already editing and not in an input)
+        if (e.key === "e" && !editing && !isInput) {
+          e.preventDefault();
+          startEditing();
+          return;
+        }
+        // "p" to toggle pin (when not editing and not in an input)
+        if (e.key === "p" && !editing && !isInput) {
+          e.preventDefault();
+          togglePin(selected);
+          return;
+        }
+        // j/↓ = next memory, k/↑ = prev memory in detail view (only when not editing)
+        if ((e.key === "j" || e.key === "ArrowDown") && !isInput && !editing) {
           e.preventDefault();
           navigateMemory('next');
           return;
         }
-        if ((e.key === "k" || e.key === "ArrowUp") && !isInput) {
+        if ((e.key === "k" || e.key === "ArrowUp") && !isInput && !editing) {
           e.preventDefault();
           navigateMemory('prev');
           return;
@@ -247,12 +475,12 @@ export default function ExplorePage() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll]);
+  }, [selected, focusedIndex, memories, navigateMemory, selectMode, selectedIds, exitSelectMode, toggleSelect, selectAll, deselectAll, editing, startEditing, cancelEditing, togglePin]);
 
   // Reset focused index when memories change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [search, filter]);
+  }, [search, filter, sortBy]);
 
   // Sync search query to URL (shallow, no navigation)
   useEffect(() => {
@@ -289,6 +517,7 @@ export default function ExplorePage() {
       setTotalMemories(prev => prev - 1);
       setSelected(null);
       setCopied(false);
+      setEditing(false);
       toast.success("Memory deleted");
     } catch {
       toast.error("Failed to delete memory");
@@ -299,7 +528,7 @@ export default function ExplorePage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
-      fetch('/api/v1/memories?limit=100').then(r => r.json()),
+      fetch(`/api/v1/memories?limit=100&sort=${sortBy}`).then(r => r.json()),
     ]).then(([srcData, memData]) => {
       setSources(srcData.sources || []);
       setMemories(memData.memories || []);
@@ -313,7 +542,7 @@ export default function ExplorePage() {
       if (search) {
         // Use BM25 full-text search for queries (better relevance than ILIKE)
         const p = new URLSearchParams({ q: search, limit: '100' });
-        if (filter) p.set('source', filter);
+        if (filter && filter !== 'pinned') p.set('source', filter);
         fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
           const results = (d.results || []).map((r: any) => ({
             id: r.memoryId,
@@ -324,14 +553,20 @@ export default function ExplorePage() {
             timestamp: r.createdAt,
             importedAt: r.createdAt,
             metadata: r.metadata || {},
+            layers: r.layers || {},
+            score: r.score || 0,
+            pinned: r.metadata?.pinned === true,
           }));
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
+          setSearchLayers(d.layers || null);
         }).catch(() => {});
       } else {
         // No search query — list all memories
-        const p = new URLSearchParams({ limit: '100' });
-        if (filter) p.set('source', filter);
+        setSearchLayers(null);
+        const p = new URLSearchParams({ limit: '100', sort: sortBy });
+        if (filter && filter !== 'pinned') p.set('source', filter);
+        if (filter === 'pinned') p.set('pinned', 'true');
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
           setMemories(d.memories || []);
           setTotalMemories(d.total || 0);
@@ -339,7 +574,39 @@ export default function ExplorePage() {
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [search, filter]);
+  }, [search, filter, sortBy]);
+
+  // ── Infinite scroll with Intersection Observer ──────────────────
+  const loadMore = useCallback(async () => {
+    if (loadingMore || memories.length >= totalMemories || search) return;
+    setLoadingMore(true);
+    try {
+      const p = new URLSearchParams({ limit: '100', offset: String(memories.length), sort: sortBy });
+      if (filter && filter !== 'pinned') p.set('source', filter);
+      if (filter === 'pinned') p.set('pinned', 'true');
+      const res = await fetch(`/api/v1/memories?${p}`);
+      const d = await res.json();
+      setMemories(prev => [...prev, ...(d.memories || [])]);
+    } catch { /* ignore */ }
+    setLoadingMore(false);
+  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingMore && memories.length < totalMemories && !search) {
+          loadMore();
+        }
+      },
+      { rootMargin: '200px' } // trigger 200px before the sentinel is visible
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, loadingMore, memories.length, totalMemories, search]);
 
   return (
     <PageTransition className="space-y-4 md:space-y-6">
@@ -388,18 +655,101 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
-      {/* Filters */}
+      {/* Filters + Sort */}
       <Stagger>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
-          <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
-          {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-            const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
-            if (count === 0) return null;
-            const Icon = typeConfig[type]?.icon || FileText;
-            return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
-          })}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
+            <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
+            <FilterPill
+              active={filter === "pinned"}
+              onClick={() => setFilter(filter === "pinned" ? null : "pinned")}
+              label="Pinned"
+              icon={<Pin className="w-3 h-3" />}
+            />
+            {(["chatgpt", "text", "file", "url"] as const).map((type) => {
+              const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
+              if (count === 0) return null;
+              const Icon = typeConfig[type]?.icon || FileText;
+              return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
+            })}
+          </div>
+
+          {/* Sort Dropdown */}
+          {!search.trim() && memories.length > 0 && (
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setSortMenuOpen(!sortMenuOpen)}
+                className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-full text-[11px] font-medium transition-all active:scale-[0.95] ${
+                  sortMenuOpen
+                    ? "bg-violet-500/15 text-violet-300 border border-violet-500/25"
+                    : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
+                }`}
+              >
+                <ArrowUpDown className="w-3 h-3" />
+                <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.id === sortBy)?.label || 'Sort'}</span>
+              </button>
+
+              {sortMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1.5 z-40 w-44 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                    <div className="py-1">
+                      {SORT_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => { setSortBy(opt.id); setSortMenuOpen(false); }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors ${
+                            sortBy === opt.id
+                              ? "text-violet-300 bg-violet-500/10"
+                              : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
+                          }`}
+                        >
+                          <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-violet-400" : "text-zinc-600"}`} />
+                          <span className="flex-1">{opt.label}</span>
+                          {sortBy === opt.id && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </Stagger>
+
+      {/* Search Intelligence Indicators */}
+      {search.trim() && searchLayers && !loading && (
+        <Stagger>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-zinc-600 font-medium">Search layers</span>
+            <div className="flex items-center gap-1.5">
+              {searchLayers.bm25 > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                  🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                </span>
+              )}
+              {searchLayers.vector > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/15">
+                  🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                </span>
+              )}
+              {searchLayers.tree > 0 && (
+                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                  🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                </span>
+              )}
+            </div>
+            {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
+              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-violet-400 transition-colors italic">
+                Connect AI for semantic search →
+              </Link>
+            )}
+          </div>
+        </Stagger>
+      )}
 
       {/* ═══ Selection Toolbar ═══ */}
       {selectMode && (
@@ -503,27 +853,40 @@ export default function ExplorePage() {
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
+                {m.pinned && (
+                  <Pin className="w-3 h-3 text-amber-400 shrink-0 fill-amber-400/30" />
+                )}
+                {/* Layer indicators per result (when searching) */}
+                {search.trim() && m.layers && (
+                  <span className="flex items-center gap-[3px] shrink-0 ml-0.5" title={
+                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
+                  }>
+                    {m.layers.bm25 && <span className="w-[5px] h-[5px] rounded-full bg-blue-400/70" />}
+                    {m.layers.vector && <span className="w-[5px] h-[5px] rounded-full bg-violet-400/70" />}
+                    {m.layers.tree && <span className="w-[5px] h-[5px] rounded-full bg-emerald-400/70" />}
+                  </span>
+                )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
             </button>
           );
         })}
 
-        {totalMemories > memories.length && (
-          <button
-            onClick={async () => {
-              const p = new URLSearchParams({ limit: '100', offset: String(memories.length) });
-              if (search) p.set('search', search);
-              if (filter) p.set('source', filter);
-              const res = await fetch(`/api/v1/memories?${p}`);
-              const d = await res.json();
-              setMemories(prev => [...prev, ...(d.memories || [])]);
-            }}
-            className="w-full py-3 rounded-2xl border border-white/[0.06] text-[12px] text-zinc-500 hover:bg-white/[0.04] transition-colors flex items-center justify-center gap-1.5 font-medium"
-          >
-            <ChevronDown className="w-3.5 h-3.5" />
-            Load more ({totalMemories - memories.length} remaining)
-          </button>
+        {/* Infinite scroll sentinel */}
+        {totalMemories > memories.length && !search && (
+          <div ref={sentinelRef} className="flex items-center justify-center py-4">
+            {loadingMore ? (
+              <div className="flex items-center gap-2 text-[12px] text-zinc-500">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                Loading more…
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-600">
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                {totalMemories - memories.length} more
+              </div>
+            )}
+          </div>
         )}
 
         {memories.length === 0 && !loading && (
@@ -589,7 +952,7 @@ export default function ExplorePage() {
 
       {/* Detail Bottom Sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => { setSelected(null); setCopied(false); }}>
+        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); } }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
@@ -599,92 +962,318 @@ export default function ExplorePage() {
               <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
             </div>
             <div className="px-5 py-3 flex items-start justify-between border-b border-white/[0.06]">
-              <div className="min-w-0 pr-3">
-                <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+              <div className="min-w-0 pr-3 flex-1">
+                {editing ? (
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Title"
+                    className="w-full text-[15px] font-semibold bg-transparent border-b border-violet-500/30 focus:border-violet-500/60 outline-none pb-0.5 transition-colors placeholder:text-zinc-600"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="text-[15px] font-semibold truncate">{selected.sourceTitle}</h3>
+                    {selected.pinned && (
+                      <Pin className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 shrink-0" />
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${typeConfig[selected.source]?.color || ""}`}>
                     {selected.source}
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
+                  {editing && (
+                    <span className="text-[10px] text-violet-400 font-medium animate-pulse">Editing</span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {/* Prev / Next navigation */}
-                <button
-                  onClick={() => navigateMemory('prev')}
-                  disabled={selectedIndex <= 0}
-                  className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
-                  title="Previous (↑ or k)"
-                >
-                  <ChevronUp className="w-4 h-4 text-zinc-500" />
-                </button>
-                <span className="text-[10px] text-zinc-600 tabular-nums min-w-[2.5rem] text-center">
-                  {selectedIndex + 1}/{memories.length}
-                </span>
-                <button
-                  onClick={() => navigateMemory('next')}
-                  disabled={selectedIndex >= memories.length - 1}
-                  className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
-                  title="Next (↓ or j)"
-                >
-                  <ChevronDown className="w-4 h-4 text-zinc-500" />
-                </button>
-                <button onClick={() => { setSelected(null); setCopied(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
+                {/* Prev / Next navigation (hidden during edit) */}
+                {!editing && (
+                  <>
+                    <button
+                      onClick={() => navigateMemory('prev')}
+                      disabled={selectedIndex <= 0}
+                      className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
+                      title="Previous (↑ or k)"
+                    >
+                      <ChevronUp className="w-4 h-4 text-zinc-500" />
+                    </button>
+                    <span className="text-[10px] text-zinc-600 tabular-nums min-w-[2.5rem] text-center">
+                      {selectedIndex + 1}/{memories.length}
+                    </span>
+                    <button
+                      onClick={() => navigateMemory('next')}
+                      disabled={selectedIndex >= memories.length - 1}
+                      className="p-1.5 hover:bg-white/[0.06] rounded-lg disabled:opacity-20 transition-all"
+                      title="Next (↓ or j)"
+                    >
+                      <ChevronDown className="w-4 h-4 text-zinc-500" />
+                    </button>
+                  </>
+                )}
+                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
             </div>
+
+            {/* Content Stats Bar */}
+            {!editing && selected.content && (
+              <div className="px-5 py-2 border-b border-white/[0.04] bg-white/[0.01] flex items-center gap-3 flex-wrap">
+                {(() => {
+                  const words = selected.content.trim().split(/\s+/).filter(Boolean).length;
+                  const chars = selected.content.length;
+                  const readMins = Math.max(1, Math.round(words / 225));
+                  return (
+                    <>
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${words.toLocaleString()} words`}>
+                        <Hash className="w-2.5 h-2.5 text-zinc-700" />
+                        {words.toLocaleString()} words
+                      </span>
+                      <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${chars.toLocaleString()} characters`}>
+                        {chars.toLocaleString()} chars
+                      </span>
+                      <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title="Estimated reading time at 225 wpm">
+                        <BookOpen className="w-2.5 h-2.5 text-zinc-700" />
+                        {readMins} min read
+                      </span>
+                      {selected.importedAt && selected.importedAt !== selected.timestamp && (
+                        <>
+                          <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`Imported ${new Date(selected.importedAt).toLocaleString()}`}>
+                            <Clock className="w-2.5 h-2.5 text-zinc-700" />
+                            Imported {new Date(selected.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Content area — view or edit */}
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
-              <div className="text-[13px] text-zinc-300 leading-[1.7]">
-                <ChatMarkdown content={selected.content} />
-              </div>
+              {editing ? (
+                <textarea
+                  ref={editTextareaRef}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-500/30 resize-y transition-all placeholder:text-zinc-600 font-mono"
+                  placeholder="Memory content…"
+                  onKeyDown={(e) => {
+                    // Cmd/Ctrl+Enter to save
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      saveEdit();
+                    }
+                    // Escape to cancel
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEditing();
+                    }
+                  }}
+                />
+              ) : (
+                <div className="text-[13px] text-zinc-300 leading-[1.7]">
+                  <ChatMarkdown content={selected.content} />
+                </div>
+              )}
             </div>
-            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleCopy(selected.content)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-green-400" />
-                      <span className="text-green-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      Copy
-                    </>
+
+            {/* Related Memories — semantic connections */}
+            {!editing && (relatedLoading || relatedMemories.length > 0) && (
+              <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Sparkles className="w-3 h-3 text-violet-400/70" />
+                  <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+                    Related memories
+                  </span>
+                  {relatedLoading && (
+                    <Loader2 className="w-2.5 h-2.5 text-zinc-600 animate-spin ml-1" />
                   )}
-                </button>
-                <button
-                  onClick={() => askAboutMemory(selected)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-violet-400 hover:bg-violet-500/10 transition-colors"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  Ask about this
-                </button>
+                </div>
+                {relatedMemories.length > 0 ? (
+                  <div className="space-y-1">
+                    {relatedMemories.map((rel) => {
+                      const Icon = typeConfig[rel.type]?.icon || FileText;
+                      const colors = typeConfig[rel.type]?.color || "text-zinc-400 bg-zinc-500/10";
+                      const scorePercent = Math.round(rel.score * 100);
+                      return (
+                        <button
+                          key={rel.id}
+                          onClick={() => openRelatedMemory(rel.id)}
+                          className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
+                        >
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${colors.split(" ").filter(c => !c.startsWith("text-")).join(" ")}`}>
+                            <Icon className={`w-3 h-3 ${colors.split(" ")[0]}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] text-zinc-300 font-medium truncate group-hover/rel:text-white transition-colors">
+                              {rel.title}
+                            </p>
+                            <p className="text-[11px] text-zinc-600 truncate mt-0.5">
+                              {rel.preview || "No preview"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 opacity-60 group-hover/rel:opacity-100 transition-opacity">
+                            <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-violet-500/50"
+                                style={{ width: `${Math.max(scorePercent, 10)}%` }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-5 text-right">
+                              {scorePercent}%
+                            </span>
+                            <ExternalLink className="w-2.5 h-2.5 text-zinc-700 group-hover/rel:text-violet-400 transition-colors" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : relatedLoading ? (
+                  <div className="flex items-center gap-2 py-2 px-2.5">
+                    <div className="w-6 h-6 rounded-lg bg-white/[0.04] animate-pulse" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-2/3 bg-white/[0.04] rounded animate-pulse" />
+                      <div className="h-2.5 w-1/2 bg-white/[0.03] rounded animate-pulse" />
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <button
-                onClick={() => deleteMemory(selected.id)}
-                disabled={deleting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
+            )}
+
+            {/* Footer — different buttons for view vs edit mode */}
+            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
+              {editing ? (
+                <>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={cancelEditing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <span className="text-[10px] text-zinc-700 hidden sm:inline">
+                      ⌘↵ save · Esc cancel
+                    </span>
+                  </div>
+                  <button
+                    onClick={saveEdit}
+                    disabled={saving || !editContent.trim()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-violet-600 hover:bg-violet-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => togglePin(selected)}
+                      disabled={pinning}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+                        selected.pinned
+                          ? "text-amber-400 hover:bg-amber-500/10"
+                          : "text-zinc-400 hover:bg-white/[0.06]"
+                      }`}
+                      title={selected.pinned ? "Unpin (p)" : "Pin to top (p)"}
+                    >
+                      {pinning ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : selected.pinned ? (
+                        <PinOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Pin className="w-3.5 h-3.5" />
+                      )}
+                      {selected.pinned ? "Unpin" : "Pin"}
+                    </button>
+                    <button
+                      onClick={() => handleCopy(selected.content)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-green-400">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={startEditing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => askAboutMemory(selected)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-violet-400 hover:bg-violet-500/10 transition-colors"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Ask about this
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => deleteMemory(selected.id)}
+                    disabled={deleting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleting ? "Deleting…" : "Delete"}
+                  </button>
+                </>
+              )}
             </div>
             {/* Keyboard hint */}
             <div className="hidden md:flex items-center justify-center gap-3 px-5 py-2 border-t border-white/[0.04] bg-white/[0.01]">
-              <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
-                navigate
-              </span>
-              <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
-                close
-              </span>
+              {editing ? (
+                <>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘↵</kbd>
+                    save
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
+                    cancel edit
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
+                    navigate
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">p</kbd>
+                    pin
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">e</kbd>
+                    edit
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
+                    close
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search, LayoutDashboard, MessageSquare, Upload, Compass,
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
-  FileText, Globe, MessageCircle, Type, ArrowRight, Command,
-  Hash,
+  FileText, Globe, MessageCircle, Type, ArrowRight,
+  Plus, Download, Trash2, RefreshCw, Zap, Clock,
+  Brain, BookOpen, StickyNote, Link2, Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface SearchResult {
   id: string;
@@ -17,13 +19,16 @@ interface SearchResult {
   score: number;
 }
 
+type SectionType = "search" | "recent" | "actions" | "navigation";
+
 interface PaletteItem {
   id: string;
   icon: React.ReactNode;
   label: string;
   description?: string;
   action: () => void;
-  section: "navigation" | "search";
+  section: SectionType;
+  shortcut?: string;
 }
 
 const NAV_ITEMS = [
@@ -45,12 +50,60 @@ const typeIcons: Record<string, typeof FileText> = {
   url: Globe,
 };
 
+const typeColors: Record<string, string> = {
+  chatgpt: "text-green-400",
+  text: "text-violet-400",
+  file: "text-blue-400",
+  url: "text-orange-400",
+};
+
+/** Load recent conversations from localStorage for the palette */
+function getRecentConversations(): Array<{ id: string; title: string; updatedAt: string; messageCount: number }> {
+  try {
+    const raw = localStorage.getItem("mindstore-chat-history");
+    if (!raw) return [];
+    const convos = JSON.parse(raw) as Array<{
+      id: string;
+      title: string;
+      messages: any[];
+      updatedAt: string;
+    }>;
+    return convos
+      .filter((c) => c.messages.length > 0)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 4)
+      .map((c) => ({
+        id: c.id,
+        title: c.title,
+        updatedAt: c.updatedAt,
+        messageCount: c.messages.length,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/** Format relative time compactly */
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "1d";
+  if (days < 7) return `${days}d`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [recentConvos, setRecentConvos] = useState<ReturnType<typeof getRecentConversations>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -70,12 +123,13 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Focus input when opened
+  // Focus input when opened + load recent conversations
   useEffect(() => {
     if (open) {
       setQuery("");
       setResults([]);
       setActiveIndex(0);
+      setRecentConvos(getRecentConversations());
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
@@ -113,6 +167,173 @@ export function CommandPalette() {
     return () => clearTimeout(t);
   }, [query]);
 
+  // ─── Quick Actions ───
+  const actionItems: PaletteItem[] = useMemo(() => {
+    const actions: Array<{
+      id: string;
+      icon: typeof Plus;
+      iconColor: string;
+      label: string;
+      desc: string;
+      keywords: string[];
+      action: () => void;
+      shortcut?: string;
+    }> = [
+      {
+        id: "new-chat",
+        icon: Plus,
+        iconColor: "text-violet-400",
+        label: "New Chat",
+        desc: "Start a fresh conversation",
+        keywords: ["new", "chat", "conversation", "ask", "fresh"],
+        action: () => {
+          router.push("/app/chat");
+          // Clear current conversation by dispatching a custom event
+          window.dispatchEvent(new CustomEvent("mindstore:new-chat"));
+          setOpen(false);
+        },
+        shortcut: "N",
+      },
+      {
+        id: "import-text",
+        icon: Type,
+        iconColor: "text-violet-400",
+        label: "Import Text",
+        desc: "Paste notes or text content",
+        keywords: ["import", "text", "paste", "note", "write"],
+        action: () => {
+          router.push("/app/import");
+          setOpen(false);
+        },
+      },
+      {
+        id: "import-chatgpt",
+        icon: MessageCircle,
+        iconColor: "text-green-400",
+        label: "Import ChatGPT",
+        desc: "Upload ChatGPT export ZIP",
+        keywords: ["import", "chatgpt", "openai", "zip", "export", "conversation"],
+        action: () => {
+          router.push("/app/import");
+          setOpen(false);
+        },
+      },
+      {
+        id: "import-url",
+        icon: Globe,
+        iconColor: "text-orange-400",
+        label: "Import URL",
+        desc: "Extract text from a webpage",
+        keywords: ["import", "url", "web", "page", "link", "website", "article"],
+        action: () => {
+          router.push("/app/import");
+          setOpen(false);
+        },
+      },
+      {
+        id: "export-data",
+        icon: Download,
+        iconColor: "text-blue-400",
+        label: "Export All Data",
+        desc: "Download full backup as JSON",
+        keywords: ["export", "backup", "download", "data", "save", "json"],
+        action: async () => {
+          setOpen(false);
+          try {
+            const res = await fetch("/api/v1/export");
+            if (!res.ok) throw new Error("Export failed");
+            const data = await res.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            toast.success("Backup downloaded");
+          } catch (err: any) {
+            toast.error(err.message || "Export failed");
+          }
+        },
+      },
+      {
+        id: "reindex",
+        icon: RefreshCw,
+        iconColor: "text-amber-400",
+        label: "Reindex Embeddings",
+        desc: "Generate missing embeddings",
+        keywords: ["reindex", "embeddings", "search", "index", "rebuild", "semantic"],
+        action: () => {
+          router.push("/app/settings");
+          setOpen(false);
+          toast("Navigate to Settings to start reindex");
+        },
+      },
+      {
+        id: "learn-about-me",
+        icon: GraduationCap,
+        iconColor: "text-amber-400",
+        label: "Teach AI About You",
+        desc: "Start an interview session",
+        keywords: ["learn", "teach", "interview", "about me", "personal", "know"],
+        action: () => {
+          router.push("/app/learn");
+          setOpen(false);
+        },
+      },
+      {
+        id: "mind-map",
+        icon: Fingerprint,
+        iconColor: "text-fuchsia-400",
+        label: "View Mind Map",
+        desc: "3D knowledge topology",
+        keywords: ["map", "3d", "graph", "topology", "fingerprint", "visual", "cluster"],
+        action: () => {
+          router.push("/app/fingerprint");
+          setOpen(false);
+        },
+      },
+    ];
+
+    // Filter by query
+    if (!query) return [];
+    const q = query.toLowerCase();
+    return actions
+      .filter((a) =>
+        a.label.toLowerCase().includes(q) ||
+        a.desc.toLowerCase().includes(q) ||
+        a.keywords.some((k) => k.includes(q))
+      )
+      .map((a) => ({
+        id: `action-${a.id}`,
+        icon: <a.icon className={`w-4 h-4 ${a.iconColor}`} />,
+        label: a.label,
+        description: a.desc,
+        action: a.action,
+        section: "actions" as const,
+        shortcut: a.shortcut,
+      }));
+  }, [query, router]);
+
+  // ─── Recent Conversations (no-query state only) ───
+  const recentItems: PaletteItem[] = useMemo(() => {
+    if (query) return [];
+    return recentConvos.map((c) => ({
+      id: `recent-${c.id}`,
+      icon: <MessageSquare className="w-4 h-4" />,
+      label: c.title,
+      description: `${c.messageCount} messages · ${relativeTime(c.updatedAt)}`,
+      action: () => {
+        // Navigate to chat and load conversation via custom event
+        router.push("/app/chat");
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("mindstore:load-chat", { detail: { id: c.id } }));
+        }, 100);
+        setOpen(false);
+      },
+      section: "recent" as const,
+    }));
+  }, [query, recentConvos, router]);
+
   // Build items list
   const navItems: PaletteItem[] = NAV_ITEMS
     .filter((item) => {
@@ -137,9 +358,10 @@ export function CommandPalette() {
 
   const searchItems: PaletteItem[] = results.map((r) => {
     const Icon = typeIcons[r.sourceType] || FileText;
+    const color = typeColors[r.sourceType] || "text-zinc-400";
     return {
       id: `search-${r.id}`,
-      icon: <Icon className="w-4 h-4" />,
+      icon: <Icon className={`w-4 h-4 ${color}`} />,
       label: r.sourceTitle,
       description: r.content.slice(0, 80) + (r.content.length > 80 ? "…" : ""),
       action: () => {
@@ -150,7 +372,13 @@ export function CommandPalette() {
     };
   });
 
-  const allItems = [...(query ? searchItems : []), ...navItems];
+  // Order: search results → actions → recent conversations → navigation
+  const allItems = [
+    ...(query ? searchItems : []),
+    ...(query ? actionItems : []),
+    ...(!query ? recentItems : []),
+    ...navItems,
+  ];
 
   // Reset index when items change
   useEffect(() => {
@@ -186,6 +414,32 @@ export function CommandPalette() {
 
   if (!open) return null;
 
+  // Group items by section for rendering with headers
+  const sections: Array<{ key: SectionType; label: string; items: Array<PaletteItem & { globalIndex: number }> }> = [];
+  let globalIdx = 0;
+
+  const sectionOrder: SectionType[] = ["search", "actions", "recent", "navigation"];
+  const sectionLabels: Record<SectionType, string> = {
+    search: "Memories",
+    actions: "Quick Actions",
+    recent: "Recent Chats",
+    navigation: query ? "Pages" : "Navigate",
+  };
+
+  for (const sectionKey of sectionOrder) {
+    const sectionItems = allItems.filter((item) => item.section === sectionKey);
+    if (sectionItems.length > 0) {
+      sections.push({
+        key: sectionKey,
+        label: sectionLabels[sectionKey],
+        items: sectionItems.map((item) => ({
+          ...item,
+          globalIndex: globalIdx++,
+        })),
+      });
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)}>
       {/* Backdrop */}
@@ -205,7 +459,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search memories, navigate…"
+              placeholder="Search, navigate, or run actions…"
               className="flex-1 bg-transparent text-[14px] placeholder:text-zinc-600 focus:outline-none"
               autoComplete="off"
               spellCheck={false}
@@ -217,90 +471,60 @@ export function CommandPalette() {
 
           {/* Results */}
           <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
-            {/* Search results section */}
-            {searchItems.length > 0 && (
-              <div className="px-2">
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em] px-2 py-1.5">
-                  Memories
-                </p>
-                {searchItems.map((item, i) => {
-                  const idx = i;
-                  return (
-                    <button
-                      key={item.id}
-                      data-index={idx}
-                      onClick={item.action}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                        activeIndex === idx
-                          ? "bg-violet-500/10 text-white"
-                          : "text-zinc-400 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeIndex === idx ? "bg-violet-500/15 text-violet-400" : "bg-white/[0.04] text-zinc-500"
-                      }`}>
-                        {item.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate">{item.label}</p>
-                        {item.description && (
-                          <p className="text-[11px] text-zinc-600 truncate mt-0.5">{item.description}</p>
-                        )}
-                      </div>
-                      {activeIndex === idx && (
-                        <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            {sections.map((section) => (
+              <div key={section.key} className="px-2">
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+                    {section.label}
+                  </p>
+                  {section.key === "actions" && (
+                    <Zap className="w-2.5 h-2.5 text-zinc-700" />
+                  )}
+                  {section.key === "recent" && (
+                    <Clock className="w-2.5 h-2.5 text-zinc-700" />
+                  )}
+                </div>
+                {section.items.map((item) => (
+                  <button
+                    key={item.id}
+                    data-index={item.globalIndex}
+                    onClick={item.action}
+                    onMouseEnter={() => setActiveIndex(item.globalIndex)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
+                      activeIndex === item.globalIndex
+                        ? "bg-violet-500/10 text-white"
+                        : "text-zinc-400 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      activeIndex === item.globalIndex ? "bg-violet-500/15 text-violet-400" : "bg-white/[0.04] text-zinc-500"
+                    }`}>
+                      {item.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium truncate">{item.label}</p>
+                      {item.description && (
+                        <p className="text-[11px] text-zinc-600 truncate mt-0.5">{item.description}</p>
                       )}
-                    </button>
-                  );
-                })}
+                    </div>
+                    {item.shortcut && activeIndex === item.globalIndex && (
+                      <kbd className="text-[10px] font-mono text-zinc-600 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px] shrink-0">
+                        {item.shortcut}
+                      </kbd>
+                    )}
+                    {activeIndex === item.globalIndex && !item.shortcut && (
+                      <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                    )}
+                  </button>
+                ))}
               </div>
-            )}
-
-            {/* Navigation section */}
-            {navItems.length > 0 && (
-              <div className="px-2">
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em] px-2 py-1.5">
-                  {query ? "Pages" : "Navigate"}
-                </p>
-                {navItems.map((item, i) => {
-                  const idx = searchItems.length + i;
-                  return (
-                    <button
-                      key={item.id}
-                      data-index={idx}
-                      onClick={item.action}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                        activeIndex === idx
-                          ? "bg-violet-500/10 text-white"
-                          : "text-zinc-400 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        activeIndex === idx ? "bg-violet-500/15 text-violet-400" : "bg-white/[0.04] text-zinc-500"
-                      }`}>
-                        {item.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium">{item.label}</p>
-                        {item.description && (
-                          <p className="text-[11px] text-zinc-600 mt-0.5">{item.description}</p>
-                        )}
-                      </div>
-                      {activeIndex === idx && (
-                        <ArrowRight className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            ))}
 
             {/* Empty state */}
-            {query && allItems.length === 0 && !searching && (
+            {query && sections.length === 0 && !searching && (
               <div className="px-4 py-8 text-center">
                 <p className="text-[13px] text-zinc-600">No results for &ldquo;{query}&rdquo;</p>
+                <p className="text-[11px] text-zinc-700 mt-1">Try searching for memories, pages, or actions</p>
               </div>
             )}
 
@@ -332,6 +556,9 @@ export function CommandPalette() {
                 close
               </span>
             </div>
+            <span className="hidden sm:block text-zinc-700">
+              {allItems.length} result{allItems.length !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
       </div>

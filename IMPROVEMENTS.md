@@ -4,6 +4,195 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 13:29 UTC — Enhanced Source Cards in Chat (Perplexity-style)
+- **Research**: Internal UX audit — compared MindStore's chat source citations against Perplexity, Phind, Google AI Overviews, and ChatGPT's RAG implementations. Every modern RAG chat interface shows source previews inline so users can verify what the AI actually retrieved. MindStore's source cards only showed title + score bar — no content preview, no citation numbering, and no way to click through to the source memory.
+- **Finding**: The search API already returned full content for each result, but the chat page was discarding it — only passing `title`, `type`, and `score` to the `SourceCards` component. The `[1]`, `[2]` citation numbers in AI responses had no visual counterpart in the source cards, making it hard to match citations to sources.
+- **Implemented**:
+  - **Content previews**: Each source card now shows a 2-line content preview (120 chars) below the title, giving users a transparent view of what the AI actually retrieved and reasoned from
+  - **Citation number badges**: Numbered badges [1], [2], [3] etc. appear on each source card, visually matching the `[1]`, `[2]` inline citations in AI responses — users can now trace exactly which source backs which claim
+  - **Clickable source cards**: Each source card is now wrapped in an `<a>` link that navigates to Explore with a search query for that memory. Click-through from chat → explore closes the discovery loop
+  - **Memory ID + preview pipeline**: Updated `ChatMessage` type in `chat-history.ts` to include optional `id` and `preview` fields. Both source-mapping locations in the chat handler now pass `memoryId`/`id` and a 120-char content preview
+  - **Expanded default view**: Shows 3 sources by default (up from 2) since the cards are now more informative and worth showing
+  - **Design**: Citation badge uses `bg-white/[0.06]` with tabular-nums for consistent width. Preview text is `text-[10px] text-zinc-600` with `pl-6` indentation aligned under the title. Clickable cards get enhanced hover state (`bg-white/[0.06] border-white/[0.08]`)
+- **Branch**: `frain/improve` (commit `63e5819`)
+
+## 2026-03-24 12:59 UTC — Import History Section on Import Page
+- **Research**: Internal UX audit — compared MindStore's Import page to Notion's import flow, Obsidian's sync status, and general PKM app patterns. After importing content, users had zero feedback about what they'd already imported, how much data was in the system, or when things were last added. The Import page was a one-way "drop and forget" experience with no import log or history.
+- **Finding**: The Import page showed the import tabs and a progress bar during active imports, but once the import completed and the user navigated away, there was no record on the Import page itself. Users who wanted to know "what did I import?" or "when did I add that?" had to navigate to Explore and mentally reconstruct their import history. The sources API already returned `importedAt` timestamps and chunk counts — the data existed, just wasn't surfaced.
+- **Implemented**:
+  - **Import History section** below the import tabs, showing recent imports as a list:
+    - Each entry displays: colored source type icon (green=ChatGPT, blue=file, orange=URL, violet=text), source title, type badge, chunk count, and relative timestamp
+    - Click any entry → navigates to Explore with search query for that source
+    - Shows up to 8 most recent imports (sorted by `importedAt` DESC), with "View all N sources in Explore →" link when more exist
+    - Header shows total import count and total memory count, plus "Explore all" link with Compass icon
+  - **Auto-refresh after import**: Both `importViaApi()` (FormData) and `importJsonViaApi()` (JSON) now call `refreshHistory()` on success, so the history section updates immediately after a new import without page reload
+  - **Empty state**: When no imports exist yet, shows a dashed-border card with Package icon and "No imports yet — Choose a source above" prompt
+  - **Data fetching**: Parallel `Promise.all()` fetch of `/api/v1/sources` + `/api/v1/stats` on mount
+  - **`formatRelativeTime()` helper**: "just now", "Xm ago", "Xh ago", "yesterday", "Xd ago", or short date format
+  - New icon imports: `Clock`, `Compass`, `Package`
+  - Design: fully consistent with dashboard/explore patterns (rounded-2xl cards, divide-y list, hover states, zinc/violet palette)
+- **Branch**: `frain/improve` (commit `93819bb`)
+
+## 2026-03-24 11:29 UTC — Keyboard Shortcuts Help Modal
+- **Research**: Internal UX audit — power-user keyboard discoverability. GitHub, Gmail, Linear, Notion, and Superhuman all provide a `?` keyboard shortcut that opens a comprehensive shortcuts reference modal. MindStore now has 15+ keyboard shortcuts across different pages (⌘K, j/k, ↵, /, s, p, e, a, ␣, Esc, etc.) but no unified reference — users had to discover them through the hint bars at the bottom of Explore or guess from muscle memory.
+- **Finding**: Shortcuts were scattered and hidden. Explore had keyboard hint bars at the bottom of the list and detail modal, but Chat, Import, Learn, and the global ⌘K shortcut had no discoverability. The "?" shortcut for help is a universal convention that every serious keyboard-driven app supports.
+- **Implemented**:
+  - **New `KeyboardShortcuts` component** (`src/components/KeyboardShortcuts.tsx`):
+    - Press `?` anywhere (when not in an input/textarea) to toggle the modal
+    - Also accessible via the custom event `mindstore:open-shortcuts` for programmatic opening
+    - **Context-aware grouping**: shortcuts organized by page context:
+      - 🌐 **Global** (always shown): ⌘K command palette, ? shortcuts
+      - 🧭 **Explore** (12 shortcuts): /, j/k, ↵, Esc, e, p, s, ␣, a, ↑↓, ⌘↵
+      - 💬 **Chat** (3 shortcuts): ↵ send, ⇧↵ new line, Esc close history
+      - 🎓 **Learn** (2 shortcuts): ↵ send, ⇧↵ new line
+      - 📥 **Import** (1 shortcut): ↵ submit URL
+    - **Current page highlighting**: when on a specific page (e.g. Explore), that group is highlighted with violet accent styling and a "Current page" badge — so users see their most relevant shortcuts first
+    - **Design**: dark glass modal (bg-[#111113]) with rounded-2xl, 22px kbd key badges with mono font, divide-y section layout, purple accent for highlighted groups
+    - **Animations**: CSS-only `ks-fade-in` backdrop + `ks-scale-in` modal entry (scale 0.95 → 1 + translateY spring)
+    - Auto-closes on route change and Escape key
+    - Escape handler uses capture phase to prevent conflicts with other Escape listeners
+  - **Sidebar shortcut**: New "Shortcuts" button in the desktop sidebar footer (below Search/⌘K), with Keyboard icon and `?` kbd hint — matches existing Search button styling exactly
+  - **Layout integration**: Added to `layout.tsx` alongside Onboarding, CommandPalette, and GlobalDropZone
+  - Added `Keyboard` to lucide-react imports in layout
+  - Exported `openKeyboardShortcuts()` utility function for programmatic access
+- **Branch**: `frain/improve` (commit `dcc9145`)
+
+## 2026-03-24 10:29 UTC — Save Chat Response to Memory (Knowledge Loop)
+- **Research**: Internal UX audit — compared MindStore's chat experience to Mem.ai, Notion AI, and Reflect. A core pattern in modern PKM apps is the "knowledge loop": you search/chat your knowledge → get a synthesized insight → save that insight back as new knowledge. MindStore had no way to capture AI-generated answers back into the knowledge base. Users would get great synthesized responses but couldn't persist them without manually copy-pasting into Import.
+- **Finding**: The chat message hover UI only showed a Copy button. Assistant messages needed a Save action to close the knowledge loop. This is a signature feature that differentiates true PKM tools from simple chatbots.
+- **Implemented**:
+  - **MessageActions component**: New hover-action bar for assistant messages with two buttons:
+    - **Copy** (existing behavior, preserved)
+    - **Save to Memory** (new): BookmarkPlus icon with "Save" label
+  - **Save workflow**:
+    - Extracts the preceding user question as context for the memory title (prefixed with 💡)
+    - POSTs to `/api/v1/import` as a `text` type document
+    - Shows loading spinner during save, green checkmark on success
+    - Toast notification with chunk count + "Find it in Explore" description
+    - Button transitions to "Saved" state after success (prevents double-saves)
+  - **Design details**:
+    - Hover state: violet accent (bg-violet-500/10, border-violet-500/20) — matches app palette
+    - Saved state: emerald accent (bg-emerald-500/10) for clear success feedback
+    - Responsive: icon-only on mobile, icon + "Save" label on desktop (hidden via sm:inline)
+    - Shadow, border, and rounded-lg match existing Copy button aesthetics
+  - User messages retain the original single Copy button on the left side
+- **Branch**: `frain/improve` (commit `f55012f`)
+
+## 2026-03-24 09:59 UTC — Content Stats Bar in Explore Detail Modal
+- **Research**: UX audit against Notion, Obsidian, Medium, Mem, Apple Notes. Every serious knowledge management app shows content metadata (word count, reading time) when viewing a document. MindStore's Explore detail modal showed only source type, title, and date — no content-level stats. Users had no way to gauge memory size or reading commitment before diving in.
+- **Finding**: The detail modal had a header and content area, but the gap between them was an unused opportunity. Adding a stats bar in that space follows Notion's document info pattern and Medium's reading time convention, both of which are proven UX patterns users intuitively understand.
+- **Implemented**:
+  - **Content Stats Bar** between header and content in the Explore detail modal:
+    - **Word count** with # icon — count of whitespace-separated tokens
+    - **Character count** — total characters for length-at-a-glance
+    - **Reading time** with BookOpen icon — estimated at 225 WPM (standard reading speed), minimum 1 minute
+    - **Import date** with Clock icon — shows when the memory was imported (only if different from the content's original timestamp), giving temporal context for when knowledge entered MindStore
+  - Stats bar is hidden during edit mode (not relevant while editing)
+  - Dot separators between stats items for clean visual rhythm
+  - Subtle styling: `text-[10px] text-zinc-600` with `bg-white/[0.01]` background, matching existing design system
+  - Tooltips on hover for each stat with more detail
+  - New lucide imports: `Clock`, `Hash`, `BookOpen`
+- **Branch**: `frain/improve` (commit `882b041`)
+
+---
+
+## 2026-03-24 07:59 UTC — Markdown Tables & Task Lists in Chat Renderer
+- **Research**: AI chat rendering patterns — ChatGPT, Claude, Gemini, and Perplexity all render markdown tables natively in chat responses. AI models frequently output comparison tables, data summaries, and structured info as markdown tables. Task lists (`- [ ]` / `- [x]`) are also common in AI-generated action plans. Web search was unavailable (quota), used domain knowledge of markdown rendering gaps.
+- **Finding**: MindStore's `ChatMarkdown` component handled bold, italic, code, code blocks, lists, blockquotes, and headings — but had **zero table support**. Markdown tables (`| Col | Col |`) rendered as broken plain text with literal pipe characters, making AI responses that use tables look unprofessional. Task lists also rendered as regular bullet lists with literal `[ ]` text.
+- **Implemented**:
+  - **Table rendering**: Full markdown table support with:
+    - Header row detection (line starting/ending with `|` followed by `|---|` separator)
+    - Column alignment parsing: `:---` = left, `:---:` = center, `---:` = right
+    - Styled header row: `bg-white/[0.04]` background, semibold `text-zinc-300`, `whitespace-nowrap`
+    - Data rows with `hover:bg-white/[0.02]` highlight and `border-white/[0.03]` dividers
+    - Horizontal scroll (`overflow-x-auto`) for wide tables on mobile
+    - Container: `rounded-xl border border-white/[0.06]` matching all card styling
+    - Inline markdown (bold, italic, code, links) fully works inside table cells
+  - **Task list rendering**: `- [ ]` / `- [x]` patterns now render with:
+    - Custom checkbox: `w-[15px] h-[15px] rounded-[4px]` — empty border or violet-500 filled with SVG checkmark
+    - Completed items: `text-zinc-500 line-through` for visual differentiation
+    - Matches existing bullet/numbered list spacing and sizing
+  - **Paragraph guard**: Updated paragraph collector to stop collecting lines when a table start is detected, preventing tables from being swallowed into paragraph text
+  - **Helper functions**: `isTableRow()`, `isTableSeparator()`, `parseAlignments()`, `parseTableCells()` — all pure functions, zero dependencies
+  - Zero new dependencies — still 100% regex + React, no markdown library needed
+- **Branch**: `frain/improve` (commit `96e26a3`)
+
+## 2026-03-24 06:59 UTC — Ollama Streaming Chat Support (Complete Local LLM Parity)
+- **Research**: Codebase audit — compared the three-provider support across embeddings vs chat. Web search unavailable (quota).
+- **Finding**: **Critical functional gap** — The chat API route (`/api/v1/chat/route.ts`) only supported OpenAI and Gemini for streaming chat, but **NOT Ollama** — even though the embeddings system (`embeddings.ts`) and settings page both fully support Ollama as a provider. Users who configured Ollama could generate embeddings and search, but clicking "chat" would fail with "No API key configured" — because the settings endpoint's `hasApiKey` check didn't include `ollama_url`, and the chat route had no `streamOllama()` function.
+- **Implemented**:
+  - **New `streamOllama()` function** in `/api/v1/chat/route.ts`: Streams chat via Ollama's `/api/chat` endpoint. Ollama uses NDJSON streaming (one JSON object per line: `{"message":{"content":"token"},"done":false}`), which is transformed to OpenAI-compatible SSE format (`data: {"choices":[{"delta":{"content":"token"}}]}`) so the existing client-side `streamChat()` generator works without any changes.
+  - **Provider priority with explicit override**: Reads `chat_provider` from settings DB. If explicitly set (e.g. `chat_provider: "ollama"`), that provider is used first. Otherwise falls back to auto-detect chain: OpenAI → Gemini → Ollama.
+  - **Graceful connection errors**: If Ollama is unreachable (e.g. not running), returns a clear 502 error: "Cannot connect to Ollama at http://localhost:11434. Is it running?" — much better than a generic fetch crash.
+  - **Settings `hasApiKey` fix**: The `/api/v1/settings` GET endpoint now includes `config.ollama_url` and `process.env.OLLAMA_URL` in the `hasApiKey` boolean. This fixes the chat page's `hasAI` state — previously Ollama-only users saw "Connect an AI provider" even though they had one configured.
+  - **Default model**: Uses `llama3.2` as the default Ollama chat model (widely available, good quality, fast).
+  - **Zero client-side changes needed**: The existing `streamChat()` generator in `lib/openai.ts` already parses OpenAI-compatible SSE, so Ollama chat "just works" through the same pipeline.
+  - **Complete parity**: All three providers (OpenAI, Gemini, Ollama) now work identically across both embeddings AND chat. MindStore is truly usable as a 100% local/offline knowledge base.
+- **Also committed**: Chat conversation rename feature (double-click title or pencil icon in history panel).
+- **Branch**: `frain/improve` (commits `b0de58e`, `7f4cd40`)
+
+## 2026-03-24 05:59 UTC — Global Drag-and-Drop File Import
+- **Research**: Drag-and-drop UX patterns from Notion, Slack, Discord, Gmail — all modern productivity apps allow dropping files anywhere in the app, not just on dedicated upload areas. MindStore's Import page had per-tab DropZone components, but users had to navigate to the Import page first. Web search unavailable (quota), used domain knowledge of file import UX patterns.
+- **Finding**: MindStore had drag-and-drop support only within the Import page's DropZone components. Users on Chat, Explore, Dashboard, or any other page had no way to quickly import a file without navigating away. This breaks the flow — especially for power users who want to "drop and go" like in Slack or Notion.
+- **Implemented**:
+  - **New `GlobalDropZone` component** (`src/components/GlobalDropZone.tsx`): A window-level drag-and-drop handler that intercepts file drags anywhere in the app.
+  - **Full-screen overlay**: When dragging files over the window, a `z-[200]` overlay appears with backdrop blur, animated upload icon (CSS bounce), and pulsing glow ring — clear visual feedback that the app is ready to receive files.
+  - **Auto file type detection**: Categorizes dropped files automatically:
+    - `.json` / `.zip` → ChatGPT import (`source_type: 'chatgpt'`)
+    - `.txt` / `.md` / `.markdown` → File import (`source_type: 'file'`)
+    - Unsupported files → shows error with supported formats
+  - **Four visual states**: `hovering` (drop target with animated icon), `importing` (spinner + "Processing…"), `done` (green checkmark + result count), `error` (red alert + message)
+  - **Mixed file handling**: If a user drops a mix of `.json` and `.md` files, imports both sets and reports on any unsupported files separately
+  - **Import page guard**: Overlay is disabled on `/app/import` since that page has its own granular DropZone components per tab
+  - **Drag counter pattern**: Uses `dragCountRef` counter (increment on `dragenter`, decrement on `dragleave`) to handle the browser's notoriously tricky drag events — prevents the overlay from flickering when dragging over child elements
+  - **Auto-dismiss**: Success state auto-clears after 2.5s, error after 3.5s
+  - **CSS animations**: `gdz-fade-in`, `gdz-pulse`, `gdz-bounce`, `gdz-scale-in` — all pure CSS keyframes, no JS animation library
+  - **Integrated into app layout**: Added alongside Onboarding and CommandPalette in `layout.tsx`
+- **Branch**: `frain/improve` (commit `7b02df0`)
+
+## 2026-03-24 05:29 UTC — Infinite Scroll on Explore Page
+- **Research**: Scroll/pagination UX patterns from Twitter, Instagram, Notion, Linear — modern apps universally use infinite scroll (via Intersection Observer) instead of manual "Load More" buttons for content lists. Infinite scroll keeps users in flow, reduces friction, and feels seamless. Web search unavailable (quota), used domain knowledge of pagination UX patterns.
+- **Finding**: The Explore page had a manual "Load More" button at the bottom of the memory list. Users had to notice it, stop scrolling, and click it to see more memories. This is a friction point — especially for users with hundreds or thousands of memories. Every major content app (Twitter, Instagram, Notion databases, Linear issue lists) auto-loads the next page as you scroll.
+- **Implemented**:
+  - **Intersection Observer**: Added a sentinel `<div>` at the bottom of the memory list, observed with `IntersectionObserver` using `rootMargin: '200px'` — this triggers the next fetch 200px before the sentinel becomes visible, so content loads before the user reaches the bottom.
+  - **`loadMore()` callback**: Fetches the next batch of 100 memories via `/api/v1/memories?limit=100&offset=N` and appends to the existing list. Guards against duplicate fetches with `loadingMore` state.
+  - **Loading indicator**: While fetching, shows a subtle "Loading more…" with a spinning violet `Loader2` icon. When not loading, shows "N more" with a `MoreHorizontal` icon so users know there's more content.
+  - **Smart guards**: Infinite scroll only activates when: (a) not already loading, (b) there are more memories to load (`memories.length < totalMemories`), and (c) the user is NOT searching (search results load all at once since they're naturally scoped by query relevance).
+  - **Cleanup**: Observer disconnects on unmount/re-render to prevent memory leaks.
+  - **No changes to API**: The existing `/api/v1/memories` endpoint already supported `limit` and `offset` parameters — purely a frontend UX improvement.
+- **Branch**: `frain/improve` (commit `6a27418`)
+
+## 2026-03-24 03:29 UTC — Enhanced Command Palette: Quick Actions & Recent Chats
+- **Research**: Command palette UX patterns from Linear, Raycast, Notion, Superhuman — modern command palettes aren't just search boxes. They're action hubs: search content, navigate pages, AND execute quick actions (new chat, export, import). Linear's ⌘K shows recent items when empty. Raycast groups results by type with section headers. Superhuman's ⌘K has instant actions with keyword matching.
+- **Finding**: MindStore's ⌘K Command Palette could only do two things: search memories and navigate to pages. No quick actions (users had to navigate to a page first, then find the button). No recent items (the palette opened empty with just a page list). No section grouping. This made it feel like a basic nav menu rather than a power-user hub. Web search unavailable (quota), used domain knowledge of command palette UX patterns.
+- **Implemented**:
+  - **Quick Actions section**: 8 actions searchable by keywords — "New Chat" (start fresh conversation), "Import Text" (paste notes), "Import ChatGPT" (upload ZIP), "Import URL" (extract webpage), "Export All Data" (download JSON backup *directly from palette* — no navigation needed), "Reindex Embeddings" (navigate to settings), "Teach AI About You" (open Learn), "View Mind Map" (open 3D graph). Each action has fuzzy keyword matching (e.g. typing "backup" finds Export, typing "web" finds Import URL).
+  - **Recent Chats section**: When the palette opens with no query, shows the last 4 conversations from localStorage with title, message count, and relative timestamps. Clicking a recent chat navigates to Chat page and loads that conversation via custom event dispatch.
+  - **Section grouping**: Items are now grouped under labeled section headers — "Memories" (search results), "Quick Actions" (with ⚡ icon), "Recent Chats" (with 🕐 icon), "Navigate"/"Pages" (page links). Much easier to scan than a flat list.
+  - **Custom event bridge**: Command palette dispatches `mindstore:new-chat` and `mindstore:load-chat` custom events. Chat page listens for these events and triggers `handleNewChat()` or `handleLoadConversation(id)` — enabling cross-component communication without prop drilling or global state.
+  - **Direct export action**: The "Export All Data" action fetches `/api/v1/export`, creates a Blob, and triggers download — all without leaving the current page. Shows toast on success/failure.
+  - **Color-coded search result icons**: Memory search results now use source-type-specific icon colors (green for ChatGPT, blue for files, orange for URLs, violet for text) — consistent with Explore page.
+  - **Result count in footer**: Shows "N results" counter in the bottom-right of the palette.
+  - **Better empty state**: When query matches nothing, shows "No results for…" with a help hint ("Try searching for memories, pages, or actions").
+  - **Updated placeholder**: "Search, navigate, or run actions…" — tells users the palette can do more than just search.
+- **Branch**: `frain/improve` (commit `af68ff0`)
+
+---
+
+## 2026-03-24 02:59 UTC — Suggested Follow-Up Questions in Chat
+- **Research**: AI chat UX patterns from ChatGPT, Perplexity, Gemini, Claude — all modern AI chat apps generate contextual follow-up questions after responses to drive engagement and help users explore their knowledge deeper. MindStore's chat had no suggested follow-ups — after an answer, the user had to think of the next question entirely on their own.
+- **Finding**: The Chat page had great UX (stop/regenerate, source citations, copy, scroll FAB) but lacked the "what to ask next" pattern. In knowledge management, follow-up suggestions are even more valuable than in general chat because users often don't know what connections exist in their own data.
+- **Implemented**:
+  - **`generateFollowUps()` function**: After streaming completes, makes a lightweight background API call asking the AI to generate exactly 3 short, contextual follow-up questions based on the user's query and the AI's answer. Parses JSON array from streamed response.
+  - **Follow-up pill buttons**: Displayed below the last assistant message as rounded-full chips with violet styling (`border-violet-500/15 bg-violet-500/[0.06] text-violet-300`). Truncated at 280px for long questions.
+  - **Loading state**: Shows "Thinking of follow-ups…" with spinner while generating, so users know more is coming.
+  - **Click to send**: Clicking any follow-up pill immediately clears the suggestions and sends that question as the next query — seamless conversation flow.
+  - **Proper cleanup**: Follow-ups clear on new chat, regenerate, stop generation, and when sending a new message. Uses `AbortController` so follow-up generation is cancelled if the user navigates away or starts a new interaction.
+  - **Non-blocking**: Follow-up generation runs entirely in the background — doesn't delay the main response or block the input.
+- **Branch**: `frain/improve` (commit `4f3f90f`)
+
+---
+
 ## 2026-03-24 02:29 UTC — Multi-Select & Batch Operations for Explore
 - **Research**: Bulk action patterns from Notion, Gmail, Obsidian, Apple Notes — every major knowledge app supports selecting multiple items and performing batch operations (delete, export, copy). MindStore's Explore page only supported single-item actions — no way to bulk-delete imports gone wrong or export a selection. Web search was unavailable (quota), used domain knowledge of modern UX patterns.
 - **Finding**: The Explore page had individual delete per memory via the detail modal, but no multi-select capability. Users who imported large ChatGPT exports or file batches had no efficient way to curate or clean up. No batch export either — the only export was a full database dump from Settings.
@@ -305,3 +494,111 @@ _Automated 30-min improvement cycles by Frain_
   - Refresh button uses standard icon button pattern (rounded-xl, border-white/[0.06])
   - **All 9 app pages now use 100% unified design system** — zero legacy styling remaining anywhere
 - **Branch**: `frain/improve` (commit `318bbee`)
+
+---
+
+## 2026-03-24 04:59 UTC — Dashboard Recent Activity Timeline
+- **Research**: Internal UX audit — modern PKM apps (Notion, Obsidian, Reflect) all show recent activity on their home/dashboard pages. MindStore's dashboard showed stats and actions but no sense of *when* things were added or what was recently imported.
+- **Finding**: The dashboard felt static — no temporal context. Users couldn't see their latest additions without navigating to Explore. Notion's home page, Obsidian's "Recent files", and Reflect's timeline all surface recent items prominently.
+- **Implemented**:
+  - Stats API (`/api/v1/stats`) now returns `recentMemories` — the 5 most recently created memories with id, content preview (120 chars), source type, title, and `created_at` timestamp
+  - New **"Recent Activity"** section on the Dashboard between Actions Grid and Discover
+  - Each entry shows: colored source type icon, source title, content preview (1-line truncated), and relative timestamp with clock icon
+  - Clicking a recent memory navigates to Explore with a search query for that content
+  - "View all →" link navigates to the full Explore page
+  - `formatRelativeTime()` helper: "just now", "Xm ago", "Xh ago", "yesterday", "Xd ago", or short date
+  - Fully consistent with existing dashboard design system (rounded-2xl cards, divide-y, hover states)
+- **Also committed**: Previously uncommitted inline memory editing feature (PATCH API + Edit UI in Explore modal with keyboard shortcuts)
+- **Branch**: `frain/improve` (commit `e482ed4`)
+
+---
+
+## 2026-03-24 08:59 UTC — Chat Provider Preference Picker
+- **Research**: Analyzed MindStore's backend vs frontend feature parity. The chat API route (`/api/v1/chat`) already supported a `chat_provider` setting to let users choose between OpenAI, Gemini, and Ollama for chat — but there was no UI to set this preference. Users with multiple providers configured had no control over which one handled their conversations.
+- **Finding**: The backend had dead code — `chat_provider` was queried from the settings table and respected in the chat route's provider selection logic, but the Settings API didn't return it and couldn't save it. This is a classic backend-frontend disconnect. Modern PKM apps like Notion AI and Reflect let users choose their AI backend.
+- **Implemented**:
+  - **Settings API** (`/api/v1/settings`):
+    - GET now returns `chatProvider` (current preference or null)
+    - POST accepts `chatProvider` param — saves to DB, or removes preference when set to "auto"
+  - **Settings Page** — new "Chat Provider" section (only visible when at least one AI is connected):
+    - Radio-style picker with 4 options: Auto-detect (⚡), Google Gemini, OpenAI, Ollama
+    - Each option shows model name and description (e.g. "gemini-2.0-flash-lite · fast & free")
+    - Active selection highlighted with violet ring + filled radio circle
+    - Unavailable providers greyed out with "Not connected" label and disabled
+    - Instant save with loading spinner feedback + toast confirmation
+    - Fully matches existing Settings page design system (rounded-2xl cards, zinc/violet palette)
+- **Branch**: `frain/improve` (commit `9438b7b`)
+
+## 2026-03-24 09:29 UTC — Sort Memories in Explore
+- **Research**: Internal UX audit — every modern knowledge management app (Notion, Obsidian, Apple Notes, Mem, Reflect) provides sort controls when browsing content. MindStore's Explore page always showed memories sorted by newest first with no user control. Users with hundreds of memories had no way to find content by title alphabetically or by content length.
+- **Finding**: The Explore page had filter pills (by source type) but no sort control — a fundamental gap. The backend API also hardcoded `ORDER BY created_at DESC` with no flexibility.
+- **Implemented**:
+  - **Backend** (`/api/v1/memories`): Added `sort` query parameter supporting 6 sort modes:
+    - `newest` (default) — created_at DESC
+    - `oldest` — created_at ASC
+    - `alpha-asc` — Title A→Z (case-insensitive, falls back to created_at)
+    - `alpha-desc` — Title Z→A
+    - `longest` — Content length DESC (find most substantial memories)
+    - `shortest` — Content length ASC (find brief notes)
+  - **Frontend** (Explore page): Sort dropdown button with ArrowUpDown icon
+    - Positioned inline with filter pills (right-aligned) for clean layout
+    - Dropdown menu with 6 options, each with descriptive icon (ArrowDownNarrowWide, ArrowDownAZ, etc.)
+    - Active sort highlighted with violet accent + dot indicator
+    - Hidden during search (since search results are ranked by relevance score, not chronologically)
+    - Sort selection resets focused index and immediately refetches memories
+    - Sort persists across filter changes — infinite scroll also respects sort order
+    - Click-outside-to-close with fixed overlay
+    - Fully responsive — label hidden on mobile, icon-only on small screens
+  - Design: matches existing filter pill aesthetic (rounded-full, 30px height, violet active state)
+- **Branch**: `frain/improve` (commit `d95a206`)
+
+## 2026-03-24 11:59 UTC — Related Memories in Explore Detail View
+- **Research**: Internal UX audit — core PKM apps (Obsidian, Notion, Mem, Reflect, Capacities) all surface related/connected content when viewing a note. Obsidian has backlinks and outgoing links, Notion has related pages, Mem has "related notes" via AI, Reflect shows bi-directional links. MindStore's Explore detail modal showed a single memory in isolation with no way to discover connections to other stored knowledge.
+- **Finding**: The detail modal was a dead-end — users could view content, edit, pin, copy, or delete, but had no way to explore the knowledge graph from that context. This is the opposite of what a "second brain" should do. The whole point of a PKM is surfacing unexpected connections. The search API already supports semantic search, so the infrastructure existed — just no UI to surface it in-context.
+- **Implemented**:
+  - **Related Memories section** in the Explore detail modal (between content area and footer):
+    - When a memory is selected, automatically fetches 4 semantically similar memories via `/api/v1/search`
+    - Uses a combination of the memory's title + first 200 chars of content as the search query
+    - Filters out the currently viewed memory from results
+    - Each related memory shows: colored source type icon, title, content preview (100 chars), similarity score bar, and arrow icon
+    - Clicking a related memory navigates to it — if it's in the loaded list, selects directly; if not, fetches from API
+    - Loading state with skeleton animation while fetching
+    - Hidden during edit mode to keep the UI focused
+    - Request abort on memory change to prevent stale results
+  - **Design**: `Sparkles` icon header with "Related memories" label, compact card layout with hover states, score visualization bars matching the chat source cards pattern
+  - **Icons**: Added `Sparkles` and `ExternalLink` from lucide-react
+- **Branch**: `frain/improve` (commit `dd9900e`)
+
+## 2026-03-24 12:29 UTC — Pinned Memories on Dashboard
+- **Research**: PKM UX audit — every major knowledge management app (Notion, Obsidian, Apple Notes, Bear, Mem, Capacities) surfaces pinned/starred/favorited items on the home screen. MindStore added pinning in a previous cycle, and the backend stats API already returned `pinnedMemories` data, but the dashboard page never used it. Users who pinned important memories had to navigate to Explore with a pinned filter to find them — defeating the purpose of quick access.
+- **Finding**: The stats API already had the infrastructure (`pinnedMemories` array, `pinnedCount`), but the dashboard `page.tsx` only rendered stat cards, quick search, action grid, recent activity, discover features, and sources. Pinned memories were invisible from the home screen.
+- **Implemented**:
+  - **Pinned Memories section** on the dashboard, positioned between stat cards and action grid for maximum prominence:
+    - Shows up to 4 pinned memories in a responsive 2-column grid (`grid-cols-1 sm:grid-cols-2`)
+    - Each card features: warm amber gradient background (`from-amber-500/[0.04]`), subtle pin icon in top-right corner, source type icon badge, title, and 2-line content preview
+    - Header with Pin icon, "PINNED" label, and count badge
+    - "View all →" link that navigates to Explore with pinned filter (`/app/explore?filter=pinned`)
+    - Click navigates to Explore with search query for the memory
+    - Hover state: amber gradient intensifies + border brightens + title goes white
+    - Only renders when `pinnedMemories.length > 0` — zero visual noise for users without pins
+  - **No backend changes** — leverages existing stats API data
+  - **Design**: amber-tinted gradient cards complement the pinning feature's amber color palette, creating visual consistency across Explore and Dashboard
+- **Branch**: `frain/improve` (commit `ba293bb`)
+
+## 2026-03-24 13:59 UTC — 14-Day Activity Chart on Dashboard
+- **Research**: UX patterns from Obsidian (activity graph), GitHub (contribution heatmap), and Duolingo (streak counter). Knowledge management apps that show activity patterns keep users engaged and motivated. MindStore's dashboard showed stat cards and recent activity list, but had no temporal visualization of knowledge growth.
+- **Finding**: The stats API had no temporal data at all — just total counts and recent items. Users had no way to see their knowledge-building patterns over time, making it impossible to answer "am I consistently adding to my knowledge base?"
+- **Implemented**:
+  - **Backend**: Added `dailyActivity` query to `/api/v1/stats` — aggregates memory creation counts by day for the last 14 days, with a `buildDailyActivity()` helper that fills in zero-count days for a complete 14-day array
+  - **Frontend**: `ActivityChart` component on dashboard between Stat Cards and Pinned Memories:
+    - 14 vertical bars showing daily import counts, proportionally scaled to max
+    - Today's bar highlighted with violet gradient + shadow glow
+    - Hover tooltips showing exact count and date for each day
+    - Hover state: bar brightens to `violet-400/60`
+    - Zero-count days shown as 2px dim bars for visual continuity
+    - 🔥 Streak counter — shows consecutive active days (e.g. "🔥 5-day streak")
+    - Date labels at start, middle, and end of the 14-day range
+    - Header with BarChart3 icon, "ACTIVITY · 14 days" label, total memories added count
+    - Only renders when there's actual activity data (zero visual noise for inactive users)
+  - **Design**: Matches MindStore's design language — dark rounded cards, violet gradients, zinc-toned typography, smooth transitions
+- **Branch**: `frain/improve` (commit `b5ede6c`)

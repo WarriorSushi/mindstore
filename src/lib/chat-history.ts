@@ -6,7 +6,7 @@
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  sources?: { title: string; type: string; score: number }[];
+  sources?: { title: string; type: string; score: number; id?: string; preview?: string }[];
 }
 
 export interface Conversation {
@@ -84,6 +84,15 @@ export function saveConversation(id: string, messages: ChatMessage[]): void {
 /** Delete a conversation */
 export function deleteConversation(id: string): void {
   const convos = getConversations().filter((c) => c.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(convos));
+}
+
+/** Rename a conversation */
+export function renameConversation(id: string, title: string): void {
+  const convos = getConversations();
+  const idx = convos.findIndex((c) => c.id === id);
+  if (idx === -1) return;
+  convos[idx].title = title.trim() || "Untitled";
   localStorage.setItem(STORAGE_KEY, JSON.stringify(convos));
 }
 

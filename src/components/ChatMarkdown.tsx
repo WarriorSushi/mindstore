@@ -6,7 +6,8 @@ import { Check, Copy } from "lucide-react";
 /**
  * Lightweight markdown renderer for chat messages.
  * Handles: **bold**, *italic*, `code`, ```code blocks```, [links](url),
- * --- dividers, bullet lists (- / *), numbered lists (1.), headings, \n
+ * --- dividers, bullet lists (- / *), numbered lists (1.), headings,
+ * | tables |, task lists (- [ ] / - [x]), \n
  * No heavy dependencies — just regex + React.
  */
 export function ChatMarkdown({ content }: { content: string }) {
@@ -40,6 +41,23 @@ function parseBlocks(content: string): React.ReactNode[] {
       elements.push(
         <CodeBlock key={key++} code={codeLines.join("\n")} language={lang} />
       );
+      continue;
+    }
+
+    // ── Markdown table ────────────────────────────
+    // Detect table: line starts with | or is followed by a separator line |---|
+    if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+      const tableLines: string[] = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+        // Skip the separator line (|---|---|) but include it for alignment parsing
+        if (tableLines.length === 1 && i < lines.length && isTableSeparator(lines[i])) {
+          tableLines.push(lines[i]);
+          i++;
+        }
+      }
+      elements.push(<MarkdownTable key={key++} rows={tableLines} />);
       continue;
     }
 
@@ -89,6 +107,20 @@ function parseBlocks(content: string): React.ReactNode[] {
         </div>
       );
       i++;
+      continue;
+    }
+
+    // ── Task list (- [ ] / - [x]) ─────────────────
+    if (/^[\-\*]\s\[[ xX]\]\s/.test(line)) {
+      const items: { checked: boolean; content: string }[] = [];
+      while (i < lines.length && /^[\-\*]\s\[[ xX]\]\s/.test(lines[i])) {
+        const m = lines[i].match(/^[\-\*]\s\[([ xX])\]\s(.+)/);
+        if (m) {
+          items.push({ checked: m[1].toLowerCase() === "x", content: m[2] });
+        }
+        i++;
+      }
+      elements.push(<TaskList key={key++} items={items} />);
       continue;
     }
 
@@ -154,7 +186,8 @@ function parseBlocks(content: string): React.ReactNode[] {
       !/^#{1,3}\s/.test(lines[i]) &&
       !/^[\-\*]\s/.test(lines[i]) &&
       !/^\d+\.\s/.test(lines[i]) &&
-      !/^>\s/.test(lines[i])
+      !/^>\s/.test(lines[i]) &&
+      !(isTableRow(lines[i]) && i + 1 < lines.length && isTableSeparator(lines[i + 1]))
     ) {
       paraLines.push(lines[i]);
       i++;
@@ -241,6 +274,122 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
         <code className="text-[12px] font-mono text-zinc-300 leading-[1.6]">{code}</code>
       </pre>
     </div>
+  );
+}
+
+/** Check if a line looks like a table row (starts and ends with |, or has | separators) */
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|") && trimmed.split("|").length >= 3;
+}
+
+/** Check if a line is a table separator (|---|---|) */
+function isTableSeparator(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return false;
+  const cells = trimmed.slice(1, -1).split("|");
+  return cells.every(c => /^\s*:?-{2,}:?\s*$/.test(c));
+}
+
+/** Parse alignment from separator row */
+function parseAlignments(separator: string): Array<"left" | "center" | "right"> {
+  const cells = separator.trim().slice(1, -1).split("|");
+  return cells.map(c => {
+    const t = c.trim();
+    if (t.startsWith(":") && t.endsWith(":")) return "center";
+    if (t.endsWith(":")) return "right";
+    return "left";
+  });
+}
+
+/** Parse cells from a table row */
+function parseTableCells(row: string): string[] {
+  const trimmed = row.trim();
+  // Remove leading and trailing |, then split
+  return trimmed.slice(1, -1).split("|").map(c => c.trim());
+}
+
+/** Markdown table component */
+function MarkdownTable({ rows }: { rows: string[] }) {
+  if (rows.length < 2) return null;
+
+  const headerCells = parseTableCells(rows[0]);
+  const hasSeparator = rows.length > 1 && isTableSeparator(rows[1]);
+  const alignments = hasSeparator ? parseAlignments(rows[1]) : headerCells.map(() => "left" as const);
+  const dataRows = rows.slice(hasSeparator ? 2 : 1);
+
+  const alignClass = (i: number) => {
+    const a = alignments[i] || "left";
+    if (a === "center") return "text-center";
+    if (a === "right") return "text-right";
+    return "text-left";
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-white/[0.06] my-1">
+      <table className="w-full text-[12px] leading-[1.5]">
+        <thead>
+          <tr className="bg-white/[0.04] border-b border-white/[0.06]">
+            {headerCells.map((cell, ci) => (
+              <th
+                key={ci}
+                className={`px-3 py-2 font-semibold text-zinc-300 ${alignClass(ci)} whitespace-nowrap`}
+              >
+                {parseInline(cell)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dataRows.map((row, ri) => {
+            const cells = parseTableCells(row);
+            return (
+              <tr
+                key={ri}
+                className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors"
+              >
+                {headerCells.map((_, ci) => (
+                  <td
+                    key={ci}
+                    className={`px-3 py-1.5 text-zinc-400 ${alignClass(ci)}`}
+                  >
+                    {parseInline(cells[ci] || "")}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Task list component (- [ ] unchecked / - [x] checked) */
+function TaskList({ items }: { items: { checked: boolean; content: string }[] }) {
+  return (
+    <ul className="space-y-0.5 text-[13px] leading-[1.6]">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2">
+          <span
+            className={`w-[15px] h-[15px] rounded-[4px] border mt-[3px] shrink-0 flex items-center justify-center ${
+              item.checked
+                ? "bg-violet-500 border-violet-500 text-white"
+                : "border-zinc-600 bg-transparent"
+            }`}
+          >
+            {item.checked && (
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </span>
+          <span className={`min-w-0 ${item.checked ? "text-zinc-500 line-through" : ""}`}>
+            {parseInline(item.content)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
