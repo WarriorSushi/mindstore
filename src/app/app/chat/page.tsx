@@ -8,6 +8,7 @@ import {
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
+  BookmarkPlus,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -838,9 +839,19 @@ export default function ChatPage() {
                         <SourceCards sources={msg.sources} />
                       )}
                   </div>
-                  {/* Hover copy button */}
+                  {/* Hover action buttons */}
                   {msg.content && (
-                    <MessageCopyButton content={msg.content} side={msg.role === "user" ? "left" : "right"} />
+                    msg.role === "assistant" ? (
+                      <MessageActions
+                        content={msg.content}
+                        question={
+                          // Find the preceding user message as context for the title
+                          messages.slice(0, i).reverse().find((m) => m.role === "user")?.content || ""
+                        }
+                      />
+                    ) : (
+                      <MessageCopyButton content={msg.content} side="left" />
+                    )
                   )}
                 </div>
                 {msg.role === "user" && (
@@ -1023,6 +1034,101 @@ function MessageCopyButton({ content, side }: { content: string; side: "left" | 
         <Copy className="w-3 h-3 text-zinc-500" />
       )}
     </button>
+  );
+}
+
+/** Action buttons (Copy + Save to Memory) for assistant messages */
+function MessageActions({ content, question }: { content: string; question: string }) {
+  const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveToMemory = async () => {
+    if (saving || saved) return;
+    setSaving(true);
+    try {
+      // Generate a title from the user's question
+      const title = question
+        ? (question.length > 80 ? question.slice(0, 77) + "…" : question)
+        : "Chat Insight";
+
+      const res = await fetch("/api/v1/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documents: [
+            {
+              title: `💡 ${title}`,
+              content: content,
+              sourceType: "text",
+            },
+          ],
+        }),
+      });
+
+      if (!res.ok) throw new Error("Save failed");
+      const data = await res.json();
+      setSaved(true);
+      toast.success(`Saved to memory — ${data.imported || 1} chunk${(data.imported || 1) > 1 ? "s" : ""}`, {
+        description: "Find it in Explore",
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="absolute -bottom-1 left-0 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-all">
+      {/* Copy button */}
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(content).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+        className={cn(
+          "w-6 h-6 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
+          "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30",
+        )}
+        title="Copy message"
+      >
+        {copied ? (
+          <Check className="w-3 h-3 text-green-400" />
+        ) : (
+          <Copy className="w-3 h-3 text-zinc-500" />
+        )}
+      </button>
+
+      {/* Save to Memory button */}
+      <button
+        onClick={handleSaveToMemory}
+        disabled={saving || saved}
+        className={cn(
+          "h-6 rounded-lg border flex items-center justify-center gap-1 px-1.5",
+          "shadow-lg shadow-black/30 active:scale-90 transition-all",
+          saved
+            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default"
+            : saving
+              ? "bg-[#111113] border-white/[0.08] text-zinc-500 cursor-wait"
+              : "bg-[#111113] border-white/[0.08] text-zinc-500 hover:bg-violet-500/10 hover:border-violet-500/20 hover:text-violet-400",
+        )}
+        title={saved ? "Saved to memory" : "Save to memory"}
+      >
+        {saving ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : saved ? (
+          <Check className="w-3 h-3" />
+        ) : (
+          <BookmarkPlus className="w-3 h-3" />
+        )}
+        <span className="text-[10px] font-medium leading-none hidden sm:inline">
+          {saved ? "Saved" : saving ? "Saving…" : "Save"}
+        </span>
+      </button>
+    </div>
   );
 }
 
