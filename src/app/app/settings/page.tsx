@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { PageTransition, Stagger } from "@/components/PageTransition";
 
 async function fetchSettings() {
   try { const r = await fetch('/api/v1/settings'); return r.ok ? r.json() : null; } catch { return null; }
@@ -102,35 +103,42 @@ export default function SettingsPage() {
   const providers = settings?.providers || {};
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <div>
-        <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Settings</h1>
-        <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, data management</p>
-      </div>
+    <PageTransition className="space-y-6 md:space-y-8">
+      <Stagger>
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Settings</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, data management</p>
+        </div>
+      </Stagger>
 
       {/* Active Provider Badge */}
       {settings?.embeddingProvider && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
-          <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
-          <span className="text-[12px] text-zinc-400">Active: <span className="text-violet-300 font-medium">{settings.embeddingProvider}</span></span>
-        </div>
+        <Stagger>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/5 border border-violet-500/15">
+            <CheckCircle className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-[12px] text-zinc-400">Active: <span className="text-violet-300 font-medium">{settings.embeddingProvider}</span></span>
+          </div>
+        </Stagger>
       )}
 
       {/* Reindex nudge */}
       {settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
-        <button
-          onClick={handleReindex}
-          className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.06] border border-amber-500/15 px-4 py-3 hover:bg-amber-500/[0.1] transition-colors text-left"
-        >
-          <div>
-            <p className="text-[13px] text-amber-300 font-medium">⚡ {reindexStatus.withoutEmbeddings} memories need embeddings</p>
-            <p className="text-[11px] text-zinc-500 mt-0.5">Tap to enable semantic search for all your data</p>
-          </div>
-          <RefreshCw className="w-4 h-4 text-amber-400 shrink-0" />
-        </button>
+        <Stagger>
+          <button
+            onClick={handleReindex}
+            className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.06] border border-amber-500/15 px-4 py-3 hover:bg-amber-500/[0.1] transition-colors text-left"
+          >
+            <div>
+              <p className="text-[13px] text-amber-300 font-medium">⚡ {reindexStatus.withoutEmbeddings} memories need embeddings</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">Tap to enable semantic search for all your data</p>
+            </div>
+            <RefreshCw className="w-4 h-4 text-amber-400 shrink-0" />
+          </button>
+        </Stagger>
       )}
 
       {/* ─── Providers ─── */}
+      <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">AI Providers</p>
 
@@ -185,8 +193,10 @@ export default function SettingsPage() {
           buttonColor="bg-orange-600 hover:bg-orange-500"
         />
       </div>
+      </Stagger>
 
       {/* ─── Data ─── */}
+      <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Data</p>
 
@@ -233,9 +243,11 @@ export default function SettingsPage() {
           <ActionButton icon={<Trash2 className="w-4 h-4" />} label="Clear All" onClick={handleClear} danger />
         </div>
       </div>
+      </Stagger>
 
       {/* About */}
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <Stagger>
+      <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-white/[0.01] p-4">
         <p className="text-[12px] text-zinc-500 leading-relaxed">
           <span className="text-zinc-300 font-medium">MindStore</span> — personal knowledge base. Import conversations, notes, and articles. Search semantically. Connect to any AI via MCP.
         </p>
@@ -243,7 +255,8 @@ export default function SettingsPage() {
           Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-violet-400 hover:underline">WarriorSushi</a> · v0.3
         </p>
       </div>
-    </div>
+      </Stagger>
+    </PageTransition>
   );
 }
 
