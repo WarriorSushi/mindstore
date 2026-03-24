@@ -1,11 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { type ReactNode } from "react";
+import { type ReactNode, Children, cloneElement, isValidElement } from "react";
 
 /**
  * PageTransition — wraps page content with a smooth fade + slide-up entrance.
- * Use as the outermost wrapper in any app page for consistent entry animation.
+ * Pure CSS animations — zero JS animation library needed.
  *
  * Usage:
  *   <PageTransition>
@@ -19,32 +18,30 @@ import { type ReactNode } from "react";
  *   </PageTransition>
  */
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.02,
-    },
-  },
-};
+// CSS is injected once via a <style> tag to avoid needing global CSS changes
+const STAGGER_KEYFRAMES = `
+@keyframes ms-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+`;
 
-const itemVariants = {
-  hidden: {
-    opacity: 0,
-    y: 8,
-    filter: "blur(2px)",
-  },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: {
-      duration: 0.35,
-      ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number],
-    },
-  },
-};
+let stylesInjected = false;
+function ensureStyles() {
+  if (stylesInjected || typeof document === "undefined") return;
+  const style = document.createElement("style");
+  style.textContent = STAGGER_KEYFRAMES;
+  document.head.appendChild(style);
+  stylesInjected = true;
+}
 
 export function PageTransition({
   children,
@@ -53,16 +50,19 @@ export function PageTransition({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
+  ensureStyles();
+
+  // Count Stagger children to assign incremental delays
+  let staggerIndex = 0;
+  const mapped = Children.map(children, (child) => {
+    if (isValidElement(child) && (child.type as any).__isStagger) {
+      const idx = staggerIndex++;
+      return cloneElement(child as React.ReactElement<any>, { __staggerIndex: idx });
+    }
+    return child;
+  });
+
+  return <div className={className}>{mapped}</div>;
 }
 
 /**
@@ -72,13 +72,25 @@ export function PageTransition({
 export function Stagger({
   children,
   className,
+  __staggerIndex = 0,
 }: {
   children: ReactNode;
   className?: string;
+  __staggerIndex?: number;
 }) {
+  const delay = 20 + __staggerIndex * 60; // 20ms base + 60ms per item
+
   return (
-    <motion.div variants={itemVariants} className={className}>
+    <div
+      className={className}
+      style={{
+        animation: `ms-stagger-in 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms both`,
+      }}
+    >
       {children}
-    </motion.div>
+    </div>
   );
 }
+
+// Tag so PageTransition can identify Stagger children
+(Stagger as any).__isStagger = true;

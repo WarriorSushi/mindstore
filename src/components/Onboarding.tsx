@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
 import { ArrowRight, Zap } from "lucide-react";
 
 const ONBOARDING_KEY = "mindstore_onboarding_done";
@@ -47,29 +46,43 @@ const slides = [
 export function Onboarding() {
   const [show, setShow] = useState(false);
   const [current, setCurrent] = useState(0);
+  const [animating, setAnimating] = useState(false);
   const [direction, setDirection] = useState(1);
+  const [fadeIn, setFadeIn] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const done = localStorage.getItem(ONBOARDING_KEY);
-      if (!done) setShow(true);
+      if (!done) {
+        setShow(true);
+        // Trigger entrance animation
+        requestAnimationFrame(() => setFadeIn(true));
+      }
     }
   }, []);
 
   function finish() {
     localStorage.setItem(ONBOARDING_KEY, "true");
-    setShow(false);
+    setFadeIn(false);
+    setTimeout(() => setShow(false), 300);
   }
 
   function goTo(i: number) {
+    if (animating || i === current) return;
     setDirection(i > current ? 1 : -1);
-    setCurrent(i);
+    setAnimating(true);
+    // Brief exit, then switch
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setCurrent(i);
+      setAnimating(false);
+    }, 200);
   }
 
   function next() {
     if (current < slides.length - 1) {
-      setDirection(1);
-      setCurrent(current + 1);
+      goTo(current + 1);
     } else {
       finish();
     }
@@ -82,19 +95,37 @@ export function Onboarding() {
 
   return (
     <div className="fixed inset-0 z-[100]">
+      {/* Inline keyframes for onboarding animations */}
+      <style>{`
+        @keyframes onboard-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes onboard-emoji-in {
+          from { opacity: 0; transform: scale(0.6) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes onboard-text-in {
+          from { opacity: 0; transform: translateX(var(--slide-dir, 40px)); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes onboard-exit {
+          from { opacity: 1; transform: translateX(0); }
+          to { opacity: 0; transform: translateX(var(--slide-exit-dir, -40px)); }
+        }
+        @keyframes onboard-emoji-exit {
+          from { opacity: 1; transform: scale(1) translateY(0); }
+          to { opacity: 0; transform: scale(0.6) translateY(-20px); }
+        }
+      `}</style>
+
       {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0 bg-[#0a0a0b]"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div
+        className="absolute inset-0 bg-[#0a0a0b] transition-opacity duration-300"
+        style={{ opacity: fadeIn ? 1 : 0 }}
       />
 
       {/* Content */}
-      <motion.div
-        className="relative h-full flex flex-col items-center justify-between px-6 py-safe"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
+      <div
+        className="relative h-full flex flex-col items-center justify-between px-6 py-safe transition-opacity duration-300"
+        style={{ opacity: fadeIn ? 1 : 0, transitionDelay: "100ms" }}
       >
         {/* Skip */}
         <div className="w-full flex justify-end pt-4 md:pt-6">
@@ -109,39 +140,39 @@ export function Onboarding() {
         {/* Main slide area */}
         <div className="flex-1 flex flex-col items-center justify-center max-w-md w-full -mt-8">
           {/* Emoji */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`emoji-${current}`}
-              initial={{ opacity: 0, scale: 0.6, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.6, y: -20 }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="mb-8"
-            >
-              <div className={`w-24 h-24 rounded-[28px] bg-gradient-to-br ${slide.gradient} flex items-center justify-center shadow-lg`}>
-                <span className="text-5xl">{slide.emoji}</span>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+          <div
+            key={`emoji-${current}`}
+            className="mb-8"
+            style={{
+              animation: animating
+                ? "onboard-emoji-exit 0.2s ease-out forwards"
+                : "onboard-emoji-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+            }}
+          >
+            <div className={`w-24 h-24 rounded-[28px] bg-gradient-to-br ${slide.gradient} flex items-center justify-center shadow-lg`}>
+              <span className="text-5xl">{slide.emoji}</span>
+            </div>
+          </div>
 
           {/* Text */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`text-${current}`}
-              initial={{ opacity: 0, x: direction * 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: direction * -40 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="text-center"
-            >
-              <h1 className="text-[32px] md:text-[40px] font-bold tracking-[-0.04em] leading-[1.1] whitespace-pre-line mb-4">
-                {slide.title}
-              </h1>
-              <p className="text-[15px] md:text-[16px] text-zinc-400 leading-[1.65] max-w-[320px] mx-auto">
-                {slide.body}
-              </p>
-            </motion.div>
-          </AnimatePresence>
+          <div
+            key={`text-${current}`}
+            className="text-center"
+            style={{
+              "--slide-dir": `${direction * 40}px`,
+              "--slide-exit-dir": `${direction * -40}px`,
+              animation: animating
+                ? "onboard-exit 0.2s ease-out forwards"
+                : "onboard-text-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
+            } as React.CSSProperties}
+          >
+            <h1 className="text-[32px] md:text-[40px] font-bold tracking-[-0.04em] leading-[1.1] whitespace-pre-line mb-4">
+              {slide.title}
+            </h1>
+            <p className="text-[15px] md:text-[16px] text-zinc-400 leading-[1.65] max-w-[320px] mx-auto">
+              {slide.body}
+            </p>
+          </div>
         </div>
 
         {/* Bottom controls */}
@@ -185,7 +216,7 @@ export function Onboarding() {
             )}
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
