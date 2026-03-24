@@ -4,6 +4,49 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 19:29 UTC — Topic Evolution Timeline Plugin (Phase 3, Plugin #16)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) and Contradiction Finder (#15) are done. Topic Evolution Timeline (#16) is the **third Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/topic-evolution`):
+    - **K-Means++ clustering**: Clusters all memories by embedding similarity into up to 10 topics. Same robust k-means++ initialization as Mind Map Generator.
+    - **Time period binning**: Groups memories into week, month, or quarter granularity via configurable `?granularity=` param. Builds complete period arrays with proper date math.
+    - **Shift detection engine**: Analyzes each topic's temporal distribution to classify interest trends:
+      - **Rising**: >65% of activity in second half of timeline
+      - **Declining**: >65% of activity in first half
+      - **New**: Topic first appeared in second half of timeline
+      - **Dormant**: No activity in last 3 periods despite earlier activity
+      - **Resurgent**: Activity gap in middle with comeback at end
+      - **Steady**: Roughly even distribution throughout
+    - **Peak tracking**: Identifies peak period and peak count per topic, plus first-seen and last-seen dates.
+    - **Topic labeling**: Same keyword extraction and source-dominant strategies as Mind Map Generator.
+    - **16 topic colors**: Curated palette (teal, sky, emerald, amber, cyan, rose, lime, orange, blue, slate) — zero violet/purple/fuchsia.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Evolution page** (`/app/evolution`) — interactive stream graph visualization:
+    - **Canvas stream graph**: Stacked area chart rendered on HTML5 Canvas. Topics stacked bottom-up, largest on bottom. Smooth bezier curves between data points. Semi-transparent fills with visible top-edge strokes.
+    - **Topic isolation**: Click any topic in the legend to highlight it — all other topics dim to 8% opacity. "Show all topics" to reset.
+    - **Hover tooltip**: Crosshair cursor tracks mouse position. Dashed vertical indicator line shows current period. Tooltip card shows period label, total memories, and per-topic breakdown with colored dots and counts. Smart positioning flips when near right edge.
+    - **Granularity toggle**: Week / Month / Quarter pills in header. Changes re-fetch data from backend.
+    - **Stats bar**: Total memories (teal), topic count (sky), period count (amber), peak period (orange) — each in rounded pills.
+    - **Period activity bar chart**: Secondary visualization below the stream graph. Vertical bars proportional to period totals. Hover syncs with main chart. X-axis labels at regular intervals.
+    - **Interest Shifts panel**: Right sidebar listing all detected shifts. Each shift card shows: type badge (Rising/New/Comeback/Steady/Declining/Dormant), topic label, expandable description, and keywords. Color-coded icons per shift type: emerald for rising, teal for new, sky for resurgent, amber for declining, zinc for dormant/steady.
+    - **Topic Detail panel**: When a topic is selected, shows: memory count, coherence score, peak activity period, active date range, keywords, source breakdown with progress bars, and sample memories (clickable → Explore).
+    - **Topics by Size list**: When no topic selected, shows all topics ranked by memory count with proportional bars.
+    - **Loading/empty/error states**: Centered spinner, empty state with import CTA, error with retry button.
+    - **Design**: OLED black base, teal primary accent, glass-morphism panels, zero violet/purple/fuchsia. Dark tooltips with `bg-[#111113]` and `border-white/[0.1]`.
+  - **Navigation updates**:
+    - Sidebar: "Evolution" entry with TrendingUp icon between Mind Map and Insights
+    - Command Palette: "View Topic Evolution" action + Evolution page in navigation list
+  - **Zero new dependencies**: Pure Canvas rendering, k-means in pure TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ⬜ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Sentiment Timeline (#18) — emotional arc visualization of stored knowledge
+- **Branch**: `frain/improve` (commit `c37e0f1`)
+
 ## 2026-03-24 18:59 UTC — Contradiction Finder Plugin (Phase 3, Plugin #15)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) is done. Contradiction Finder (#15) is the **second Analysis plugin**.
 - **Implemented**:
