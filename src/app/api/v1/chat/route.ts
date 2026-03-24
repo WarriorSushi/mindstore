@@ -85,7 +85,7 @@ async function streamGemini(messages: any[], apiKey: string) {
   const systemInstruction = systemMsg ? { parts: [{ text: systemMsg.content }] } : undefined;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:streamGenerateContent?alt=sse&key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
