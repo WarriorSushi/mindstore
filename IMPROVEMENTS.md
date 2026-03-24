@@ -4,6 +4,23 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 12:59 UTC — Import History Section on Import Page
+- **Research**: Internal UX audit — compared MindStore's Import page to Notion's import flow, Obsidian's sync status, and general PKM app patterns. After importing content, users had zero feedback about what they'd already imported, how much data was in the system, or when things were last added. The Import page was a one-way "drop and forget" experience with no import log or history.
+- **Finding**: The Import page showed the import tabs and a progress bar during active imports, but once the import completed and the user navigated away, there was no record on the Import page itself. Users who wanted to know "what did I import?" or "when did I add that?" had to navigate to Explore and mentally reconstruct their import history. The sources API already returned `importedAt` timestamps and chunk counts — the data existed, just wasn't surfaced.
+- **Implemented**:
+  - **Import History section** below the import tabs, showing recent imports as a list:
+    - Each entry displays: colored source type icon (green=ChatGPT, blue=file, orange=URL, violet=text), source title, type badge, chunk count, and relative timestamp
+    - Click any entry → navigates to Explore with search query for that source
+    - Shows up to 8 most recent imports (sorted by `importedAt` DESC), with "View all N sources in Explore →" link when more exist
+    - Header shows total import count and total memory count, plus "Explore all" link with Compass icon
+  - **Auto-refresh after import**: Both `importViaApi()` (FormData) and `importJsonViaApi()` (JSON) now call `refreshHistory()` on success, so the history section updates immediately after a new import without page reload
+  - **Empty state**: When no imports exist yet, shows a dashed-border card with Package icon and "No imports yet — Choose a source above" prompt
+  - **Data fetching**: Parallel `Promise.all()` fetch of `/api/v1/sources` + `/api/v1/stats` on mount
+  - **`formatRelativeTime()` helper**: "just now", "Xm ago", "Xh ago", "yesterday", "Xd ago", or short date format
+  - New icon imports: `Clock`, `Compass`, `Package`
+  - Design: fully consistent with dashboard/explore patterns (rounded-2xl cards, divide-y list, hover states, zinc/violet palette)
+- **Branch**: `frain/improve` (commit `93819bb`)
+
 ## 2026-03-24 11:29 UTC — Keyboard Shortcuts Help Modal
 - **Research**: Internal UX audit — power-user keyboard discoverability. GitHub, Gmail, Linear, Notion, and Superhuman all provide a `?` keyboard shortcut that opens a comprehensive shortcuts reference modal. MindStore now has 15+ keyboard shortcuts across different pages (⌘K, j/k, ↵, /, s, p, e, a, ␣, Esc, etc.) but no unified reference — users had to discover them through the hint bars at the bottom of Explore or guess from muscle memory.
 - **Finding**: Shortcuts were scattered and hidden. Explore had keyboard hint bars at the bottom of the list and detail modal, but Chat, Import, Learn, and the global ⌘K shortcut had no discoverability. The "?" shortcut for help is a universal convention that every serious keyboard-driven app supports.
