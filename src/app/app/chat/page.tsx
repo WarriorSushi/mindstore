@@ -368,6 +368,8 @@ export default function ChatPage() {
               title: r.sourceTitle || "",
               type: r.sourceType,
               score: r.score,
+              id: r.memoryId || r.id || "",
+              preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
             })),
           },
         ];
@@ -406,6 +408,8 @@ export default function ChatPage() {
             title: r.sourceTitle || "",
             type: r.sourceType,
             score: r.score,
+            id: r.memoryId || r.id || "",
+            preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
           })),
         },
       ];
@@ -1132,8 +1136,8 @@ function MessageActions({ content, question }: { content: string; question: stri
   );
 }
 
-/** Expandable source citations — Perplexity-style */
-function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number }> }) {
+/** Expandable source citations — Perplexity-style with previews & clickable links */
+function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string }> }) {
   const [expanded, setExpanded] = useState(false);
 
   const typeIcons: Record<string, any> = {
@@ -1146,7 +1150,7 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
     text: "text-violet-400 bg-violet-500/10 border-violet-500/15",
   };
 
-  const displayed = expanded ? sources : sources.slice(0, 2);
+  const displayed = expanded ? sources : sources.slice(0, 3);
 
   return (
     <div className="mt-2 pt-2 border-t border-white/[0.06]">
@@ -1154,12 +1158,12 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
         <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
           Sources · {sources.length}
         </span>
-        {sources.length > 2 && (
+        {sources.length > 3 && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="flex items-center gap-0.5 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
           >
-            {expanded ? "Less" : `+${sources.length - 2} more`}
+            {expanded ? "Less" : `+${sources.length - 3} more`}
             {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
           </button>
         )}
@@ -1169,32 +1173,69 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
           const Icon = typeIcons[s.type] || FileText;
           const colors = typeColors[s.type] || "text-zinc-400 bg-zinc-500/10 border-zinc-500/15";
           const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
-          return (
+          const isClickable = !!s.id;
+
+          const cardContent = (
             <div
-              key={j}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.05] transition-colors"
+              className={cn(
+                "flex flex-col gap-1 px-2.5 py-2 rounded-lg border transition-colors",
+                isClickable
+                  ? "bg-white/[0.03] border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] cursor-pointer"
+                  : "bg-white/[0.03] border-white/[0.04]",
+              )}
             >
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${colors.split(' ').slice(1).join(' ')}`}>
-                <Icon className={`w-2.5 h-2.5 ${colors.split(' ')[0]}`} />
-              </div>
-              <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0">
-                {s.title || "Untitled"}
-              </span>
-              {scorePercent != null && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="w-10 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-violet-500/60 transition-all"
-                      style={{ width: `${Math.max(scorePercent, 8)}%` }}
-                    />
-                  </div>
-                  <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-6 text-right">
-                    {scorePercent}%
-                  </span>
+              {/* Header row: citation badge + icon + title + score */}
+              <div className="flex items-center gap-2">
+                {/* Citation number badge */}
+                <span className="text-[9px] font-bold text-zinc-500 bg-white/[0.06] rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums">
+                  {j + 1}
+                </span>
+                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${colors.split(' ').slice(1).join(' ')}`}>
+                  <Icon className={`w-2.5 h-2.5 ${colors.split(' ')[0]}`} />
                 </div>
+                <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0 font-medium">
+                  {s.title || "Untitled"}
+                </span>
+                {scorePercent != null && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-violet-500/60 transition-all"
+                        style={{ width: `${Math.max(scorePercent, 8)}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-5 text-right">
+                      {scorePercent}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Content preview */}
+              {s.preview && (
+                <p className="text-[10px] text-zinc-600 leading-relaxed line-clamp-2 pl-6">
+                  {s.preview}{s.preview.length >= 118 ? "…" : ""}
+                </p>
               )}
             </div>
           );
+
+          if (isClickable) {
+            return (
+              <a
+                key={j}
+                href={`/app/explore?q=${encodeURIComponent((s.title || s.preview || "").slice(0, 40))}`}
+                onClick={(e) => {
+                  // Prevent the click from bubbling to parent elements
+                  e.stopPropagation();
+                }}
+                className="block no-underline text-inherit"
+              >
+                {cardContent}
+              </a>
+            );
+          }
+
+          return <div key={j}>{cardContent}</div>;
         })}
       </div>
     </div>
