@@ -4,6 +4,61 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 20:59 UTC — Writing Style Analyzer Plugin (Phase 3, Plugin #17) — PHASE 3 COMPLETE! 🎉
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), Sentiment Timeline (#18), and Knowledge Gaps Analyzer (#14) are done. Writing Style Analyzer (#17) is the **sixth and final Analysis plugin** — completing Phase 3!
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/writing-style`):
+    - **NLP analysis engine** in pure TypeScript (zero dependencies):
+      - **Flesch-Kincaid Grade Level**: Standard readability formula using syllable-per-word and words-per-sentence ratios. Syllable counter handles silent-e, diphthongs (ia, io, ua, ue), and -le endings.
+      - **Flesch Reading Ease**: 0-100 scale (higher = easier). Classified as Very Easy/Standard/Fairly Difficult/Difficult/Very Difficult.
+      - **Vocabulary richness**: Type-token ratio calculated on 200-word samples (normalized for text length). Measures lexical diversity.
+      - **Tone classification**: Multi-signal system combining word-set matching (30 formal words, 30 casual words, 50 technical words), structural signals (sentence length, word length, syllable average), punctuation patterns (exclamations, questions), emoji/emoticon detection, and contraction presence. Classifies as formal/casual/technical/conversational/neutral.
+      - **N-gram analysis**: Top bigrams (2-word phrases) and trigrams (3-word phrases) with stopword filtering (140+ stopwords). Reveals recurring phrase patterns.
+      - **Hedging language detection**: Matches patterns like "maybe", "perhaps", "I think", "sort of", "probably", "as far as I know" — 4 pattern groups.
+      - **Confidence language detection**: Matches "definitely", "certainly", "I know", "always", "the fact is" — 4 pattern groups.
+      - **Question & exclamation rates**: Per-sentence frequency of interrogative and exclamatory punctuation.
+      - **Word extraction**: Strips URLs, emails, code blocks, inline code, markdown syntax before word counting.
+      - **Sentence splitting**: Handles paragraph breaks, standard sentence boundaries, avoids abbreviation false-splits.
+    - **Three API actions**:
+      - `analyze`: Processes up to 500 unanalyzed memories (50+ char content). Caches 12 metrics per memory in metadata JSONB fields.
+      - `results`: Returns all analyzed memories with per-memory metrics.
+      - `profile`: Comprehensive writing fingerprint — aggregates across all memories:
+        - Core readability (avg/median grade level, reading ease, readability level label)
+        - Vocabulary stats (total words, unique count, type-token ratio, rare word count, top 30 significant words, top 15 bigrams, top 10 trigrams)
+        - Sentence structure (avg/median sentence length, total sentences, sentence length distribution for histogram)
+        - Tone distribution (counts per tone type, dominant tone)
+        - Writing patterns (question/exclamation/hedging/confidence rates)
+        - Complexity composite score (weighted: grade 35%, sentence 25%, word 15%, vocab 25%)
+        - Style by source type (per-source avg grade, ease, sentence length, dominant tone)
+        - Monthly evolution (grade, ease, sentence length, word length, vocab richness, question rate, confidence rate, dominant tone per month)
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Writing Style page** (`/app/writing`) — full writing fingerprint dashboard:
+    - **Complexity score hero card**: Large 48px score number, readability level label (Elementary through Graduate/Professional), reading ease sub-stat. SVG circular progress arc (teal stroke, proportional to score). Gradient background overlay.
+    - **Core stats grid**: 4 cards — Vocabulary (unique word count, CaseSensitive icon, sky accent), Grade Level (with readability label, BookOpen icon, teal accent), Avg Sentence Length (words/sentence, AlignLeft icon, amber accent), Total Words (with sentence count, Hash icon, emerald accent).
+    - **Tone distribution panel**: Proportional progress bars per tone type with colored dot indicators. Color-coded: sky=formal, amber=casual, teal=technical, emerald=conversational, zinc=neutral. Dominant tone summary below.
+    - **Writing patterns panel**: Confidence vs Hedging diverging bar chart (centered at 50%, extends right for confident, left for hedging; emerald positive, amber negative). Pattern metrics grid: question rate, exclamation rate, vocab richness, avg word length. Rare word count card.
+    - **Sentence length histogram** (Canvas): 8 buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-40, 41+). Gradient-filled bars with rounded tops. Count labels above bars. Base line.
+    - **Top words, bigrams, trigrams**: 3-column grid. Ranked lists with numbered positions, monospace font words, proportional frequency bars, and count labels. Color-coded bars: sky for words, teal for bigrams, emerald for trigrams. Scrollable at 280px max height.
+    - **Style evolution line chart** (Canvas): Metric toggle (Grade/Ease/Sentence/Confidence). Bezier curve line with teal stroke. Gradient fill under curve. Data points as ring-styled dots. Grid lines with Y-axis value labels. X-axis month labels. Smart label thinning for many months.
+    - **Style by source table**: Sortable by count. Columns: source (with colored icon), memory count, grade, ease, avg sentence length, tone badge. Hover highlighting.
+    - **Analysis progress bar**: Shows when not all memories analyzed. Teal accent, percentage indicator, "Analyze more" button.
+    - **Empty state**: PenTool icon, memory count, analyze CTA button.
+    - **Loading/error states**: Centered spinner with description, error with retry.
+    - **Design**: OLED black base, teal primary accent, sky/amber/emerald secondary. Zero violet/purple/fuchsia. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`.
+  - **Navigation updates**:
+    - Sidebar: "Writing" entry with PenTool icon between Gaps and Insights
+    - Command Palette: "View Writing Style" action with keywords (writing, style, vocabulary, readability, tone, words, sentences, grade, flesch, complexity, phrases)
+  - **Zero new dependencies**: Pure TypeScript NLP engine, pure Canvas rendering
+- **Phase 3 COMPLETE! 🎉**: All 6 Analysis Plugins are now built:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ✅ Knowledge Gaps Analyzer (#14)
+  6. ✅ Writing Style Analyzer (#17)
+- **Next**: Phase 4 — Action Plugins! Starting with Flashcard Maker (#20) — spaced repetition learning from your knowledge
+- **Branch**: `frain/improve` (commit `f54958b`)
+
 ## 2026-03-24 20:29 UTC — Knowledge Gaps Analyzer Plugin (Phase 3, Plugin #14)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), and Sentiment Timeline (#18) are done. Knowledge Gaps Analyzer (#14) is the **fifth Analysis plugin**.
 - **Implemented**:
