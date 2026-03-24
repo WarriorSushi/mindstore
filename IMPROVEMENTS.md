@@ -4,6 +4,45 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 19:59 UTC — Sentiment Timeline Plugin (Phase 3, Plugin #18)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), and Topic Evolution Timeline (#16) are done. Sentiment Timeline (#18) is the **fourth Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/sentiment-timeline`):
+    - **AI-powered sentiment analysis**: Multi-provider support (OpenAI, Gemini, Ollama, OpenRouter, Custom API). Batch processing in groups of 8 with `Promise.allSettled`. Each memory gets a score (-1 to +1), label (positive/negative/neutral/mixed), and detected emotions (joy, curiosity, frustration, etc.).
+    - **AFINN-inspired lexicon fallback**: ~200-word sentiment lexicon when no AI available. Strong positive (+3 to +5: amazing, brilliant, etc.), moderate positive (+1 to +2: good, helpful, etc.), moderate negative (-1 to -2: frustrating, worried, etc.), strong negative (-3 to -5: hate, terrible, etc.). Negation-aware — "not", "don't", "never" flip and weaken sentiment.
+    - **Emotion keyword detection**: 12 emotion categories (joy, curiosity, excitement, gratitude, inspiration, frustration, anxiety, sadness, determination, pride, calm, nostalgia) with keyword matching.
+    - **Results cached in metadata**: Scores stored as `metadata->>'sentiment_score'`, `sentiment_label`, `sentiment_emotions` in the memories table. Subsequent loads use cached data — no re-analysis needed.
+    - **Three actions**: `analyze` (batch process unscored memories, up to 200 per run), `results` (return all scored memories with daily/weekly aggregates), `summary` (overall mood, distribution, trends, happiest/saddest, mood by source).
+    - **Daily aggregation**: Groups scores by day for calendar heatmap. Calculates avgScore, count, dominant mood per day.
+    - **Weekly/Monthly aggregation**: Weekly for trend smoothing, monthly for the line chart. Each period has avgScore, count, label.
+    - **Mood by source type**: Breakdown showing average sentiment per import source (ChatGPT, files, URLs, etc.).
+    - **Happiest/saddest memories**: Top 3 highest and lowest scored memories with metadata for insight panels.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Sentiment page** (`/app/sentiment`) — full emotional arc visualization:
+    - **Overall Mood card**: Large emoji + mood label + numeric score. Gradient background shifts based on overall sentiment (emerald for positive, rose for negative, teal for neutral). Trend direction indicator (up/down/flat) based on last two months. Summary stats: total analyzed, month count.
+    - **Mood Distribution cards**: 4 cards for positive/negative/neutral/mixed. Each shows percentage, count, icon, and distribution progress bar. Color-coded: emerald, rose, zinc, sky.
+    - **Calendar Heatmap** (GitHub-contribution style): Up to 365-day view, Sunday-aligned week columns. 7-color scale from rose (negative) through zinc (neutral) to emerald (positive). Month labels along top. Day-of-week labels on left. Hover tooltips with exact date, score, memory count, dominant mood. Color legend bar. Scrollable for large date ranges.
+    - **Monthly Mood Trend** (Canvas line chart): Zero-line reference with dashed stroke. Gradient fill under the line (teal above zero, rose below). Color-coded data points (emerald positive, rose negative, zinc neutral). Hover tooltips with month, score, memory count. X-axis month labels, auto-thinned to prevent crowding.
+    - **Mood by Source** card: Diverging horizontal bar chart centered on neutral (0). Bars extend right for positive sources, left for negative. Center line marker. Score label overlaid on each bar. Source icon + label + count per row.
+    - **Happiest & Saddest Memories** panels: Side-by-side cards (sun/rain icons). Each shows top 3 most extreme memories with source icon, title, content preview, score, date. Click-through to Explore.
+    - **Analysis progress bar**: Shows when not all memories are analyzed. "Analyze more" button. Percentage indicator.
+    - **Empty state**: Heart icon, explanation text, analyze CTA button with memory count.
+    - **Loading/error states**: Centered spinner, error with retry.
+  - **Navigation updates**:
+    - Sidebar: "Sentiment" entry with Heart icon between Evolution and Insights
+    - Command Palette: "View Sentiment Timeline" action with emotion/mood keywords
+  - **Design**: OLED black base, teal primary, emerald for positive sentiment, rose for negative. Zero violet/purple/fuchsia. Glass-morphism panels, dark tooltips with `bg-[#111113]`.
+  - **Zero new dependencies**: Pure Canvas rendering, lexicon in pure TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Knowledge Gaps Analyzer (#14) — identify blind spots in your knowledge
+- **Branch**: `frain/improve` (commit `dea1094`)
+
 ## 2026-03-24 19:29 UTC — Topic Evolution Timeline Plugin (Phase 3, Plugin #16)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) and Contradiction Finder (#15) are done. Topic Evolution Timeline (#16) is the **third Analysis plugin**.
 - **Implemented**:
