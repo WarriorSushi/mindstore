@@ -30,12 +30,18 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Plugin not found' }, { status: 404 });
       }
 
-      // Check if installed
-      const [dbRecord] = await db
-        .select()
-        .from(schema.plugins)
-        .where(eq(schema.plugins.slug, slug))
-        .limit(1);
+      // Check if installed (gracefully handle missing table)
+      let dbRecord: any = null;
+      try {
+        const [row] = await db
+          .select()
+          .from(schema.plugins)
+          .where(eq(schema.plugins.slug, slug))
+          .limit(1);
+        dbRecord = row;
+      } catch {
+        // Table might not exist
+      }
 
       return NextResponse.json({
         ...manifest,
@@ -49,8 +55,14 @@ export async function GET(req: NextRequest) {
 
     // ─── Full catalog ─────────────────────────────────────────
     
-    // Get all installed plugins from DB
-    const installedPlugins = await db.select().from(schema.plugins);
+    // Get all installed plugins from DB (gracefully handle missing table)
+    let installedPlugins: any[] = [];
+    try {
+      installedPlugins = await db.select().from(schema.plugins);
+    } catch (e: any) {
+      // Table might not exist yet — that's fine, just show catalog without install status
+      console.warn('[plugins] plugins table not found, showing catalog only:', e.message);
+    }
     const installedMap = new Map(
       installedPlugins.map((p) => [p.slug, { status: p.status, config: p.config as Record<string, unknown> }])
     );
@@ -100,6 +112,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Ensure plugins table exists (auto-migrate)
+    await ensurePluginsTable();
+    
     const body = await req.json();
     const { action, slug, config } = body;
 
@@ -241,5 +256,44 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Plugin action error:', err);
     return NextResponse.json({ error: 'Plugin operation failed' }, { status: 500 });
+  }
+}
+
+/** Ensure plugins table + enums exist (idempotent) */
+async function ensurePluginsTable() {
+  try {
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE plugin_type AS ENUM ('extension', 'mcp', 'prompt');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$
+    `);
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE plugin_status AS ENUM ('installed', 'active', 'disabled', 'error');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS plugins (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        slug TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        version TEXT DEFAULT '1.0.0',
+        type plugin_type NOT NULL DEFAULT 'extension',
+        status plugin_status NOT NULL DEFAULT 'installed',
+        icon TEXT,
+        category TEXT,
+        author TEXT DEFAULT 'MindStore',
+        config JSONB DEFAULT '{}',
+        metadata JSONB DEFAULT '{}',
+        installed_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        last_error TEXT
+      )
+    `);
+  } catch (e) {
+    console.warn('[plugins] ensurePluginsTable warning:', e);
   }
 }
