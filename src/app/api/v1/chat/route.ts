@@ -4,9 +4,15 @@ import { sql } from 'drizzle-orm';
 
 /**
  * POST /api/v1/chat — streaming chat proxy
- * Supports OpenAI, Gemini, and Ollama (local) as chat backends
+ * 
+ * Supports:
+ *  - OpenAI (direct)
+ *  - Google Gemini (native API)
+ *  - Ollama (local)
+ *  - OpenRouter (200+ models via one key)
+ *  - Any OpenAI-compatible API (Groq, Together, Fireworks, Mistral, DeepSeek, etc.)
+ * 
  * Body: { messages: [{role, content}], model?: string }
- * Model selection: pass model name to override defaults (e.g. "gpt-4o", "gemini-2.0-flash", "llama3.2")
  */
 export async function POST(req: NextRequest) {
   try {
@@ -15,9 +21,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
 
-    // Get configured keys and URLs
+    // Get all configured settings
     const settings = await db.execute(
-      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'chat_provider', 'chat_model')`
+      sql`SELECT key, value FROM settings WHERE key IN (
+        'openai_api_key', 'gemini_api_key', 'ollama_url',
+        'openrouter_api_key', 'custom_api_key', 'custom_api_url', 'custom_api_model',
+        'chat_provider', 'chat_model'
+      )`
     );
     const config: Record<string, string> = {};
     for (const row of settings as any[]) {
@@ -27,31 +37,46 @@ export async function POST(req: NextRequest) {
     const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
     const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
     const ollamaUrl = config.ollama_url || process.env.OLLAMA_URL;
+    const openrouterKey = config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
+    const customKey = config.custom_api_key;
+    const customUrl = config.custom_api_url;
+    const customModel = config.custom_api_model;
     
     // Model override: request body > saved setting > default
     const selectedModel = model || config.chat_model || undefined;
 
-    // Respect explicit chat_provider preference if set
+    // Respect explicit chat_provider preference
     const preferred = config.chat_provider;
+    
+    if (preferred === 'openrouter' && openrouterKey) {
+      return streamOpenAICompatible(messages, openrouterKey, 'https://openrouter.ai/api/v1/chat/completions', selectedModel || 'anthropic/claude-3.5-haiku', { 'HTTP-Referer': 'https://mindstore.app', 'X-Title': 'MindStore' });
+    }
+    if (preferred === 'custom' && customKey && customUrl) {
+      return streamOpenAICompatible(messages, customKey, customUrl, selectedModel || customModel || 'default');
+    }
     if (preferred === 'ollama' && ollamaUrl) {
       return streamOllama(messages, ollamaUrl, selectedModel);
     }
     if (preferred === 'openai' && openaiKey) {
-      return streamOpenAI(messages, openaiKey, selectedModel);
+      return streamOpenAICompatible(messages, openaiKey, 'https://api.openai.com/v1/chat/completions', selectedModel || 'gpt-4o-mini');
     }
     if (preferred === 'gemini' && geminiKey) {
       return streamGemini(messages, geminiKey, selectedModel);
     }
 
-    // Auto-detect: try OpenAI first, then Gemini, then Ollama
+    // Auto-detect fallback chain: OpenAI → Gemini → OpenRouter → Custom → Ollama
     if (openaiKey) {
-      return streamOpenAI(messages, openaiKey, selectedModel);
+      return streamOpenAICompatible(messages, openaiKey, 'https://api.openai.com/v1/chat/completions', selectedModel || 'gpt-4o-mini');
     } else if (geminiKey) {
       return streamGemini(messages, geminiKey, selectedModel);
+    } else if (openrouterKey) {
+      return streamOpenAICompatible(messages, openrouterKey, 'https://openrouter.ai/api/v1/chat/completions', selectedModel || 'anthropic/claude-3.5-haiku', { 'HTTP-Referer': 'https://mindstore.app', 'X-Title': 'MindStore' });
+    } else if (customKey && customUrl) {
+      return streamOpenAICompatible(messages, customKey, customUrl, selectedModel || customModel || 'default');
     } else if (ollamaUrl) {
       return streamOllama(messages, ollamaUrl, selectedModel);
     } else {
-      return NextResponse.json({ error: 'No AI provider configured. Add an OpenAI key, Gemini key, or Ollama URL in Settings.' }, { status: 400 });
+      return NextResponse.json({ error: 'No AI provider configured. Add an API key in Settings.' }, { status: 400 });
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -59,16 +84,26 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function streamOpenAI(messages: any[], apiKey: string, model?: string) {
-  const useModel = model || 'gpt-4o-mini';
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+/**
+ * Universal OpenAI-compatible streaming
+ * Works with: OpenAI, OpenRouter, Groq, Together, Fireworks, Mistral, DeepSeek, etc.
+ */
+async function streamOpenAICompatible(
+  messages: any[],
+  apiKey: string,
+  endpoint: string,
+  model: string,
+  extraHeaders?: Record<string, string>,
+) {
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
+      ...extraHeaders,
     },
     body: JSON.stringify({
-      model: useModel,
+      model,
       messages,
       stream: true,
       temperature: 0.7,
@@ -76,11 +111,12 @@ async function streamOpenAI(messages: any[], apiKey: string, model?: string) {
   });
 
   if (!res.ok) {
-    const err = await res.json();
-    return NextResponse.json(
-      { error: err.error?.message || 'OpenAI chat failed' },
-      { status: res.status }
-    );
+    let errorMsg = `Chat failed (${res.status})`;
+    try {
+      const err = await res.json();
+      errorMsg = err.error?.message || err.error || errorMsg;
+    } catch { /* body may not be JSON */ }
+    return NextResponse.json({ error: errorMsg }, { status: res.status });
   }
 
   return new NextResponse(res.body, {
@@ -92,8 +128,10 @@ async function streamOpenAI(messages: any[], apiKey: string, model?: string) {
   });
 }
 
+/**
+ * Google Gemini (native API — not OpenAI-compatible)
+ */
 async function streamGemini(messages: any[], apiKey: string, model?: string) {
-  // Convert OpenAI-style messages to Gemini format
   const contents = messages
     .filter((m: any) => m.role !== 'system')
     .map((m: any) => ({
@@ -104,7 +142,6 @@ async function streamGemini(messages: any[], apiKey: string, model?: string) {
   const systemMsg = messages.find((m: any) => m.role === 'system');
   const systemInstruction = systemMsg ? { parts: [{ text: systemMsg.content }] } : undefined;
 
-  // Default to gemini-2.0-flash (good free tier), not flash-lite (quota issues)
   const useModel = model || 'gemini-2.0-flash';
 
   const res = await fetch(
@@ -121,14 +158,15 @@ async function streamGemini(messages: any[], apiKey: string, model?: string) {
   );
 
   if (!res.ok) {
-    const err = await res.json();
-    return NextResponse.json(
-      { error: err.error?.message || 'Gemini chat failed' },
-      { status: res.status }
-    );
+    let errorMsg = 'Gemini chat failed';
+    try {
+      const err = await res.json();
+      errorMsg = err.error?.message || errorMsg;
+    } catch {}
+    return NextResponse.json({ error: errorMsg }, { status: res.status });
   }
 
-  // Transform Gemini SSE format to OpenAI-compatible SSE format
+  // Transform Gemini SSE to OpenAI-compatible SSE
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const reader = res.body!.getReader();
@@ -152,7 +190,6 @@ async function streamGemini(messages: any[], apiKey: string, model?: string) {
               const data = JSON.parse(line.slice(6));
               const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (text) {
-                // Emit in OpenAI-compatible format
                 const chunk = JSON.stringify({
                   choices: [{ delta: { content: text } }],
                 });
@@ -178,13 +215,9 @@ async function streamGemini(messages: any[], apiKey: string, model?: string) {
 }
 
 /**
- * Stream chat via Ollama (local LLM)
- * Ollama uses its own /api/chat endpoint with NDJSON streaming
- * We transform the output to OpenAI-compatible SSE format
+ * Ollama (local LLM — NDJSON streaming, not SSE)
  */
 async function streamOllama(messages: any[], baseUrl: string, model?: string) {
-  // Ollama expects messages in OpenAI-compatible format (role + content)
-  // but uses its own /api/chat endpoint
   const ollamaMessages = messages.map((m: any) => ({
     role: m.role,
     content: m.content,
@@ -201,15 +234,13 @@ async function streamOllama(messages: any[], baseUrl: string, model?: string) {
         model: useModel,
         messages: ollamaMessages,
         stream: true,
-        options: {
-          temperature: 0.7,
-        },
+        options: { temperature: 0.7 },
       }),
     });
   } catch (err: any) {
     return NextResponse.json(
       { error: `Cannot connect to Ollama at ${baseUrl}. Is it running? Error: ${err.message}` },
-      { status: 502 }
+      { status: 502 },
     );
   }
 
@@ -218,15 +249,11 @@ async function streamOllama(messages: any[], baseUrl: string, model?: string) {
     try {
       const err = await res.json();
       errorMsg = err.error || errorMsg;
-    } catch { /* body may not be JSON */ }
-    return NextResponse.json(
-      { error: errorMsg },
-      { status: res.status }
-    );
+    } catch {}
+    return NextResponse.json({ error: errorMsg }, { status: res.status });
   }
 
-  // Transform Ollama NDJSON stream to OpenAI-compatible SSE format
-  // Ollama streams: {"model":"...","message":{"role":"assistant","content":"token"},"done":false}
+  // Transform Ollama NDJSON to OpenAI-compatible SSE
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const reader = res.body!.getReader();
@@ -249,19 +276,15 @@ async function streamOllama(messages: any[], baseUrl: string, model?: string) {
           if (!trimmed) continue;
           try {
             const data = JSON.parse(trimmed);
-            if (data.done) {
-              // Stream complete
-              continue;
-            }
+            if (data.done) continue;
             const text = data.message?.content;
             if (text) {
-              // Emit in OpenAI-compatible SSE format
               const chunk = JSON.stringify({
                 choices: [{ delta: { content: text } }],
               });
               await writer.write(encoder.encode(`data: ${chunk}\n\n`));
             }
-          } catch { /* skip malformed lines */ }
+          } catch { /* skip malformed */ }
         }
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'));

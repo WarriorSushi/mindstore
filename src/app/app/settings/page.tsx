@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
@@ -16,6 +16,10 @@ export default function SettingsPage() {
   const [openaiKey, setOpenaiKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");
+  const [openrouterKey, setOpenrouterKey] = useState("");
+  const [customApiKey, setCustomApiKey] = useState("");
+  const [customApiUrl, setCustomApiUrl] = useState("");
+  const [customApiModel, setCustomApiModel] = useState("");
   const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
@@ -39,12 +43,18 @@ export default function SettingsPage() {
     if (provider === 'openai') body.apiKey = openaiKey.trim();
     if (provider === 'gemini') body.geminiKey = geminiKey.trim();
     if (provider === 'ollama') body.ollamaUrl = ollamaUrl.trim();
+    if (provider === 'openrouter') body.openrouterKey = openrouterKey.trim();
+    if (provider === 'custom') {
+      body.customApiKey = customApiKey.trim();
+      body.customApiUrl = customApiUrl.trim();
+      body.customApiModel = customApiModel.trim();
+    }
     const res = await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     setSaving(null);
     if (data.ok) {
       toast.success(`${provider} connected`);
-      setOpenaiKey(""); setGeminiKey(""); setOllamaUrl("");
+      setOpenaiKey(""); setGeminiKey(""); setOllamaUrl(""); setOpenrouterKey(""); setCustomApiKey(""); setCustomApiUrl(""); setCustomApiModel("");
       fetchSettings().then(setSettings);
     } else toast.error(data.error || 'Failed');
   };
@@ -218,6 +228,59 @@ export default function SettingsPage() {
           disabled={!ollamaUrl.trim()}
           buttonColor="bg-orange-600 hover:bg-orange-500"
         />
+
+        {/* OpenRouter */}
+        <ProviderCard
+          name="OpenRouter"
+          icon={<Globe className="w-4 h-4" />}
+          iconColor="text-teal-400"
+          badge="200+ Models"
+          badgeColor="text-teal-400 bg-teal-500/10 border-teal-500/15"
+          connected={providers.openrouter?.configured}
+          preview={providers.openrouter?.preview}
+          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" className="text-teal-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (e: any) => setOpenrouterKey(e.target.value) }}
+          onSave={() => handleSave('openrouter')}
+          saving={saving === 'openrouter'}
+          disabled={!openrouterKey.trim()}
+          buttonColor="bg-teal-600 hover:bg-teal-500"
+        />
+
+        {/* Custom API */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-zinc-500/10 flex items-center justify-center text-zinc-400">
+                <Plug className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px] font-medium">Custom API</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium text-zinc-400 bg-zinc-500/10 border-zinc-500/15">Any LLM</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-0.5">Any OpenAI-compatible endpoint (Groq, Together, Fireworks, DeepSeek, etc.)</p>
+              </div>
+            </div>
+            {providers.custom?.configured && (
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                <CheckCircle className="w-3 h-3 text-emerald-400" />
+                Connected
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <input type="text" placeholder="API Base URL (e.g. https://api.groq.com/openai/v1/chat/completions)" value={customApiUrl} onChange={(e) => setCustomApiUrl(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
+            <input type="password" placeholder="API Key" value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
+            <input type="text" placeholder="Model name (e.g. llama-3.3-70b-versatile)" value={customApiModel} onChange={(e) => setCustomApiModel(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
+          </div>
+          <button
+            onClick={() => handleSave('custom')}
+            disabled={!customApiKey.trim() || !customApiUrl.trim() || saving === 'custom'}
+            className="h-8 px-4 rounded-xl text-[12px] font-medium bg-zinc-700 hover:bg-zinc-600 disabled:opacity-30 transition-all"
+          >
+            {saving === 'custom' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Connect'}
+          </button>
+        </div>
       </div>
       </Stagger>
 
@@ -268,6 +331,24 @@ export default function SettingsPage() {
               active={chatProvider === 'ollama'}
               onClick={() => handleSetChatProvider('ollama')}
               available={!!providers.ollama?.configured}
+            />
+            <ChatProviderOption
+              name="OpenRouter"
+              description="200+ models · Claude, Llama, Mistral"
+              icon={<Globe className="w-3.5 h-3.5" />}
+              iconColor="text-teal-400"
+              active={chatProvider === 'openrouter'}
+              onClick={() => handleSetChatProvider('openrouter')}
+              available={!!providers.openrouter?.configured}
+            />
+            <ChatProviderOption
+              name="Custom API"
+              description={providers.custom?.model || "any OpenAI-compatible"}
+              icon={<Plug className="w-3.5 h-3.5" />}
+              iconColor="text-zinc-400"
+              active={chatProvider === 'custom'}
+              onClick={() => handleSetChatProvider('custom')}
+              available={!!providers.custom?.configured}
             />
           </div>
         </div>

@@ -1047,6 +1047,19 @@ const MODEL_OPTIONS: Record<string, { label: string; models: { id: string; name:
       { id: "o4-mini", name: "o4-mini", tag: "reasoning" },
     ],
   },
+  openrouter: {
+    label: "OpenRouter",
+    models: [
+      { id: "anthropic/claude-3.5-haiku", name: "Claude 3.5 Haiku", tag: "default" },
+      { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", tag: "smart" },
+      { id: "anthropic/claude-opus-4", name: "Claude Opus 4", tag: "best" },
+      { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", tag: "free" },
+      { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash" },
+      { id: "mistralai/mistral-large-latest", name: "Mistral Large" },
+      { id: "deepseek/deepseek-chat-v3", name: "DeepSeek V3", tag: "cheap" },
+      { id: "qwen/qwen-2.5-72b-instruct", name: "Qwen 2.5 72B" },
+    ],
+  },
   ollama: {
     label: "Ollama",
     models: [
@@ -1057,6 +1070,10 @@ const MODEL_OPTIONS: Record<string, { label: string; models: { id: string; name:
       { id: "phi3", name: "Phi-3" },
       { id: "qwen2.5", name: "Qwen 2.5" },
     ],
+  },
+  custom: {
+    label: "Custom",
+    models: [],
   },
 };
 

@@ -9,7 +9,11 @@ import { getEmbeddingConfig } from '@/server/embeddings';
 export async function GET() {
   try {
     const settings = await db.execute(
-      sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'embedding_provider', 'chat_provider', 'chat_model')`
+      sql`SELECT key, value FROM settings WHERE key IN (
+        'openai_api_key', 'gemini_api_key', 'ollama_url',
+        'openrouter_api_key', 'custom_api_key', 'custom_api_url', 'custom_api_model',
+        'embedding_provider', 'chat_provider', 'chat_model'
+      )`
     );
 
     const config: Record<string, string> = {};
@@ -20,11 +24,13 @@ export async function GET() {
     const embConfig = await getEmbeddingConfig();
 
     return NextResponse.json({
-      // Legacy compat — now includes Ollama as a valid AI provider
-      hasApiKey: !!(config.openai_api_key || config.gemini_api_key || config.ollama_url || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL),
+      hasApiKey: !!(
+        config.openai_api_key || config.gemini_api_key || config.ollama_url ||
+        config.openrouter_api_key || (config.custom_api_key && config.custom_api_url) ||
+        process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL || process.env.OPENROUTER_API_KEY
+      ),
       apiKeyPreview: config.openai_api_key ? `sk-...${config.openai_api_key.slice(-4)}` : null,
       source: config.openai_api_key ? 'database' : (process.env.OPENAI_API_KEY ? 'environment' : null),
-      // New multi-provider
       providers: {
         openai: {
           configured: !!(config.openai_api_key || process.env.OPENAI_API_KEY),
@@ -38,6 +44,15 @@ export async function GET() {
           configured: !!(config.ollama_url || process.env.OLLAMA_URL),
           url: config.ollama_url || process.env.OLLAMA_URL || null,
         },
+        openrouter: {
+          configured: !!(config.openrouter_api_key || process.env.OPENROUTER_API_KEY),
+          preview: config.openrouter_api_key ? `sk-...${config.openrouter_api_key.slice(-4)}` : (process.env.OPENROUTER_API_KEY ? 'env' : null),
+        },
+        custom: {
+          configured: !!(config.custom_api_key && config.custom_api_url),
+          url: config.custom_api_url || null,
+          model: config.custom_api_model || null,
+        },
       },
       embeddingProvider: embConfig?.provider || null,
       chatProvider: config.chat_provider || null,
@@ -45,15 +60,16 @@ export async function GET() {
     });
   } catch (error: unknown) {
     console.error('[settings GET]', error);
-    // Return a safe fallback when DB is unavailable — check env vars only
     return NextResponse.json({
-      hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL),
+      hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.OLLAMA_URL || process.env.OPENROUTER_API_KEY),
       apiKeyPreview: null,
       source: null,
       providers: {
         openai: { configured: !!process.env.OPENAI_API_KEY, preview: process.env.OPENAI_API_KEY ? 'env' : null },
         gemini: { configured: !!process.env.GEMINI_API_KEY, preview: process.env.GEMINI_API_KEY ? 'env' : null },
         ollama: { configured: !!process.env.OLLAMA_URL, url: process.env.OLLAMA_URL || null },
+        openrouter: { configured: !!process.env.OPENROUTER_API_KEY, preview: process.env.OPENROUTER_API_KEY ? 'env' : null },
+        custom: { configured: false, url: null, model: null },
       },
       embeddingProvider: null,
       chatProvider: null,
@@ -64,22 +80,24 @@ export async function GET() {
 
 /**
  * POST /api/v1/settings — store settings
- * Body: { apiKey, geminiKey, ollamaUrl, embeddingProvider, action }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Legacy: remove all keys
+    // Remove all keys
     if (body.action === 'remove') {
-      await db.execute(sql`DELETE FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'embedding_provider')`);
+      await db.execute(sql`DELETE FROM settings WHERE key IN (
+        'openai_api_key', 'gemini_api_key', 'ollama_url',
+        'openrouter_api_key', 'custom_api_key', 'custom_api_url', 'custom_api_model',
+        'embedding_provider'
+      )`);
       return NextResponse.json({ ok: true, message: 'All keys removed' });
     }
 
     // Save OpenAI key
     if (body.apiKey) {
       const key = body.apiKey.trim();
-      // Test it
       const testRes = await fetch('https://api.openai.com/v1/models', {
         headers: { Authorization: `Bearer ${key}` },
       });
@@ -92,7 +110,6 @@ export async function POST(req: NextRequest) {
     // Save Gemini key
     if (body.geminiKey) {
       const key = body.geminiKey.trim();
-      // Test it
       const testRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
       );
@@ -105,6 +122,26 @@ export async function POST(req: NextRequest) {
     // Save Ollama URL
     if (body.ollamaUrl) {
       await upsertSetting('ollama_url', body.ollamaUrl.trim());
+    }
+
+    // Save OpenRouter key
+    if (body.openrouterKey) {
+      const key = body.openrouterKey.trim();
+      // Test with OpenRouter models endpoint
+      const testRes = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!testRes.ok) {
+        return NextResponse.json({ error: 'Invalid OpenRouter API key' }, { status: 400 });
+      }
+      await upsertSetting('openrouter_api_key', key);
+    }
+
+    // Save Custom API (any OpenAI-compatible endpoint)
+    if (body.customApiKey !== undefined || body.customApiUrl !== undefined || body.customApiModel !== undefined) {
+      if (body.customApiKey) await upsertSetting('custom_api_key', body.customApiKey.trim());
+      if (body.customApiUrl) await upsertSetting('custom_api_url', body.customApiUrl.trim());
+      if (body.customApiModel) await upsertSetting('custom_api_model', body.customApiModel.trim());
     }
 
     // Save preferred embedding provider
