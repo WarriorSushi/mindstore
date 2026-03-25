@@ -455,6 +455,30 @@ export function CommandPalette() {
           setOpen(false);
         },
       },
+      {
+        id: "notion-sync",
+        icon: BookOpen,
+        iconColor: "text-stone-400",
+        label: "Notion Sync",
+        desc: "Push memories to a Notion database",
+        keywords: ["notion", "sync", "push", "database", "export", "workspace"],
+        action: () => {
+          router.push("/app/notion-sync");
+          setOpen(false);
+        },
+      },
+      {
+        id: "obsidian-sync",
+        icon: Layers,
+        iconColor: "text-purple-400",
+        label: "Obsidian Vault Sync",
+        desc: "Export knowledge as an Obsidian vault with frontmatter and wikilinks",
+        keywords: ["obsidian", "vault", "sync", "export", "markdown", "wikilink", "backlink"],
+        action: () => {
+          router.push("/app/obsidian-sync");
+          setOpen(false);
+        },
+      },
     ];
 
     // Filter by query
