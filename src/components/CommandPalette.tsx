@@ -12,6 +12,7 @@ import {
   Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getSourceType } from "@/lib/source-types";
 
 interface SearchResult {
   id: string;
@@ -67,24 +68,7 @@ const NAV_ITEMS = [
   { href: "/app/settings", icon: Settings, label: "Settings", desc: "Providers & data" },
 ];
 
-const typeIcons: Record<string, typeof FileText> = {
-  chatgpt: MessageCircle,
-  text: Type,
-  file: FileText,
-  url: Globe,
-  bookmark: Bookmark,
-};
-
-const typeColors: Record<string, string> = {
-  chatgpt: "text-green-400",
-  text: "text-teal-400",
-  file: "text-blue-400",
-  url: "text-orange-400",
-  kindle: "text-amber-400",
-  document: "text-blue-400",
-  youtube: "text-red-400",
-  bookmark: "text-sky-400",
-};
+// Source type icons/colors delegated to shared module: getSourceType()
 
 /** Load recent conversations from localStorage for the palette */
 function getRecentConversations(): Array<{ id: string; title: string; updatedAt: string; messageCount: number }> {
@@ -579,11 +563,11 @@ export function CommandPalette() {
     }));
 
   const searchItems: PaletteItem[] = results.map((r) => {
-    const Icon = typeIcons[r.sourceType] || FileText;
-    const color = typeColors[r.sourceType] || "text-zinc-400";
+    const st = getSourceType(r.sourceType);
+    const Icon = st.icon;
     return {
       id: `search-${r.id}`,
-      icon: <Icon className={`w-4 h-4 ${color}`} />,
+      icon: <Icon className={`w-4 h-4 ${st.textColor}`} />,
       label: r.sourceTitle,
       description: r.content.slice(0, 80) + (r.content.length > 80 ? "…" : ""),
       action: () => {

@@ -3,15 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  X, Pin, Trash2, Copy, ExternalLink, Clock, FileText,
-  Globe, MessageCircle, Type, BookOpen, Bookmark, Gem, Mic,
-  Camera, StickyNote, Send, Music, Highlighter, PlayCircle,
-  AtSign, BookmarkCheck, MessageSquare, ChevronRight,
+  X, Pin, Trash2, Copy, ExternalLink, Clock, FileText, Globe,
+  ChevronRight,
   Layers, Edit3, Check, Loader2, Hash, Calendar,
-  FileBox, ArrowUpRight, Sparkles, Link2, MessageSquarePlus,
+  ArrowUpRight, Sparkles, Link2, MessageSquarePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getSourceType } from "@/lib/source-types";
 
 interface Memory {
   id: string;
@@ -25,27 +24,7 @@ interface Memory {
   pinned?: boolean;
 }
 
-const TYPE_CONFIG: Record<string, { icon: typeof FileText; color: string; bg: string; label: string }> = {
-  chatgpt:     { icon: MessageCircle, color: "text-green-400",   bg: "bg-green-500/10",   label: "ChatGPT" },
-  text:        { icon: Type,          color: "text-teal-400",    bg: "bg-teal-500/10",    label: "Note" },
-  file:        { icon: FileText,      color: "text-blue-400",    bg: "bg-blue-500/10",    label: "File" },
-  url:         { icon: Globe,         color: "text-orange-400",  bg: "bg-orange-500/10",  label: "URL" },
-  kindle:      { icon: BookOpen,      color: "text-amber-400",   bg: "bg-amber-500/10",   label: "Kindle" },
-  document:    { icon: FileBox,       color: "text-blue-400",    bg: "bg-blue-500/10",    label: "Document" },
-  youtube:     { icon: PlayCircle,    color: "text-red-400",     bg: "bg-red-500/10",     label: "YouTube" },
-  bookmark:    { icon: Bookmark,      color: "text-sky-400",     bg: "bg-sky-500/10",     label: "Bookmark" },
-  obsidian:    { icon: Gem,           color: "text-teal-400",    bg: "bg-teal-500/10",    label: "Obsidian" },
-  reddit:      { icon: MessageSquare, color: "text-orange-400",  bg: "bg-orange-500/10",  label: "Reddit" },
-  audio:       { icon: Mic,           color: "text-teal-400",    bg: "bg-teal-500/10",    label: "Audio" },
-  image:       { icon: Camera,        color: "text-sky-400",     bg: "bg-sky-500/10",     label: "Image" },
-  notion:      { icon: StickyNote,    color: "text-zinc-300",    bg: "bg-zinc-500/10",    label: "Notion" },
-  twitter:     { icon: AtSign,        color: "text-sky-400",     bg: "bg-sky-500/10",     label: "Twitter/X" },
-  telegram:    { icon: Send,          color: "text-teal-400",    bg: "bg-teal-500/10",    label: "Telegram" },
-  pocket:      { icon: BookmarkCheck, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Pocket" },
-  instapaper:  { icon: BookmarkCheck, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Instapaper" },
-  spotify:     { icon: Music,         color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Spotify" },
-  readwise:    { icon: Highlighter,   color: "text-amber-400",   bg: "bg-amber-500/10",   label: "Readwise" },
-};
+// Source type config delegated to shared module: getSourceType()
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -251,12 +230,7 @@ export function MemoryDrawer() {
 
   if (!memory) return null;
 
-  const config = TYPE_CONFIG[memory.source] || {
-    icon: FileText,
-    color: "text-zinc-400",
-    bg: "bg-zinc-500/10",
-    label: memory.source || "Unknown",
-  };
+  const config = getSourceType(memory.source);
   const Icon = config.icon;
   const words = wordCount(memory.content);
   const chars = memory.content.length;
@@ -287,8 +261,8 @@ export function MemoryDrawer() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", config.bg)}>
-              <Icon className={cn("w-4 h-4", config.color)} />
+            <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", config.bgColor)}>
+              <Icon className={cn("w-4 h-4", config.textColor)} />
             </div>
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-zinc-200 truncate">
@@ -337,7 +311,7 @@ export function MemoryDrawer() {
           <div className="flex flex-wrap gap-2">
             <span className={cn(
               "inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-semibold uppercase tracking-wider",
-              config.bg, config.color, "border", `border-${config.color.replace("text-", "").replace("-400", "-500/15")}`,
+              config.badgeClasses, "border", config.borderColor,
             )}>
               <Icon className="w-3 h-3" />
               {config.label}
@@ -485,9 +459,7 @@ export function MemoryDrawer() {
                   </div>
                 ) : (
                   relatedMemories.map((related) => {
-                    const relConfig = TYPE_CONFIG[related.sourceType || related.source] || {
-                      icon: FileText, color: "text-zinc-400", bg: "bg-zinc-500/10", label: related.sourceType || "Unknown",
-                    };
+                    const relConfig = getSourceType(related.sourceType || related.source);
                     const RelIcon = relConfig.icon;
                     const preview = related.content.slice(0, 120).replace(/\n/g, ' ').trim();
                     return (
@@ -497,8 +469,8 @@ export function MemoryDrawer() {
                         className="w-full rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 hover:bg-white/[0.04] hover:border-teal-500/15 transition-all group text-left"
                       >
                         <div className="flex items-start gap-2.5">
-                          <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5", relConfig.bg)}>
-                            <RelIcon className={cn("w-3 h-3", relConfig.color)} />
+                          <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5", relConfig.bgColor)}>
+                            <RelIcon className={cn("w-3 h-3", relConfig.textColor)} />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-0.5">

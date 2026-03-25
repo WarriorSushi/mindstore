@@ -1,16 +1,19 @@
 {
   "name": "MindStore",
   "short_name": "MindStore",
-  "description": "Your Mind, Connected to Every AI.",
+  "description": "Your second brain — powered by AI. Import knowledge, search semantically, get answers from your own mind.",
   "start_url": "/app",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#7c3aed",
+  "background_color": "#0a0a0b",
+  "theme_color": "#14b8a6",
+  "orientation": "any",
+  "categories": ["productivity", "education", "utilities"],
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

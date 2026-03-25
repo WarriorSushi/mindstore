@@ -3,37 +3,15 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
-  Brain, Database, FileText, Globe, MessageCircle, Type, Loader2,
+  Brain, Database, FileText, Loader2,
   BarChart3, TrendingUp, BookOpen, Hash, Sparkles, Calendar,
-  PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
-  AtSign, Send, BookmarkCheck, Music, Highlighter, MessageSquare,
   ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { getSourceType } from "@/lib/source-types";
 
-// ─── Source type config ──────────────────────────────────────
-const typeConfig: Record<string, { icon: LucideIcon; color: string; label: string }> = {
-  chatgpt: { icon: MessageCircle, color: "text-green-400 bg-green-500/10", label: "ChatGPT" },
-  text: { icon: Type, color: "text-teal-400 bg-teal-500/10", label: "Text" },
-  file: { icon: FileText, color: "text-blue-400 bg-blue-500/10", label: "Files" },
-  url: { icon: Globe, color: "text-orange-400 bg-orange-500/10", label: "URLs" },
-  kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10", label: "Kindle" },
-  document: { icon: FileText, color: "text-blue-400 bg-blue-500/10", label: "Documents" },
-  youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10", label: "YouTube" },
-  bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10", label: "Bookmarks" },
-  obsidian: { icon: Gem, color: "text-teal-400 bg-teal-500/10", label: "Obsidian" },
-  reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10", label: "Reddit" },
-  audio: { icon: Mic, color: "text-teal-400 bg-teal-500/10", label: "Audio" },
-  image: { icon: Camera, color: "text-sky-400 bg-sky-500/10", label: "Images" },
-  notion: { icon: StickyNote, color: "text-zinc-300 bg-zinc-500/10", label: "Notion" },
-  twitter: { icon: AtSign, color: "text-sky-400 bg-sky-500/10", label: "Twitter" },
-  telegram: { icon: Send, color: "text-teal-400 bg-teal-500/10", label: "Telegram" },
-  pocket: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10", label: "Pocket" },
-  instapaper: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10", label: "Instapaper" },
-  spotify: { icon: Music, color: "text-emerald-400 bg-emerald-500/10", label: "Spotify" },
-  readwise: { icon: Highlighter, color: "text-amber-400 bg-amber-500/10", label: "Readwise" },
-};
+// Source type config delegated to shared module: getSourceType()
 
 // ─── Source bar colors (for the chart) ──────────────────────
 const barColors: Record<string, string> = {
@@ -414,13 +392,13 @@ export default function StatsPage() {
             </div>
             <div className="space-y-2">
               {data.sources.map((s) => {
-                const cfg = typeConfig[s.type] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10", label: s.type };
+                const cfg = getSourceType(s.type);
                 const Icon = cfg.icon;
                 const pct = data.total > 0 ? Math.round((s.count / data.total) * 100) : 0;
                 return (
                   <div key={s.type} className="flex items-center gap-2.5">
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${cfg.color.split(" ").filter((c: string) => !c.startsWith("text-")).join(" ")}`}>
-                      <Icon className={`w-3 h-3 ${cfg.color.split(" ")[0]}`} />
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
+                      <Icon className={`w-3 h-3 ${cfg.textColor}`} />
                     </div>
                     <span className="text-[12px] text-zinc-400 w-20 shrink-0 truncate">{cfg.label}</span>
                     <div className="flex-1 h-[6px] rounded-full bg-white/[0.04] overflow-hidden">
@@ -561,7 +539,7 @@ export default function StatsPage() {
           </div>
           <div className="space-y-1">
             {data.topSources.slice(0, 10).map((s, i) => {
-              const cfg = typeConfig[s.type] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10", label: s.type };
+              const cfg = getSourceType(s.type);
               const Icon = cfg.icon;
               return (
                 <div
@@ -571,8 +549,8 @@ export default function StatsPage() {
                   <span className="text-[10px] text-zinc-700 tabular-nums w-5 text-right shrink-0">
                     {i + 1}.
                   </span>
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.color.split(" ").filter((c: string) => !c.startsWith("text-")).join(" ")}`}>
-                    <Icon className={`w-2.5 h-2.5 ${cfg.color.split(" ")[0]}`} />
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
+                    <Icon className={`w-2.5 h-2.5 ${cfg.textColor}`} />
                   </div>
                   <span className="text-[12px] text-zinc-300 truncate flex-1">{s.title}</span>
                   <span className="text-[11px] text-zinc-600 tabular-nums shrink-0">{s.count} memories</span>
