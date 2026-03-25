@@ -345,7 +345,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
     ui: {
-      pages: [{ path: 'write', title: 'Write', icon: 'PenSquare', showInSidebar: true }],
+      pages: [{ path: 'blog', title: 'Blog Writer', icon: 'PenSquare', showInSidebar: true }],
     },
   },
 
@@ -376,6 +376,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'newsletter', title: 'Newsletter Writer', icon: 'Mail', showInSidebar: true }],
+    },
   },
 
   'resume-builder': {
@@ -389,6 +392,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'files:write', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'resume', title: 'Resume Builder', icon: 'FileUser', showInSidebar: true }],
+    },
   },
 
   'conversation-prep': {
@@ -400,8 +406,11 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'action',
     icon: 'UserCheck',
     author: 'MindStore',
-    capabilities: ['read:memories', 'read:embeddings', 'chat:generate'],
+    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'conversation', title: 'Conversation Prep', icon: 'UserCheck', showInSidebar: true }],
+    },
     mcpTools: [{
       name: 'prepare_briefing',
       description: 'Generate a comprehensive briefing about a person or topic from your knowledge',
@@ -426,6 +435,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'paths', title: 'Learning Paths', icon: 'Route', showInSidebar: true }],
+    },
   },
 
   // ─── Export/Sync Plugins ──────────────────────────────────────

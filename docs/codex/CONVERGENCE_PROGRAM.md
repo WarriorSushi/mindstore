@@ -51,20 +51,18 @@ That means:
   - topic-evolution
   - sentiment-timeline
   - mind-map-generator
+- the full action batch on codex:
+  - blog-draft
+  - conversation-prep
+  - newsletter-writer
+  - resume-builder
+  - learning-paths
 
 ## What Still Exists Only On Frain
 
 ### Analysis
 
 - no major analysis plugin remains frain-only
-
-### Action
-
-- Blog Draft
-- Newsletter Writer
-- Resume Builder
-- Conversation Prep
-- Learning Paths
 
 ### AI / Media / Retrieval
 
@@ -177,6 +175,8 @@ Batch B: Action parity
 - conversation-prep
 - learning-paths
 
+Status: complete on codex
+
 Batch C: Import parity
 
 - kindle-importer
@@ -274,8 +274,8 @@ The branches should be considered “effectively the same” when all of these a
 
 ### Codex
 
-1. move into Batch B action parity
-2. prioritize blog-draft, conversation-prep, newsletter-writer, and resume-builder
+1. move into Batch C import parity
+2. start on richer importer coverage from frain's portable modules
 3. keep using codex runtime/docs/tests as the destination shape
 
 ### Frain

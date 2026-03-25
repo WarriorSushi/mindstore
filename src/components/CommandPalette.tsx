@@ -7,6 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, RefreshCw, Zap, Clock, Bookmark, Layers, Mic, PenLine, SearchX, TrendingUp, Heart,
+  PenSquare, Mail, FileUser, Route, UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,6 +59,11 @@ const NAV_ITEMS = [
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition from your knowledge" },
   { href: "/app/voice", icon: Mic, label: "Voice", desc: "Record and transcribe thoughts" },
+  { href: "/app/blog", icon: PenSquare, label: "Blog Writer", desc: "Turn memories into blog drafts" },
+  { href: "/app/newsletter", icon: Mail, label: "Newsletter Writer", desc: "Curate digest issues from your knowledge" },
+  { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build a resume from your professional memories" },
+  { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Design structured plans for what to learn next" },
+  { href: "/app/conversation", icon: UserCheck, label: "Conversation Prep", desc: "Generate meeting and topic briefings" },
   { href: "/app/writing", icon: PenLine, label: "Writing Style", desc: "Vocabulary, tone, and readability analysis" },
   { href: "/app/sentiment", icon: Heart, label: "Sentiment Timeline", desc: "Track the emotional arc of your knowledge" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },

@@ -380,3 +380,57 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run lint:ci`
 - `npm run typecheck`
 - `npm run test`
+
+### 2026-03-25: Action Parity Batch
+
+#### Scope
+
+- Complete the codex-side action parity batch from frain.
+- Port Blog Draft, Conversation Prep, Newsletter Writer, Resume Builder, and Learning Paths into codex runtime-first architecture.
+- Add dedicated app pages, thin routes, tests, docs, and discoverability wiring for the full batch.
+
+#### Changes Completed
+
+- Added shared plugin-config helpers in `src/server/plugins/ports/plugin-config.ts` to standardize manifest-backed install/bootstrap and plugin config persistence.
+- Added codex server ports for:
+  - `src/server/plugins/ports/blog-draft.ts`
+  - `src/server/plugins/ports/conversation-prep.ts`
+  - `src/server/plugins/ports/newsletter-writer.ts`
+  - `src/server/plugins/ports/resume-builder.ts`
+  - `src/server/plugins/ports/learning-paths.ts`
+- Added thin route wrappers for:
+  - `src/app/api/v1/plugins/blog-draft/route.ts`
+  - `src/app/api/v1/plugins/conversation-prep/route.ts`
+  - `src/app/api/v1/plugins/newsletter-writer/route.ts`
+  - `src/app/api/v1/plugins/resume-builder/route.ts`
+  - `src/app/api/v1/plugins/learning-paths/route.ts`
+- Added dedicated app pages for:
+  - `/app/blog`
+  - `/app/conversation`
+  - `/app/newsletter`
+  - `/app/resume`
+  - `/app/paths`
+- Updated plugin registry metadata, command palette entries, layout navigation, plugin docs index, and lint coverage so the new action surfaces are treated as first-class codex pages.
+- Added action-plugin unit coverage in `tests/unit/action-plugins.test.ts`.
+
+#### Decisions
+
+- Action plugins use canonical plugin-config persistence first instead of introducing more dedicated tables in this batch.
+- Shared AI provider logic stays centralized in `src/server/ai-client.ts`; action ports call it rather than duplicating provider resolution.
+- Dedicated pages are intentionally functional and codex-native rather than waiting for a perfect UI-only reconciliation pass.
+- Batch B is now considered complete on codex, which means future convergence should move into import, export/sync, and advanced AI parity.
+
+#### Risks and Follow-Ups
+
+- The new action pages are strong functional codex pages, but frain may still carry richer visual polish worth borrowing during later UX reconciliation.
+- Resume export is currently markdown-only in the codex page because the current converged API does not expose PDF generation.
+- `npm run test:e2e` timed out in this session; there was no compile failure, but a fresh E2E pass should still be re-run on the committed branch.
+- The existing non-blocking Turbopack docs tracing warning from `src/lib/docs.ts` remains unchanged.
+
+#### Verification
+
+- `npm run typecheck`
+- `npm run lint:ci`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e` timed out in this session
