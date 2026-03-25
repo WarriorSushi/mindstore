@@ -282,6 +282,42 @@ async function getContradictionsWidget(userId: string): Promise<Widget | null> {
   } catch { return null; }
 }
 
+async function getDuplicatesWidget(userId: string): Promise<Widget | null> {
+  try {
+    // Quick count of near-duplicate pairs (≥92% cosine similarity)
+    const rows = await db.execute(sql`
+      SELECT COUNT(*)::int AS duplicate_pairs
+      FROM (
+        SELECT a.id
+        FROM memories a
+        INNER JOIN memories b ON a.id < b.id
+        WHERE a.user_id = ${userId}::uuid
+          AND b.user_id = ${userId}::uuid
+          AND a.embedding IS NOT NULL
+          AND b.embedding IS NOT NULL
+          AND (a.embedding <=> b.embedding) < 0.08
+        LIMIT 50
+      ) sub
+    `);
+    const r = (rows as any[])[0];
+    const count = r?.duplicate_pairs ?? 0;
+    if (count === 0) return null;
+
+    return {
+      id: 'duplicates',
+      type: 'maintenance',
+      title: 'Duplicates',
+      icon: 'Copy',
+      color: count > 5 ? 'amber' : 'sky',
+      href: '/app/duplicates',
+      data: {
+        count,
+        label: count >= 50 ? '50+' : String(count),
+      },
+    };
+  } catch { return null; }
+}
+
 // ─── GET Handler ────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -298,6 +334,7 @@ export async function GET(req: NextRequest) {
       getOldestNewestWidget(userId),
       getConnectionsWidget(userId),
       getContradictionsWidget(userId),
+      getDuplicatesWidget(userId),
     ]);
 
     const widgets: Widget[] = results

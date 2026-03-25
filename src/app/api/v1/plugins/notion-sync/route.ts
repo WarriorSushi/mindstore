@@ -206,7 +206,7 @@ async function createNotionDatabase(token: string, parentPageId?: string): Promi
             { name: 'ChatGPT', color: 'green' },
             { name: 'File', color: 'blue' },
             { name: 'URL', color: 'orange' },
-            { name: 'Text', color: 'purple' },
+            { name: 'Text', color: 'default' },
             { name: 'Kindle', color: 'yellow' },
             { name: 'YouTube', color: 'red' },
             { name: 'Reddit', color: 'default' },

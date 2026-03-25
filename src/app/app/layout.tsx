@@ -7,7 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
   FileEdit, Users, Route, FileUser, Mail, Mic, Camera, SlidersHorizontal, Globe, Dna,
-  Download, FolderDown, FileStack, Gem, ChevronDown, Zap, BarChart3,
+  Download, FolderDown, FileStack, Gem, ChevronDown, Zap, BarChart3, Copy,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,7 @@ const navSections: NavSection[] = [
       { href: "/app/evolution", icon: TrendingUp, label: "Evolution" },
       { href: "/app/sentiment", icon: Heart, label: "Sentiment" },
       { href: "/app/gaps", icon: Target, label: "Gaps" },
+      { href: "/app/duplicates", icon: Copy, label: "Duplicates" },
       { href: "/app/writing", icon: PenTool, label: "Writing Style" },
     ],
   },

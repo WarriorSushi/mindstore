@@ -9,7 +9,7 @@ import {
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
   Clock, Pin, BarChart3, BookOpen,
-  Layers, AlertTriangle, Target,
+  Layers, AlertTriangle, Target, Copy,
   type LucideIcon,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
@@ -49,7 +49,7 @@ interface DashboardWidget {
 // ─── Widget icon map ──────────────────────────────────────────
 const WIDGET_ICONS: Record<string, LucideIcon> = {
   Layers, TrendingUp, Zap, Database, BookOpen, Clock, Network,
-  AlertTriangle, Target, BarChart3,
+  AlertTriangle, Target, BarChart3, Copy,
 };
 
 const WIDGET_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
@@ -417,16 +417,30 @@ export default function DashboardPage() {
                       const st = getSourceType(r.sourceType);
                       const Icon = st.icon;
                       return (
-                        <div key={r.memoryId || i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                        <button
+                          key={r.memoryId || i}
+                          onClick={() => openMemoryDrawer({
+                            id: r.memoryId,
+                            content: r.content,
+                            source: r.sourceType,
+                            sourceId: r.sourceId || "",
+                            sourceTitle: r.sourceTitle || "Untitled",
+                            timestamp: r.createdAt || "",
+                            importedAt: r.importedAt || "",
+                            metadata: r.metadata || {},
+                            pinned: r.metadata?.pinned === true,
+                          })}
+                          className="w-full text-left px-4 py-3 hover:bg-white/[0.03] transition-colors group"
+                        >
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${st.badgeClasses}`}>
                               <Icon className="w-2.5 h-2.5" />
                               {r.sourceType}
                             </span>
-                            <span className="text-[11px] text-zinc-600 truncate">{r.sourceTitle}</span>
+                            <span className="text-[11px] text-zinc-600 truncate group-hover:text-zinc-400 transition-colors">{r.sourceTitle}</span>
                           </div>
                           <p className="text-[12px] text-zinc-400 line-clamp-2 leading-relaxed">{r.content}</p>
-                        </div>
+                        </button>
                       );
                     })}
                     <Link href={`/app/explore?q=${encodeURIComponent(searchQuery)}`} className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-[12px] text-teal-400 font-medium hover:bg-teal-500/5 transition-colors">
@@ -597,6 +611,17 @@ export default function DashboardPage() {
                           </p>
                           <p className="text-[10px] text-zinc-600 mt-0.5">
                             unresolved · {w.data.resolved} resolved
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'duplicates' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">
+                            <span className={w.data.count > 5 ? 'text-amber-400' : 'text-sky-400'}>{w.data.label}</span>
+                          </p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            duplicate pairs to review
                           </p>
                         </div>
                       )}

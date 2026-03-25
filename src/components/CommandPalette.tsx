@@ -9,17 +9,22 @@ import {
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
   Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
-  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3,
+  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getSourceType } from "@/lib/source-types";
+import { openMemoryDrawer } from "@/components/MemoryDrawer";
 
 interface SearchResult {
   id: string;
   content: string;
   sourceType: string;
   sourceTitle: string;
+  sourceId?: string;
   score: number;
+  createdAt?: string;
+  importedAt?: string;
+  metadata?: Record<string, any>;
 }
 
 type SectionType = "search" | "recent" | "actions" | "navigation";
@@ -45,6 +50,7 @@ const NAV_ITEMS = [
   { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
+  { href: "/app/duplicates", icon: Copy, label: "Duplicate Detector", desc: "Find and merge near-duplicate memories" },
   { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
   { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
@@ -167,7 +173,11 @@ export function CommandPalette() {
               content: r.content,
               sourceType: r.sourceType,
               sourceTitle: r.sourceTitle || "Untitled",
+              sourceId: r.sourceId,
               score: r.score,
+              createdAt: r.createdAt,
+              importedAt: r.importedAt,
+              metadata: r.metadata,
             }))
           );
         }
@@ -363,6 +373,18 @@ export function CommandPalette() {
         keywords: ["gaps", "blind", "spots", "missing", "coverage", "sparse", "bridge", "knowledge", "learn", "stale"],
         action: () => {
           router.push("/app/gaps");
+          setOpen(false);
+        },
+      },
+      {
+        id: "duplicate-detector",
+        icon: Copy,
+        iconColor: "text-amber-400",
+        label: "Duplicate Detector",
+        desc: "Find and merge near-duplicate memories",
+        keywords: ["duplicate", "duplicates", "merge", "similar", "copy", "copies", "dedup", "clean", "cleanup", "redundant"],
+        action: () => {
+          router.push("/app/duplicates");
           setOpen(false);
         },
       },
@@ -571,16 +593,41 @@ export function CommandPalette() {
       label: r.sourceTitle,
       description: r.content.slice(0, 80) + (r.content.length > 80 ? "…" : ""),
       action: () => {
-        router.push(`/app/explore?q=${encodeURIComponent(r.sourceTitle)}`);
         setOpen(false);
+        // Open memory drawer with full context
+        setTimeout(() => openMemoryDrawer({
+          id: r.id,
+          content: r.content,
+          source: r.sourceType,
+          sourceId: r.sourceId || "",
+          sourceTitle: r.sourceTitle,
+          timestamp: r.createdAt || "",
+          importedAt: r.importedAt || "",
+          metadata: r.metadata || {},
+          pinned: r.metadata?.pinned === true,
+        }), 50);
       },
       section: "search" as const,
     };
   });
 
-  // Order: search results → actions → recent conversations → navigation
+  // "View all in Explore" link when there are search results
+  const viewAllItem: PaletteItem[] = query && results.length > 0 ? [{
+    id: "search-view-all",
+    icon: <Compass className="w-4 h-4 text-teal-400" />,
+    label: `View all results for "${query}"`,
+    description: "Open in Explore with full search",
+    action: () => {
+      router.push(`/app/explore?q=${encodeURIComponent(query)}`);
+      setOpen(false);
+    },
+    section: "search" as const,
+  }] : [];
+
+  // Order: search results → view all → actions → recent conversations → navigation
   const allItems = [
     ...(query ? searchItems : []),
+    ...viewAllItem,
     ...(query ? actionItems : []),
     ...(!query ? recentItems : []),
     ...navItems,
