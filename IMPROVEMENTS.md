@@ -1558,3 +1558,73 @@ _Automated 30-min improvement cycles by Frain_
 - **Design**: Teal primary accent throughout. Framework templates get subtle color identities (Hugo=pink, Jekyll=red, Astro=orange, Next.js=sky). NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards.
 - **Phase 6 Progress**: 7 of 10 plugins built. Remaining: Notion Sync (#26), Obsidian Vault Sync (#25), Notion Enhanced Import (#11)
 - **Branch**: `frain/improve` (commit `e5d71d1`)
+
+## 2026-03-25 02:45 UTC — Phase 6 COMPLETE · All Remaining Plugins
+- **Phase**: 6 (Export/Sync & OAuth Plugins) — FINAL 3 plugins
+- **Implemented**:
+  - **Notion Sync (#26)** — Full Backend + Frontend (`/app/notion-sync`):
+    - Connect via Notion API internal integration token
+    - Token validation against Notion API
+    - List/select existing databases or create new "MindStore Knowledge Base" database
+    - Push sync: memories → Notion pages with Title, Source, Tags, Created, Word Count, MindStore ID
+    - Content split into Notion paragraph blocks (max 2000 chars per block, max 100 blocks)
+    - Batch processing: 50 memories per sync, 3 concurrent (Notion rate limit)
+    - Source filter, sync history with success/partial/failed status
+    - Config persistence in plugins table
+    - Frontend: connection flow, database picker, create database, sync button, history, preview
+  - **Obsidian Vault Sync (#25)** — Full Backend + Frontend (`/app/obsidian-sync`):
+    - Export memories as complete Obsidian vault (ZIP download)
+    - 3 folder structures: flat, by-source (ChatGPT/, Files/, URLs/), by-date (2024/2024-03/)
+    - YAML frontmatter: title, source, created, mindstore_id, tags, word_count, language, domain
+    - Wikilinks: `[[slugified-title|Display Title]]` to related memories via connections table
+    - Backlinks section on each note
+    - `.obsidian` config folder for instant vault recognition
+    - README with stats and usage instructions
+    - Unique filename handling with collision resolution
+    - Source type filtering, export history tracking
+    - Frontend: config panel, folder structure preview, one-click ZIP download
+  - **Notion Enhanced Import (#11)** — Full Backend + Import Page Integration:
+    - ZIP upload: parses Notion export with pages AND database CSVs
+    - UUID cleanup (removes 32-char hex suffixes from filenames)
+    - CSV database parsing with proper quoted-field handling
+    - Database rows → structured memories with property preservation
+    - Smart chunking by heading structure (not arbitrary character splits)
+    - Nested page hierarchy via folder paths
+    - Preview mode: shows pages, databases, columns, row counts, word count, folders, samples
+    - Batch import with embedding generation
+    - Tree index rebuild after import
+    - Import tab in `/app/import` with ZIP upload + old MD upload fallback
+  - **Navigation**: Notion Sync + Obsidian Sync added to sidebar under "Sync & Export"
+  - **Plugin Store**: "Open" button routes for both sync plugins
+  - **Registry**: UI page declarations for both
+- **Phase 6 Status**: ✅ COMPLETE — All 10 Export/Sync plugins built
+- **ALL 33 PLUGINS STATUS**: ✅ COMPLETE — Every plugin from the master plan is implemented
+  - Phase 1: Plugin Infrastructure ✅
+  - Phase 2: Import Plugins (6) ✅
+  - Phase 3: Analysis Plugins (6) ✅
+  - Phase 4: Action Plugins (6) ✅
+  - Phase 5: AI Enhancement Plugins (5) ✅
+  - Phase 6: Export/Sync & OAuth Plugins (10) ✅
+- **Branch**: `frain/improve`
+
+## 2026-03-25 04:59 UTC — Dashboard Insight Widgets · Plugin Intelligence on Home
+- **What**: Smart dashboard widgets that surface actionable insights from installed plugins
+- **New API**: `/api/v1/dashboard-widgets` — aggregates lightweight summaries:
+  - **Flashcard Widget**: Cards due for review, total cards, mastery rate percentage
+  - **Knowledge Growth**: This week vs last week comparison, trend %, today's count
+  - **Search Coverage**: Embedding percentage with progress bar, unembedded count
+  - **Source Diversity**: How many source types, compact source badges (GPT, TXT, YT, etc.)
+  - **Content Depth**: Average word count, % of deep content (2000+ chars)
+  - **Knowledge Timeline**: Time span of knowledge history (e.g., "1.5 years")
+  - **Connections**: Cross-reference count from connections table
+  - **Contradictions**: Unresolved vs resolved contradiction count
+- **Architecture**: All widget fetchers run concurrently via `Promise.allSettled`. Each is independent — if one DB table doesn't exist, others still load.
+- **Dashboard UI**: Responsive grid (2-col mobile, 4-col desktop) between Activity Chart and Pinned Memories. Each widget:
+  - Color-coded border/background by status (teal=normal, emerald=good, amber=attention, red=needs action)
+  - Linked to relevant plugin page for drill-down
+  - Hover state with subtle arrow indicator
+  - Compact number display with contextual labels
+  - Source diversity badges with abbreviated source names
+  - Embedding coverage progress bar visualization
+- **Design**: Teal primary, OLED black base, glass borders. Zero violet/purple/fuchsia.
+- **Branch**: `frain/improve` (commit `82aacfa`)
