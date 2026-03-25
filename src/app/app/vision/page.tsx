@@ -364,12 +364,6 @@ export default function ImageToMemoryPage() {
         {/* Header */}
         <Stagger>
           <div className="flex items-center gap-3 mb-6">
-            <Link
-              href="/app/plugins"
-              className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
             <div className="flex-1">
               <h1 className="text-[22px] sm:text-[28px] font-semibold tracking-[-0.03em] text-white">
                 Image to Memory

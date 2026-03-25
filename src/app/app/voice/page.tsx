@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Mic, MicOff, Square, Play, Pause, Save, Trash2, Loader2,
   Clock, FileText, ChevronRight, AlertCircle, Check, Volume2,
-  Radio, Waves, ArrowLeft, RotateCcw, Pencil,
+  Radio, Waves, RotateCcw, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -391,12 +391,6 @@ export default function VoicePage() {
         {/* Header */}
         <Stagger>
           <div className="flex items-center gap-3 mb-8">
-            <Link
-              href="/app/plugins"
-              className="w-8 h-8 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center hover:bg-white/[0.06] transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 text-zinc-400" />
-            </Link>
             <div className="flex-1">
               <h1 className="text-[20px] font-semibold text-white tracking-tight">
                 Voice-to-Memory

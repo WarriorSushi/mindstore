@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  ArrowLeft, Gem, Download, Settings2, Loader2, FolderTree, FileText,
+  Gem, Download, Settings2, Loader2, FolderTree, FileText,
   CheckCircle, ChevronDown, ChevronRight, History, Eye, RefreshCw,
   Tag, Link2, Code, Clock, Hash, BookOpen, Layers
 } from 'lucide-react';
@@ -140,15 +140,12 @@ export default function ObsidianSyncPage() {
     <div className="max-w-3xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => window.history.back()} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
         <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center">
           <Gem className="w-4.5 h-4.5 text-teal-400" />
         </div>
         <div className="flex-1">
           <h1 className="text-[22px] font-semibold tracking-[-0.03em]">Obsidian Vault Sync</h1>
-          <p className="text-xs text-zinc-500">Export your knowledge as an Obsidian vault</p>
+          <p className="text-[13px] text-zinc-500">Export your knowledge as an Obsidian vault</p>
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}

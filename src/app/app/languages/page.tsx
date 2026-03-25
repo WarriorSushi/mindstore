@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Languages, ArrowLeft, Globe, Search, Loader2, AlertTriangle,
+  Languages, Globe, Search, Loader2, AlertTriangle,
   Check, BarChart3, Tag, RefreshCw, Sparkles, ChevronDown,
   ArrowRightLeft, Zap, Info, Settings2,
 } from "lucide-react";
@@ -167,18 +167,12 @@ export default function MultiLanguagePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/app/plugins"
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 text-zinc-400" />
-        </Link>
         <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
           <Languages className="w-5 h-5 text-sky-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Multi-Language</h1>
-          <p className="text-sm text-zinc-500">Search and store memories in any language</p>
+          <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-white">Multi-Language</h1>
+          <p className="text-[13px] text-zinc-500">Search and store memories in any language</p>
         </div>
       </div>
 

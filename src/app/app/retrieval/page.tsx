@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Cog, Zap, Search, Clock, TrendingUp,
+  Cog, Zap, Search, Clock, TrendingUp,
   Check, Loader2, AlertTriangle, ChevronRight, Play,
   Layers, TreePine, Type, Sparkles, Maximize2,
   Database, Brain, Cpu, GitBranch, Target, Gauge,
@@ -250,12 +250,6 @@ export default function RetrievalPage() {
       {/* Header */}
       <div className="sticky top-0 z-20 bg-[#0a0a0b]/80 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.push('/app/plugins')}
-            className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 text-zinc-400" />
-          </button>
           <div className="flex-1">
             <h1 className="text-[15px] font-semibold text-zinc-100 flex items-center gap-2">
               <Cog className="w-4 h-4 text-teal-400" />

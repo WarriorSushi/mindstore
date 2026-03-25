@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  FileStack, ArrowLeft, Settings2, RefreshCw, Database, CheckCircle, XCircle,
+  FileStack, Settings2, RefreshCw, Database, CheckCircle, XCircle,
   AlertTriangle, Loader2, Link2, Unlink, ChevronDown, ChevronRight, Clock,
   Filter, Zap, History, ArrowUpRight, Eye, Plus, Trash2, BarChart3
 } from 'lucide-react';
@@ -208,15 +208,12 @@ export default function NotionSyncPage() {
     <div className="max-w-3xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => window.history.back()} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
         <div className="w-9 h-9 rounded-xl bg-teal-500/10 flex items-center justify-center">
           <FileStack className="w-4.5 h-4.5 text-teal-400" />
         </div>
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.03em]">Notion Sync</h1>
-          <p className="text-xs text-zinc-500">Push your MindStore knowledge to a Notion database</p>
+          <p className="text-[13px] text-zinc-500">Push your MindStore knowledge to a Notion database</p>
         </div>
       </div>
 
