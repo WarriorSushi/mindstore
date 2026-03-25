@@ -7,6 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
   FileEdit, Users, Route, FileUser, Mail, Mic, Camera, SlidersHorizontal, Globe, Dna,
+  Download, FolderDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -37,6 +38,8 @@ const navItems = [
   { href: "/app/retrieval", icon: SlidersHorizontal, label: "Retrieval" },
   { href: "/app/languages", icon: Globe, label: "Languages" },
   { href: "/app/domains", icon: Dna, label: "Domains" },
+  { href: "/app/anki", icon: Download, label: "Anki Export" },
+  { href: "/app/export", icon: FolderDown, label: "Blog Export" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights" },
   { href: "/app/plugins", icon: Puzzle, label: "Plugins" },
   { href: "/app/connect", icon: Network, label: "Connect AI" },

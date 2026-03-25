@@ -433,7 +433,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'anki-export': {
     slug: 'anki-export',
     name: 'Anki Deck Export',
-    description: 'Export flashcards as Anki-compatible .apkg decks.',
+    description: 'Export flashcards as Anki-compatible .apkg decks. Supports TSV (Anki native) and CSV (universal) formats with full SM-2 metadata.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -441,12 +441,15 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'files:write'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'anki', title: 'Anki Export', icon: 'Download', showInSidebar: true }],
+    },
   },
 
   'markdown-blog-export': {
     slug: 'markdown-blog-export',
     name: 'Markdown Blog Export',
-    description: 'Export memories as a blog-ready markdown folder with frontmatter. Hugo, Jekyll, Astro.',
+    description: 'Export memories as blog-ready markdown with frontmatter. Supports Hugo, Jekyll, Astro, Next.js, and plain markdown.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -454,6 +457,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'files:write'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'export', title: 'Blog Export', icon: 'FolderDown', showInSidebar: true }],
+    },
   },
 
   // ─── AI Enhancement Plugins ───────────────────────────────────

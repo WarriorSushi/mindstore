@@ -104,6 +104,8 @@ const PLUGIN_ROUTES: Record<string, string> = {
   'custom-rag': '/app/retrieval',
   'multi-language': '/app/languages',
   'domain-embeddings': '/app/domains',
+  'anki-export': '/app/anki',
+  'markdown-blog-export': '/app/export',
 };
 
 // ─── Component ────────────────────────────────────────────────────
