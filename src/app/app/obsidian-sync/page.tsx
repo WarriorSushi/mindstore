@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 
 interface SyncConfig {
   vaultName: string;
@@ -137,6 +138,7 @@ export default function ObsidianSyncPage() {
   }
 
   return (
+    <PageTransition>
     <div className="max-w-3xl mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
@@ -358,5 +360,6 @@ export default function ObsidianSyncPage() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }

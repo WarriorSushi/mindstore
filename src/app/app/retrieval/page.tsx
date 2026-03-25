@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -246,6 +247,7 @@ export default function RetrievalPage() {
   const strategyOrder: RAGStrategy[] = ['default', 'hyde', 'multi-query', 'reranking', 'contextual-compression', 'maximal'];
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-[#0a0a0b] pb-24">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-[#0a0a0b]/80 backdrop-blur-xl border-b border-white/[0.06]">
@@ -845,5 +847,6 @@ export default function RetrievalPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

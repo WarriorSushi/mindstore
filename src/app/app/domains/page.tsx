@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ export default function DomainEmbeddingsPage() {
   const totalDomainMemories = stats?.domainDistribution.reduce((sum, d) => sum + d.count, 0) || 0;
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -473,5 +475,6 @@ export default function DomainEmbeddingsPage() {
         </>
       )}
     </div>
+    </PageTransition>
   );
 }

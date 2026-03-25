@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Brain, RefreshCw, Loader2 } from 'lucide-react';
 import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
@@ -56,6 +57,7 @@ export default function FingerprintPage() {
   [data]);
 
   return (
+    <PageTransition>
     <div className="space-y-5 md:space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -227,6 +229,7 @@ export default function FingerprintPage() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
 

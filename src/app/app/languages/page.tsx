@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -164,6 +165,7 @@ export default function MultiLanguagePage() {
   ];
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -643,5 +645,6 @@ export default function MultiLanguagePage() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
