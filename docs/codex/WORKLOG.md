@@ -120,6 +120,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - DCO enforcement may require current contributors to update their commit habits with `Signed-off-by:` lines.
 - The first `frain` feature port is now underway with Flashcard Maker; this is the new reference slice for future convergence work.
 - Shared AI client extraction plus Voice-to-Memory now define the convergence pattern for media-aware AI plugins.
+- Branch convergence is now tracked as a formal multi-phase program in `docs/codex/CONVERGENCE_PROGRAM.md`.
 
 ### Verification
 
