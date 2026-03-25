@@ -4,6 +4,46 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 10:25 UTC — Saved Searches + Search History + Interactive Citations
+
+### Saved Searches & Search History (Explore Power-User Upgrade)
+- **Saved Searches**: Save any search + filter combination with a name and color
+  - Star button in search bar to save current query/source/tag/sort combo
+  - Dropdown panel to browse, apply, pin/unpin, and delete saved searches
+  - 6 color options (teal, sky, emerald, amber, red, blue)
+  - Active saved search indicator banner with one-click clear
+  - Use count tracking, sorted by pinned-first then most-recently-used
+  - Persisted in localStorage
+- **Search History**: Automatic recent search tracking
+  - Shows 8 recent searches when search input is focused and empty
+  - Result count displayed per history item
+  - Individual remove + "Clear all" button
+  - Auto-deduplication and 20-item cap
+- **Batch Pin/Unpin**: Select multiple memories → pin or unpin in one action
+  - Smart toggle: shows "Pin" if any unpinned, "Unpin" if all pinned
+  - Batched API calls (10 at a time) for performance
+- **Command Palette Integration**: Saved searches appear in ⌘K results
+  - Pinned saved searches shown in no-query state
+  - All searchable by name/query/description
+  - Click → navigate to Explore with filters applied
+- **Fixed**: Search input `onFocus`/`onBlur` wiring for history dropdown
+
+### Interactive Citations + Memory Drawer Sources + Per-Message Regenerate (Chat UX)
+- **Interactive Citation Badges**: `[1]`, `[2]` in AI responses rendered as teal clickable badges
+  - Hover → highlights the corresponding source card below (teal ring glow)
+  - Click → opens the full memory in the MemoryDrawer slide-in panel
+  - React Context-based — citation handlers thread through the markdown tree
+  - Non-destructive: renders as styled spans when no handlers provided
+- **Source Cards → MemoryDrawer**: Clicking source citation cards now opens MemoryDrawer
+  - Full memory content, related memories, actions — all inline, zero page navigation
+  - Previously linked to Explore page (required leaving chat)
+- **Per-Message Regenerate**: Each assistant message now has a ↺ regenerate button
+  - Re-sends the preceding user question with fresh search
+  - Previously only the last message could be regenerated
+
+- **Design**: OLED black base, teal accent, glass borders. Zero violet/purple/fuchsia.
+- **Branch**: `frain/improve` (commits `b5852cc`, `deac612`)
+
 ## 2026-03-25 08:59 UTC — Duplicate Detector + Command Palette Memory Drawer Integration
 
 ### Duplicate Detector (`/app/duplicates`)
