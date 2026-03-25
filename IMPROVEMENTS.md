@@ -4,6 +4,35 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 17:00 UTC — Route Slimming: 5 Import Routes Refactored to Use Port Logic
+
+### Routes Slimmed (5 files, 1943 lines removed)
+- **Browser Bookmarks**: 512→240 lines (-53%) — parsing, entity decoding, content formatting now from port
+- **YouTube Transcript**: 525→199 lines (-62%) — video ID extraction, metadata fetching, transcript chunking, preview building all from port
+- **Reddit Saved**: 738→246 lines (-67%) — CSV/JSON parsing, content formatting, stats building from port; ZIP processing stays in route
+- **PDF/EPUB Parser**: 601→266 lines (-56%) — section extraction, HTML-to-text, smart chunking, word counting from port; library-specific parsing (pdf-parse, epub2) stays in route
+- **Obsidian Importer**: 785→267 lines (-66%) — note parsing, vault analysis, chunking, frontmatter/wikilink extraction from port; ZIP extraction stays in route
+
+### Convergence Impact
+- **Total: 3,161→1,218 lines (-61%)** across 5 import route files
+- Routes are now thin wrappers: validation → port logic → DB/embeddings → response
+- Matches codex porting guide pattern exactly: "heavy logic in reusable server-side helpers, not inside the route body"
+- Both branches now agree on the `src/server/plugins/ports/` extraction layer
+- All 5 routes import from existing port files — no new logic created
+
+### Codex Monitor (read-only)
+- **2 new commits** since last cycle on `codex/local-dev`:
+  - `9427ed1` Port import parity batch 1 — browser-bookmarks, obsidian-importer, pdf-epub-parser, reddit-saved, youtube-transcript (with its own port files + thin routes + unit tests)
+  - `06ad41c` Complete action parity batch — blog-draft, conversation-prep, newsletter-writer, resume-builder, learning-paths (new pages + routes + ports)
+- Codex independently ported the same 5 import plugins this cycle — strong convergence signal
+- Codex also created 5 new action plugin pages + routes on its branch
+
+### Build
+- Clean — 0 errors, all pages compile
+- No color violations
+
+---
+
 ## 2026-03-25 16:29 UTC — Navigation Consistency: Back Buttons Removed + Entrance Animations
 
 ### Removed Redundant Back-to-Plugins Buttons (7 Pages)
