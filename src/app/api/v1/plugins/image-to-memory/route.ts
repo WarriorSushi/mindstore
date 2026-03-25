@@ -94,7 +94,7 @@ async function getVisionConfig(): Promise<VisionConfig | null> {
     WHERE key IN ('openai_api_key','gemini_api_key','ollama_url','openrouter_api_key','custom_api_key','custom_api_url','chat_provider')
   `);
   const c: Record<string, string> = {};
-  for (const row of settings as { key: string; value: string }[]) {
+  for (const row of settings as unknown as { key: string; value: string }[]) {
     c[row.key] = row.value;
   }
 
