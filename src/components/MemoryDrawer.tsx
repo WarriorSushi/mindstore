@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   X, Pin, Trash2, Copy, ExternalLink, Clock, FileText,
   Globe, MessageCircle, Type, BookOpen, Bookmark, Gem, Mic,
   Camera, StickyNote, Send, Music, Highlighter, PlayCircle,
   AtSign, BookmarkCheck, MessageSquare, ChevronRight,
   Layers, Edit3, Check, Loader2, Hash, Calendar,
-  FileBox, ArrowUpRight,
+  FileBox, ArrowUpRight, Sparkles, Link2, MessageSquarePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -83,13 +84,30 @@ function wordCount(text: string): number {
  * Dispatch from anywhere:
  *   window.dispatchEvent(new CustomEvent("mindstore:open-memory", { detail: memory }))
  */
+interface RelatedMemory {
+  id: string;
+  content: string;
+  source: string;
+  sourceType: string;
+  sourceId?: string;
+  sourceTitle: string;
+  timestamp: string;
+  metadata?: Record<string, any>;
+  similarity: number | null;
+  method: string;
+}
+
 export function MemoryDrawer() {
+  const router = useRouter();
   const [memory, setMemory] = useState<Memory | null>(null);
   const [open, setOpen] = useState(false);
   const [pinning, setPinning] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [relatedMemories, setRelatedMemories] = useState<RelatedMemory[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [showRelated, setShowRelated] = useState(true);
 
   // Listen for custom events
   useEffect(() => {
@@ -99,11 +117,27 @@ export function MemoryDrawer() {
         setMemory(detail);
         setOpen(true);
         setConfirmDelete(false);
+        setRelatedMemories([]);
       }
     }
     window.addEventListener("mindstore:open-memory", handleOpen);
     return () => window.removeEventListener("mindstore:open-memory", handleOpen);
   }, []);
+
+  // Fetch related memories when a memory is opened
+  useEffect(() => {
+    if (!memory?.id || !open) return;
+    let cancelled = false;
+    setLoadingRelated(true);
+    fetch(`/api/v1/memories/related?id=${memory.id}&limit=5`)
+      .then(r => r.ok ? r.json() : { related: [] })
+      .then(data => {
+        if (!cancelled) setRelatedMemories(data.related || []);
+      })
+      .catch(() => { if (!cancelled) setRelatedMemories([]); })
+      .finally(() => { if (!cancelled) setLoadingRelated(false); });
+    return () => { cancelled = true; };
+  }, [memory?.id, open]);
 
   // Lock body scroll when open
   useEffect(() => {
@@ -188,6 +222,33 @@ export function MemoryDrawer() {
     }
   }, [memory]);
 
+  const handleChatAbout = useCallback(() => {
+    if (!memory) return;
+    const preview = memory.content.slice(0, 200).replace(/\n/g, ' ');
+    const query = `Tell me more about: "${preview}"`;
+    router.push(`/app/chat?q=${encodeURIComponent(query)}`);
+    handleClose();
+  }, [memory, router, handleClose]);
+
+  const handleOpenRelated = useCallback((related: RelatedMemory) => {
+    // Open the related memory in the same drawer
+    setMemory({
+      id: related.id,
+      content: related.content,
+      source: related.sourceType || related.source,
+      sourceId: related.sourceId,
+      sourceTitle: related.sourceTitle,
+      timestamp: related.timestamp,
+      metadata: related.metadata,
+      pinned: false,
+    });
+    setConfirmDelete(false);
+    setRelatedMemories([]);
+    // Scroll to top of drawer
+    const scrollEl = document.querySelector('[data-drawer-scroll]');
+    if (scrollEl) scrollEl.scrollTop = 0;
+  }, []);
+
   if (!memory) return null;
 
   const config = TYPE_CONFIG[memory.source] || {
@@ -271,7 +332,7 @@ export function MemoryDrawer() {
         </div>
 
         {/* Content area — scrollable */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 overscroll-contain">
+        <div data-drawer-scroll className="flex-1 overflow-y-auto px-5 py-5 space-y-5 overscroll-contain">
           {/* Metadata pills */}
           <div className="flex flex-wrap gap-2">
             <span className={cn(
@@ -390,6 +451,101 @@ export function MemoryDrawer() {
             </div>
           )}
 
+          {/* Related Memories — Knowledge Connections */}
+          <div className="space-y-2.5">
+            <button
+              onClick={() => setShowRelated(prev => !prev)}
+              className="flex items-center gap-2 group w-full"
+            >
+              <Link2 className="w-3.5 h-3.5 text-teal-400" />
+              <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest group-hover:text-zinc-400 transition-colors">
+                Related Memories
+              </p>
+              {relatedMemories.length > 0 && (
+                <span className="text-[9px] font-bold text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-md">
+                  {relatedMemories.length}
+                </span>
+              )}
+              <ChevronRight className={cn(
+                "w-3 h-3 text-zinc-600 ml-auto transition-transform",
+                showRelated && "rotate-90",
+              )} />
+            </button>
+
+            {showRelated && (
+              <div className="space-y-1.5">
+                {loadingRelated ? (
+                  <div className="flex items-center gap-2 py-4 justify-center">
+                    <Loader2 className="w-3.5 h-3.5 text-teal-400/60 animate-spin" />
+                    <span className="text-[11px] text-zinc-600">Finding connections…</span>
+                  </div>
+                ) : relatedMemories.length === 0 ? (
+                  <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3.5 text-center">
+                    <p className="text-[11px] text-zinc-600">No related memories found</p>
+                  </div>
+                ) : (
+                  relatedMemories.map((related) => {
+                    const relConfig = TYPE_CONFIG[related.sourceType || related.source] || {
+                      icon: FileText, color: "text-zinc-400", bg: "bg-zinc-500/10", label: related.sourceType || "Unknown",
+                    };
+                    const RelIcon = relConfig.icon;
+                    const preview = related.content.slice(0, 120).replace(/\n/g, ' ').trim();
+                    return (
+                      <button
+                        key={related.id}
+                        onClick={() => handleOpenRelated(related)}
+                        className="w-full rounded-xl bg-white/[0.02] border border-white/[0.06] p-3 hover:bg-white/[0.04] hover:border-teal-500/15 transition-all group text-left"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5", relConfig.bg)}>
+                            <RelIcon className={cn("w-3 h-3", relConfig.color)} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className="text-[11px] font-semibold text-zinc-300 truncate group-hover:text-teal-300 transition-colors">
+                                {related.sourceTitle || "Untitled"}
+                              </p>
+                              {related.similarity !== null && (
+                                <span className="text-[9px] font-bold text-teal-500/70 bg-teal-500/8 px-1.5 py-0.5 rounded shrink-0">
+                                  {related.similarity}%
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                              {preview}{related.content.length > 120 ? '…' : ''}
+                            </p>
+                          </div>
+                          <ChevronRight className="w-3 h-3 text-zinc-700 group-hover:text-teal-400 shrink-0 mt-1 transition-colors" />
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Quick Actions</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleChatAbout}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-teal-500/8 border border-teal-500/15 text-teal-400 hover:bg-teal-500/15 hover:border-teal-500/25 transition-all text-[12px] font-medium"
+              >
+                <MessageSquarePlus className="w-3.5 h-3.5" />
+                Chat about this
+              </button>
+              <button
+                onClick={handleCopy}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all text-[12px] font-medium"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+
           {/* Memory ID */}
           <div className="pt-2">
             <p className="text-[10px] text-zinc-700 font-mono tracking-wide break-all">
@@ -433,11 +589,11 @@ export function MemoryDrawer() {
               {memory.pinned ? "Pinned" : "Pin"}
             </button>
             <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium bg-white/[0.04] text-zinc-400 hover:text-teal-400 hover:bg-teal-500/10 border border-white/[0.06] transition-all"
+              onClick={handleChatAbout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/15 transition-all"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? "Copied" : "Copy"}
+              <MessageSquarePlus className="w-3.5 h-3.5" />
+              Chat
             </button>
           </div>
         </div>

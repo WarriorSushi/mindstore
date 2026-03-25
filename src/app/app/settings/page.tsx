@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
@@ -10,6 +10,21 @@ async function fetchSettings() {
 }
 async function fetchStats() {
   try { const r = await fetch('/api/v1/stats'); return r.ok ? r.json() : null; } catch { return null; }
+}
+async function fetchHealth() {
+  try { const r = await fetch('/api/v1/health'); return r.ok ? r.json() : null; } catch { return null; }
+}
+
+interface HealthData {
+  status: string;
+  memories: { total: number; withEmbeddings: number; withoutEmbeddings: number; embeddingPercent: number; pinned: number; oldest: string; newest: string };
+  embeddings: { dimensions: { dims: number; count: number }[]; coverage: string };
+  sources: { type: string; count: number; totalChars: number; avgChars: number; size: string }[];
+  storage: { contentSize: string; tableSize: string; indexSize: string; totalSize: string; raw: { contentBytes: number; tableBytes: number; indexBytes: number; totalBytes: number } };
+  activity: { day: string; count: number }[];
+  plugins: { total: number; enabled: number };
+  connections: number;
+  database: { version: string; serverTime: string; healthy: boolean };
 }
 
 export default function SettingsPage() {
@@ -27,6 +42,8 @@ export default function SettingsPage() {
   const [reindexStatus, setReindexStatus] = useState<any>(null);
   const [chatProvider, setChatProvider] = useState<string>("auto");
   const [savingChat, setSavingChat] = useState(false);
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [activeTab, setActiveTab] = useState<'providers' | 'health' | 'data'>('providers');
 
   useEffect(() => {
     fetchSettings().then((s) => {
@@ -34,6 +51,7 @@ export default function SettingsPage() {
       if (s?.chatProvider) setChatProvider(s.chatProvider);
     });
     fetchStats().then(setStats);
+    fetchHealth().then(setHealth);
     fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
   }, []);
 
@@ -143,12 +161,36 @@ export default function SettingsPage() {
       <Stagger>
         <div>
           <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Settings</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, data management</p>
+          <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, system health, data management</p>
+        </div>
+      </Stagger>
+
+      {/* Tab navigation */}
+      <Stagger>
+        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          {([
+            { id: 'providers' as const, label: 'Providers', icon: <Key className="w-3.5 h-3.5" /> },
+            { id: 'health' as const, label: 'System Health', icon: <Activity className="w-3.5 h-3.5" /> },
+            { id: 'data' as const, label: 'Data', icon: <Database className="w-3.5 h-3.5" /> },
+          ]).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
       </Stagger>
 
       {/* Active Provider Badge */}
-      {settings?.embeddingProvider && (
+      {activeTab === 'providers' && settings?.embeddingProvider && (
         <Stagger>
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-500/5 border border-teal-500/15">
             <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
@@ -158,7 +200,7 @@ export default function SettingsPage() {
       )}
 
       {/* Reindex nudge */}
-      {settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
+      {activeTab === 'providers' && settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
         <Stagger>
           <button
             onClick={handleReindex}
@@ -174,6 +216,7 @@ export default function SettingsPage() {
       )}
 
       {/* ─── Providers ─── */}
+      {activeTab === 'providers' && (
       <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">AI Providers</p>
@@ -283,9 +326,10 @@ export default function SettingsPage() {
         </div>
       </div>
       </Stagger>
+      )}
 
       {/* ─── Chat Provider Preference ─── */}
-      {settings?.hasApiKey && (
+      {activeTab === 'providers' && settings?.hasApiKey && (
         <Stagger>
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
@@ -355,7 +399,205 @@ export default function SettingsPage() {
         </Stagger>
       )}
 
+      {/* ─── SYSTEM HEALTH TAB ─── */}
+      {activeTab === 'health' && (
+        <Stagger>
+          <div className="space-y-4">
+            {!health ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Status Banner */}
+                <div className={`rounded-2xl border p-4 flex items-center gap-3 ${
+                  health.status === 'healthy'
+                    ? 'bg-emerald-500/[0.04] border-emerald-500/15'
+                    : 'bg-red-500/[0.04] border-red-500/15'
+                }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    health.status === 'healthy' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                  }`}>
+                    <Shield className={`w-5 h-5 ${health.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`} />
+                  </div>
+                  <div>
+                    <p className={`text-[14px] font-semibold ${health.status === 'healthy' ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {health.status === 'healthy' ? 'System Healthy' : 'Issues Detected'}
+                    </p>
+                    <p className="text-[11px] text-zinc-500">
+                      {health.database?.version || 'Unknown DB'} · Last checked {new Date().toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                  <MetricCard
+                    label="Total Memories"
+                    value={health.memories.total.toLocaleString()}
+                    icon={<Layers className="w-3.5 h-3.5" />}
+                    color="text-teal-400"
+                    bg="bg-teal-500/10"
+                  />
+                  <MetricCard
+                    label="Embedded"
+                    value={`${health.memories.embeddingPercent}%`}
+                    icon={<Cpu className="w-3.5 h-3.5" />}
+                    color={health.memories.embeddingPercent >= 90 ? "text-emerald-400" : health.memories.embeddingPercent >= 50 ? "text-amber-400" : "text-red-400"}
+                    bg={health.memories.embeddingPercent >= 90 ? "bg-emerald-500/10" : health.memories.embeddingPercent >= 50 ? "bg-amber-500/10" : "bg-red-500/10"}
+                    sub={`${health.memories.withEmbeddings} / ${health.memories.total}`}
+                  />
+                  <MetricCard
+                    label="Storage"
+                    value={health.storage.totalSize}
+                    icon={<HardDrive className="w-3.5 h-3.5" />}
+                    color="text-sky-400"
+                    bg="bg-sky-500/10"
+                    sub={`Content: ${health.storage.contentSize}`}
+                  />
+                  <MetricCard
+                    label="Connections"
+                    value={health.connections.toLocaleString()}
+                    icon={<TrendingUp className="w-3.5 h-3.5" />}
+                    color="text-amber-400"
+                    bg="bg-amber-500/10"
+                  />
+                </div>
+
+                {/* Embedding Coverage Bar */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] font-medium text-zinc-300">Embedding Coverage</p>
+                    <span className="text-[11px] text-zinc-500">{health.memories.withEmbeddings} / {health.memories.total} memories</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        health.memories.embeddingPercent >= 90 ? 'bg-emerald-500' :
+                        health.memories.embeddingPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${health.memories.embeddingPercent}%` }}
+                    />
+                  </div>
+                  {health.memories.withoutEmbeddings > 0 && (
+                    <p className="text-[11px] text-amber-400/80">
+                      {health.memories.withoutEmbeddings} memories without embeddings — semantic search won't find them
+                    </p>
+                  )}
+                  {health.embeddings.dimensions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {health.embeddings.dimensions.map(d => (
+                        <span key={d.dims} className="text-[10px] font-mono text-zinc-500 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.06]">
+                          {d.dims}d × {d.count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Source Breakdown */}
+                {health.sources.length > 0 && (
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                    <p className="text-[12px] font-medium text-zinc-300">Source Breakdown</p>
+                    <div className="space-y-2">
+                      {health.sources.map((s) => {
+                        const pct = health.memories.total > 0 ? (s.count / health.memories.total) * 100 : 0;
+                        return (
+                          <div key={s.type} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-medium text-zinc-300 capitalize">{s.type}</span>
+                                <span className="text-[10px] text-zinc-600">{s.count.toLocaleString()}</span>
+                              </div>
+                              <span className="text-[10px] text-zinc-500">{s.size} · {Math.round(pct)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-teal-500/60"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity Sparkline */}
+                {health.activity.length > 0 && (
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                    <p className="text-[12px] font-medium text-zinc-300">Activity (Last 7 Days)</p>
+                    <div className="flex items-end gap-1 h-16">
+                      {(() => {
+                        // Fill missing days
+                        const days: { day: string; count: number }[] = [];
+                        for (let i = 6; i >= 0; i--) {
+                          const d = new Date();
+                          d.setDate(d.getDate() - i);
+                          const dayStr = d.toISOString().split('T')[0];
+                          const found = health.activity.find(a => a.day?.split('T')[0] === dayStr);
+                          days.push({ day: dayStr, count: found?.count || 0 });
+                        }
+                        const max = Math.max(...days.map(d => d.count), 1);
+                        return days.map((day, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div
+                              className="w-full rounded-t-md bg-teal-500/40 hover:bg-teal-500/60 transition-colors min-h-[2px]"
+                              style={{ height: `${Math.max((day.count / max) * 100, 3)}%` }}
+                              title={`${day.day}: ${day.count} memories`}
+                            />
+                            <span className="text-[8px] text-zinc-600">
+                              {new Date(day.day).toLocaleDateString(undefined, { weekday: 'narrow' })}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Storage Breakdown */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                  <p className="text-[12px] font-medium text-zinc-300">Storage Breakdown</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.contentSize}</p>
+                      <p className="text-[10px] text-zinc-600">Content</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.indexSize}</p>
+                      <p className="text-[10px] text-zinc-600">Indexes</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.totalSize}</p>
+                      <p className="text-[10px] text-zinc-600">Total</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plugin & System Info */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                  <p className="text-[12px] font-medium text-zinc-300">System Info</p>
+                  <div className="space-y-1.5">
+                    <InfoRow label="Database" value={health.database?.version || 'Unknown'} />
+                    <InfoRow label="Plugins Installed" value={`${health.plugins.total} (${health.plugins.enabled} active)`} />
+                    <InfoRow label="Knowledge Span" value={
+                      health.memories.oldest && health.memories.newest
+                        ? `${new Date(health.memories.oldest).toLocaleDateString()} — ${new Date(health.memories.newest).toLocaleDateString()}`
+                        : 'N/A'
+                    } />
+                    <InfoRow label="Pinned Memories" value={String(health.memories.pinned)} />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </Stagger>
+      )}
+
       {/* ─── Data ─── */}
+      {activeTab === 'data' && (
       <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Data</p>
@@ -404,6 +646,7 @@ export default function SettingsPage() {
         </div>
       </div>
       </Stagger>
+      )}
 
       {/* About */}
       <Stagger>
@@ -513,5 +756,31 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
         <div className="w-5 h-5 rounded-full border border-white/[0.1] shrink-0" />
       )}
     </button>
+  );
+}
+
+function MetricCard({ label, value, icon, color, bg, sub }: {
+  label: string; value: string; icon: React.ReactNode; color: string; bg: string; sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
+      <div className="flex items-center gap-1.5">
+        <div className={`w-6 h-6 rounded-lg ${bg} flex items-center justify-center ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <p className={`text-[18px] font-bold tabular-nums ${color}`}>{value}</p>
+      <p className="text-[10px] text-zinc-600 font-medium">{label}</p>
+      {sub && <p className="text-[9px] text-zinc-700">{sub}</p>}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[11px] text-zinc-500">{label}</span>
+      <span className="text-[11px] text-zinc-400 text-right truncate max-w-[200px]">{value}</span>
+    </div>
   );
 }

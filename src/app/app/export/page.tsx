@@ -37,7 +37,7 @@ interface PreviewItem {
 // ─── Framework Icons ──────────────────────────────────────────
 
 const FRAMEWORK_COLORS: Record<string, string> = {
-  'hugo': 'text-pink-400 bg-pink-500/10 border-pink-500/20',
+  'hugo': 'text-red-400 bg-red-500/10 border-red-500/20',
   'jekyll': 'text-red-400 bg-red-500/10 border-red-500/20',
   'astro': 'text-orange-400 bg-orange-500/10 border-orange-500/20',
   'nextjs': 'text-sky-400 bg-sky-500/10 border-sky-500/20',

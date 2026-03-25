@@ -81,7 +81,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   trait: "text-blue-400 bg-blue-500/10 border-blue-500/15",
   goal: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
   knowledge: "text-cyan-400 bg-cyan-500/10 border-cyan-500/15",
-  relationship: "text-pink-400 bg-pink-500/10 border-pink-500/15",
+  relationship: "text-red-400 bg-red-500/10 border-red-500/15",
   habit: "text-amber-400 bg-amber-500/10 border-amber-500/15",
   background: "text-orange-400 bg-orange-500/10 border-orange-500/15",
   opinion: "text-red-400 bg-red-500/10 border-red-500/15",

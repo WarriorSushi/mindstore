@@ -67,7 +67,7 @@ const TOPIC_COLORS = [
   '#10b981', // emerald
   '#f59e0b', // amber
   '#ef4444', // red
-  '#ec4899', // pink
+  '#ef4444', // red
   '#06b6d4', // cyan
   '#f97316', // orange
   '#84cc16', // lime

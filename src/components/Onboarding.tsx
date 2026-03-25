@@ -29,15 +29,15 @@ const slides = [
   },
   {
     emoji: "🧬",
-    gradient: "from-amber-400 via-orange-400 to-rose-400",
+    gradient: "from-amber-400 via-orange-400 to-red-400",
     bg: "bg-amber-500/[0.03]",
     title: "See how\nyou think.",
     body: "Knowledge Fingerprint maps your mind in 3D. Insights surface connections between ideas you never linked yourself.",
   },
   {
     emoji: "🔌",
-    gradient: "from-rose-400 via-pink-500 to-teal-500",
-    bg: "bg-rose-500/[0.03]",
+    gradient: "from-sky-400 via-teal-400 to-emerald-500",
+    bg: "bg-sky-500/[0.03]",
     title: "Give any AI\nyour context.",
     body: "One-click MCP setup. Claude, Cursor, VS Code — they all get access to what you know. Your mind becomes their memory.",
   },
