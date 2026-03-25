@@ -4,6 +4,41 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 12:59 UTC — Flashcard + Learning Path Ports · Responsive Fixes
+
+### Plugin Ports: Flashcard Maker + Learning Path Generator
+- **`src/server/plugins/ports/flashcard-maker.ts`** (410 lines)
+  - SM-2 spaced repetition algorithm: `sm2Initial()`, `sm2Update()` — pure math, no HTTP
+  - Deck management: `createDeck()`, `summarizeDecks()`, `addCardsToDeck()`
+  - Review system: `getDueCards()`, `reviewCard()` — returns state transitions
+  - AI generation: `buildGenerationPrompt()`, `parseGeneratedCards()` — prompt/parse separated from calling
+  - Stats: `computeStats()` — streak, mastery distribution, aggregate metrics
+  - Types: `SM2State`, `Flashcard`, `Deck`, `DeckSummary`, `FlashcardStats`, `ReviewResult`
+
+- **`src/server/plugins/ports/learning-paths.ts`** (319 lines)
+  - Path generation: `buildPathGenerationPrompt()`, `parseLearningPath()` — pure prompt construction + JSON parsing
+  - Progress tracking: `updateNodeProgress()`, `addNodeNote()` — mutates in place
+  - Topic suggestions: `buildLearningPathSuggestionPrompt()`, `parseSuggestions()`
+  - Summaries: `summarizePaths()` — lightweight list views
+  - Namespaced exports: `LearningTopicSuggestion` (avoids conflict with blog-draft's `TopicSuggestion`)
+  - Types: `PathNode`, `LearningPath`, `LearningPathSummary`, `ExistingKnowledge`
+
+- Total ports now: **14 of ~33** plugins (kindle-importer, contradiction-finder, voice-to-memory, writing-style, blog-draft, conversation-prep, newsletter-writer, topic-evolution, sentiment-timeline, knowledge-gaps, mind-map-generator, shared-vectors, **flashcard-maker**, **learning-paths**)
+
+### Responsive Fixes
+- **Flashcards page**: Grade buttons `grid-cols-6` → `grid-cols-3 sm:grid-cols-6` (3x2 on mobile, 6x1 on desktop). Deck detail stats + global stats `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`. Review results grid gap adjusted for mobile.
+- **Settings page**: Storage breakdown grid gap `gap-3` → `gap-2 sm:gap-3`. Data stats `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`.
+- Audited all 33 pages for bare `grid-cols-N≥3` — remaining ones are intentional (3-item grids, dense icon grids).
+
+### Codex Monitor (read-only)
+- 2 new commits on `codex/local-dev`:
+  - `503ef02` Port kindle importer into codex runtime
+  - `ae2ced7` Add branch convergence program
+- Codex now has kindle importer ported independently — matches our port
+- Convergence program formalized in docs
+
+---
+
 ## 2026-03-25 12:29 UTC — Newsletter Port · Responsive Fixes · Codex Monitor
 
 ### Plugin Port: Newsletter Writer
