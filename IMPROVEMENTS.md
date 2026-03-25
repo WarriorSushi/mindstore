@@ -1280,3 +1280,47 @@ _Automated 30-min improvement cycles by Frain_
   - **Registry**: Updated voice-to-memory manifest with UI page declaration
 - **Design**: Teal primary, no violet/purple/fuchsia anywhere. OLED black, glass borders, rounded-2xl cards. Recording indicator uses red pulse animation. Completion uses emerald. Provider badge shows teal dot + provider name.
 - **Branch**: `frain/improve` (commit `22f660d`)
+
+## 2026-03-25 01:29 UTC — Custom RAG Strategies Plugin (#32) — Phase 5 Continues
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #21 in build order · Third AI Enhancement
+- **Research**: Studied advanced RAG techniques — HyDE (Gao et al., 2022), Multi-Query expansion, cross-encoder reranking, contextual compression. MindStore already has a triple-layer fusion engine (BM25 + Vector + Tree with RRF), but users had zero control over retrieval strategy. Every query used the same fixed pipeline — no way to optimize for precision vs recall, or trade latency for quality on important queries.
+- **Finding**: The existing retrieval engine is strong for most cases, but falls short on: (1) abstract/conceptual queries where keywords don't match (HyDE fixes this), (2) queries where the user's wording doesn't match stored content (Multi-Query fixes this), (3) cases where BM25/vector ranking disagrees with true relevance (Reranking fixes this), (4) long documents where only a few sentences matter (Compression fixes this). Power users need tunable retrieval.
+- **Implemented**:
+  - **Backend** (`/api/v1/plugins/custom-rag`):
+    - 6 configurable retrieval strategies:
+      - **Default**: Triple-layer fusion (BM25 + Vector + Tree) with RRF — fast, no AI calls
+      - **HyDE**: AI generates a hypothetical "ideal document", embeds that for search — bridges vocabulary gap
+      - **Multi-Query**: Expands query into 3+ alternative perspectives, searches each independently, merges with cross-query RRF + appearance boost
+      - **AI Reranking**: Retrieves larger candidate set, then AI judges true relevance and reorders
+      - **Contextual Compression**: After retrieval, AI extracts only the relevant sentences from each result
+      - **Maximal**: HyDE + Multi-Query + Reranking combined — highest quality, highest cost
+    - Config persisted in plugins table config JSONB
+    - Strategy metadata: latency estimates, accuracy rating, pros/cons arrays
+    - GET actions: `config` (settings + strategy catalog + AI availability), `stats` (memory/embedding/tree counts), `benchmark` (compare strategies on a query)
+    - POST actions: `save-config` (persist strategy + advanced settings), `test-query` (run any strategy on a query, return results + details)
+    - AI helper function with provider fallback chain (OpenAI → Gemini → OpenRouter)
+    - Auto-detects whether advanced strategies are available (requires AI provider)
+  - **Frontend** (`/app/retrieval`) — Retrieval Strategy Dashboard:
+    - **Strategy Selector**: 6 strategy cards with icons, descriptions, latency/accuracy badges. Active strategy gets color-coded ring + check badge. Unavailable strategies grayed with "Requires AI" label
+    - **Stats Row**: 4 stat cards — total memories, embedding coverage %, tree nodes, active strategy
+    - **Advanced Config Panel** (expandable):
+      - Toggle retrieval layers (BM25, Vector, Tree) independently
+      - RRF constant (k) slider: 10-100, controls top-rank weighting
+      - Tree layer boost slider: 0.5x-2.0x
+      - Rerank Top-K slider: 5-50
+      - Multi-Query count slider: 2-5
+    - **Live Test Bench**: Enter query, select strategy, click Run → see results in real time
+      - Results show: rank number, title, source type badge, content preview, score bar, layer indicators (BM25/Vector/Tree)
+      - HyDE: shows generated hypothetical document in sky-blue card
+      - Multi-Query: shows all expanded query variants with original highlighted
+      - Reranking: shows reranked count badge
+      - Latency displayed in teal badge
+    - **How It Works** section: 4-step explanation of the retrieval pipeline
+    - AI provider warning banner when no API key configured
+    - Embedding provider info bar
+  - **Plugin Store**: Added "Open" button route for custom-rag → /app/retrieval
+  - **Navigation**: SlidersHorizontal icon in sidebar between Vision and Insights
+  - **Registry**: Updated custom-rag manifest with UI page declaration
+- **Design**: Teal primary accent, sky for HyDE, amber for multi-query, emerald for reranking, orange for compression, rose for maximal. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards, range sliders with teal accent.
+- **Strategy color system**: Each strategy gets a unique color identity — not gradient slop, just subtle background tints + border accents that communicate function at a glance.
+- **Branch**: `frain/improve` (commit `153d80d`)
