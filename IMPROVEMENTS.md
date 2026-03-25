@@ -4,6 +4,38 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 11:29 UTC — Shared AI Caller · Plugin Ports · Design Consistency
+
+### Shared AI Caller (`src/server/plugins/ai-caller.ts`)
+- **Eliminates 9x duplication** of `getAIConfig`/`callAI`/`callOpenAICompatible`/`callGemini`/`callOllama` across plugin routes
+- Single source of truth for AI provider resolution: OpenAI, Gemini, Ollama, OpenRouter, Custom
+- `resolveAIConfig()` reads DB settings; `resolveAIConfigFromMap()` takes pre-fetched map
+- `callAI(config, prompt, opts)` — never throws, returns `string | null`
+- Supports `temperature`, `maxTokens`, and `system` message options
+
+### Plugin Ports — Convergence with `codex/local-dev`
+Following the [plugin-porting-guide.md](docs/build/plugin-porting-guide.md):
+
+**`src/server/plugins/ports/kindle-importer.ts`**
+- Extracted: `parseClippings()`, `deduplicateClippings()`, `groupByBook()`, `formatBookContent()`, `buildImportChunks()`, `buildPreview()`, `processKindleFile()`
+- All pure logic — no HTTP, no NextRequest/NextResponse
+- Full TypeScript types: `KindleClipping`, `BookGroup`, `BookPreview`, `ParseResult`, `ImportChunk`
+
+**`src/server/plugins/ports/contradiction-finder.ts`**
+- Extracted: `verifyContradiction()`, `batchVerify()`, `keywordScan()`, `extractBridgeConcept()`
+- Uses shared `ai-caller.ts` instead of inline AI functions
+- AI verification + keyword fallback, both HTTP-free
+- Types: `ContradictionCandidate`, `VerifiedContradiction`, `DetectedContradiction`
+
+### UX Polish — Design System Consistency
+- **Anki Export page**: Normalized from old `bg-zinc-900`/`bg-zinc-800` palette to app design system (`bg-white/[0.02]`, `border-white/[0.06]`). Consistent header style, better loading state with descriptive text.
+- **Blog Export page**: Same normalization. Removed back-arrow navigation (unnecessary with sidebar), cleaner loading state.
+- Both pages now visually match Connect, Explore, Stats, and other recently polished pages.
+
+### Codex Branch Monitor
+- New commit: `7a51e0e` — DCO enforcement and governance docs (`.github/workflows/dco.yml`, `GOVERNANCE.md`, `CONTRIBUTING.md`, etc.)
+- No conflicts with our UX work. Documentation-only changes.
+
 ## 2026-03-25 10:59 UTC — Notification Center · Plugin Activity Notifications
 
 ### Notification Center (Bell Icon + Dropdown Panel)
