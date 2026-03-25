@@ -96,6 +96,10 @@ export default function ImportPage() {
   const [rdPreview, setRdPreview] = useState<any>(null);
   const [rdParsing, setRdParsing] = useState(false);
 
+  // ─── Notion-specific state ───────────────────────────────
+  const [notionPreview, setNotionPreview] = useState<any>(null);
+  const [notionParsing, setNotionParsing] = useState(false);
+
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
     try {
@@ -512,29 +516,52 @@ export default function ImportPage() {
     }
   };
 
-  const handleNotionImport = async (files: FileList | null) => {
-    if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
-    // Notion exports have UUIDs in filenames and content links
-    // e.g. "My Page 32 char hex.md" and "[link](Another%20Page%2032charhex)"
-    const notionIdPattern = /\s+[a-f0-9]{32}(?=\.(md|csv)$)/i;
-    const notionLinkIdPattern = /(%20)?[a-f0-9]{32}/gi;
-    const docs: Array<{ title: string; content: string; sourceType: string }> = [];
-
-    for (const f of Array.from(files)) {
-      if (!f.name.endsWith('.md') && !f.name.endsWith('.txt')) continue;
-      let text = await f.text();
-      // Clean title: remove Notion UUID from filename
-      const title = f.name.replace(notionIdPattern, '').replace(/\.(md|txt)$/, '');
-      // Clean content: remove UUIDs from internal links
-      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
-        const cleanUrl = url.replace(notionLinkIdPattern, '');
-        return `[${label}](${cleanUrl})`;
-      });
-      docs.push({ title, content: text, sourceType: 'file' });
+  const handleNotionPreview = async (file: File) => {
+    setNotionParsing(true);
+    setNotionPreview(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/notion-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Failed to parse Notion export');
+      }
+      const data = await res.json();
+      setNotionPreview({ ...data, file });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setNotionParsing(false);
     }
+  };
 
-    if (docs.length === 0) { toast.error("No .md files found"); setState("idle"); return; }
-    await importJsonViaApi(docs);
+  const handleNotionImport = async () => {
+    if (!notionPreview?.file) return;
+    setState("uploading"); setProgress(30);
+    setProgressText(`Importing ${notionPreview.stats.totalPages} Notion pages…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', notionPreview.file);
+      const res = await fetch('/api/v1/plugins/notion-importer', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      const { imported } = data;
+      setState("done"); setProgress(100);
+      setProgressText(`${imported.pages + imported.databaseRows} items → ${imported.chunks} memories`);
+      toast.success(`Imported Notion workspace`, {
+        description: `${imported.pages} pages · ${imported.databaseRows} database rows · ${data.databases} databases`,
+      });
+      setNotionPreview(null);
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    }
   };
 
   const reset = () => { setState("idle"); setProgress(0); setProgressText(""); };
@@ -885,15 +912,96 @@ export default function ImportPage() {
             <>
               <div className="text-[12px] text-zinc-500 space-y-1">
                 <p className="text-zinc-300 font-medium">Export from Notion</p>
-                <p>Settings → Export → Markdown & CSV → Extract ZIP → Select .md files</p>
+                <p>Settings → Export all workspace content → HTML disabled → Markdown & CSV → upload the ZIP here</p>
               </div>
-              <DropZone
-                id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
-                onFiles={(f) => handleNotionImport(f)}
-                title="Drop Notion files"
-                subtitle=".md files — UUIDs auto-cleaned"
-                icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
-              />
+              {!notionPreview ? (
+                <DropZone
+                  id="notion-upload" accept=".zip" disabled={busy || notionParsing}
+                  onFile={handleNotionPreview}
+                  title={notionParsing ? "Parsing Notion export…" : "Drop Notion export ZIP"}
+                  subtitle={notionParsing ? "Reading pages and databases…" : "Markdown + CSV export"}
+                  icon={notionParsing
+                    ? <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                    : <StickyNote className="w-6 h-6 text-zinc-600" />
+                  }
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/[0.08] border border-teal-500/15 flex items-center justify-center shrink-0">
+                        <StickyNote className="w-5 h-5 text-teal-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-zinc-200 tabular-nums">
+                          {notionPreview.stats.totalPages.toLocaleString()} pages
+                        </p>
+                        <p className="text-[11px] text-zinc-500">
+                          {notionPreview.stats.totalDatabases} databases · {notionPreview.stats.totalWords.toLocaleString()} words
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setNotionPreview(null)}
+                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    {notionPreview.stats.databases?.length > 0 && (
+                      <div className="border-t border-white/[0.04] px-4 py-2.5">
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">Databases</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {notionPreview.stats.databases.slice(0, 6).map((db: any, index: number) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] text-[10px] text-zinc-400"
+                            >
+                              {db.name}
+                              <span className="text-zinc-600 tabular-nums">{db.rowCount} rows</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {notionPreview.stats.samplePages?.length > 0 && (
+                      <div className="border-t border-white/[0.04] max-h-[200px] overflow-y-auto">
+                        {notionPreview.stats.samplePages.slice(0, 6).map((page: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
+                          >
+                            <span className="text-[10px] text-teal-400/60 font-mono tabular-nums w-4 text-right shrink-0">{index + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-[11px] text-zinc-300 truncate">{page.name}</p>
+                                <span className="text-[9px] text-zinc-600 shrink-0">{page.type}</span>
+                              </div>
+                              <p className="text-[10px] text-zinc-600 truncate">
+                                {page.path} · {page.wordCount} words
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleNotionImport}
+                    disabled={busy}
+                    className="w-full h-11 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {busy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <StickyNote className="w-4 h-4" />
+                    )}
+                    Import {notionPreview.stats.totalPages.toLocaleString()} Notion Pages
+                  </button>
+                </div>
+              )}
             </>
           )}
           {tab === "kindle" && (

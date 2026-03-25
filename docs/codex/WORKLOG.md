@@ -473,3 +473,32 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Obsidian import still keeps route-level DB writes because connection creation needs note-to-memory mapping; a deeper codex import runtime abstraction could simplify that later.
 - This batch does not yet include the remaining frain import/sync/media surfaces such as Twitter, Telegram, Pocket, Readwise, Spotify, Notion, or Image-to-Memory.
 - Import Batch 2 should move next into the frain-only importer set rather than revisiting these now-converged built-ins.
+
+### 2026-03-25: Notion Importer Port
+
+#### Scope
+
+- Replace the old markdown-only Notion fallback in the Import page with the richer ZIP-based importer from the convergence plan.
+- Port Notion export parsing and chunking into a codex `ports/*` module.
+- Keep the user workflow preview-first instead of pushing a blind import.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/notion-importer.ts` as the portable Notion export parser and chunker.
+- Added `src/app/api/v1/plugins/notion-importer/route.ts` as the codex route wrapper for ZIP preview/import.
+- Updated `src/server/plugins/registry.ts` so Notion declares an import-tab surface with `.zip` support.
+- Reworked the Notion section in `src/app/app/import/page.tsx` to use preview/import against the new route instead of the old markdown-file fallback.
+- Added unit coverage for Notion title cleanup, CSV parsing, export parsing, and chunk preparation.
+- Added plugin docs and a release note for the port.
+
+#### Decisions
+
+- Notion import belongs in Batch C because it is a major real-world knowledge source and the old codex fallback was materially behind frain.
+- The Notion UI now prefers the export ZIP because that is the only way to preserve database rows cleanly.
+- The Import page keeps its existing hardcoded Notion tab for now, but it now talks to the plugin route instead of bypassing the plugin architecture.
+
+#### Risks and Follow-Ups
+
+- The Import page itself still has a large pre-existing lint backlog, so codex kept the current branch lint ratchet scoped rather than expanding it to the full file.
+- Notion Sync is still pending; this port only closes the importer side.
+- Remaining Batch C work is now concentrated in Twitter, Telegram, Pocket, Readwise, Spotify, and other frain-only import/media flows.

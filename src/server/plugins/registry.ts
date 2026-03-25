@@ -219,6 +219,13 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['write:memories', 'files:read', 'write:embeddings'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      importTab: {
+        label: 'Notion',
+        icon: 'FileStack',
+        acceptedFileTypes: ['.zip'],
+      },
+    },
   },
 
   // ─── Analysis Plugins ─────────────────────────────────────────

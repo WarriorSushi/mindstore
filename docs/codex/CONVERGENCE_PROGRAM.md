@@ -185,6 +185,7 @@ Batch C: Import parity
 - browser-bookmarks
 - obsidian-importer
 - reddit-saved
+- notion-importer
 - twitter-importer
 - telegram-importer
 - pocket-importer

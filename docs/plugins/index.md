@@ -30,6 +30,7 @@ Plugins are how MindStore becomes a platform instead of a single app.
 - [Learning Paths](./learning-paths.md)
 - [Mind Map Generator](./mind-map-generator.md)
 - [Newsletter Writer](./newsletter-writer.md)
+- [Notion Importer](./notion-importer.md)
 - [Obsidian Importer](./obsidian-importer.md)
 - [Resume Builder](./resume-builder.md)
 - [Sentiment Timeline](./sentiment-timeline.md)
