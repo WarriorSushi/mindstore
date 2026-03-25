@@ -678,7 +678,7 @@ export default function BlogPage() {
                   {exportFormat && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setExportFormat(null)} />
-                      <div className="absolute right-0 top-full mt-1 z-40 bg-zinc-900 border border-white/[0.08] rounded-xl p-1 min-w-[160px] shadow-2xl">
+                      <div className="absolute right-0 top-full mt-1 z-40 bg-[#131315] border border-white/[0.08] rounded-xl p-1 min-w-[160px] shadow-2xl shadow-black/60">
                         <button
                           onClick={() => exportDraft("markdown")}
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:bg-white/[0.05] transition-colors"

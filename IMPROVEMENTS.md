@@ -4,6 +4,52 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 13:29 UTC — Anki Export + YouTube Transcript + Resume Builder Ports · Design Fixes
+
+### Plugin Ports: Anki Export + YouTube Transcript + Resume Builder
+- **`src/server/plugins/ports/anki-export.ts`** (~200 lines)
+  - Anki TSV generation: `generateAnkiTSV()` with proper header comments for auto-detection
+  - CSV generation: `generateCSV()` — universal format for Quizlet/Brainscape/Anki
+  - ZIP packaging: `createExportPackage()` — single file for 1 deck, ZIP+README for multiple
+  - Deck summaries: `summarizeDecks()` — due/mastered counts, total cards
+  - Export stats: `computeExportStats()`, `exportCardsCSV()` — flat card export
+  - Types: `SM2State`, `Flashcard`, `Deck`, `DeckSummary`, `ExportFormat`, `ExportResult`
+  - Namespaced as `AnkiExport.*` to avoid type collisions with flashcard-maker
+
+- **`src/server/plugins/ports/youtube-transcript.ts`** (~360 lines)
+  - URL parsing: `extractVideoId()` — supports watch, embed, shorts, youtu.be
+  - Metadata: `fetchVideoMetadata()` — scrapes title, channel, duration from video page
+  - Transcript normalization: `normalizeSegments()` — detects ms vs seconds, converts
+  - Smart chunking: `chunkTranscript()` — splits by pauses >3s, sentence boundaries, max chars
+  - Memory formatting: `formatChunkForMemory()`, `processTranscriptForImport()`
+  - Preview: `buildTranscriptPreview()` — chunk summaries for UI
+  - Stats: `computeTranscriptStats()` — word count, duration
+  - Namespaced as `YouTubeTranscript.*`
+
+- **`src/server/plugins/ports/resume-builder.ts`** (~310 lines)
+  - Templates: `TEMPLATES` (modern, classic, creative, executive) with section configs
+  - Prompt building: `buildGenerationPrompt()`, `buildRefinePrompt()` — separated from AI calling
+  - AI response parsing: `parseGeneratedSections()` — extracts JSON sections from AI output
+  - Resume CRUD: `createResume()`, `updateResumeSection()`, `addSection()`, `reorderSections()`, `deleteResume()`
+  - Summaries: `summarizeResumes()` — lightweight list views
+  - Search queries: `getResumeSearchQueries()` — semantic queries for memory retrieval
+  - Namespaced as `ResumeBuilder.*`
+
+- Total ports now: **17 of ~33** plugins (42% → 52%)
+  - Previously: kindle-importer, contradiction-finder, voice-to-memory, writing-style, blog-draft, conversation-prep, newsletter-writer, topic-evolution, sentiment-timeline, knowledge-gaps, mind-map-generator, shared-vectors, flashcard-maker, learning-paths
+  - New: **anki-export**, **youtube-transcript**, **resume-builder**
+
+### Design Consistency Fixes
+- **Blog page**: Dropdown menu `bg-zinc-900` → `bg-[#131315]` with proper shadow
+- **Chat page**: Context menu `bg-zinc-900/95` → `bg-[#131315]/95` with proper shadow
+
+### Codex Monitor (read-only)
+- Latest commit: `503ef02` Port kindle importer into codex runtime
+- Convergence program formalized: `ae2ced7`
+- Both branches continue parallel porting — no conflicts
+
+---
+
 ## 2026-03-25 12:59 UTC — Flashcard + Learning Path Ports · Responsive Fixes
 
 ### Plugin Ports: Flashcard Maker + Learning Path Generator

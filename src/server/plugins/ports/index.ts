@@ -33,3 +33,10 @@ export * from './conversation-prep';
 export * from './flashcard-maker';
 export * from './learning-paths';
 export * from './newsletter-writer';
+export * as ResumeBuilder from './resume-builder';
+
+// Export plugins
+export * as AnkiExport from './anki-export';
+
+// Import plugins (extended)
+export * as YouTubeTranscript from './youtube-transcript';

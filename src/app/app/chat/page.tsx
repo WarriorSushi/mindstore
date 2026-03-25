@@ -1227,7 +1227,7 @@ function ModelSelector({ provider, selectedModel, onModelChange }: {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-zinc-900/95 backdrop-blur-lg border border-white/[0.08] shadow-2xl overflow-hidden z-50">
+        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-[#131315]/95 backdrop-blur-lg border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden z-50">
           {Object.entries(sections).filter(([, s]) => s).map(([key, section]) => (
             <div key={key}>
               <div className="px-3 pt-2 pb-1">
