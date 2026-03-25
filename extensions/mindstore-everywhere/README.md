@@ -24,7 +24,7 @@ This is the first working browser extension for capturing content into MindStore
 - Smart capture with selection, page, and conversation modes
 - Lightweight "Ask MindStore" query box in the popup
 - API key auth for hosted or shared deployments
-- First site adapters for ChatGPT, Claude, and OpenClaw
+- First site adapters for ChatGPT, Claude, Gemini, and OpenClaw
 
 ## Next Improvements
 

@@ -13,6 +13,7 @@ Use MindStore Everywhere when you want fast capture from any page without switch
 - Generic web pages
 - ChatGPT web UI
 - Claude web UI
+- Gemini web UI
 - OpenClaw web UI
 
 ## Load The Extension

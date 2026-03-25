@@ -103,6 +103,21 @@ function detectAdapter() {
     };
   }
 
+  if (hostname.includes("gemini.google.com")) {
+    return {
+      id: "gemini",
+      label: "Gemini",
+      extractConversation() {
+        return (
+          extractRoleBasedConversation("user-query, model-response", inferRoleFromElement) ||
+          extractRoleBasedConversation("[data-message-author-role]", (element) =>
+            element.getAttribute("data-message-author-role")
+          )
+        );
+      },
+    };
+  }
+
   if (hostname.includes("openclaw")) {
     return {
       id: "openclaw",
@@ -154,6 +169,8 @@ function extractRoleBasedConversation(selector, getRole) {
 
 function inferRoleFromElement(element) {
   const attrText = [
+    element.tagName,
+    element.parentElement?.tagName,
     element.getAttribute("data-testid"),
     element.getAttribute("aria-label"),
     element.className,

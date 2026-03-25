@@ -55,6 +55,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Upgraded the Import page to render runtime-discovered plugin importers with generic fallback panels.
 - Added extension setup/package endpoints and centralized extension metadata so the browser install flow is version-aware and easier to verify.
 - Upgraded the browser extension popup with a `Test connection` flow, setup diagnostics, and direct links to docs/package downloads.
+- Expanded extension conversation detection to cover Gemini alongside ChatGPT, Claude, and OpenClaw.
 - Reworked the Connect page to clarify browser extension setup, hosted versus local MCP auth, and remote MCP configuration patterns.
 - Expanded docs with:
   - browser extension guide

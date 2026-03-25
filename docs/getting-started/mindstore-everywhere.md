@@ -6,7 +6,7 @@ MindStore Everywhere is the browser companion for MindStore. It lets you capture
 
 - Text selections from any page.
 - Page excerpts from normal websites.
-- Conversation transcripts from supported AI UIs such as ChatGPT, Claude, and OpenClaw-style apps.
+- Conversation transcripts from supported AI UIs such as ChatGPT, Claude, Gemini, and OpenClaw-style apps.
 
 ## Setup
 
