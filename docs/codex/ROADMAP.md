@@ -45,3 +45,14 @@ MindStore should be usable in three practical ways:
 ## Integration Principle
 
 Feature-heavy work from other branches should be integrated after the codex foundation is strong enough to absorb it cleanly.
+
+## Branch Convergence
+
+The active convergence strategy is:
+
+1. preserve `frain` docs and planning artifacts that Irfan actively uses
+2. use `codex` as the architectural destination branch
+3. port `frain` feature plugins into the codex runtime shape one by one
+4. start with `kindle-importer`, `flashcard-maker`, and `voice-to-memory`
+
+See [BRANCH_CONVERGENCE.md](./BRANCH_CONVERGENCE.md) and [plugin porting guide](../build/plugin-porting-guide.md).

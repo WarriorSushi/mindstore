@@ -22,6 +22,8 @@ MindStore plugins should feel approachable for open source contributors, not onl
 
 Look at `packages/example-community-plugin` for the first sample external plugin package.
 
+If you are adapting existing route-based MindStore features into the runtime-first model, use the [plugin porting guide](../build/plugin-porting-guide.md).
+
 ## Recommended Next Docs
 
 - Add a step-by-step plugin tutorial.

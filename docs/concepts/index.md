@@ -15,4 +15,4 @@ MindStore is easiest to understand as a system with four layers.
 - A source is the original container that memories came from.
 - A plugin is a modular extension that adds import, analysis, action, export, or AI behavior.
 - MCP is the bridge that lets other AI tools use MindStore as a memory backend.
-
+- `.mind` is the long-range file-format vision for a portable, AI-native personal knowledge container. See [The `.mind` Vision](./mind-file.md).

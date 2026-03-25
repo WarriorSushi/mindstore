@@ -4,6 +4,581 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 04:00 UTC — Grouped Sidebar Navigation + Complete Color Purge
+- **Phase**: Post-Plugin Polish — UX architecture & design consistency
+- **Context**: With all 33 plugins built, the sidebar had grown to 29 flat navigation items — an overwhelming wall of links. Additionally, violet/purple/fuchsia colors had crept into 9 files across the codebase, violating our design mandate. This cycle fixes both.
+
+### Sidebar UX Overhaul
+  - **7 logical sections** with collapsible groups:
+    - **Core** (always visible): Home, Chat, Import, Explore
+    - **Knowledge**: Learn, Mind Map, Fingerprint, Insights
+    - **Analysis**: Evolution, Sentiment, Gaps, Writing Style
+    - **Create**: Flashcards, Blog Writer, Prep, Learn Paths, Resume, Newsletter
+    - **AI Tools**: Voice, Vision, Retrieval, Languages, Domains
+    - **Sync & Export**: Anki Export, Blog Export, Notion Sync, Obsidian Sync
+    - **System** (always visible): Plugins, Connect AI, Settings
+  - **Collapsible sections**: Click section headers to expand/collapse with smooth max-height CSS animations
+  - **Auto-expand**: When navigating to a page, its parent section auto-expands
+  - **Section headers**: 10px uppercase tracking-widest labels with chevron rotation indicators
+  - **Separator**: Subtle border between Core section and collapsible groups
+  - **Ultra-thin scrollbar**: 3px width, near-invisible, for sidebar overflow
+  - **Mobile menu**: Also uses grouped navigation with same section structure
+  - **Fingerprint page**: Now accessible from sidebar (was missing from flat nav)
+
+### Complete Color Purge — Zero Violet/Purple/Fuchsia
+  - **9 files fixed**, every instance of banned colors replaced:
+    - `globals.css` — hero-gradient (#8b5cf6/#d946ef/#a78bfa → #14b8a6/#38bdf8/#5eead4), glow-card, scrollbar thumb (rgba(139,92,246) → rgba(20,184,166))
+    - `mindmap/page.tsx` — 11 color violations: TOPIC_COLORS array (removed #8b5cf6 violet + #a855f7 purple), SOURCE_ICONS text/obsidian colors, root node color, canvas root gradient (#a78bfa/#7c3aed → #5eead4/#0d9488), loading spinner, CTA button, view-all link
+    - `fingerprint/page.tsx` — text source color #8b5cf6 → #38bdf8
+    - `fingerprint/route.ts` — API cluster color #8b5cf6 → #38bdf8
+    - `opengraph-image.tsx` — OG image gradient + radial gradients → teal/sky
+    - `layout.tsx` — theme-color meta tag #7c3aed → #14b8a6
+    - `CommandPalette.tsx` — Obsidian icon text-purple-400 → text-teal-400
+    - `gaps/page.tsx` — Removed #e879f0 fuchsia + #a78bfa violet reassignment hack
+  - **Verification**: Full codebase grep confirms ZERO remaining violations (except one Notion API string value which is Notion's own color name, not our UI)
+
+- **Design**: OLED black base, teal primary, sky secondary. Premium Silicon Valley aesthetic. Zero AI-slop fingerprints.
+- **Build**: Clean build pass, zero errors.
+- **Branch**: `frain/improve` (commit `443a974`)
+
+## 2026-03-25 03:29 UTC — Phase 6 Import Page Integration — All 16 Source Tabs Complete
+- **Phase**: 6 (Export/Sync & OAuth Plugins) · Frontend integration for Phase 6 importers
+- **Context**: Phase 6 backends were built last cycle (Twitter, Telegram, Pocket, Spotify, Readwise) but had NO frontend UI on the Import page. Users couldn't access these importers without manually hitting API endpoints. This cycle closes that gap — all 5 importers now have full Import page tabs.
+- **Implemented**:
+
+### Import Page — 5 New Tabs
+  - **Twitter/X** (AtSign icon, sky accent):
+    - Instructions for downloading Twitter data archive
+    - File drop zone for `bookmarks.js` or `tweets.js` files
+    - Reads file as text, sends raw content to `/api/v1/plugins/twitter-importer`
+    - Result shows imported count, duplicates skipped
+  - **Telegram** (Send icon, teal accent):
+    - Instructions for Telegram Desktop JSON export
+    - File drop zone for `result.json`
+    - Parses JSON client-side, sends data object to backend
+    - Shows message groups imported, chat name, message count
+  - **Pocket / Instapaper** (BookmarkCheck icon, emerald accent):
+    - **Format toggle**: Switch between Pocket (HTML) and Instapaper (CSV)
+    - Instructions with direct links to export pages for both services
+    - Reads file as text, sends to appropriate backend action
+    - Shows articles imported, source, duplicates skipped
+  - **Spotify** (Music icon, emerald accent):
+    - Instructions with link to Spotify privacy data page
+    - Info box explaining the taste profile feature with example queries
+    - File drop zone for `StreamingHistory_music_0.json`
+    - Shows hours, artists, top artist from the built profile
+  - **Readwise** (Highlighter icon, amber accent):
+    - API token input with Key icon, password field, Validate button
+    - Token validation via Readwise API with success/error feedback
+    - Once validated: info card explaining incremental sync, Import button
+    - Checks for saved token on tab switch (auto-populates verified state)
+    - Shows highlights imported, books processed, duplicates skipped
+
+### Source Type Recognition — App-Wide Update
+  - **Dashboard**: All 3 typeIcons/typeColors maps updated with twitter (sky), telegram (teal), pocket/instapaper (emerald), spotify (emerald), readwise (amber)
+  - **Explore**: typeConfig extended with all 6 new types + icons + colors
+  - **Chat**: Source cards recognize all new types with proper accent colors
+  - **Import History**: All new types show correct icons and colors in the import log
+
+### Grid Layout
+  - Updated from 11-column to 8-column responsive grid (`grid-cols-4 md:grid-cols-8`) to accommodate 16 source tabs in a clean 2-row layout
+  - Plugin tab filter updated to exclude all 11 built-in importers from dynamic plugin tabs
+
+- **Design**: OLED black, teal/sky/emerald/amber accents per source type. Zero violet/purple/fuchsia. Glass borders, rounded-2xl cards.
+- **Build**: Clean build pass, zero errors.
+- **Phase 6 Progress**: All backends + frontends complete for all 33 plugins!
+  1. ✅ Notion Sync (#26) — full backend + frontend
+  2. ✅ Obsidian Vault Sync (#25) — full backend + frontend
+  3. ✅ Readwise Importer (#7) — backend + Import tab
+  4. ✅ Twitter/X Bookmarks (#1) — backend + Import tab
+  5. ✅ Telegram Saved Messages (#5) — backend + Import tab
+  6. ✅ Pocket/Instapaper (#4) — backend + Import tab
+  7. ✅ Spotify Listening History (#10) — backend + Import tab
+  8. ✅ Notion Enhanced (#11) — backend + Import tab
+  9. ✅ Anki Deck Export (#27) — backend + frontend page
+  10. ✅ Markdown Blog Export (#28) — backend + frontend page
+- **🎉 ALL 33 PLUGINS COMPLETE — ENTIRE PLUGIN SYSTEM BUILT!**
+- **Branch**: `frain/improve` (commit `34c2798`)
+
+## 2026-03-25 00:59 UTC — Image-to-Memory Plugin (#30) — Phase 5 Continues
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #20 in build order · Second AI Enhancement
+- **Context**: Phase 5 continues after Voice-to-Memory (#29). Image-to-Memory (#30) lets users upload images — photos, screenshots, whiteboards, diagrams — and get AI-generated descriptions saved as searchable knowledge.
+- **Implemented**:
+
+### Image-to-Memory (#30) — NEW
+  - **Full backend API route** (`/api/v1/plugins/image-to-memory`):
+    - **Multi-provider Vision AI**: GPT-4o (OpenAI), Gemini Flash (Google), LLaVA (Ollama), OpenRouter — auto-detects best available or respects chat_provider preference
+    - **8 context types** with specialized analysis prompts:
+      - `general` — AI decides best approach
+      - `screenshot` — app/website content extraction
+      - `whiteboard` — handwritten notes transcription + diagram description
+      - `document` — scanned document OCR-style text extraction
+      - `diagram` — flowchart/architecture structure analysis
+      - `photo` — scene, subjects, setting, mood description
+      - `chart` — data visualization interpretation
+      - `meme` — cultural reference and humor explanation
+    - **Auto-tag extraction**: AI generates 3-8 relevant tags per image, parsed from structured TAGS: [...] format in response. Tags stored as PostgreSQL text array.
+    - **Re-analysis**: Re-analyze any image with different context type or custom prompt. Stored image data (base64 for images ≤500KB) enables re-processing without re-upload.
+    - **Save as memory**: Creates embedded memory with `image` source_type. Full content includes title, description, tags, context type. Embedding generated for semantic search.
+    - **8 API actions**: images (list), stats (aggregates), check (provider availability), analyze (multipart upload), save, reanalyze, delete, update (title)
+    - **`image_analyses` table**: Auto-created with id, title, description, image_data, size/format, tags[], context_type, provider, model, word_count, saved_as_memory, memory_id
+    - **File validation**: JPEG, PNG, GIF, WebP, BMP, TIFF accepted. 20MB size limit.
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **Full frontend page** (`/app/vision`) — 3 views:
+    - **Upload view**:
+      - Drag-and-drop zone with camera icon, file type info, visual feedback on drag-over
+      - Image preview with file info (name, size, format)
+      - 8 context type selector cards (2×4 grid) with icons and descriptions
+      - Custom prompt textarea for additional analysis instructions
+      - Full-width "Analyze with AI" button with loading state
+    - **Gallery view**:
+      - Grid mode: 3-column image cards with thumbnails, titles, description preview, saved status, tags count, relative timestamp
+      - List mode: Compact rows with mini thumbnail, title, context type, word count, timestamp, saved checkmark
+      - Grid/list toggle buttons
+      - Empty state with upload CTA
+    - **Detail view**:
+      - Full image preview in rounded container
+      - Editable title (click to edit, Enter to save, Escape to cancel)
+      - Metadata: context type, word count, provider, model, file size, timestamp
+      - Tag pills with teal accent
+      - Full AI description panel with BookOpen icon header
+      - Action bar: Re-analyze, Save to Memory, Delete
+      - Saved state: emerald badge with checkmark
+  - **Source type recognition**: Added `image` source type across the entire app:
+    - Dashboard: recent activity, pinned memories, sources section — Camera icon with sky accent
+    - Explore: typeConfig with Camera icon and sky color
+    - Chat: source cards with sky accent and border
+    - Import: history section with image type icon and color
+  - **Also added `audio` source type** to all pages (was missing from dashboard/explore/chat/import after Voice-to-Memory)
+  - **Navigation**: Sidebar entry ("Vision" with Camera icon), Command Palette action (searchable by image/photo/screenshot/vision/picture/camera/upload/scan/whiteboard/diagram/ocr), Command Palette nav entry
+  - **Plugin Store**: Route mapping added for direct "Open" button
+- **Design**: OLED black, teal primary, sky secondary. Zero violet/purple/fuchsia. Glass borders, rounded-2xl cards. Drag-drop zone with teal highlight. Gallery thumbnails with smooth hover opacity transitions.
+- **Phase 5 Progress**:
+  1. ✅ Voice-to-Memory (#29)
+  2. ✅ Image-to-Memory (#30) ← NEW
+  3. ⬜ Custom RAG Strategies (#32)
+  4. ⬜ Multi-Language Support (#31)
+  5. ⬜ Domain-Specific Embeddings (#33)
+- **Next**: Custom RAG Strategies (#32) — pluggable retrieval strategies (HyDE, reranking, contextual compression)
+- **Branch**: `frain/improve` (commit `0e96a37`)
+
+## 2026-03-24 23:59 UTC — Newsletter Writer Plugin (Phase 4, Plugin #21) — PHASE 4 COMPLETE! 🎉
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Newsletter Writer is the **6th and final Action Plugin**, completing Phase 4.
+- **Implemented**:
+
+### Newsletter Writer (#21) — NEW
+  - **Full backend API route** (`/api/v1/plugins/newsletter-writer`):
+    - **7 API actions**: `newsletters` (list), `newsletter` (get), `suggest` (AI themes), `generate`, `update`, `refine`, `delete`
+    - **AI suggestion engine**: Fetches up to 50 recent memories within the chosen timeframe, asks AI to suggest 3 themed newsletter ideas with catchy titles, email subject lines, and topic lists
+    - **Multi-query RAG newsletter generation**: Fetches memories by timeframe (7/14/30 days) + optional focus topic semantic search via embeddings. Deduplicates across all queries. Up to 40 source memories used as context.
+    - **Structured section generation**: AI creates a structured newsletter with typed sections:
+      - `intro` — Opening paragraph with warm greeting
+      - `topic` (2-4) — Deep dive sections synthesizing related sources with personal take
+      - `highlight` — Single most interesting/surprising discovery from the period
+      - `quicklinks` — Bullet list of noteworthy items that didn't get full sections
+      - `outro` — Closing thought or question for readers
+    - **Per-section AI refinement**: Refine any section with custom instructions (e.g. "make punchier", "add personal anecdote", "shorten")
+    - **Section-level editing**: Update individual section content with save to backend + word count recalculation
+    - **Configurable timeframe**: 7-day (weekly), 14-day (bi-weekly), 30-day (monthly roundup)
+    - **3 tones**: casual (warm/conversational), professional (polished/authoritative), witty (sharp/clever)
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 20 newsletters per user, auto-install on first use
+  - **Full frontend page** (`/app/newsletter`) — 4 views:
+    - **List view**: Newsletter cards with title, email subject, period badge, topic tags, word count, section count, source count, status badges (draft/polishing/ready), relative timestamps, delete per newsletter. Empty state with call-to-action.
+    - **Create view**:
+      - Title + subject line inputs (side-by-side on desktop)
+      - 3 timeframe options (7d/14d/30d) with descriptive labels, highlighted active
+      - 3 tone selectors with icons (MessageSquare/Briefcase/Zap)
+      - AI suggestion cards: automatically fetches theme ideas when timeframe changes, each shows title/pitch/topic tags, click to populate form fields
+      - Focus topics input (comma-separated, optional)
+      - Custom instructions textarea (optional)
+      - Full-width generate button with loading state
+    - **Edit view**: Expandable section accordion with:
+      - Type-colored icon badges (teal=intro, sky=topic, amber=highlight, emerald=quicklinks, zinc=outro)
+      - Section type label + title + source count
+      - Collapsed preview (first 80 chars)
+      - Expanded: full markdown rendering with inline formatting support
+      - Edit mode: monospace textarea with keyboard shortcuts (⌘+Enter save, Esc cancel)
+      - AI Refine: expandable instruction input, Enter to submit, Esc to close
+      - Top bar: Preview, Copy, Download .md buttons
+      - Subject line display
+    - **Preview view**: Clean document-style rendering with teal section headers, proper markdown rendering, section dividers. Copy All + Download .md export buttons.
+    - **Export**: Copy full newsletter as markdown to clipboard, download as `.md` file with auto-generated filename
+  - **Design**: OLED black base, teal primary accent, sky/amber/emerald type-colored section badges, glass borders (white/[0.06]), rounded-2xl cards, zero violet/purple/fuchsia
+  - **Navigation**: Sidebar entry ("Newsletter" with Mail icon), Command Palette action (searchable by newsletter/digest/weekly/email/curate/summary/roundup/send/mail/report/recap), Command Palette nav entry
+- **Phase 4 Progress** — COMPLETE:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ✅ Resume Builder (#22)
+  6. ✅ Newsletter Writer (#21) ← NEW — PHASE 4 DONE!
+- **Next**: Phase 5 — AI Enhancement Plugins! Starting with Voice-to-Memory (#29).
+- **Branch**: `frain/improve` (commit `34648fa`)
+
+## 2026-03-24 23:29 UTC — Resume Builder Plugin (Phase 4, Plugin #22)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Learning Path Generator (#24). Resume Builder is the **5th of 6 Action Plugins**.
+- **Implemented**:
+
+### Resume Builder (#22) — NEW
+  - **Full backend API route** (`/api/v1/plugins/resume-builder`):
+    - **Multi-query RAG knowledge extraction**: 5 professional search queries (`work experience`, `skills & technologies`, `education & certifications`, `projects & achievements`, `career history`) + user_facts table lookup. Deduplicates across all queries. Up to 30 relevant memories surfaced as context for the AI resume writer.
+    - **AI-powered resume generation**: Creates structured resumes with sections tailored to target role:
+      - 9 section types: header, summary, experience, education, skills, projects, certifications, languages, interests
+      - ATS-optimized content with strong action verbs and quantified achievements
+      - Uses only information from user's actual memories — no hallucinated experience
+    - **4 resume templates**:
+      - Modern — clean minimal layout for tech roles (experience → skills → projects → education)
+      - Classic — traditional chronological format (experience → education → skills → certifications)
+      - Creative — projects-first for portfolio-driven roles (projects → experience → skills → interests)
+      - Executive — leadership-focused with impact metrics (experience → certifications → education → languages)
+    - **8 API actions**: list, get, templates, generate, update, refine, add-section, reorder, delete
+    - **Per-section AI refinement**: Refine any section with custom instructions (e.g., "add more metrics", "focus on leadership", "make more concise"). AI rewrites section content while maintaining structure.
+    - **Section management**: Toggle visibility (show/hide without deleting), reorder sections up/down, add custom sections, edit content inline
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 10 resumes per user, auto-install on first use
+  - **Full frontend page** (`/app/resume`) — 4 views:
+    - **List view**: Resume cards with title, target role, template badge, section/source counts, date, content preview. Empty state with call-to-action. Delete per resume.
+    - **Create view**: Target role input with autofocus + Enter shortcut, 4 template selection cards (2-col grid) with emoji icons, section preview tags, and descriptions. Optional additional context textarea. Full-width generate button with loading state showing "Analyzing your memories and building resume..."
+    - **Edit view**: Accordion-style section list. Each section has:
+      - Type-colored icon badge (teal/sky/emerald/amber/cyan/rose)
+      - Expand/collapse with content preview when collapsed
+      - Reorder buttons (up/down chevrons)
+      - Visibility toggle (Eye/EyeOff)
+      - Expanded: rendered markdown content + action buttons (Edit, AI Refine)
+      - Edit mode: monospace textarea with save/cancel
+      - AI Refine: expandable instruction input for custom refinement prompts
+    - **Preview view**: Clean document-style rendering with teal section headers, proper markdown rendering, copy + download buttons
+    - **Export**: Copy as Markdown, Download as .md file (auto-named by target role)
+  - **Design**: OLED black, teal primary accent, type-colored section badges (9 distinct colors for 9 section types), glass borders (white/[0.06]), rounded-2xl cards, zero violet/purple/fuchsia
+  - **Navigation**: Sidebar entry ("Resume" with FileUser icon), Command Palette action (searchable by resume/cv/career/job/professional/experience/skills/hire/work/apply/application), Command Palette nav entry
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ✅ Resume Builder (#22) ← NEW
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Newsletter Writer (#21) — auto-curate weekly digests from your knowledge. This completes Phase 4!
+- **Branch**: `frain/improve` (commit `0fcfcb1`)
+
+## 2026-03-24 22:59 UTC — Learning Path Generator Plugin (Phase 4, Plugin #24)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Conversation Prep (#23) and Blog Draft Generator (#19).
+- **Implemented**:
+
+### Learning Path Generator (#24) — NEW
+  - **Full backend API route** (`/api/v1/plugins/learning-paths`):
+    - **Multi-query RAG knowledge assessment**: Searches existing memories about the requested topic via 3 queries (topic, fundamentals, advanced). Generates embeddings for semantic search. Deduplicates results. Up to 15 related memories surfaced as "existing knowledge" context for the AI curriculum designer.
+    - **AI-powered curriculum generation**: Creates structured learning paths with 8-15 nodes, each with:
+      - Title, description, estimated minutes, depth level (beginner/intermediate/advanced)
+      - Node type: concept (theory), practice (hands-on), project (build something), reading (study), milestone (checkpoint)
+      - Resource suggestions (articles, videos, books, exercises, tools)
+      - Dependency tracking between nodes (prerequisites)
+      - Related memory linking — connects nodes to user's existing knowledge
+    - **6 API actions**: list, get, suggestions, generate, update-progress, add-note, delete
+    - **AI topic suggestions**: Analyzes 30 most recent memories to suggest 6 personalized learning topics with difficulty ratings and time estimates
+    - **Progress tracking**: Node-level completion with timestamps, path-level progress (0-100%), estimated remaining time
+    - **Personal notes**: Add/edit notes per learning node for personal annotations
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 20 paths per user, auto-install on first use
+  - **Full frontend page** (`/app/paths`) — 3 views:
+    - **Home view**: Quick generate bar (type topic → Enter → instant path), AI suggestion cards (2-col grid with difficulty + time + reason), existing paths list with SVG progress rings (teal/emerald)
+    - **Create view**: Topic input with autofocus, optional context textarea, suggestion chips (click to populate topic), "Generate Learning Path" button with Sparkles icon and loading state
+    - **Detail view**: Progress bar (% complete, remaining hours, Trophy on completion), "What you already know" section (sky-tinted, shows related memories), timeline-style node list with vertical connector lines
+    - **Node UI**: Circle/CheckCircle toggle for completion, type-colored icons (BookOpen/Code/Rocket/FileText/Trophy), depth badges (emerald/sky/amber), time estimates, note indicators, related memory count
+    - **Expanded node**: Full description, resources with emoji type indicators and external links, related memories, inline note editor (textarea with save/cancel), completion timestamp
+    - **Design**: OLED black, teal primary, sky/emerald/amber accents for depth, zero violet/purple/fuchsia, glass borders (white/[0.06]), smooth transitions
+  - **Navigation**: Sidebar entry ("Learn Paths" with Route icon), Command Palette action (searchable by learn/path/curriculum/study/course/roadmap/gap), Command Palette nav list entry
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Resume Builder (#22) — build a resume/CV from professional memories
+- **Branch**: `frain/improve` (commit `596ea00`)
+
+## 2026-03-24 22:29 UTC — Conversation Prep Plugin + Blog Draft Generator (Phase 4, Plugins #23 & #19)
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Flashcard Maker (#20).
+- **Implemented**:
+
+### Conversation Prep (#23) — NEW
+  - **Full backend API route** (`/api/v1/plugins/conversation-prep`):
+    - **Multi-query RAG retrieval**: 5 search queries per subject for comprehensive knowledge coverage. Person queries search conversations/meetings/projects. Company queries search business/product/partnership. Deduplicates across all queries.
+    - **AI-powered structured briefing**: Generates 7 sections — Overview, Key Facts, History & Timeline, Related Topics, Talking Points, Questions to Ask, Preparation Notes
+    - **4 subject types**: Person, Company, Project, Topic — each with type-specific search strategies
+    - **Follow-up questions**: Ask deeper questions about any briefing — re-searches knowledge + uses briefing context for more specific answers
+    - **Briefing history**: Stores up to 50 past briefings. List, view, delete.
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **Full frontend page** (`/app/prep`) — 3 views:
+    - **Home view**: Quick prep bar (type subject → hit Enter → instant briefing), past briefings list with type-colored icons (sky/emerald/amber/teal), source count, section count
+    - **Create view**: Type picker (Person/Company/Project/Topic as icon cards), subject input with type-specific placeholders, optional context textarea, generate button with loading state
+    - **Detail view**: Subject header with type badge, color-coded briefing sections with matching icons (User/ListChecks/Clock/Network/MessageCircle/HelpCircle/ClipboardList), bullet points with colored dots, follow-up question input with Send button, follow-up answer display
+  - **Navigation**: Added to sidebar (Users icon), Command Palette (⌘K searchable by "prep", "meeting", "briefing", "conversation", "person"), plugin registry updated to extension type
+  - **Design**: OLED black, 7 section accent colors cycling (teal/sky/emerald/amber/rose/cyan/orange), zero violet/purple/fuchsia
+
+### Blog Draft Generator (#19) — Previously untracked, now committed
+  - **Full backend**: RAG-powered blog generation, 5 writing styles × 4 tones, AI topic suggestions, outline generation, refinement, export (Markdown with frontmatter, styled HTML)
+  - **Full frontend**: Create view (topic input, AI suggestions, style/tone pickers, word count slider), Editor (markdown textarea + live preview toggle, title editing, status toggle, refine panel with text selection support, copy/export/save), Drafts list with status badges
+  - Fully working — was on disk but never committed
+
+- **Phase 4 Progress**:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ⬜ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Learning Path Generator (#24) — structured learning plans based on knowledge gaps
+- **Branch**: `frain/improve` (commit `209cc10`)
+
+## 2026-03-24 21:29 UTC — Flashcard Maker Plugin (Phase 4, Plugin #20) — PHASE 4 STARTED! 🚀
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. All 6 Phase 3 Analysis Plugins are complete. Flashcard Maker (#20) is the **first Action plugin** — the beginning of Phase 4.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/flashcard-maker`):
+    - **Deck management**: Create, list, delete decks with color coding (8 colors: teal, sky, emerald, amber, cyan, rose, lime, orange). Decks stored in plugin config JSONB — zero DB migrations needed.
+    - **AI-powered flashcard generation**: Multi-provider support (OpenAI, Gemini, Ollama, OpenRouter, Custom API). Generates Q&A pairs from memory content with:
+      - Front (question), back (answer), hint (keyword nudge), tags, source memory reference
+      - Topic-based search or random memory selection (15 memories max)
+      - Structured JSON extraction with markdown fence stripping and regex fallback
+      - Temperature 0.3 for consistent, factual card generation
+    - **SM-2 SuperMemo spaced repetition algorithm**:
+      - Ease factor: starts at 2.5, adapts based on performance (min 1.3)
+      - Interval growth: 1 day → 6 days → EF-scaled exponential growth
+      - Grade 0-5 system: grades 0-2 = fail (reset interval to 1d), grades 3-5 = correct (advance interval)
+      - Tracks: easeFactor, interval, repetitions, nextReview, lastReview per card
+    - **Review session API**: Returns due cards (nextReview ≤ now) sorted by urgency + up to 10 new cards (never reviewed)
+    - **Stats API**: Total cards, due count, mastered count (5+ consecutive correct), review streak (consecutive days with activity), mastery distribution (new/learning/reviewing/mastered)
+    - **Card CRUD**: Save generated cards to deck, delete individual cards, review-card with SM-2 state update
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **New Flashcards page** (`/app/flashcards`) — full interactive spaced repetition system:
+    - **Decks view (main)**:
+      - Deck list with color-coded icon cards, card count, due count (amber), mastered count (emerald)
+      - Global stats bar: total cards, due now, mastered, streak (fire icon)
+      - Mastery progress bar: stacked bar showing new (sky) → learning (amber) → reviewing (teal) → mastered (emerald)
+      - Quick "Review" button on decks with due cards
+      - Create deck inline form with name, description, auto-assigned color
+      - Empty state with guidance text and dual CTA (Create Deck + Generate Cards)
+    - **Review mode** — immersive card study experience:
+      - Clean single-card layout with progress bar and card counter (e.g. "3 / 12")
+      - Deck name badge in header
+      - **Card flip**: Large question card with "Tap to reveal" prompt. Click or press Space to reveal answer
+      - **Answer reveal**: Slides in below the question with teal accent border, source title reference
+      - **Hint system**: "Show hint" toggle (press H) reveals keyword hint without full answer
+      - **6-grade response buttons**: Forgot (rose) → Barely → Hard (amber) → Okay → Good (teal) → Easy (emerald)
+      - **Full keyboard flow**: Space/Enter = reveal, 1-6 = grade, H = hint, Escape = end session
+      - Keyboard hints shown at bottom of card
+      - Tags displayed below card
+      - **Session results**: Score circle (SVG arc), percentage, correct/missed/total stats grid, "Review Again" + "Done" buttons
+    - **Generate view**:
+      - Topic search input with Enter-to-generate
+      - AI generates up to 10 flashcards with Q/A preview
+      - Remove individual generated cards (X button)
+      - Tags and hints shown inline
+      - "Save to deck" picker listing all decks with card counts
+    - **Deck detail view**:
+      - Stats bar: Due (amber), New (sky), Learning (teal), Mastered (emerald) counts
+      - Card list with status badges (New/Due/Mastered)
+      - Hover-reveal delete button per card
+      - Review button in header
+      - Back navigation
+    - **States**: Loading (teal spinner), empty (guidance with CTAs), all transitions smooth
+  - **Navigation updates**:
+    - Sidebar: "Flashcards" entry with Layers icon between Writing and Insights
+    - Command Palette: "Study Flashcards" action with keywords (flashcard, study, learn, review, spaced, repetition, anki, cards, quiz, deck, memorize)
+    - Command Palette: Flashcards page in navigation list
+  - **Design**: OLED black base, teal primary accent. Zero violet/purple/fuchsia. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`. Spring animations for answer reveal. SM-2 grade colors: rose (fail) → amber (hard) → teal (good) → emerald (easy).
+  - **Zero new dependencies**: SM-2 algorithm in pure TypeScript, all CSS animations
+- **Phase 4 Started! 🚀**: First of 6 Action Plugins now built:
+  1. ✅ Flashcard Maker (#20)
+  2. ⬜ Blog Draft Generator (#19)
+  3. ⬜ Conversation Prep (#23)
+  4. ⬜ Learning Path Generator (#24)
+  5. ⬜ Resume Builder (#22)
+  6. ⬜ Newsletter Writer (#21)
+- **Next**: Blog Draft Generator (#19) — turn memories into polished blog posts
+- **Branch**: `frain/improve` (commit `c1fcefe`)
+
+## 2026-03-24 20:59 UTC — Writing Style Analyzer Plugin (Phase 3, Plugin #17) — PHASE 3 COMPLETE! 🎉
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), Sentiment Timeline (#18), and Knowledge Gaps Analyzer (#14) are done. Writing Style Analyzer (#17) is the **sixth and final Analysis plugin** — completing Phase 3!
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/writing-style`):
+    - **NLP analysis engine** in pure TypeScript (zero dependencies):
+      - **Flesch-Kincaid Grade Level**: Standard readability formula using syllable-per-word and words-per-sentence ratios. Syllable counter handles silent-e, diphthongs (ia, io, ua, ue), and -le endings.
+      - **Flesch Reading Ease**: 0-100 scale (higher = easier). Classified as Very Easy/Standard/Fairly Difficult/Difficult/Very Difficult.
+      - **Vocabulary richness**: Type-token ratio calculated on 200-word samples (normalized for text length). Measures lexical diversity.
+      - **Tone classification**: Multi-signal system combining word-set matching (30 formal words, 30 casual words, 50 technical words), structural signals (sentence length, word length, syllable average), punctuation patterns (exclamations, questions), emoji/emoticon detection, and contraction presence. Classifies as formal/casual/technical/conversational/neutral.
+      - **N-gram analysis**: Top bigrams (2-word phrases) and trigrams (3-word phrases) with stopword filtering (140+ stopwords). Reveals recurring phrase patterns.
+      - **Hedging language detection**: Matches patterns like "maybe", "perhaps", "I think", "sort of", "probably", "as far as I know" — 4 pattern groups.
+      - **Confidence language detection**: Matches "definitely", "certainly", "I know", "always", "the fact is" — 4 pattern groups.
+      - **Question & exclamation rates**: Per-sentence frequency of interrogative and exclamatory punctuation.
+      - **Word extraction**: Strips URLs, emails, code blocks, inline code, markdown syntax before word counting.
+      - **Sentence splitting**: Handles paragraph breaks, standard sentence boundaries, avoids abbreviation false-splits.
+    - **Three API actions**:
+      - `analyze`: Processes up to 500 unanalyzed memories (50+ char content). Caches 12 metrics per memory in metadata JSONB fields.
+      - `results`: Returns all analyzed memories with per-memory metrics.
+      - `profile`: Comprehensive writing fingerprint — aggregates across all memories:
+        - Core readability (avg/median grade level, reading ease, readability level label)
+        - Vocabulary stats (total words, unique count, type-token ratio, rare word count, top 30 significant words, top 15 bigrams, top 10 trigrams)
+        - Sentence structure (avg/median sentence length, total sentences, sentence length distribution for histogram)
+        - Tone distribution (counts per tone type, dominant tone)
+        - Writing patterns (question/exclamation/hedging/confidence rates)
+        - Complexity composite score (weighted: grade 35%, sentence 25%, word 15%, vocab 25%)
+        - Style by source type (per-source avg grade, ease, sentence length, dominant tone)
+        - Monthly evolution (grade, ease, sentence length, word length, vocab richness, question rate, confidence rate, dominant tone per month)
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Writing Style page** (`/app/writing`) — full writing fingerprint dashboard:
+    - **Complexity score hero card**: Large 48px score number, readability level label (Elementary through Graduate/Professional), reading ease sub-stat. SVG circular progress arc (teal stroke, proportional to score). Gradient background overlay.
+    - **Core stats grid**: 4 cards — Vocabulary (unique word count, CaseSensitive icon, sky accent), Grade Level (with readability label, BookOpen icon, teal accent), Avg Sentence Length (words/sentence, AlignLeft icon, amber accent), Total Words (with sentence count, Hash icon, emerald accent).
+    - **Tone distribution panel**: Proportional progress bars per tone type with colored dot indicators. Color-coded: sky=formal, amber=casual, teal=technical, emerald=conversational, zinc=neutral. Dominant tone summary below.
+    - **Writing patterns panel**: Confidence vs Hedging diverging bar chart (centered at 50%, extends right for confident, left for hedging; emerald positive, amber negative). Pattern metrics grid: question rate, exclamation rate, vocab richness, avg word length. Rare word count card.
+    - **Sentence length histogram** (Canvas): 8 buckets (1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-40, 41+). Gradient-filled bars with rounded tops. Count labels above bars. Base line.
+    - **Top words, bigrams, trigrams**: 3-column grid. Ranked lists with numbered positions, monospace font words, proportional frequency bars, and count labels. Color-coded bars: sky for words, teal for bigrams, emerald for trigrams. Scrollable at 280px max height.
+    - **Style evolution line chart** (Canvas): Metric toggle (Grade/Ease/Sentence/Confidence). Bezier curve line with teal stroke. Gradient fill under curve. Data points as ring-styled dots. Grid lines with Y-axis value labels. X-axis month labels. Smart label thinning for many months.
+    - **Style by source table**: Sortable by count. Columns: source (with colored icon), memory count, grade, ease, avg sentence length, tone badge. Hover highlighting.
+    - **Analysis progress bar**: Shows when not all memories analyzed. Teal accent, percentage indicator, "Analyze more" button.
+    - **Empty state**: PenTool icon, memory count, analyze CTA button.
+    - **Loading/error states**: Centered spinner with description, error with retry.
+    - **Design**: OLED black base, teal primary accent, sky/amber/emerald secondary. Zero violet/purple/fuchsia. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`.
+  - **Navigation updates**:
+    - Sidebar: "Writing" entry with PenTool icon between Gaps and Insights
+    - Command Palette: "View Writing Style" action with keywords (writing, style, vocabulary, readability, tone, words, sentences, grade, flesch, complexity, phrases)
+  - **Zero new dependencies**: Pure TypeScript NLP engine, pure Canvas rendering
+- **Phase 3 COMPLETE! 🎉**: All 6 Analysis Plugins are now built:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ✅ Knowledge Gaps Analyzer (#14)
+  6. ✅ Writing Style Analyzer (#17)
+- **Next**: Phase 4 — Action Plugins! Starting with Flashcard Maker (#20) — spaced repetition learning from your knowledge
+- **Branch**: `frain/improve` (commit `f54958b`)
+
+## 2026-03-24 20:29 UTC — Knowledge Gaps Analyzer Plugin (Phase 3, Plugin #14)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), Topic Evolution Timeline (#16), and Sentiment Timeline (#18) are done. Knowledge Gaps Analyzer (#14) is the **fifth Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/knowledge-gaps`):
+    - **K-Means++ clustering**: Clusters up to 500 memories by embedding similarity into topics (up to 12 configurable). Same robust k-means++ initialization as other Analysis plugins.
+    - **Five gap detection types**:
+      - **Sparse topic**: Clusters with very few memories relative to total — areas needing depth.
+      - **Bridge gap**: Topics that are moderately similar (55-75% cosine similarity) but lack connecting knowledge — hidden relationships to explore.
+      - **Stale knowledge**: Topics with no activity in 30+ days and average age >60 days — potentially outdated.
+      - **Single-source**: Topics where all memories come from one source type — lacking diverse perspectives.
+      - **Isolated topic**: Topics with low similarity to all other topics — knowledge islands disconnected from the rest of the graph.
+    - **Density scoring**: Each topic classified as deep/moderate/thin/sparse based on memory count, proportion of total, and coherence score. Deep = 10+ memories, 8%+ proportion, 70%+ coherence.
+    - **Coherence analysis**: Average cosine similarity of all members to cluster centroid — measures how tightly related a topic's memories are.
+    - **Coverage map**: Returns proportional data for treemap visualization — size, density, gap status per topic.
+    - **AI-powered suggestions**: `?action=suggest` queries OpenAI/Gemini to recommend 5 adjacent topics to explore based on current gaps and knowledge distribution.
+    - **Topic metadata**: Keywords via TF-IDF extraction, source type breakdown, average age, recent activity flag, preview memories.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Gaps page** (`/app/gaps`) — interactive knowledge coverage visualization:
+    - **Squarified treemap** (Canvas): Proportional topic cells sized by memory count. Color-coded by topic. Dashed rose borders on cells with detected gaps. Hover highlights with increased opacity. Click to open topic detail. Labels with memory count and density badge.
+    - **Stats bar**: 5 stat cards — topic count, gaps found (amber-highlighted when high), deep topics, thin/sparse count, avg coherence percentage.
+    - **Gap cards**: Expandable cards with severity badges (high/medium/low), type icons (Link2 for bridge, Eye for sparse, Clock for stale, Layers for single-source, Compass for isolated). Expanded view shows AI suggestion text and related topic links.
+    - **Topic density sidebar**: All topics listed with proportional progress bars, colored by density level. Click to select topic.
+    - **"What to Learn Next" panel**: AI-generated learning suggestions with topic name, reason, and which existing topic it connects to. "Generate" button triggers API call.
+    - **Stale knowledge panel**: Lists topics with no recent updates and days-since-last-activity.
+    - **Topic detail modal**: Full topic inspection — keywords as teal pills, source breakdown with progress bars, activity age, related gaps list, clickable sample memories linking to Explore.
+    - **Empty state**: Target icon, insufficient data message, import CTA button.
+    - **Loading/error states**: Centered spinner with analysis description, error with retry.
+    - **Design**: OLED black base, teal primary accent, treemap with per-topic colors (no violet/purple/fuchsia). Rose for gaps/sparse, amber for warnings, emerald for deep coverage. Glass-morphism panels with `bg-white/[0.02]` and `border-white/[0.06]`.
+  - **Navigation updates**:
+    - Sidebar: "Gaps" entry with Target icon between Sentiment and Insights
+    - Command Palette: "View Knowledge Gaps" action with keywords (gaps, blind, spots, missing, coverage, sparse, bridge, stale)
+  - **Zero new dependencies**: Pure Canvas rendering, squarified treemap algorithm, k-means in TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ✅ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Writing Style Analyzer (#17) — the final Analysis plugin in Phase 3
+- **Branch**: `frain/improve` (commit `90cc7a6`)
+
+## 2026-03-24 19:59 UTC — Sentiment Timeline Plugin (Phase 3, Plugin #18)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13), Contradiction Finder (#15), and Topic Evolution Timeline (#16) are done. Sentiment Timeline (#18) is the **fourth Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/sentiment-timeline`):
+    - **AI-powered sentiment analysis**: Multi-provider support (OpenAI, Gemini, Ollama, OpenRouter, Custom API). Batch processing in groups of 8 with `Promise.allSettled`. Each memory gets a score (-1 to +1), label (positive/negative/neutral/mixed), and detected emotions (joy, curiosity, frustration, etc.).
+    - **AFINN-inspired lexicon fallback**: ~200-word sentiment lexicon when no AI available. Strong positive (+3 to +5: amazing, brilliant, etc.), moderate positive (+1 to +2: good, helpful, etc.), moderate negative (-1 to -2: frustrating, worried, etc.), strong negative (-3 to -5: hate, terrible, etc.). Negation-aware — "not", "don't", "never" flip and weaken sentiment.
+    - **Emotion keyword detection**: 12 emotion categories (joy, curiosity, excitement, gratitude, inspiration, frustration, anxiety, sadness, determination, pride, calm, nostalgia) with keyword matching.
+    - **Results cached in metadata**: Scores stored as `metadata->>'sentiment_score'`, `sentiment_label`, `sentiment_emotions` in the memories table. Subsequent loads use cached data — no re-analysis needed.
+    - **Three actions**: `analyze` (batch process unscored memories, up to 200 per run), `results` (return all scored memories with daily/weekly aggregates), `summary` (overall mood, distribution, trends, happiest/saddest, mood by source).
+    - **Daily aggregation**: Groups scores by day for calendar heatmap. Calculates avgScore, count, dominant mood per day.
+    - **Weekly/Monthly aggregation**: Weekly for trend smoothing, monthly for the line chart. Each period has avgScore, count, label.
+    - **Mood by source type**: Breakdown showing average sentiment per import source (ChatGPT, files, URLs, etc.).
+    - **Happiest/saddest memories**: Top 3 highest and lowest scored memories with metadata for insight panels.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Sentiment page** (`/app/sentiment`) — full emotional arc visualization:
+    - **Overall Mood card**: Large emoji + mood label + numeric score. Gradient background shifts based on overall sentiment (emerald for positive, rose for negative, teal for neutral). Trend direction indicator (up/down/flat) based on last two months. Summary stats: total analyzed, month count.
+    - **Mood Distribution cards**: 4 cards for positive/negative/neutral/mixed. Each shows percentage, count, icon, and distribution progress bar. Color-coded: emerald, rose, zinc, sky.
+    - **Calendar Heatmap** (GitHub-contribution style): Up to 365-day view, Sunday-aligned week columns. 7-color scale from rose (negative) through zinc (neutral) to emerald (positive). Month labels along top. Day-of-week labels on left. Hover tooltips with exact date, score, memory count, dominant mood. Color legend bar. Scrollable for large date ranges.
+    - **Monthly Mood Trend** (Canvas line chart): Zero-line reference with dashed stroke. Gradient fill under the line (teal above zero, rose below). Color-coded data points (emerald positive, rose negative, zinc neutral). Hover tooltips with month, score, memory count. X-axis month labels, auto-thinned to prevent crowding.
+    - **Mood by Source** card: Diverging horizontal bar chart centered on neutral (0). Bars extend right for positive sources, left for negative. Center line marker. Score label overlaid on each bar. Source icon + label + count per row.
+    - **Happiest & Saddest Memories** panels: Side-by-side cards (sun/rain icons). Each shows top 3 most extreme memories with source icon, title, content preview, score, date. Click-through to Explore.
+    - **Analysis progress bar**: Shows when not all memories are analyzed. "Analyze more" button. Percentage indicator.
+    - **Empty state**: Heart icon, explanation text, analyze CTA button with memory count.
+    - **Loading/error states**: Centered spinner, error with retry.
+  - **Navigation updates**:
+    - Sidebar: "Sentiment" entry with Heart icon between Evolution and Insights
+    - Command Palette: "View Sentiment Timeline" action with emotion/mood keywords
+  - **Design**: OLED black base, teal primary, emerald for positive sentiment, rose for negative. Zero violet/purple/fuchsia. Glass-morphism panels, dark tooltips with `bg-[#111113]`.
+  - **Zero new dependencies**: Pure Canvas rendering, lexicon in pure TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ✅ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Knowledge Gaps Analyzer (#14) — identify blind spots in your knowledge
+- **Branch**: `frain/improve` (commit `dea1094`)
+
+## 2026-03-24 19:29 UTC — Topic Evolution Timeline Plugin (Phase 3, Plugin #16)
+- **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) and Contradiction Finder (#15) are done. Topic Evolution Timeline (#16) is the **third Analysis plugin**.
+- **Implemented**:
+  - **Full backend API route** (`/api/v1/plugins/topic-evolution`):
+    - **K-Means++ clustering**: Clusters all memories by embedding similarity into up to 10 topics. Same robust k-means++ initialization as Mind Map Generator.
+    - **Time period binning**: Groups memories into week, month, or quarter granularity via configurable `?granularity=` param. Builds complete period arrays with proper date math.
+    - **Shift detection engine**: Analyzes each topic's temporal distribution to classify interest trends:
+      - **Rising**: >65% of activity in second half of timeline
+      - **Declining**: >65% of activity in first half
+      - **New**: Topic first appeared in second half of timeline
+      - **Dormant**: No activity in last 3 periods despite earlier activity
+      - **Resurgent**: Activity gap in middle with comeback at end
+      - **Steady**: Roughly even distribution throughout
+    - **Peak tracking**: Identifies peak period and peak count per topic, plus first-seen and last-seen dates.
+    - **Topic labeling**: Same keyword extraction and source-dominant strategies as Mind Map Generator.
+    - **16 topic colors**: Curated palette (teal, sky, emerald, amber, cyan, rose, lime, orange, blue, slate) — zero violet/purple/fuchsia.
+    - **Auto-install**: Plugin auto-installs in DB on first use.
+  - **New Evolution page** (`/app/evolution`) — interactive stream graph visualization:
+    - **Canvas stream graph**: Stacked area chart rendered on HTML5 Canvas. Topics stacked bottom-up, largest on bottom. Smooth bezier curves between data points. Semi-transparent fills with visible top-edge strokes.
+    - **Topic isolation**: Click any topic in the legend to highlight it — all other topics dim to 8% opacity. "Show all topics" to reset.
+    - **Hover tooltip**: Crosshair cursor tracks mouse position. Dashed vertical indicator line shows current period. Tooltip card shows period label, total memories, and per-topic breakdown with colored dots and counts. Smart positioning flips when near right edge.
+    - **Granularity toggle**: Week / Month / Quarter pills in header. Changes re-fetch data from backend.
+    - **Stats bar**: Total memories (teal), topic count (sky), period count (amber), peak period (orange) — each in rounded pills.
+    - **Period activity bar chart**: Secondary visualization below the stream graph. Vertical bars proportional to period totals. Hover syncs with main chart. X-axis labels at regular intervals.
+    - **Interest Shifts panel**: Right sidebar listing all detected shifts. Each shift card shows: type badge (Rising/New/Comeback/Steady/Declining/Dormant), topic label, expandable description, and keywords. Color-coded icons per shift type: emerald for rising, teal for new, sky for resurgent, amber for declining, zinc for dormant/steady.
+    - **Topic Detail panel**: When a topic is selected, shows: memory count, coherence score, peak activity period, active date range, keywords, source breakdown with progress bars, and sample memories (clickable → Explore).
+    - **Topics by Size list**: When no topic selected, shows all topics ranked by memory count with proportional bars.
+    - **Loading/empty/error states**: Centered spinner, empty state with import CTA, error with retry button.
+    - **Design**: OLED black base, teal primary accent, glass-morphism panels, zero violet/purple/fuchsia. Dark tooltips with `bg-[#111113]` and `border-white/[0.1]`.
+  - **Navigation updates**:
+    - Sidebar: "Evolution" entry with TrendingUp icon between Mind Map and Insights
+    - Command Palette: "View Topic Evolution" action + Evolution page in navigation list
+  - **Zero new dependencies**: Pure Canvas rendering, k-means in pure TypeScript
+- **Phase 3 Progress**:
+  1. ✅ Mind Map Generator (#13)
+  2. ✅ Contradiction Finder (#15)
+  3. ✅ Topic Evolution Timeline (#16)
+  4. ⬜ Sentiment Timeline (#18)
+  5. ⬜ Knowledge Gaps Analyzer (#14)
+  6. ⬜ Writing Style Analyzer (#17)
+- **Next**: Sentiment Timeline (#18) — emotional arc visualization of stored knowledge
+- **Branch**: `frain/improve` (commit `c37e0f1`)
+
 ## 2026-03-24 18:59 UTC — Contradiction Finder Plugin (Phase 3, Plugin #15)
 - **Context**: Phase 3 of the Plugin System build — Analysis Plugins. Mind Map Generator (#13) is done. Contradiction Finder (#15) is the **second Analysis plugin**.
 - **Implemented**:
@@ -773,3 +1348,182 @@ _Automated 30-min improvement cycles by Frain_
     - Only renders when there's actual activity data (zero visual noise for inactive users)
   - **Design**: Matches MindStore's design language — dark rounded cards, violet gradients, zinc-toned typography, smooth transitions
 - **Branch**: `frain/improve` (commit `b5ede6c`)
+
+## 2026-03-25 00:29 UTC — Voice-to-Memory Plugin (#29) — Phase 5 Begins
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #19 in build order · First AI Enhancement
+- **Research**: Analyzed MindStore's schema — already supports `audio` content type and has a `media` table with `transcript` field, but no voice recording infrastructure. Studied the Whisper API (OpenAI) and Gemini's multimodal audio capabilities. Browser MediaRecorder API with opus/webm codec is the modern standard for in-browser audio capture. FFT-based audio visualization (AnalyserNode) provides real-time visual feedback during recording.
+- **Finding**: This is the first plugin that captures *new* knowledge directly (not importing existing data). Every other plugin so far processes pre-existing content — Voice-to-Memory lets users think aloud and capture fleeting thoughts. The infrastructure gap: no voice recording table, no transcription route, no audio capture UI.
+- **Implemented**:
+  - **Backend** (`/api/v1/plugins/voice-to-memory`):
+    - `voice_recordings` table — auto-created: id, title, transcript, duration, audio size/format, language, provider, model, word count, saved_as_memory flag, memory_id link
+    - **Transcription**: OpenAI Whisper (primary, verbose_json response with segments + language detection) and Gemini Flash (fallback, uses inline audio data). Auto-detects best available provider.
+    - **GET actions**: `recordings` (paginated list), `stats` (aggregated metrics), `check` (provider availability)
+    - **POST actions**: multipart audio upload → transcribe, `save` (creates embedded memory from recording), `delete`, `update` (title editing)
+    - Auto-generates titles from first sentence of transcript, truncated at 60 chars
+    - Generates embeddings when saving as memory for full semantic search
+    - 25MB file size limit matching Whisper API constraints
+  - **Frontend** (`/app/voice`) — Full recording studio:
+    - **Audio visualizer**: 32-bar real-time FFT frequency display during recording, color-coded: teal (loud), sky (medium), zinc (quiet)
+    - **Recording flow**: idle → recording (with timer) → transcribing (spinner) → done (transcript + save/discard)
+    - **Transcript view**: editable title (inline edit with Enter/Escape), full transcript text, word count, language, provider info
+    - **One-click save**: "Save to Knowledge Base" creates an embedded memory with `audio` source type
+    - **Recording history**: list of all recordings with status (saved = emerald checkmark, unsaved = mic icon), duration, word count, relative timestamp, hover-to-reveal save/delete actions
+    - **Stats row**: 4 stat cards (total recordings, total time, words captured, saved count)
+    - **Provider check**: amber warning banner when no API key is configured, with link to Settings
+    - **Back navigation**: arrow back to Plugins page
+  - **Plugin Store**: Added "Open" button for ALL installed plugins that have dedicated pages (13 plugins mapped). Users can now navigate directly from Plugins → Open → Plugin Page. Route mapping covers: Mind Map, Evolution, Sentiment, Gaps, Writing, Flashcards, Blog, Prep, Paths, Resume, Newsletter, Voice.
+  - **Navigation**: Added Voice (Mic icon) to sidebar nav between Newsletter and Insights
+  - **Registry**: Updated voice-to-memory manifest with UI page declaration
+- **Design**: Teal primary, no violet/purple/fuchsia anywhere. OLED black, glass borders, rounded-2xl cards. Recording indicator uses red pulse animation. Completion uses emerald. Provider badge shows teal dot + provider name.
+- **Branch**: `frain/improve` (commit `22f660d`)
+
+## 2026-03-25 01:29 UTC — Custom RAG Strategies Plugin (#32) — Phase 5 Continues
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #21 in build order · Third AI Enhancement
+- **Research**: Studied advanced RAG techniques — HyDE (Gao et al., 2022), Multi-Query expansion, cross-encoder reranking, contextual compression. MindStore already has a triple-layer fusion engine (BM25 + Vector + Tree with RRF), but users had zero control over retrieval strategy. Every query used the same fixed pipeline — no way to optimize for precision vs recall, or trade latency for quality on important queries.
+- **Finding**: The existing retrieval engine is strong for most cases, but falls short on: (1) abstract/conceptual queries where keywords don't match (HyDE fixes this), (2) queries where the user's wording doesn't match stored content (Multi-Query fixes this), (3) cases where BM25/vector ranking disagrees with true relevance (Reranking fixes this), (4) long documents where only a few sentences matter (Compression fixes this). Power users need tunable retrieval.
+- **Implemented**:
+  - **Backend** (`/api/v1/plugins/custom-rag`):
+    - 6 configurable retrieval strategies:
+      - **Default**: Triple-layer fusion (BM25 + Vector + Tree) with RRF — fast, no AI calls
+      - **HyDE**: AI generates a hypothetical "ideal document", embeds that for search — bridges vocabulary gap
+      - **Multi-Query**: Expands query into 3+ alternative perspectives, searches each independently, merges with cross-query RRF + appearance boost
+      - **AI Reranking**: Retrieves larger candidate set, then AI judges true relevance and reorders
+      - **Contextual Compression**: After retrieval, AI extracts only the relevant sentences from each result
+      - **Maximal**: HyDE + Multi-Query + Reranking combined — highest quality, highest cost
+    - Config persisted in plugins table config JSONB
+    - Strategy metadata: latency estimates, accuracy rating, pros/cons arrays
+    - GET actions: `config` (settings + strategy catalog + AI availability), `stats` (memory/embedding/tree counts), `benchmark` (compare strategies on a query)
+    - POST actions: `save-config` (persist strategy + advanced settings), `test-query` (run any strategy on a query, return results + details)
+    - AI helper function with provider fallback chain (OpenAI → Gemini → OpenRouter)
+    - Auto-detects whether advanced strategies are available (requires AI provider)
+  - **Frontend** (`/app/retrieval`) — Retrieval Strategy Dashboard:
+    - **Strategy Selector**: 6 strategy cards with icons, descriptions, latency/accuracy badges. Active strategy gets color-coded ring + check badge. Unavailable strategies grayed with "Requires AI" label
+    - **Stats Row**: 4 stat cards — total memories, embedding coverage %, tree nodes, active strategy
+    - **Advanced Config Panel** (expandable):
+      - Toggle retrieval layers (BM25, Vector, Tree) independently
+      - RRF constant (k) slider: 10-100, controls top-rank weighting
+      - Tree layer boost slider: 0.5x-2.0x
+      - Rerank Top-K slider: 5-50
+      - Multi-Query count slider: 2-5
+    - **Live Test Bench**: Enter query, select strategy, click Run → see results in real time
+      - Results show: rank number, title, source type badge, content preview, score bar, layer indicators (BM25/Vector/Tree)
+      - HyDE: shows generated hypothetical document in sky-blue card
+      - Multi-Query: shows all expanded query variants with original highlighted
+      - Reranking: shows reranked count badge
+      - Latency displayed in teal badge
+    - **How It Works** section: 4-step explanation of the retrieval pipeline
+    - AI provider warning banner when no API key configured
+    - Embedding provider info bar
+  - **Plugin Store**: Added "Open" button route for custom-rag → /app/retrieval
+  - **Navigation**: SlidersHorizontal icon in sidebar between Vision and Insights
+  - **Registry**: Updated custom-rag manifest with UI page declaration
+- **Design**: Teal primary accent, sky for HyDE, amber for multi-query, emerald for reranking, orange for compression, rose for maximal. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards, range sliders with teal accent.
+- **Strategy color system**: Each strategy gets a unique color identity — not gradient slop, just subtle background tints + border accents that communicate function at a glance.
+- **Branch**: `frain/improve` (commit `153d80d`)
+
+## 2026-03-25 01:59 UTC — Multi-Language Support (#31) + Domain-Specific Embeddings (#33) — Phase 5 COMPLETE
+- **Phase**: 5 (AI Enhancement Plugins) · Plugins #22 + #23 in build order · Final AI Enhancements
+- **Finding**: MindStore had zero language awareness — all content treated as monolingual English. Users who stored notes in multiple languages couldn't search across language barriers. And embedding models are general-purpose, with no awareness of specialized vocabulary in domains like medicine or law.
+- **Implemented**:
+  - **Multi-Language Support Backend** (`/api/v1/plugins/multi-language`):
+    - Script-based heuristic detection: identifies CJK (Chinese/Japanese/Korean), Cyrillic, Arabic, Hebrew, Devanagari, Thai, Georgian, Armenian, and 10+ more scripts without any AI call
+    - AI-powered language detection: Gemini/OpenAI for Latin-script languages (English, Spanish, French, German, etc.) where script alone is insufficient
+    - Cross-language search: detects all unique languages in knowledge base → translates query to each → runs BM25 search per translation → deduplicates by memory ID → fuses results
+    - On-demand translation: AI-powered translation for any memory content
+    - Batch language tagging: process 50 untagged memories at a time
+    - Language stored in memory metadata (`metadata.language`, `metadata.languageName`, `metadata.languageConfidence`)
+    - 50+ supported languages with ISO 639-1 codes
+  - **Multi-Language Frontend** (`/app/languages`):
+    - **Overview tab**: Language distribution bars (color-coded, top-5 unique colors), stats row (languages detected, total memories, tagged %, untagged count), capabilities card, how-it-works section
+    - **Cross-Language Search tab**: Search input → detects query language → shows translated queries in badges → results with language tags, match source indication ("Matched via 🇪🇸 translation: ...")
+    - **Detect & Translate tab**: Text area for language detection testing, quick examples (English, Spanish, Japanese, Russian, Arabic, Korean), batch tagging controls with progress reporting
+    - Flag emoji for 40+ languages
+  - **Domain-Specific Embeddings Backend** (`/api/v1/plugins/domain-embeddings`):
+    - 6 domain profiles: General, Code/Programming, Medical/Health, Legal/Compliance, Scientific Research, Finance/Business
+    - Each domain has curated keyword lists (20-30 keywords) for automatic detection
+    - Recommended embedding models per domain with provider, dimensions, description, strengths
+    - Domain detection scoring: keywords matched / total domain keywords → confidence percentage
+    - Batch domain detection: tag up to 100 memories per batch
+    - Domain stored in memory metadata (`metadata.domain`)
+    - Domain stats: distribution across analyzed memories, embedding coverage
+  - **Domain Embeddings Frontend** (`/app/domains`):
+    - Stats row: domains found, analyzed count, embedding coverage %, total memories
+    - Domain distribution chart with colored bars and domain icons
+    - Expandable domain profile cards: click to see keywords + recommended models with provider badges, dimension counts, strengths
+    - Interactive domain detection test bench: paste text → see primary domain + confidence + matched keywords + other domain matches
+    - Auto-detect batch button with progress reporting
+    - How-it-works section (4 steps)
+  - **Navigation**: Globe icon (Languages) and Dna icon (Domains) added to sidebar between Retrieval and Insights
+  - **Plugin Store**: "Open" buttons for both plugins
+  - **Registry**: Updated both manifests with UI page declarations, upgraded domain-embeddings from `prompt` type to `extension` type
+- **Design**: Teal primary, sky for language features, amber for legal domain, rose for medical, emerald for scientific, sky for code/financial. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-xl cards.
+- **Phase 5 Status**: ✅ COMPLETE — All 5 AI Enhancement plugins built (Voice-to-Memory, Image-to-Memory, Custom RAG Strategies, Multi-Language Support, Domain-Specific Embeddings)
+- **Branch**: `frain/improve` (commit `f43c492`)
+
+## 2026-03-25 02:29 UTC — Phase 6 Begins: 7 Export & Import Plugins
+- **Phase**: 6 (Export/Sync & OAuth Plugins) · Plugins #24-30 in build order
+- **Strategy**: Started with plugins that DON'T need OAuth — file-upload importers and export tools. 7 plugins in one cycle.
+- **Implemented**:
+  - **Anki Deck Export (#27)** — Backend + Frontend (`/app/anki`):
+    - Reads flashcard decks from Flashcard Maker plugin
+    - Two export formats: Anki-native TSV (with auto-detection headers) and universal CSV
+    - Deck selection with select-all, card preview expansion
+    - Options: include SM-2 study metadata in CSV
+    - Multi-deck export generates ZIP with README
+    - Browser download via base64 → Blob → URL.createObjectURL
+    - How-to-import guide with 4-step instructions
+    - Empty state redirects to Flashcard Maker
+  - **Markdown Blog Export (#28)** — Backend + Frontend (`/app/export`):
+    - 5 framework templates: Hugo, Jekyll, Astro, Next.js MDX, Plain Markdown
+    - Each template generates correct frontmatter format, file naming conventions, and directory structure
+    - Hugo: YAML frontmatter, folder bundles with index.md, categories/taxonomies
+    - Jekyll: YAML frontmatter, date-prefixed filenames, _posts/ directory
+    - Astro: Content collections with typed schema (auto-generates config.ts), pubDate
+    - Next.js: MDX format with frontmatter metadata
+    - Plain: Minimal YAML frontmatter, universal compatibility
+    - Source type filtering (import only obsidian notes, or only chatgpt conversations, etc.)
+    - Options: author name, mark as draft, include source metadata comments, group by source type
+    - Live preview showing generated frontmatter + content
+    - Output structure visualization per framework
+    - ZIP download with README and framework-specific instructions
+  - **Twitter/X Bookmarks Importer (#1)** — Backend:
+    - Parses bookmarks.js and tweets.js from Twitter data archive (Settings → Download Archive)
+    - Handles Twitter's JS module format (window.YTD.bookmark.part0 = [...])
+    - Extracts: text, author, handle, likes, retweets, URLs, media, hashtags, reply context
+    - Formats tweets with author attribution, linked URLs, hashtag listing
+    - Deduplication by tweet ID
+  - **Telegram Saved Messages Importer (#5)** — Backend:
+    - Parses Telegram Desktop JSON export format
+    - Handles mixed content arrays (text + entities: links, mentions, code, bold, italic)
+    - Smart message grouping: consecutive messages from same sender within 5 minutes merged into single memory
+    - Chat type filtering (saved messages, private chats, groups, channels)
+    - Minimum length filter, dedup by message ID
+    - Link extraction from text entities
+  - **Pocket/Instapaper Importer (#4)** — Backend:
+    - Pocket: Parses Netscape bookmark HTML export (ril_export.html) — extracts href, time_added, tags
+    - Instapaper: Parses CSV export with proper quoted-field handling
+    - Preserves tags (Pocket), folders (Instapaper), descriptions (Instapaper selections)
+    - URL-based deduplication
+  - **Spotify Listening History (#10)** — Backend:
+    - Parses both standard (StreamingHistory_music_*.json) and extended (Streaming_History_Audio_*.json) formats
+    - Builds comprehensive music taste profile:
+      - Total listening hours, unique artists/tracks
+      - Top 20 artist profiles with top tracks, play counts, album listings
+      - Monthly listening history timeline
+    - Creates searchable memories: taste profile, individual artist summaries, monthly timeline
+    - Replaces old import on re-import (clean slate)
+    - Skips plays under 30 seconds
+  - **Readwise Importer (#7)** — Backend:
+    - API-based import using Readwise access token (readwise.io/access_token)
+    - Token validation via /auth/ endpoint
+    - Paginated book and highlight fetching (up to 10,000 highlights)
+    - Highlights grouped by book with full metadata: title, author, category, location, color, tags
+    - Category filtering: books, articles, tweets, podcasts, supplementals
+    - Incremental sync: saves last sync timestamp, only fetches new highlights on subsequent imports
+    - Dedup by Readwise highlight ID
+  - **Navigation**: Added Anki Export (Download icon) and Blog Export (FolderDown icon) to sidebar
+  - **Plugin Store**: Added "Open" button routes for both export plugins
+  - **Registry**: Updated anki-export and markdown-blog-export manifests with UI page declarations
+- **Design**: Teal primary accent throughout. Framework templates get subtle color identities (Hugo=pink, Jekyll=red, Astro=orange, Next.js=sky). NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards.
+- **Phase 6 Progress**: 7 of 10 plugins built. Remaining: Notion Sync (#26), Obsidian Vault Sync (#25), Notion Enhanced Import (#11)
+- **Branch**: `frain/improve` (commit `e5d71d1`)

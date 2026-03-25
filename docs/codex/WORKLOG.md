@@ -90,6 +90,8 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Added unit coverage for plugin scheduling time computation.
 - Added licensing clarity files (`LICENSING.md`, `TRADEMARKS.md`, `DCO.md`) plus explicit package license metadata so the repo's current legal state and contributor expectations are visible.
 - Updated README, contributing guidance, and PR template to separate code license, trademark rights, and contribution-origin expectations.
+- Synced `IMPROVEMENTS.md` and restored `MIND_FILE_SPEC.md` from the active `frain` line so product context docs are preserved on codex as requested.
+- Added a branch convergence playbook and plugin porting guide so `frain` feature work can be adapted into the codex runtime/test/docs model instead of landing as an uncontrolled merge.
 
 ### Decisions
 
@@ -113,6 +115,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Local dev route-type generation under `.next/dev/types` can still be malformed; the codex branch now routes production `build` and `typecheck` through `tsconfig.build.json` as the stable workaround.
 - Many import plugins still need richer dedicated UIs or OAuth flows; runtime import tabs currently provide the shared discovery layer and fallback panel.
 - The repository remains MIT today; any future move to a stronger core license still requires deliberate contributor-rights and governance handling.
+- The branches still diverge heavily in implementation style; feature parity requires structured ports, not a single blind merge.
 
 ### Verification
 
