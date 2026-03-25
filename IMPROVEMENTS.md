@@ -4,6 +4,60 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-24 23:59 UTC — Newsletter Writer Plugin (Phase 4, Plugin #21) — PHASE 4 COMPLETE! 🎉
+- **Context**: Phase 4 of the Plugin System build — Action Plugins. Newsletter Writer is the **6th and final Action Plugin**, completing Phase 4.
+- **Implemented**:
+
+### Newsletter Writer (#21) — NEW
+  - **Full backend API route** (`/api/v1/plugins/newsletter-writer`):
+    - **7 API actions**: `newsletters` (list), `newsletter` (get), `suggest` (AI themes), `generate`, `update`, `refine`, `delete`
+    - **AI suggestion engine**: Fetches up to 50 recent memories within the chosen timeframe, asks AI to suggest 3 themed newsletter ideas with catchy titles, email subject lines, and topic lists
+    - **Multi-query RAG newsletter generation**: Fetches memories by timeframe (7/14/30 days) + optional focus topic semantic search via embeddings. Deduplicates across all queries. Up to 40 source memories used as context.
+    - **Structured section generation**: AI creates a structured newsletter with typed sections:
+      - `intro` — Opening paragraph with warm greeting
+      - `topic` (2-4) — Deep dive sections synthesizing related sources with personal take
+      - `highlight` — Single most interesting/surprising discovery from the period
+      - `quicklinks` — Bullet list of noteworthy items that didn't get full sections
+      - `outro` — Closing thought or question for readers
+    - **Per-section AI refinement**: Refine any section with custom instructions (e.g. "make punchier", "add personal anecdote", "shorten")
+    - **Section-level editing**: Update individual section content with save to backend + word count recalculation
+    - **Configurable timeframe**: 7-day (weekly), 14-day (bi-weekly), 30-day (monthly roundup)
+    - **3 tones**: casual (warm/conversational), professional (polished/authoritative), witty (sharp/clever)
+    - **Multi-provider AI**: OpenAI, Gemini, Ollama, OpenRouter, Custom API — same pattern as all plugins
+    - **Storage**: Plugin config JSONB, max 20 newsletters per user, auto-install on first use
+  - **Full frontend page** (`/app/newsletter`) — 4 views:
+    - **List view**: Newsletter cards with title, email subject, period badge, topic tags, word count, section count, source count, status badges (draft/polishing/ready), relative timestamps, delete per newsletter. Empty state with call-to-action.
+    - **Create view**:
+      - Title + subject line inputs (side-by-side on desktop)
+      - 3 timeframe options (7d/14d/30d) with descriptive labels, highlighted active
+      - 3 tone selectors with icons (MessageSquare/Briefcase/Zap)
+      - AI suggestion cards: automatically fetches theme ideas when timeframe changes, each shows title/pitch/topic tags, click to populate form fields
+      - Focus topics input (comma-separated, optional)
+      - Custom instructions textarea (optional)
+      - Full-width generate button with loading state
+    - **Edit view**: Expandable section accordion with:
+      - Type-colored icon badges (teal=intro, sky=topic, amber=highlight, emerald=quicklinks, zinc=outro)
+      - Section type label + title + source count
+      - Collapsed preview (first 80 chars)
+      - Expanded: full markdown rendering with inline formatting support
+      - Edit mode: monospace textarea with keyboard shortcuts (⌘+Enter save, Esc cancel)
+      - AI Refine: expandable instruction input, Enter to submit, Esc to close
+      - Top bar: Preview, Copy, Download .md buttons
+      - Subject line display
+    - **Preview view**: Clean document-style rendering with teal section headers, proper markdown rendering, section dividers. Copy All + Download .md export buttons.
+    - **Export**: Copy full newsletter as markdown to clipboard, download as `.md` file with auto-generated filename
+  - **Design**: OLED black base, teal primary accent, sky/amber/emerald type-colored section badges, glass borders (white/[0.06]), rounded-2xl cards, zero violet/purple/fuchsia
+  - **Navigation**: Sidebar entry ("Newsletter" with Mail icon), Command Palette action (searchable by newsletter/digest/weekly/email/curate/summary/roundup/send/mail/report/recap), Command Palette nav entry
+- **Phase 4 Progress** — COMPLETE:
+  1. ✅ Flashcard Maker (#20)
+  2. ✅ Blog Draft Generator (#19)
+  3. ✅ Conversation Prep (#23)
+  4. ✅ Learning Path Generator (#24)
+  5. ✅ Resume Builder (#22)
+  6. ✅ Newsletter Writer (#21) ← NEW — PHASE 4 DONE!
+- **Next**: Phase 5 — AI Enhancement Plugins! Starting with Voice-to-Memory (#29).
+- **Branch**: `frain/improve` (commit `34648fa`)
+
 ## 2026-03-24 23:29 UTC — Resume Builder Plugin (Phase 4, Plugin #22)
 - **Context**: Phase 4 of the Plugin System build — Action Plugins. Continuing after Learning Path Generator (#24). Resume Builder is the **5th of 6 Action Plugins**.
 - **Implemented**:
