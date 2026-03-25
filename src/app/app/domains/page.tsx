@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -81,17 +82,22 @@ export default function DomainEmbeddingsPage() {
   const [detectText, setDetectText] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [detectResult, setDetectResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [configRes, statsRes] = await Promise.all([
         fetch("/api/v1/plugins/domain-embeddings?action=config"),
         fetch("/api/v1/plugins/domain-embeddings?action=stats"),
       ]);
       if (configRes.ok) setConfig(await configRes.json());
+      else throw new Error("Failed to load domain config");
       if (statsRes.ok) setStats(await statsRes.json());
-    } catch {}
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load domain data");
+    }
     setLoading(false);
   }, []);
 
@@ -111,7 +117,7 @@ export default function DomainEmbeddingsPage() {
         setTagResult({ tagged: data.tagged, remaining: data.remaining });
         fetchData();
       }
-    } catch {}
+    } catch { toast.error("Failed to detect domains"); }
     setTagging(false);
   };
 
@@ -122,7 +128,7 @@ export default function DomainEmbeddingsPage() {
     try {
       const res = await fetch(`/api/v1/plugins/domain-embeddings?action=detect&text=${encodeURIComponent(detectText)}`);
       if (res.ok) setDetectResult(await res.json());
-    } catch {}
+    } catch { toast.error("Detection failed"); }
     setDetecting(false);
   };
 
@@ -170,6 +176,18 @@ export default function DomainEmbeddingsPage() {
       {loading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="text-center py-16">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/[0.06] border border-red-500/10 flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-[14px] text-zinc-400 font-medium mb-1">{error}</p>
+          <button onClick={fetchData} className="text-[13px] text-teal-400 hover:text-teal-300 transition-colors">
+            Try again
+          </button>
         </div>
       )}
 

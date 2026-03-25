@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
   Brain, Database, FileText, Loader2,
@@ -52,15 +52,20 @@ export default function StatsPage() {
   usePageTitle("Stats");
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const growthCanvasRef = useRef<HTMLCanvasElement>(null);
   const depthCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
+  const loadStats = useCallback(() => {
+    setLoading(true);
+    setError(null);
     fetch("/api/v1/knowledge-stats")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error("Failed to load stats"); return r.json(); })
       .then((d) => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch((e) => { setError(e.message || "Something went wrong"); setLoading(false); });
   }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   // ─── Growth chart (Canvas) ────────────────────
   useEffect(() => {
@@ -237,6 +242,27 @@ export default function StatsPage() {
           <span className="text-[13px] text-zinc-600">Loading knowledge stats…</span>
         </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageTransition className="space-y-6">
+        <Stagger>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Knowledge Stats</h1>
+        </Stagger>
+        <Stagger>
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/[0.06] border border-red-500/10 flex items-center justify-center mx-auto mb-3">
+              <BarChart3 className="w-6 h-6 text-red-400" />
+            </div>
+            <p className="text-[14px] text-zinc-400 font-medium mb-1">{error}</p>
+            <button onClick={loadStats} className="text-[13px] text-teal-400 hover:text-teal-300 transition-colors">
+              Try again
+            </button>
+          </div>
+        </Stagger>
+      </PageTransition>
     );
   }
 

@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -86,17 +87,22 @@ export default function MultiLanguagePage() {
   const [detectedLang, setDetectedLang] = useState<{ code: string; name: string; confidence: number; method: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "search" | "detect">("overview");
   const [configOpen, setConfigOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [statsRes, checkRes] = await Promise.all([
         fetch("/api/v1/plugins/multi-language?action=stats"),
         fetch("/api/v1/plugins/multi-language?action=check"),
       ]);
       if (statsRes.ok) setStats(await statsRes.json());
+      else throw new Error("Failed to load language stats");
       if (checkRes.ok) setCheck(await checkRes.json());
-    } catch {}
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load language data");
+    }
     setLoading(false);
   }, []);
 
@@ -117,7 +123,7 @@ export default function MultiLanguagePage() {
         // Refresh stats
         fetchData();
       }
-    } catch {}
+    } catch { toast.error("Failed to tag languages"); }
     setTagging(false);
   };
 
@@ -128,7 +134,7 @@ export default function MultiLanguagePage() {
     try {
       const res = await fetch(`/api/v1/plugins/multi-language?action=search&q=${encodeURIComponent(searchQuery)}&limit=10`);
       if (res.ok) setSearchResults(await res.json());
-    } catch {}
+    } catch { toast.error("Search failed"); }
     setSearching(false);
   };
 
@@ -142,7 +148,7 @@ export default function MultiLanguagePage() {
         const data = await res.json();
         setDetectedLang({ ...data.language, method: data.method });
       }
-    } catch {}
+    } catch { toast.error("Detection failed"); }
     setDetecting(false);
   };
 
@@ -234,6 +240,19 @@ export default function MultiLanguagePage() {
       {loading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+        </div>
+      )}
+
+      {/* Error */}
+      {!loading && error && (
+        <div className="text-center py-16">
+          <div className="w-14 h-14 rounded-2xl bg-red-500/[0.06] border border-red-500/10 flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+          </div>
+          <p className="text-[14px] text-zinc-400 font-medium mb-1">{error}</p>
+          <button onClick={fetchData} className="text-[13px] text-teal-400 hover:text-teal-300 transition-colors">
+            Try again
+          </button>
         </div>
       )}
 
