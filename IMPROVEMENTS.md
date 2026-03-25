@@ -1324,3 +1324,42 @@ _Automated 30-min improvement cycles by Frain_
 - **Design**: Teal primary accent, sky for HyDE, amber for multi-query, emerald for reranking, orange for compression, rose for maximal. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards, range sliders with teal accent.
 - **Strategy color system**: Each strategy gets a unique color identity — not gradient slop, just subtle background tints + border accents that communicate function at a glance.
 - **Branch**: `frain/improve` (commit `153d80d`)
+
+## 2026-03-25 01:59 UTC — Multi-Language Support (#31) + Domain-Specific Embeddings (#33) — Phase 5 COMPLETE
+- **Phase**: 5 (AI Enhancement Plugins) · Plugins #22 + #23 in build order · Final AI Enhancements
+- **Finding**: MindStore had zero language awareness — all content treated as monolingual English. Users who stored notes in multiple languages couldn't search across language barriers. And embedding models are general-purpose, with no awareness of specialized vocabulary in domains like medicine or law.
+- **Implemented**:
+  - **Multi-Language Support Backend** (`/api/v1/plugins/multi-language`):
+    - Script-based heuristic detection: identifies CJK (Chinese/Japanese/Korean), Cyrillic, Arabic, Hebrew, Devanagari, Thai, Georgian, Armenian, and 10+ more scripts without any AI call
+    - AI-powered language detection: Gemini/OpenAI for Latin-script languages (English, Spanish, French, German, etc.) where script alone is insufficient
+    - Cross-language search: detects all unique languages in knowledge base → translates query to each → runs BM25 search per translation → deduplicates by memory ID → fuses results
+    - On-demand translation: AI-powered translation for any memory content
+    - Batch language tagging: process 50 untagged memories at a time
+    - Language stored in memory metadata (`metadata.language`, `metadata.languageName`, `metadata.languageConfidence`)
+    - 50+ supported languages with ISO 639-1 codes
+  - **Multi-Language Frontend** (`/app/languages`):
+    - **Overview tab**: Language distribution bars (color-coded, top-5 unique colors), stats row (languages detected, total memories, tagged %, untagged count), capabilities card, how-it-works section
+    - **Cross-Language Search tab**: Search input → detects query language → shows translated queries in badges → results with language tags, match source indication ("Matched via 🇪🇸 translation: ...")
+    - **Detect & Translate tab**: Text area for language detection testing, quick examples (English, Spanish, Japanese, Russian, Arabic, Korean), batch tagging controls with progress reporting
+    - Flag emoji for 40+ languages
+  - **Domain-Specific Embeddings Backend** (`/api/v1/plugins/domain-embeddings`):
+    - 6 domain profiles: General, Code/Programming, Medical/Health, Legal/Compliance, Scientific Research, Finance/Business
+    - Each domain has curated keyword lists (20-30 keywords) for automatic detection
+    - Recommended embedding models per domain with provider, dimensions, description, strengths
+    - Domain detection scoring: keywords matched / total domain keywords → confidence percentage
+    - Batch domain detection: tag up to 100 memories per batch
+    - Domain stored in memory metadata (`metadata.domain`)
+    - Domain stats: distribution across analyzed memories, embedding coverage
+  - **Domain Embeddings Frontend** (`/app/domains`):
+    - Stats row: domains found, analyzed count, embedding coverage %, total memories
+    - Domain distribution chart with colored bars and domain icons
+    - Expandable domain profile cards: click to see keywords + recommended models with provider badges, dimension counts, strengths
+    - Interactive domain detection test bench: paste text → see primary domain + confidence + matched keywords + other domain matches
+    - Auto-detect batch button with progress reporting
+    - How-it-works section (4 steps)
+  - **Navigation**: Globe icon (Languages) and Dna icon (Domains) added to sidebar between Retrieval and Insights
+  - **Plugin Store**: "Open" buttons for both plugins
+  - **Registry**: Updated both manifests with UI page declarations, upgraded domain-embeddings from `prompt` type to `extension` type
+- **Design**: Teal primary, sky for language features, amber for legal domain, rose for medical, emerald for scientific, sky for code/financial. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-xl cards.
+- **Phase 5 Status**: ✅ COMPLETE — All 5 AI Enhancement plugins built (Voice-to-Memory, Image-to-Memory, Custom RAG Strategies, Multi-Language Support, Domain-Specific Embeddings)
+- **Branch**: `frain/improve` (commit `f43c492`)
