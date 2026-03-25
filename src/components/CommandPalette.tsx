@@ -9,7 +9,7 @@ import {
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
   Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
-  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem,
+  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all memories" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you" },
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
+  { href: "/app/stats", icon: BarChart3, label: "Knowledge Stats", desc: "Analytics, growth charts, and word statistics" },
   { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
@@ -330,6 +331,18 @@ export function CommandPalette() {
         keywords: ["map", "mind", "graph", "topology", "visual", "cluster", "topics"],
         action: () => {
           router.push("/app/mindmap");
+          setOpen(false);
+        },
+      },
+      {
+        id: "knowledge-stats",
+        icon: BarChart3,
+        iconColor: "text-teal-400",
+        label: "View Knowledge Stats",
+        desc: "Analytics, word counts, growth charts, source distribution",
+        keywords: ["stats", "statistics", "analytics", "growth", "words", "count", "chart", "graph", "distribution", "diversity"],
+        action: () => {
+          router.push("/app/stats");
           setOpen(false);
         },
       },

@@ -54,7 +54,8 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { keys: ["↵"], label: "Send message" },
       { keys: ["⇧", "↵"], label: "New line in message" },
-      { keys: ["Esc"], label: "Close history panel" },
+      { keys: ["Esc"], label: "Close history / Stop generating" },
+      { keys: ["Space"], label: "Reveal flashcard answer (review)" },
     ],
   },
   {

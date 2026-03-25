@@ -194,3 +194,27 @@ export const apiKeys = pgTable('api_keys', {
   lastUsedAt: timestamp('last_used_at'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// === TAGS SYSTEM ===
+
+export const tags = pgTable('tags', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  color: text('color').default('teal'), // teal, sky, emerald, amber, red, blue, orange, zinc
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_tags_user_name').on(table.userId, table.name),
+  index('idx_tags_user').on(table.userId),
+]);
+
+export const memoryTags = pgTable('memory_tags', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  memoryId: uuid('memory_id').references(() => memories.id, { onDelete: 'cascade' }).notNull(),
+  tagId: uuid('tag_id').references(() => tags.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_memory_tags_unique').on(table.memoryId, table.tagId),
+  index('idx_memory_tags_memory').on(table.memoryId),
+  index('idx_memory_tags_tag').on(table.tagId),
+]);

@@ -3,10 +3,17 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+
+interface TagData {
+  id: string;
+  name: string;
+  color: string;
+  memory_count?: number;
+}
 
 interface Memory {
   id: string;
@@ -20,6 +27,7 @@ interface Memory {
   layers?: Record<string, any>;
   score?: number;
   pinned?: boolean;
+  tags?: TagData[];
 }
 
 interface Source {
@@ -50,6 +58,29 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   spotify: { icon: Music, color: "text-emerald-400 bg-emerald-500/10" },
   readwise: { icon: Highlighter, color: "text-amber-400 bg-amber-500/10" },
 };
+
+// Tag color utility
+const TAG_COLOR_MAP: Record<string, string> = {
+  teal:    'text-teal-400 bg-teal-500/10 border-teal-500/15',
+  sky:     'text-sky-400 bg-sky-500/10 border-sky-500/15',
+  emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/15',
+  amber:   'text-amber-400 bg-amber-500/10 border-amber-500/15',
+  red:     'text-red-400 bg-red-500/10 border-red-500/15',
+  blue:    'text-blue-400 bg-blue-500/10 border-blue-500/15',
+  orange:  'text-orange-400 bg-orange-500/10 border-orange-500/15',
+  zinc:    'text-zinc-400 bg-zinc-500/10 border-zinc-500/15',
+};
+function tagColorClasses(color: string): string {
+  return TAG_COLOR_MAP[color] || TAG_COLOR_MAP.teal;
+}
+function tagDotColor(color: string): string {
+  const m: Record<string, string> = {
+    teal: 'bg-teal-400', sky: 'bg-sky-400', emerald: 'bg-emerald-400',
+    amber: 'bg-amber-400', red: 'bg-red-400', blue: 'bg-blue-400',
+    orange: 'bg-orange-400', zinc: 'bg-zinc-400',
+  };
+  return m[color] || m.teal;
+}
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
   { id: "newest", label: "Newest first", icon: ArrowDownNarrowWide },
@@ -100,6 +131,15 @@ export default function ExplorePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // ── Tags state ──────────────────
+  const [allTags, setAllTags] = useState<TagData[]>([]);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [tagMenuOpen, setTagMenuOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [tagAssignOpen, setTagAssignOpen] = useState(false); // in detail view
+  const [batchTagMenuOpen, setBatchTagMenuOpen] = useState(false); // in select mode toolbar
 
   // Derive unique source types from actual data
   const sourceTypeCounts = sources.reduce((acc, s) => {
@@ -345,6 +385,11 @@ export default function ExplorePage() {
     return () => controller.abort();
   }, [selected?.id]);
 
+  // Close tag dropdowns when selected memory changes
+  useEffect(() => {
+    setTagAssignOpen(false);
+  }, [selected?.id]);
+
   // Navigate to a related memory
   const openRelatedMemory = useCallback((relatedId: string) => {
     const mem = memories.find(m => m.id === relatedId);
@@ -507,7 +552,7 @@ export default function ExplorePage() {
   // Reset focused index when memories change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [search, filter, sortBy]);
+  }, [search, filter, sortBy, tagFilter]);
 
   // Sync search query to URL (shallow, no navigation)
   useEffect(() => {
@@ -556,10 +601,12 @@ export default function ExplorePage() {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
       fetch(`/api/v1/memories?limit=100&sort=${sortBy}`).then(r => r.json()),
-    ]).then(([srcData, memData]) => {
+      fetch('/api/v1/tags').then(r => r.json()).catch(() => ({ tags: [] })),
+    ]).then(([srcData, memData, tagData]) => {
       setSources(srcData.sources || []);
       setMemories(memData.memories || []);
       setTotalMemories(memData.total || 0);
+      setAllTags(tagData.tags || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -583,6 +630,7 @@ export default function ExplorePage() {
             layers: r.layers || {},
             score: r.score || 0,
             pinned: r.metadata?.pinned === true,
+            tags: r.tags || [],
           }));
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
@@ -594,6 +642,7 @@ export default function ExplorePage() {
         const p = new URLSearchParams({ limit: '100', sort: sortBy });
         if (filter && filter !== 'pinned') p.set('source', filter);
         if (filter === 'pinned') p.set('pinned', 'true');
+        if (tagFilter) p.set('tagId', tagFilter);
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
           setMemories(d.memories || []);
           setTotalMemories(d.total || 0);
@@ -601,7 +650,7 @@ export default function ExplorePage() {
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [search, filter, sortBy]);
+  }, [search, filter, sortBy, tagFilter]);
 
   // ── Infinite scroll with Intersection Observer ──────────────────
   const loadMore = useCallback(async () => {
@@ -611,12 +660,13 @@ export default function ExplorePage() {
       const p = new URLSearchParams({ limit: '100', offset: String(memories.length), sort: sortBy });
       if (filter && filter !== 'pinned') p.set('source', filter);
       if (filter === 'pinned') p.set('pinned', 'true');
+      if (tagFilter) p.set('tagId', tagFilter);
       const res = await fetch(`/api/v1/memories?${p}`);
       const d = await res.json();
       setMemories(prev => [...prev, ...(d.memories || [])]);
     } catch { /* ignore */ }
     setLoadingMore(false);
-  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy]);
+  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy, tagFilter]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -634,6 +684,121 @@ export default function ExplorePage() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [loadMore, loadingMore, memories.length, totalMemories, search]);
+
+  // ── Tag helpers ──────────────────
+  const refreshTags = useCallback(async () => {
+    try {
+      const r = await fetch('/api/v1/tags');
+      const d = await r.json();
+      setAllTags(d.tags || []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const createTag = useCallback(async (name: string, color?: string) => {
+    if (!name.trim()) return null;
+    setCreatingTag(true);
+    try {
+      const res = await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), color: color || 'teal' }),
+      });
+      const data = await res.json();
+      if (data.tag) {
+        if (!data.existed) {
+          toast.success(`Tag "${data.tag.name}" created`);
+        }
+        await refreshTags();
+        setNewTagName('');
+        return data.tag;
+      }
+      if (data.error) toast.error(data.error);
+      return null;
+    } catch { toast.error('Failed to create tag'); return null; }
+    finally { setCreatingTag(false); }
+  }, [refreshTags]);
+
+  const assignTag = useCallback(async (tagId: string, memoryIds: string[]) => {
+    try {
+      const res = await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'assign', tagId, memoryIds }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Update local state — add tag to affected memories
+        const tag = allTags.find(t => t.id === tagId);
+        if (tag) {
+          setMemories(prev => prev.map(m =>
+            memoryIds.includes(m.id) && !m.tags?.some(t => t.id === tagId)
+              ? { ...m, tags: [...(m.tags || []), tag] }
+              : m
+          ));
+          if (selected && memoryIds.includes(selected.id)) {
+            setSelected(prev => prev ? {
+              ...prev,
+              tags: [...(prev.tags || []), tag].filter((t, i, arr) => arr.findIndex(a => a.id === t.id) === i),
+            } : null);
+          }
+        }
+        await refreshTags();
+        toast.success(`Tagged ${memoryIds.length} memor${memoryIds.length === 1 ? 'y' : 'ies'}`);
+      }
+    } catch { toast.error('Failed to tag'); }
+  }, [allTags, selected, refreshTags]);
+
+  const unassignTag = useCallback(async (tagId: string, memoryIds: string[]) => {
+    try {
+      await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unassign', tagId, memoryIds }),
+      });
+      // Update local state
+      setMemories(prev => prev.map(m =>
+        memoryIds.includes(m.id)
+          ? { ...m, tags: (m.tags || []).filter(t => t.id !== tagId) }
+          : m
+      ));
+      if (selected && memoryIds.includes(selected.id)) {
+        setSelected(prev => prev ? {
+          ...prev,
+          tags: (prev.tags || []).filter(t => t.id !== tagId),
+        } : null);
+      }
+      await refreshTags();
+      toast.success('Tag removed');
+    } catch { toast.error('Failed to remove tag'); }
+  }, [selected, refreshTags]);
+
+  const deleteTag = useCallback(async (tagId: string) => {
+    const tag = allTags.find(t => t.id === tagId);
+    if (!confirm(`Delete tag "${tag?.name}"? It will be removed from all memories.`)) return;
+    try {
+      await fetch(`/api/v1/tags?id=${tagId}`, { method: 'DELETE' });
+      // Remove from local state
+      setMemories(prev => prev.map(m => ({
+        ...m,
+        tags: (m.tags || []).filter(t => t.id !== tagId),
+      })));
+      if (selected) {
+        setSelected(prev => prev ? {
+          ...prev,
+          tags: (prev.tags || []).filter(t => t.id !== tagId),
+        } : null);
+      }
+      if (tagFilter === tagId) setTagFilter(null);
+      await refreshTags();
+      toast.success(`Tag "${tag?.name}" deleted`);
+    } catch { toast.error('Failed to delete tag'); }
+  }, [allTags, selected, tagFilter, refreshTags]);
+
+  const handleBatchTag = useCallback(async (tagId: string) => {
+    if (selectedIds.size === 0) return;
+    await assignTag(tagId, Array.from(selectedIds));
+    setBatchTagMenuOpen(false);
+  }, [selectedIds, assignTag]);
 
   return (
     <PageTransition className="space-y-4 md:space-y-6">
@@ -727,6 +892,23 @@ export default function ExplorePage() {
               const Icon = cfg.icon || FileText;
               return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
             })}
+            {/* Tag filter pills */}
+            {allTags.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-white/[0.08] shrink-0 mx-0.5" />
+                {allTags.map(tag => (
+                  <FilterPill
+                    key={`tag-${tag.id}`}
+                    active={tagFilter === tag.id}
+                    onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
+                    label={tag.name}
+                    count={tag.memory_count}
+                    icon={<Tag className="w-3 h-3" />}
+                    tagColor={tag.color}
+                  />
+                ))}
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
@@ -868,6 +1050,59 @@ export default function ExplorePage() {
             </div>
             {selectedIds.size > 0 && (
               <div className="flex items-center gap-1">
+                {/* Batch tag */}
+                <div className="relative">
+                  <button
+                    onClick={() => setBatchTagMenuOpen(!batchTagMenuOpen)}
+                    className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 transition-all active:scale-[0.96]"
+                    title="Tag selected memories"
+                  >
+                    <Tag className="w-3 h-3" />
+                    <span className="hidden sm:inline">Tag</span>
+                  </button>
+                  {batchTagMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setBatchTagMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1.5 z-40 w-48 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="p-2 border-b border-white/[0.06]">
+                          <div className="flex gap-1.5">
+                            <input
+                              placeholder="New tag…"
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                              onKeyDown={async (e) => {
+                                if (e.key === 'Enter' && newTagName.trim()) {
+                                  const tag = await createTag(newTagName);
+                                  if (tag) {
+                                    await handleBatchTag(tag.id);
+                                  }
+                                }
+                              }}
+                              className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        {allTags.length > 0 ? (
+                          <div className="py-1 max-h-40 overflow-y-auto">
+                            {allTags.map(tag => (
+                              <button
+                                key={tag.id}
+                                onClick={() => handleBatchTag(tag.id)}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                              >
+                                <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
+                                <span className="text-[12px] text-zinc-300">{tag.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="px-3 py-2 text-[11px] text-zinc-600 italic">Type to create a tag</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <button
                   onClick={handleBatchCopy}
                   className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
@@ -952,6 +1187,14 @@ export default function ExplorePage() {
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0 w-10 text-right">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
+                {m.tags && m.tags.length > 0 && (
+                  <span className="flex items-center gap-[2px] shrink-0">
+                    {m.tags.slice(0, 3).map(tag => (
+                      <span key={tag.id} className={`w-[5px] h-[5px] rounded-full ${tagDotColor(tag.color)}`} title={tag.name} />
+                    ))}
+                    {m.tags.length > 3 && <span className="text-[8px] text-zinc-600">+{m.tags.length - 3}</span>}
+                  </span>
+                )}
                 {m.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 shrink-0 fill-amber-400/30" />}
                 {search.trim() && m.layers && (
                   <span className="flex items-center gap-[2px] shrink-0" title={
@@ -1034,14 +1277,20 @@ export default function ExplorePage() {
                 )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
-              {/* Word count hint in list view */}
-              {!search.trim() && (
-                <div className="flex items-center gap-2 mt-1.5">
+              {/* Tags + Word count hint in list view */}
+              <div className={`flex items-center gap-2 mt-1.5 flex-wrap ${selectMode ? 'pl-6' : ''}`}>
+                {m.tags && m.tags.length > 0 && m.tags.map(tag => (
+                  <span key={tag.id} className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold ${tagColorClasses(tag.color)}`}>
+                    <Tag className="w-2 h-2" />
+                    {tag.name}
+                  </span>
+                ))}
+                {!search.trim() && (
                   <span className="text-[10px] text-zinc-700">
                     {m.content.trim().split(/\s+/).length} words
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </button>
           );
         })}
@@ -1160,7 +1409,7 @@ export default function ExplorePage() {
 
       {/* Detail Bottom Sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); } }}>
+        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); } }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
@@ -1221,7 +1470,7 @@ export default function ExplorePage() {
                     </button>
                   </>
                 )}
-                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
+                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
@@ -1353,6 +1602,110 @@ export default function ExplorePage() {
                     </div>
                   </div>
                 ) : null}
+              </div>
+            )}
+
+            {/* Tags — view & manage tags on this memory */}
+            {!editing && (
+              <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Tag className="w-3 h-3 text-teal-400/70" />
+                  <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+                    Tags
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Existing tags on this memory */}
+                  {(selected.tags || []).map(tag => (
+                    <span key={tag.id} className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-semibold border ${tagColorClasses(tag.color)} group/tag`}>
+                      <Tag className="w-2.5 h-2.5" />
+                      {tag.name}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); unassignTag(tag.id, [selected.id]); }}
+                        className="ml-0.5 opacity-0 group-hover/tag:opacity-100 hover:text-white transition-all"
+                        title="Remove tag"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {/* Add tag button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setTagAssignOpen(!tagAssignOpen)}
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-medium text-zinc-600 border border-dashed border-white/[0.1] hover:border-teal-500/30 hover:text-teal-400 transition-all"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      Add tag
+                    </button>
+                    {/* Tag assign dropdown */}
+                    {tagAssignOpen && (
+                      <>
+                        <div className="fixed inset-0 z-[70]" onClick={() => setTagAssignOpen(false)} />
+                        <div className="absolute bottom-full mb-1.5 left-0 z-[80] w-52 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                          <div className="p-2 border-b border-white/[0.06]">
+                            <div className="flex gap-1.5">
+                              <input
+                                placeholder="New tag…"
+                                value={newTagName}
+                                onChange={(e) => setNewTagName(e.target.value)}
+                                onKeyDown={async (e) => {
+                                  if (e.key === 'Enter' && newTagName.trim()) {
+                                    const tag = await createTag(newTagName);
+                                    if (tag) {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }
+                                  }
+                                }}
+                                className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                                autoFocus
+                              />
+                              {newTagName.trim() && (
+                                <button
+                                  onClick={async () => {
+                                    const tag = await createTag(newTagName);
+                                    if (tag) {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }
+                                  }}
+                                  disabled={creatingTag}
+                                  className="h-7 px-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-[11px] font-medium text-white shrink-0 transition-all disabled:opacity-50"
+                                >
+                                  {creatingTag ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {allTags.length > 0 && (
+                            <div className="py-1 max-h-40 overflow-y-auto">
+                              {allTags
+                                .filter(tag => !selected.tags?.some(t => t.id === tag.id))
+                                .map(tag => (
+                                  <button
+                                    key={tag.id}
+                                    onClick={async () => {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
+                                    <span className="text-[12px] text-zinc-300">{tag.name}</span>
+                                    <span className="text-[10px] text-zinc-600 ml-auto">{tag.memory_count}</span>
+                                  </button>
+                                ))}
+                              {allTags.filter(tag => !selected.tags?.some(t => t.id === tag.id)).length === 0 && (
+                                <p className="px-3 py-2 text-[11px] text-zinc-600 italic">All tags assigned</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1490,21 +1843,23 @@ export default function ExplorePage() {
   );
 }
 
-function FilterPill({ active, onClick, label, count, icon }: {
-  active: boolean; onClick: () => void; label: string; count?: number; icon?: React.ReactNode;
+function FilterPill({ active, onClick, label, count, icon, tagColor }: {
+  active: boolean; onClick: () => void; label: string; count?: number; icon?: React.ReactNode; tagColor?: string;
 }) {
+  // For tag pills, use their color when active
+  const activeStyle = tagColor
+    ? `${tagColorClasses(tagColor).replace('border-', 'border border-')} shadow-sm`
+    : "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10";
   return (
     <button
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
-        active
-          ? "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10"
-          : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
+        active ? activeStyle : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
       }`}
     >
       {icon}
       {label}
-      {count !== undefined && <span className="text-[10px] opacity-60">{count}</span>}
+      {count !== undefined && count > 0 && <span className="text-[10px] opacity-60">{count}</span>}
     </button>
   );
 }
