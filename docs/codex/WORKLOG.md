@@ -57,16 +57,22 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Upgraded the browser extension popup with a `Test connection` flow, setup diagnostics, and direct links to docs/package downloads.
 - Expanded extension conversation detection to cover Gemini alongside ChatGPT, Claude, and OpenClaw.
 - Reworked the Connect page to clarify browser extension setup, hosted versus local MCP auth, and remote MCP configuration patterns.
+- Added a runtime requirements and provider-access model so users can see what MindStore actually requires today and what auth modes are planned next.
+- Added branch roadmap documentation tying provider access, MCP modernization, runtime integration, jobs, and extension work into one sequence.
+- Refactored MCP logic into a shared runtime module and added an official MCP SDK-backed server builder so the current route and future SDK path share the same definitions.
 - Expanded docs with:
   - browser extension guide
   - capture API reference
   - extension setup API reference
+  - provider access guide
   - plugin authoring and plugin runtime notes
   - plugin settings reference
   - plugin widgets and jobs reference
   - ingestion hook contract
   - plugin importer guide
   - MindStore Everywhere build notes
+  - codex roadmap
+  - release note for provider access and MCP foundation
   - deployment modes
   - MCP client setup
   - release note for capture and extension work

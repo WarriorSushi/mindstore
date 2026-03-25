@@ -71,6 +71,8 @@ A browser companion for capturing selections, pages, and supported AI conversati
 - Node.js 18+
 - PostgreSQL 16+ with [pgvector](https://github.com/pgvector/pgvector) and pg_trgm extensions
 
+That is the real hard requirement. You do **not** need Supabase specifically, and you do **not** need Vercel specifically. Any compatible PostgreSQL host and any Node-capable deployment target work.
+
 ### Setup
 
 ```bash
@@ -99,7 +101,18 @@ npm run dev
 | **OpenAI** | ~$0.01/10 queries | Get key at [platform.openai.com](https://platform.openai.com/api-keys) |
 | **Ollama** | Free (local) | Install from [ollama.ai](https://ollama.ai), run `ollama pull nomic-embed-text` |
 
-Configure via the Settings page or environment variables. **MindStore works for browsing and importing without any AI key** — you only need one for semantic search and chat.
+Configure via the Settings page or environment variables. **MindStore works for browsing and importing without any AI key** — you only need one for semantic search, chat, and AI-heavy plugin flows.
+
+## What You Actually Need
+
+- Required:
+  PostgreSQL with `pgvector` and `pg_trgm`
+- Optional:
+  Vercel, Supabase, Google OAuth, provider API keys
+- AI access today:
+  API key or local Ollama
+- Subscription-style provider login:
+  Planned, not the mainline path yet
 
 ## Connect Your AI
 

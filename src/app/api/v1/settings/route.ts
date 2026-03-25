@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getEmbeddingConfig } from '@/server/embeddings';
+import {
+  PROVIDER_AUTH_ROADMAP,
+  PROVIDER_CATALOG,
+  RUNTIME_REQUIREMENTS,
+} from '@/server/runtime-requirements';
+
+interface SettingRow {
+  key: string;
+  value: string;
+}
 
 /**
  * GET /api/v1/settings — get current settings
@@ -17,7 +27,7 @@ export async function GET() {
     );
 
     const config: Record<string, string> = {};
-    for (const row of settings as any[]) {
+    for (const row of settings as unknown as SettingRow[]) {
       config[row.key] = row.value;
     }
 
@@ -57,6 +67,9 @@ export async function GET() {
       embeddingProvider: embConfig?.provider || null,
       chatProvider: config.chat_provider || null,
       chatModel: config.chat_model || null,
+      runtimeRequirements: RUNTIME_REQUIREMENTS,
+      providerCatalog: PROVIDER_CATALOG,
+      providerAuthRoadmap: PROVIDER_AUTH_ROADMAP,
     });
   } catch (error: unknown) {
     console.error('[settings GET]', error);
@@ -73,6 +86,9 @@ export async function GET() {
       },
       embeddingProvider: null,
       chatProvider: null,
+      runtimeRequirements: RUNTIME_REQUIREMENTS,
+      providerCatalog: PROVIDER_CATALOG,
+      providerAuthRoadmap: PROVIDER_AUTH_ROADMAP,
       dbError: true,
     });
   }

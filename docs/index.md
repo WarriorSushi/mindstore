@@ -21,6 +21,8 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 - [Examples](./examples/index.md)
 - [Build Guide](./build/index.md)
 - [Architecture Decisions](./adr/0001-plugin-runtime-and-docs-first.md)
+- [Provider Access ADR](./adr/0002-provider-access-and-runtime-roadmap.md)
+- [Codex Roadmap](./codex/ROADMAP.md)
 
 ## Support
 
@@ -30,4 +32,5 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 - [Plugin Runtime Surfaces Release](./releases/2026-03-25-plugin-runtime-surfaces.md)
 - [Plugin-Aware Ingestion Release](./releases/2026-03-25-plugin-ingestion-runtime.md)
 - [Extension Setup and Connectivity Release](./releases/2026-03-25-extension-setup-and-connectivity.md)
+- [Provider Access and MCP Foundation Release](./releases/2026-03-25-provider-access-and-mcp-foundation.md)
 - [Codex Worklog](./codex/WORKLOG.md)

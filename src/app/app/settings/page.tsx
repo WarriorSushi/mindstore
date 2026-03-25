@@ -20,12 +20,47 @@ interface SettingsResponse {
   embeddingProvider?: string;
   hasApiKey?: boolean;
   providers?: Partial<Record<ProviderId, ProviderStatus>>;
+  runtimeRequirements?: RuntimeRequirement[];
+  providerCatalog?: ProviderCatalogEntry[];
+  providerAuthRoadmap?: RoadmapItem[];
 }
 
 interface StatsResponse {
   totalMemories: number;
   totalSources: number;
   byType?: Record<string, number>;
+}
+
+interface RuntimeRequirement {
+  id: string;
+  label: string;
+  value: string;
+  required: boolean;
+  description: string;
+}
+
+interface ProviderAuthMode {
+  id: string;
+  label: string;
+  status: "available" | "planned" | "risky";
+  description: string;
+}
+
+interface ProviderCatalogEntry {
+  id: string;
+  name: string;
+  tagline: string;
+  supports: {
+    chat: boolean;
+    embeddings: boolean;
+  };
+  authModes: ProviderAuthMode[];
+}
+
+interface RoadmapItem {
+  id: string;
+  label: string;
+  description: string;
 }
 
 interface ReindexStatusResponse {
@@ -328,6 +363,84 @@ export default function SettingsPage() {
           </div>
         </Stagger>
       )}
+
+      <Stagger>
+      <div className="space-y-3">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">What You Need</p>
+        <div className="grid gap-2 md:grid-cols-2">
+          {(settings?.runtimeRequirements || []).map((item) => (
+            <div key={item.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] font-medium text-zinc-200">{item.label}</p>
+                <span className={`text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border shrink-0 ${
+                  item.required
+                    ? "bg-amber-500/10 text-amber-300 border-amber-500/15"
+                    : "bg-zinc-500/10 text-zinc-400 border-zinc-500/15"
+                }`}>
+                  {item.required ? "Required" : "Optional"}
+                </span>
+              </div>
+              <p className="text-[12px] text-zinc-300 mt-2">{item.value}</p>
+              <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      </Stagger>
+
+      <Stagger>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Provider Access Modes</p>
+          <Link href="/docs/build/provider-access" className="text-[11px] text-teal-300 hover:text-teal-200">
+            Why this matters
+          </Link>
+        </div>
+        <div className="grid gap-2">
+          {(settings?.providerCatalog || []).map((provider) => (
+            <div key={provider.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[13px] font-medium text-zinc-200">{provider.name}</p>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border bg-white/[0.04] text-zinc-400 border-white/[0.08]">
+                    {provider.supports.chat ? "Chat" : "No chat"} · {provider.supports.embeddings ? "Embeddings" : "No embeddings"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">{provider.tagline}</p>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {provider.authModes.map((mode) => (
+                  <div key={`${provider.id}-${mode.id}`} className="rounded-xl border border-white/[0.05] bg-black/20 px-3 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[12px] font-medium text-zinc-200">{mode.label}</p>
+                      <span className={`text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border ${
+                        mode.status === "available"
+                          ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/15"
+                          : mode.status === "planned"
+                            ? "bg-sky-500/10 text-sky-300 border-sky-500/15"
+                            : "bg-amber-500/10 text-amber-300 border-amber-500/15"
+                      }`}>
+                        {mode.status}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{mode.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+          <p className="text-[12px] font-medium text-zinc-200">Auth roadmap</p>
+          {(settings?.providerAuthRoadmap || []).map((item) => (
+            <div key={item.id} className="rounded-xl border border-white/[0.05] bg-black/20 px-3 py-3">
+              <p className="text-[12px] font-medium text-zinc-200">{item.label}</p>
+              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      </Stagger>
 
       {/* Reindex nudge */}
       {settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
