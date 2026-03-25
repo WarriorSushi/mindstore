@@ -88,6 +88,8 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
   - release note for MCP SDK route and plugin scheduling groundwork
 - Tightened settings-page typing so the codex lint ratchet stays green.
 - Added unit coverage for plugin scheduling time computation.
+- Added licensing clarity files (`LICENSING.md`, `TRADEMARKS.md`, `DCO.md`) plus explicit package license metadata so the repo's current legal state and contributor expectations are visible.
+- Updated README, contributing guidance, and PR template to separate code license, trademark rights, and contribution-origin expectations.
 
 ### Decisions
 
@@ -110,6 +112,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Plugin jobs now support persisted schedules and due-job execution, but they still need a long-running worker or cron-backed runner for fully automatic operation.
 - Local dev route-type generation under `.next/dev/types` can still be malformed; the codex branch now routes production `build` and `typecheck` through `tsconfig.build.json` as the stable workaround.
 - Many import plugins still need richer dedicated UIs or OAuth flows; runtime import tabs currently provide the shared discovery layer and fallback panel.
+- The repository remains MIT today; any future move to a stronger core license still requires deliberate contributor-rights and governance handling.
 
 ### Verification
 

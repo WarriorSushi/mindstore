@@ -206,7 +206,11 @@ Self-hosted. Your data stays in your PostgreSQL database. No tracking, no analyt
 
 ## License
 
-MIT
+MindStore is currently licensed under the [MIT License](./LICENSE).
+
+For the full project policy around licensing direction, contributions, plugins, and commercial use, see [LICENSING.md](./LICENSING.md).
+
+Brand usage is covered separately by [TRADEMARKS.md](./TRADEMARKS.md).
 
 ---
 

@@ -9,6 +9,13 @@ MindStore is evolving into a personal knowledge layer for AI with a strong open 
 - Keep changes decision-documented when they affect architecture, security, or extension contracts.
 - Update docs for any user-visible or builder-visible behavior change.
 
+## License And Contribution Origin
+
+- This repository is currently licensed under [LICENSE](./LICENSE).
+- Contributions are accepted under the repository's current outbound license unless a subdirectory says otherwise.
+- Contributors should add a `Signed-off-by:` line to commits in line with [DCO.md](./DCO.md).
+- Branding rights are separate from code rights; see [TRADEMARKS.md](./TRADEMARKS.md).
+
 ## Good First Contribution Areas
 
 - Documentation improvements
@@ -34,6 +41,7 @@ MindStore is evolving into a personal knowledge layer for AI with a strong open 
 - Add or update docs
 - Add or update tests for non-trivial behavior
 - Call out assumptions, tradeoffs, and follow-up work
+- Confirm contribution origin with a DCO sign-off where possible
 
 ## Plugin and Platform Changes
 
