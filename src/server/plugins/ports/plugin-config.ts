@@ -37,6 +37,30 @@ export async function ensurePluginInstalled(slug: string) {
   });
 }
 
+export async function assertPluginEnabled(slug: string) {
+  await ensurePluginInstalled(slug);
+
+  const [plugin] = await db
+    .select({
+      slug: schema.plugins.slug,
+      name: schema.plugins.name,
+      status: schema.plugins.status,
+    })
+    .from(schema.plugins)
+    .where(eq(schema.plugins.slug, slug))
+    .limit(1);
+
+  if (!plugin) {
+    throw new Error(`${slug} plugin not found.`);
+  }
+
+  if (plugin.status === "disabled") {
+    throw new Error(`${plugin.name} plugin is disabled. Enable it in the Plugins page.`);
+  }
+
+  return plugin;
+}
+
 export async function getPluginConfig<T extends object>(slug: string, fallback: T): Promise<T> {
   const [row] = await db
     .select({ config: schema.plugins.config })

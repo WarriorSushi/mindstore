@@ -180,11 +180,18 @@ Status: complete on codex
 Batch C: Import parity
 
 - kindle-importer
+- youtube-transcript
+- pdf-epub-parser
+- browser-bookmarks
+- obsidian-importer
+- reddit-saved
 - twitter-importer
 - telegram-importer
 - pocket-importer
 - spotify-importer
 - readwise-importer
+
+Status: in progress on codex
 
 Batch D: Export/sync parity
 

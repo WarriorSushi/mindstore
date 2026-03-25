@@ -434,3 +434,42 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run test`
 - `npm run build`
 - `npm run test:e2e` timed out in this session
+
+### 2026-03-25: Import Parity Batch 1
+
+#### Scope
+
+- Start Batch C import parity with the importer flows already surfaced in the codex Import page.
+- Move existing route-heavy importers into codex-style portable server modules.
+- Preserve current preview/import contracts so the frontend does not need a rewrite.
+
+#### Changes Completed
+
+- Added `preChunked` support to the shared import service so smart importer chunk boundaries survive import intact.
+- Added `assertPluginEnabled(...)` to `src/server/plugins/ports/plugin-config.ts` for manifest-backed importer bootstrapping.
+- Added codex port modules for:
+  - `src/server/plugins/ports/youtube-transcript.ts`
+  - `src/server/plugins/ports/pdf-epub-parser.ts`
+  - `src/server/plugins/ports/browser-bookmarks.ts`
+  - `src/server/plugins/ports/reddit-saved.ts`
+  - `src/server/plugins/ports/obsidian-importer.ts`
+- Replaced the route-heavy importer implementations with thinner wrappers in:
+  - `src/app/api/v1/plugins/youtube-transcript/route.ts`
+  - `src/app/api/v1/plugins/pdf-epub-parser/route.ts`
+  - `src/app/api/v1/plugins/browser-bookmarks/route.ts`
+  - `src/app/api/v1/plugins/reddit-saved/route.ts`
+  - `src/app/api/v1/plugins/obsidian-importer/route.ts`
+- Added unit coverage for the new importer ports.
+- Added plugin docs and a release note for the batch.
+
+#### Decisions
+
+- Import parity is starting with the built-in flows already exposed by the codex Import page because that yields the cleanest convergence with the least user disruption.
+- Binary/archive parsing can stay in routes when it depends on platform libraries; the text, chunking, normalization, and preview logic still belongs in `ports/*`.
+- The shared import service now supports preserved chunk boundaries because smart importer chunking is a first-class product behavior, not an implementation detail.
+
+#### Risks and Follow-Ups
+
+- Obsidian import still keeps route-level DB writes because connection creation needs note-to-memory mapping; a deeper codex import runtime abstraction could simplify that later.
+- This batch does not yet include the remaining frain import/sync/media surfaces such as Twitter, Telegram, Pocket, Readwise, Spotify, Notion, or Image-to-Memory.
+- Import Batch 2 should move next into the frain-only importer set rather than revisiting these now-converged built-ins.

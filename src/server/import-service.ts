@@ -21,6 +21,7 @@ export interface ImportDocument {
   timestamp?: Date;
   metadata?: Record<string, unknown>;
   contentType?: MemoryContentType;
+  preChunked?: boolean;
 }
 
 interface ImportedChunk {
@@ -97,7 +98,7 @@ export async function importDocuments({
   const allChunks: ImportedChunk[] = [];
 
   for (const document of sanitizedDocuments) {
-    const chunks = chunkText(document.content);
+    const chunks = document.preChunked ? [document.content] : chunkText(document.content);
     for (const chunk of chunks) {
       allChunks.push({
         content: chunk,
