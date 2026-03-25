@@ -1363,3 +1363,71 @@ _Automated 30-min improvement cycles by Frain_
 - **Design**: Teal primary, sky for language features, amber for legal domain, rose for medical, emerald for scientific, sky for code/financial. NO violet/purple/fuchsia. OLED black base, glass borders, rounded-xl cards.
 - **Phase 5 Status**: ✅ COMPLETE — All 5 AI Enhancement plugins built (Voice-to-Memory, Image-to-Memory, Custom RAG Strategies, Multi-Language Support, Domain-Specific Embeddings)
 - **Branch**: `frain/improve` (commit `f43c492`)
+
+## 2026-03-25 02:29 UTC — Phase 6 Begins: 7 Export & Import Plugins
+- **Phase**: 6 (Export/Sync & OAuth Plugins) · Plugins #24-30 in build order
+- **Strategy**: Started with plugins that DON'T need OAuth — file-upload importers and export tools. 7 plugins in one cycle.
+- **Implemented**:
+  - **Anki Deck Export (#27)** — Backend + Frontend (`/app/anki`):
+    - Reads flashcard decks from Flashcard Maker plugin
+    - Two export formats: Anki-native TSV (with auto-detection headers) and universal CSV
+    - Deck selection with select-all, card preview expansion
+    - Options: include SM-2 study metadata in CSV
+    - Multi-deck export generates ZIP with README
+    - Browser download via base64 → Blob → URL.createObjectURL
+    - How-to-import guide with 4-step instructions
+    - Empty state redirects to Flashcard Maker
+  - **Markdown Blog Export (#28)** — Backend + Frontend (`/app/export`):
+    - 5 framework templates: Hugo, Jekyll, Astro, Next.js MDX, Plain Markdown
+    - Each template generates correct frontmatter format, file naming conventions, and directory structure
+    - Hugo: YAML frontmatter, folder bundles with index.md, categories/taxonomies
+    - Jekyll: YAML frontmatter, date-prefixed filenames, _posts/ directory
+    - Astro: Content collections with typed schema (auto-generates config.ts), pubDate
+    - Next.js: MDX format with frontmatter metadata
+    - Plain: Minimal YAML frontmatter, universal compatibility
+    - Source type filtering (import only obsidian notes, or only chatgpt conversations, etc.)
+    - Options: author name, mark as draft, include source metadata comments, group by source type
+    - Live preview showing generated frontmatter + content
+    - Output structure visualization per framework
+    - ZIP download with README and framework-specific instructions
+  - **Twitter/X Bookmarks Importer (#1)** — Backend:
+    - Parses bookmarks.js and tweets.js from Twitter data archive (Settings → Download Archive)
+    - Handles Twitter's JS module format (window.YTD.bookmark.part0 = [...])
+    - Extracts: text, author, handle, likes, retweets, URLs, media, hashtags, reply context
+    - Formats tweets with author attribution, linked URLs, hashtag listing
+    - Deduplication by tweet ID
+  - **Telegram Saved Messages Importer (#5)** — Backend:
+    - Parses Telegram Desktop JSON export format
+    - Handles mixed content arrays (text + entities: links, mentions, code, bold, italic)
+    - Smart message grouping: consecutive messages from same sender within 5 minutes merged into single memory
+    - Chat type filtering (saved messages, private chats, groups, channels)
+    - Minimum length filter, dedup by message ID
+    - Link extraction from text entities
+  - **Pocket/Instapaper Importer (#4)** — Backend:
+    - Pocket: Parses Netscape bookmark HTML export (ril_export.html) — extracts href, time_added, tags
+    - Instapaper: Parses CSV export with proper quoted-field handling
+    - Preserves tags (Pocket), folders (Instapaper), descriptions (Instapaper selections)
+    - URL-based deduplication
+  - **Spotify Listening History (#10)** — Backend:
+    - Parses both standard (StreamingHistory_music_*.json) and extended (Streaming_History_Audio_*.json) formats
+    - Builds comprehensive music taste profile:
+      - Total listening hours, unique artists/tracks
+      - Top 20 artist profiles with top tracks, play counts, album listings
+      - Monthly listening history timeline
+    - Creates searchable memories: taste profile, individual artist summaries, monthly timeline
+    - Replaces old import on re-import (clean slate)
+    - Skips plays under 30 seconds
+  - **Readwise Importer (#7)** — Backend:
+    - API-based import using Readwise access token (readwise.io/access_token)
+    - Token validation via /auth/ endpoint
+    - Paginated book and highlight fetching (up to 10,000 highlights)
+    - Highlights grouped by book with full metadata: title, author, category, location, color, tags
+    - Category filtering: books, articles, tweets, podcasts, supplementals
+    - Incremental sync: saves last sync timestamp, only fetches new highlights on subsequent imports
+    - Dedup by Readwise highlight ID
+  - **Navigation**: Added Anki Export (Download icon) and Blog Export (FolderDown icon) to sidebar
+  - **Plugin Store**: Added "Open" button routes for both export plugins
+  - **Registry**: Updated anki-export and markdown-blog-export manifests with UI page declarations
+- **Design**: Teal primary accent throughout. Framework templates get subtle color identities (Hugo=pink, Jekyll=red, Astro=orange, Next.js=sky). NO violet/purple/fuchsia. OLED black base, glass borders, rounded-2xl cards.
+- **Phase 6 Progress**: 7 of 10 plugins built. Remaining: Notion Sync (#26), Obsidian Vault Sync (#25), Notion Enhanced Import (#11)
+- **Branch**: `frain/improve` (commit `e5d71d1`)
