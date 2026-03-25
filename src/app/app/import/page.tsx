@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare, Mic, Camera, AtSign, Send, BookmarkCheck, Music, Highlighter, Key } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -2156,40 +2157,18 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
-                const typeColors: Record<string, string> = {
-                  chatgpt: "text-green-400 bg-green-500/10",
-                  file: "text-blue-400 bg-blue-500/10",
-                  url: "text-orange-400 bg-orange-500/10",
-                  text: "text-teal-400 bg-teal-500/10",
-                  kindle: "text-amber-400 bg-amber-500/10",
-                  document: "text-blue-400 bg-blue-500/10",
-                  youtube: "text-red-400 bg-red-500/10",
-                  bookmark: "text-sky-400 bg-sky-500/10",
-                  obsidian: "text-teal-400 bg-teal-500/10",
-                  reddit: "text-orange-400 bg-orange-500/10",
-                  audio: "text-teal-400 bg-teal-500/10",
-                  image: "text-sky-400 bg-sky-500/10",
-                  notion: "text-zinc-300 bg-zinc-500/10",
-                  twitter: "text-sky-400 bg-sky-500/10",
-                  telegram: "text-teal-400 bg-teal-500/10",
-                  pocket: "text-emerald-400 bg-emerald-500/10",
-                  instapaper: "text-emerald-400 bg-emerald-500/10",
-                  spotify: "text-emerald-400 bg-emerald-500/10",
-                  readwise: "text-amber-400 bg-amber-500/10",
-                };
-                const Icon = typeIcons[src.type] || FileText;
-                const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";
+                const st = getSourceType(src.type);
+                const Icon = st.icon;
                 return (
                   <Link key={src.id || i} href={`/app/explore?q=${encodeURIComponent(src.title)}`}>
                     <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ').slice(1).join(' ')}`}>
-                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                        <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-zinc-300 font-medium truncate group-hover:text-white transition-colors">{src.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[10px] font-semibold uppercase tracking-wide ${color.split(' ')[0]}`}>{src.type}</span>
+                          <span className={`text-[10px] font-semibold uppercase tracking-wide ${st.textColor}`}>{src.type}</span>
                           <span className="text-[10px] text-zinc-700">·</span>
                           <span className="text-[10px] text-zinc-600 tabular-nums">{src.itemCount} chunk{src.itemCount !== 1 ? 's' : ''}</span>
                         </div>

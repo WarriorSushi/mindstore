@@ -278,3 +278,46 @@
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* ─── Accessibility: Keyboard focus ring ─── */
+/* Only show focus outline when using keyboard (not mouse) */
+:focus-visible {
+  outline: 2px solid rgba(20, 184, 166, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Hide focus for mouse clicks */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip-to-content link (accessibility) */
+.skip-to-content {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: #14b8a6;
+  color: white;
+  border-radius: 0 0 8px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: top 0.2s ease;
+  text-decoration: none;
+}
+.skip-to-content:focus {
+  top: 0;
+  outline: none;
+}
+
+/* ─── Reduced motion preferences ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

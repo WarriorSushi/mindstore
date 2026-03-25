@@ -158,6 +158,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] bg-[#0a0a0b]">
+      {/* ════════ SKIP TO CONTENT (Accessibility) ════════ */}
+      <a href="#main-content" className="skip-to-content">
+        Skip to content
+      </a>
       {/* ════════ ONBOARDING ════════ */}
       <Onboarding />
       {/* ════════ COMMAND PALETTE ════════ */}
@@ -256,7 +260,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ════════ DESKTOP SIDEBAR ════════ */}
-      <aside className="hidden md:flex w-[220px] fixed left-0 top-0 h-screen flex-col z-30 bg-[#0a0a0b] border-r border-white/[0.04]">
+      <aside className="hidden md:flex w-[220px] fixed left-0 top-0 h-screen flex-col z-30 bg-[#0a0a0b] border-r border-white/[0.04]" aria-label="Main navigation">
         <Link href="/" className="h-14 flex items-center gap-2.5 px-5 border-b border-white/[0.04]">
           <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
             <Brain className="w-4 h-4 text-white" />
@@ -342,7 +346,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ════════ MAIN CONTENT ════════ */}
-      <main className={cn(
+      <main
+        id="main-content"
+        className={cn(
         "md:ml-[220px] min-h-[100dvh]",
         "pt-12 md:pt-0",  // account for mobile header
         "pb-[52px] md:pb-0",  // bottom nav space on mobile (always visible now)

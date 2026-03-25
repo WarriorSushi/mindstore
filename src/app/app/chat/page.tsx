@@ -6,12 +6,12 @@ import { useSearchParams } from "next/navigation";
 import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
-  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
+  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
-  AtSign, BookmarkCheck, Music, Highlighter,
+  BookmarkPlus,
   Pin, PinOff, Download, Hash,
 } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
@@ -1356,31 +1356,6 @@ function MessageActions({ content, question }: { content: string; question: stri
 function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string }> }) {
   const [expanded, setExpanded] = useState(false);
 
-  const typeIcons: Record<string, any> = {
-    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter,
-  };
-  const typeColors: Record<string, string> = {
-    chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
-    file: "text-blue-400 bg-blue-500/10 border-blue-500/15",
-    url: "text-orange-400 bg-orange-500/10 border-orange-500/15",
-    text: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    kindle: "text-amber-400 bg-amber-500/10 border-amber-500/15",
-    document: "text-blue-400 bg-blue-500/10 border-blue-500/15",
-    youtube: "text-red-400 bg-red-500/10 border-red-500/15",
-    bookmark: "text-sky-400 bg-sky-500/10 border-sky-500/15",
-    obsidian: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    reddit: "text-orange-400 bg-orange-500/10 border-orange-500/15",
-    audio: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    image: "text-sky-400 bg-sky-500/10 border-sky-500/15",
-    notion: "text-zinc-300 bg-zinc-500/10 border-zinc-500/15",
-    twitter: "text-sky-400 bg-sky-500/10 border-sky-500/15",
-    telegram: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    pocket: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
-    instapaper: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
-    spotify: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
-    readwise: "text-amber-400 bg-amber-500/10 border-amber-500/15",
-  };
-
   const displayed = expanded ? sources : sources.slice(0, 3);
 
   return (
@@ -1401,8 +1376,8 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
       </div>
       <div className="space-y-1">
         {displayed.map((s, j) => {
-          const Icon = typeIcons[s.type] || FileText;
-          const colors = typeColors[s.type] || "text-zinc-400 bg-zinc-500/10 border-zinc-500/15";
+          const st = getSourceType(s.type);
+          const Icon = st.icon;
           const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
           const isClickable = !!s.id;
 
@@ -1421,8 +1396,8 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
                 <span className="text-[9px] font-bold text-zinc-500 bg-white/[0.06] rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums">
                   {j + 1}
                 </span>
-                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${colors.split(' ').slice(1).join(' ')}`}>
-                  <Icon className={`w-2.5 h-2.5 ${colors.split(' ')[0]}`} />
+                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                  <Icon className={`w-2.5 h-2.5 ${st.textColor}`} />
                 </div>
                 <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0 font-medium">
                   {s.title || "Untitled"}

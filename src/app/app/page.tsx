@@ -7,12 +7,12 @@ import {
   Brain, Upload, MessageSquare, Compass, Database, FileText,
   Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
-  Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
-  Clock, Pin, BarChart3, BookOpen, FileBox, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
-  AtSign, Send, BookmarkCheck, Music, Highlighter,
+  Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
+  Clock, Pin, BarChart3, BookOpen,
   Layers, AlertTriangle, Target,
   type LucideIcon,
 } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
@@ -414,14 +414,12 @@ export default function DashboardPage() {
                       </div>
                     )}
                     {searchResults.map((r: any, i: number) => {
-                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
-                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
-                      const Icon = typeIcons[r.sourceType] || FileText;
-                      const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                      const st = getSourceType(r.sourceType);
+                      const Icon = st.icon;
                       return (
                         <div key={r.memoryId || i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${color}`}>
+                            <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[1px] rounded-md font-semibold uppercase tracking-wide ${st.badgeClasses}`}>
                               <Icon className="w-2.5 h-2.5" />
                               {r.sourceType}
                             </span>
@@ -552,19 +550,11 @@ export default function DashboardPage() {
                           <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.sourceCount}</p>
                           <p className="text-[10px] text-zinc-600 mt-0.5">source types</p>
                           <div className="flex gap-0.5 mt-1.5 flex-wrap">
-                            {w.data.sources.slice(0, 5).map((s: any) => {
-                              const sourceLabels: Record<string, string> = {
-                                chatgpt: 'GPT', text: 'TXT', file: 'FILE', url: 'URL',
-                                kindle: 'KDL', youtube: 'YT', reddit: 'RDT', obsidian: 'OBS',
-                                notion: 'NTN', twitter: 'X', telegram: 'TG', spotify: 'SPT',
-                                readwise: 'RW', document: 'DOC', bookmark: 'BKM',
-                              };
-                              return (
+                            {w.data.sources.slice(0, 5).map((s: any) => (
                                 <span key={s.type} className="text-[8px] font-bold uppercase tracking-wider text-zinc-600 bg-white/[0.04] rounded px-1 py-[1px]">
-                                  {sourceLabels[s.type] || s.type.slice(0, 3).toUpperCase()}
+                                  {getSourceType(s.type).shortLabel}
                                 </span>
-                              );
-                            })}
+                              ))}
                           </div>
                         </div>
                       )}
@@ -638,10 +628,8 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
-                const Icon = typeIcons[mem.sourceType] || FileText;
-                const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                const st = getSourceType(mem.sourceType);
+                const Icon = st.icon;
                 return (
                   <button
                     key={mem.id || i}
@@ -660,8 +648,8 @@ export default function DashboardPage() {
                   >
                     <div className="group relative flex items-start gap-3 p-3.5 rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.04] to-amber-500/[0.01] hover:from-amber-500/[0.08] hover:to-amber-500/[0.03] hover:border-amber-500/20 transition-all active:scale-[0.98]">
                       <Pin className="absolute top-2.5 right-2.5 w-2.5 h-2.5 text-amber-500/40 fill-amber-400/20" />
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ').slice(1).join(' ')}`}>
-                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                        <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium text-zinc-300 truncate group-hover:text-white transition-colors">{mem.sourceTitle}</p>
@@ -708,10 +696,8 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {stats.recentMemories.map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
-                const Icon = typeIcons[mem.sourceType] || FileText;
-                const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
+                const st = getSourceType(mem.sourceType);
+                const Icon = st.icon;
                 return (
                   <button
                     key={mem.id || i}
@@ -729,8 +715,8 @@ export default function DashboardPage() {
                     className="w-full text-left"
                   >
                     <div className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${color.split(' ').slice(1).join(' ')}`}>
-                        <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${st.bgColor}`}>
+                        <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -787,23 +773,19 @@ export default function DashboardPage() {
           <div className="space-y-2">
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Sources</p>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
-              {stats.topSources.slice(0, 6).map((src: any, i: number) => (
+              {stats.topSources.slice(0, 6).map((src: any, i: number) => {
+                const st = getSourceType(src.type);
+                const SrcIcon = st.icon;
+                return (
                 <div key={src.id || i} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
-                    {src.type === 'chatgpt' ? <MessageCircle className="w-3.5 h-3.5 text-green-400" /> :
-                     src.type === 'url' ? <Globe className="w-3.5 h-3.5 text-orange-400" /> :
-                     src.type === 'obsidian' ? <Gem className="w-3.5 h-3.5 text-teal-400" /> :
-                     src.type === 'bookmark' ? <Bookmark className="w-3.5 h-3.5 text-sky-400" /> :
-                     src.type === 'reddit' ? <MessageSquare className="w-3.5 h-3.5 text-orange-400" /> :
-                     src.type === 'audio' ? <Mic className="w-3.5 h-3.5 text-teal-400" /> :
-                     src.type === 'image' ? <Camera className="w-3.5 h-3.5 text-sky-400" /> :
-                     src.type === 'notion' ? <StickyNote className="w-3.5 h-3.5 text-zinc-300" /> :
-                     <FileText className="w-3.5 h-3.5 text-blue-400" />}
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                    <SrcIcon className={`w-3.5 h-3.5 ${st.textColor}`} />
                   </div>
                   <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>
                   <span className="text-[11px] text-zinc-600 tabular-nums font-medium shrink-0">{src.itemCount}</span>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </Stagger>

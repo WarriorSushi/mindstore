@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -37,27 +38,8 @@ interface Source {
   itemCount: number;
 }
 
-const typeConfig: Record<string, { icon: any; color: string }> = {
-  chatgpt: { icon: MessageCircle, color: "text-green-400 bg-green-500/10" },
-  text: { icon: Type, color: "text-teal-400 bg-teal-500/10" },
-  file: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
-  url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
-  kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10" },
-  document: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
-  youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10" },
-  bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10" },
-  obsidian: { icon: Gem, color: "text-teal-400 bg-teal-500/10" },
-  reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10" },
-  audio: { icon: Mic, color: "text-teal-400 bg-teal-500/10" },
-  image: { icon: Camera, color: "text-sky-400 bg-sky-500/10" },
-  notion: { icon: StickyNote, color: "text-zinc-300 bg-zinc-500/10" },
-  twitter: { icon: AtSign, color: "text-sky-400 bg-sky-500/10" },
-  telegram: { icon: Send, color: "text-teal-400 bg-teal-500/10" },
-  pocket: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10" },
-  instapaper: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10" },
-  spotify: { icon: Music, color: "text-emerald-400 bg-emerald-500/10" },
-  readwise: { icon: Highlighter, color: "text-amber-400 bg-amber-500/10" },
-};
+// Source type config — delegated to shared module
+// Usage: const st = getSourceType(type); st.icon, st.textColor, st.bgColor, st.badgeClasses
 
 // Tag color utility
 const TAG_COLOR_MAP: Record<string, string> = {
@@ -887,9 +869,8 @@ export default function ExplorePage() {
               icon={<Pin className="w-3 h-3" />}
             />
             {activeSourceTypes.map(([type, count]) => {
-              const cfg = typeConfig[type];
-              if (!cfg) return null;
-              const Icon = cfg.icon || FileText;
+              const cfg = getSourceType(type);
+              const Icon = cfg.icon;
               return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
             })}
             {/* Tag filter pills */}
@@ -1141,7 +1122,7 @@ export default function ExplorePage() {
       {/* Memory Cards */}
       <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-1.5"}>
         {memories.map((m, idx) => {
-          const cfg = typeConfig[m.source] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10" };
+          const cfg = getSourceType(m.source);
           const Icon = cfg.icon;
           const isFocused = focusedIndex === idx;
           const isSelected = selectedIds.has(m.id);
@@ -1171,8 +1152,8 @@ export default function ExplorePage() {
                     {isSelected && <Check className="w-2 h-2 text-white" />}
                   </div>
                 )}
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.color.split(" ").filter((c: string) => !c.startsWith("text-")).join(" ")}`}>
-                  <Icon className={`w-2.5 h-2.5 ${cfg.color.split(" ")[0]}`} />
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
+                  <Icon className={`w-2.5 h-2.5 ${cfg.textColor}`} />
                 </div>
                 <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0">{m.sourceTitle || "Untitled"}</span>
                 <span className="text-[12px] text-zinc-500 truncate flex-1">{m.content.replace(/\n/g, " ").slice(0, 120)}</span>
@@ -1238,7 +1219,7 @@ export default function ExplorePage() {
                     {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                 )}
-                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.badgeClasses}`}>
                   <Icon className="w-2.5 h-2.5" />
                   {m.source}
                 </span>
@@ -1436,7 +1417,7 @@ export default function ExplorePage() {
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${typeConfig[selected.source]?.color || ""}`}>
+                  <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${getSourceType(selected.source).badgeClasses}`}>
                     {selected.source}
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
@@ -1557,8 +1538,8 @@ export default function ExplorePage() {
                 {relatedMemories.length > 0 ? (
                   <div className="space-y-1">
                     {relatedMemories.map((rel) => {
-                      const Icon = typeConfig[rel.type]?.icon || FileText;
-                      const colors = typeConfig[rel.type]?.color || "text-zinc-400 bg-zinc-500/10";
+                      const relSt = getSourceType(rel.type);
+                      const Icon = relSt.icon;
                       const scorePercent = Math.round(rel.score * 100);
                       return (
                         <button
@@ -1566,8 +1547,8 @@ export default function ExplorePage() {
                           onClick={() => openRelatedMemory(rel.id)}
                           className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
                         >
-                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${colors.split(" ").filter(c => !c.startsWith("text-")).join(" ")}`}>
-                            <Icon className={`w-3 h-3 ${colors.split(" ")[0]}`} />
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${relSt.bgColor}`}>
+                            <Icon className={`w-3 h-3 ${relSt.textColor}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] text-zinc-300 font-medium truncate group-hover/rel:text-white transition-colors">
