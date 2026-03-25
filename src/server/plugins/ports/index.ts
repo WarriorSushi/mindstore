@@ -48,3 +48,9 @@ export * as MarkdownBlogExport from './markdown-blog-export';
 
 // Import plugins (extended)
 export * as YouTubeTranscript from './youtube-transcript';
+export * as ReadwiseImporter from './readwise-importer';
+export * as TelegramImporter from './telegram-importer';
+export * as TwitterImporter from './twitter-importer';
+
+// Document parsing
+export * as PdfEpubParser from './pdf-epub-parser';
