@@ -44,16 +44,19 @@ That means:
 - Voice-to-Memory as the second full reference port
 - shared AI client direction
 - “codex is the base” working agreement
+- the full analysis batch on codex:
+  - contradiction-finder
+  - writing-style
+  - knowledge-gaps
+  - topic-evolution
+  - sentiment-timeline
+  - mind-map-generator
 
 ## What Still Exists Only On Frain
 
 ### Analysis
 
-- Writing Style Analyzer
-- Knowledge Gaps Analyzer
-- Topic Evolution Timeline
-- Sentiment Timeline
-- Contradiction Finder still needs shared-AI migration and codex-style server extraction
+- no major analysis plugin remains frain-only
 
 ### Action
 
@@ -164,6 +167,8 @@ Batch A: Analysis parity
 - topic-evolution
 - sentiment-timeline
 
+Status: complete on codex
+
 Batch B: Action parity
 
 - blog-draft
@@ -269,9 +274,9 @@ The branches should be considered “effectively the same” when all of these a
 
 ### Codex
 
-1. port Contradiction Finder onto the shared AI client
-2. port Kindle Importer as the importer reference
-3. port Writing Style as the next high-value analysis surface
+1. move into Batch B action parity
+2. prioritize blog-draft, conversation-prep, newsletter-writer, and resume-builder
+3. keep using codex runtime/docs/tests as the destination shape
 
 ### Frain
 

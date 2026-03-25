@@ -235,7 +235,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     capabilities: ['read:memories', 'read:embeddings', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall', 'onDashboard'],
     ui: {
-      pages: [{ path: 'map', title: 'Mind Map', icon: 'Network', showInSidebar: false }],
+      pages: [{ path: 'mindmap', title: 'Mind Map', icon: 'Network', showInSidebar: false }],
     },
   },
 
@@ -324,8 +324,11 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'analysis',
     icon: 'Heart',
     author: 'MindStore',
-    capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:widgets'],
+    capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:widgets', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'sentiment', title: 'Sentiment', icon: 'Heart', showInSidebar: false }],
+    },
   },
 
   // ─── Action Plugins ───────────────────────────────────────────

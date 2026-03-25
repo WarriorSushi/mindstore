@@ -167,6 +167,40 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run lint:ci`
 - `npm run typecheck`
 - `npm run test`
+
+### 2026-03-25: Mind Map Generator Port
+
+#### Scope
+
+- Port Mind Map Generator into the codex runtime-first branch.
+- Reuse the shared vector/clustering helper instead of leaving clustering logic embedded in the route.
+- Keep the existing `/app/mindmap` UX while turning the backend into a real codex port module.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/mind-map-generator.ts` as the extracted clustering and topology engine.
+- Replaced `GET /api/v1/plugins/mind-map-generator` with a thin route wrapper.
+- Added unit coverage for empty and deterministic small-memory outputs.
+- Added plugin docs and a release note for the port.
+- Corrected the registry page path from `map` to `mindmap` to match the actual app route.
+
+#### Decisions
+
+- Mind Map Generator should share vector math through `shared-vectors.ts` rather than maintaining a private copy.
+- The existing frontend page was good enough to preserve; convergence work focused on the backend contract and correctness.
+- The route continues to accept `maxTopics` and `maxDepth` query parameters so the current page stays compatible.
+
+#### Risks and Follow-Ups
+
+- The current route logic still uses k-means randomness for larger datasets, so future work may want seeded clustering for perfect reproducibility.
+- The frontend remains the older richer page rather than a freshly simplified codex page, which is acceptable here but may want a visual pass later.
+- Analysis parity is now effectively complete; the next major convergence batch should move into action or import features.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
 - `npm run build`
 - `npm run test:e2e` (currently blocked locally by Playwright `webServer` startup timeout)
 
@@ -305,6 +339,41 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The current page is still a streamlined codex version rather than the richest frain visualization pass.
 - Mind Map and Sentiment Timeline should now reuse the same shared vector layer next.
 - The fetched `origin/frain/improve` ref is still visibly behind the VPS update stream, so codex is still reconstructing some ports from visible route/page code.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
+
+### 2026-03-25: Sentiment Timeline Port
+
+#### Scope
+
+- Port Sentiment Timeline into the codex runtime-first branch.
+- Preserve the dedicated analysis page while extracting the AI and lexicon logic into a reusable server module.
+- Add tests, docs, and page metadata so the feature behaves like the other converged analysis tools.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/sentiment-timeline.ts` as the extracted sentiment-analysis and aggregation engine.
+- Added `GET /api/v1/plugins/sentiment-timeline` as a thin route wrapper.
+- Added `/app/sentiment` with codex-side mood overview, heatmap, trend summary, and source breakdown UI.
+- Updated plugin registry metadata and command palette navigation so Sentiment Timeline is discoverable as a real page surface.
+- Added unit coverage for lexicon fallback, score classification, and aggregate builders.
+- Added plugin docs and a release note for the port.
+
+#### Decisions
+
+- Sentiment analysis should reuse `src/server/ai-client.ts` for provider-backed runs instead of embedding provider logic again.
+- A local lexicon fallback remains first-class so the feature still works without an AI provider.
+- Cached metadata on memories remains the storage layer for sentiment results to keep repeated loads fast.
+
+#### Risks and Follow-Ups
+
+- The current page is a codex-side port and not yet the fullest visualization pass from frain's line.
+- Mind Map Generator is now the last major remaining analysis-parity port in this batch.
+- AI sentiment scoring is intentionally conservative and may still benefit from future prompt tuning or provider-specific evaluation.
 
 #### Verification
 
