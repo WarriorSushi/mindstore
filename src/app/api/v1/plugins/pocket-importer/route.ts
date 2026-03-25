@@ -1,22 +1,26 @@
+/**
+ * Pocket / Instapaper Importer Plugin — Route (thin wrapper)
+ *
+ * POST ?action=import-pocket       — Parse Pocket HTML export
+ * POST ?action=import-instapaper   — Parse Instapaper CSV export
+ * GET  ?action=config              — Get import configuration
+ * GET  ?action=stats               — Get imported article stats
+ *
+ * Logic delegated to src/server/plugins/ports/pocket-importer.ts
+ */
+
 import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { v4 as uuid } from 'uuid';
-
-/**
- * Pocket / Instapaper Importer Plugin
- * 
- * Imports saved articles from Pocket (HTML export) or Instapaper (CSV export).
- * 
- * Pocket: Export from getpocket.com/export → HTML file
- * Instapaper: Export from instapaper.com/export → CSV file
- * 
- * POST ?action=import-pocket       — Parse Pocket HTML export
- * POST ?action=import-instapaper   — Parse Instapaper CSV export
- * GET  ?action=config              — Get import configuration
- * GET  ?action=stats               — Get imported article stats
- */
+import {
+  parsePocketHTML,
+  parseInstapaperCSV,
+  formatArticleContent,
+  buildArticleMetadata,
+  type SavedArticle,
+} from '@/server/plugins/ports/pocket-importer';
 
 const PLUGIN_SLUG = 'pocket-importer';
 
@@ -39,121 +43,6 @@ async function ensurePluginInstalled() {
     }
   } catch {}
 }
-
-// ─── Pocket HTML Parser ──────────────────────────────────────
-
-interface SavedArticle {
-  url: string;
-  title: string;
-  tags?: string[];
-  addedAt?: string;
-  source: 'pocket' | 'instapaper';
-  folder?: string;
-  description?: string;
-}
-
-function parsePocketHTML(html: string): SavedArticle[] {
-  const articles: SavedArticle[] = [];
-
-  // Pocket exports as Netscape bookmark HTML
-  // Format: <a href="URL" time_added="timestamp" tags="tag1,tag2">Title</a>
-  const linkRegex = /<a\s+href="([^"]+)"([^>]*)>([\s\S]*?)<\/a>/gi;
-  let match;
-
-  while ((match = linkRegex.exec(html)) !== null) {
-    const url = match[1];
-    const attrs = match[2];
-    const title = match[3].replace(/<[^>]*>/g, '').trim();
-
-    if (!url || url.startsWith('javascript:')) continue;
-
-    // Extract tags attribute
-    const tagsMatch = attrs.match(/tags="([^"]*)"/i);
-    const tags = tagsMatch ? tagsMatch[1].split(',').map(t => t.trim()).filter(Boolean) : [];
-
-    // Extract time_added
-    const timeMatch = attrs.match(/time_added="(\d+)"/i);
-    const addedAt = timeMatch
-      ? new Date(parseInt(timeMatch[1]) * 1000).toISOString()
-      : undefined;
-
-    articles.push({
-      url,
-      title: title || url,
-      tags,
-      addedAt,
-      source: 'pocket',
-    });
-  }
-
-  return articles;
-}
-
-// ─── Instapaper CSV Parser ───────────────────────────────────
-
-function parseInstapaperCSV(csv: string): SavedArticle[] {
-  const articles: SavedArticle[] = [];
-  const lines = csv.split('\n');
-
-  if (lines.length < 2) return articles;
-
-  // Find header indices
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
-  const urlIdx = headers.indexOf('url');
-  const titleIdx = headers.indexOf('title');
-  const selectionIdx = headers.indexOf('selection');
-  const folderIdx = headers.indexOf('folder');
-  const timestampIdx = headers.indexOf('timestamp');
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const fields = parseCSVLine(line);
-    const url = fields[urlIdx] || '';
-    const title = fields[titleIdx] || '';
-
-    if (!url || !url.startsWith('http')) continue;
-
-    articles.push({
-      url,
-      title: title || url,
-      description: fields[selectionIdx] || undefined,
-      folder: fields[folderIdx] || undefined,
-      addedAt: fields[timestampIdx] ? new Date(parseInt(fields[timestampIdx]) * 1000).toISOString() : undefined,
-      source: 'instapaper',
-    });
-  }
-
-  return articles;
-}
-
-function parseCSVLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      fields.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  fields.push(current.trim());
-  return fields;
-}
-
-// ─── Route Handlers ──────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   try {
@@ -248,7 +137,6 @@ export async function POST(req: NextRequest) {
       let skipped = 0;
 
       for (const article of articles) {
-        // Dedup by URL
         if (dedup) {
           try {
             const existing = await db.execute(sql`
@@ -264,23 +152,8 @@ export async function POST(req: NextRequest) {
           } catch {}
         }
 
-        const content = [
-          article.title,
-          '',
-          `URL: ${article.url}`,
-          article.description ? `\n${article.description}` : '',
-          article.tags && article.tags.length > 0 ? `\nTags: ${article.tags.join(', ')}` : '',
-          article.folder ? `\nFolder: ${article.folder}` : '',
-        ].filter(Boolean).join('\n');
-
-        const metadata: Record<string, any> = {
-          url: article.url,
-          importSource: article.source,
-          importedVia: 'pocket-importer-plugin',
-        };
-        if (article.tags?.length) metadata.tags = article.tags;
-        if (article.folder) metadata.folder = article.folder;
-        if (article.description) metadata.description = article.description;
+        const content = formatArticleContent(article);
+        const metadata = buildArticleMetadata(article);
 
         try {
           await db.execute(sql`
