@@ -122,6 +122,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Shared AI client extraction plus Voice-to-Memory now define the convergence pattern for media-aware AI plugins.
 - Branch convergence is now tracked as a formal multi-phase program in `docs/codex/CONVERGENCE_PROGRAM.md`.
 - Kindle Importer is now the codex-side importer reference port for future frain import feature convergence.
+- Contradiction Finder now kicks off the codex analysis parity batch and serves as the shared-AI analysis reference port.
 
 ### Verification
 

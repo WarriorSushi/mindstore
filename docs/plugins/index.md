@@ -19,6 +19,7 @@ Plugins are how MindStore becomes a platform instead of a single app.
 ## Authoring
 
 - [Plugin Authoring](./authoring.md)
+- [Contradiction Finder](./contradiction-finder.md)
 - [Flashcard Maker](./flashcard-maker.md)
 - [Voice-to-Memory](./voice-to-memory.md)
 - [Plugin Settings](./settings.md)
