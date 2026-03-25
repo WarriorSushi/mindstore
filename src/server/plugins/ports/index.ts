@@ -6,12 +6,27 @@
  * 
  * AI calling is injected (will use Codex's shared ai-client.ts).
  * Route wiring is NOT included — each port is pure logic.
+ * 
+ * Shared utilities:
+ *   shared-vectors — k-means clustering, cosine similarity, keyword extraction
+ *   (used by topic-evolution, knowledge-gaps, mind-map-generator, sentiment-timeline)
  */
 
+// Shared utilities
+export * from './shared-vectors';
+
+// Import plugins
 export * from './kindle-importer';
 export * from './voice-to-memory';
+
+// Analysis plugins  
 export * from './contradiction-finder';
+export * from './writing-style';
+export * from './topic-evolution';
+export * from './sentiment-timeline';
+export * from './knowledge-gaps';
+export * from './mind-map-generator';
+
+// Action plugins
 export * from './blog-draft';
 export * from './conversation-prep';
-export * from './writing-style';
-export * from './newsletter-writer';
