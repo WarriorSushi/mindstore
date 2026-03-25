@@ -488,6 +488,16 @@ export async function POST(req: NextRequest) {
       console.error('Tree index build failed (non-fatal):', e);
     }
 
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      await notifyImportComplete(
+        'youtube-importer', 'YouTube',
+        allChunks.length,
+        '/app/explore?source=youtube'
+      );
+    } catch (e) { /* non-fatal */ }
+
     return NextResponse.json({
       imported: {
         video: {

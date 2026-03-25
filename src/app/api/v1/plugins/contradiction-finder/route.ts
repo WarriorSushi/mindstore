@@ -230,6 +230,19 @@ async function runScan(userId: string) {
   const freshResults = await getResults(userId);
   const data = await freshResults.json();
 
+  // Send notification if contradictions found
+  if (newCount > 0) {
+    try {
+      const { notifyAnalysisReady } = await import('@/server/notifications');
+      await notifyAnalysisReady(
+        'contradiction-finder',
+        `${newCount} contradiction${newCount > 1 ? 's' : ''} found`,
+        `Scanned ${candidates.length} memory pairs and found potential conflicts in your knowledge.`,
+        '/app/insights'
+      );
+    } catch (e) { /* non-fatal */ }
+  }
+
   return NextResponse.json({
     ...data,
     scanned: candidates.length,

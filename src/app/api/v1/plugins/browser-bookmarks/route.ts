@@ -486,6 +486,16 @@ export async function POST(req: NextRequest) {
       console.error('Tree index build failed (non-fatal):', e);
     }
 
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      await notifyImportComplete(
+        'browser-bookmarks', 'Browser Bookmarks',
+        inserted,
+        '/app/explore?source=bookmark'
+      );
+    } catch (e) { /* non-fatal */ }
+
     return NextResponse.json({
       imported: {
         totalBookmarks: inserted,

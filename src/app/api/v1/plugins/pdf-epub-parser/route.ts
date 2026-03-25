@@ -568,6 +568,16 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error('Tree index build failed (non-fatal):', e);
     }
+
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      await notifyImportComplete(
+        'pdf-epub-parser', `${doc.format?.toUpperCase() || 'Document'}`,
+        chunks.length,
+        '/app/explore'
+      );
+    } catch (e) { /* non-fatal */ }
     
     return NextResponse.json({
       imported: {

@@ -371,6 +371,16 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error('Tree index build failed (non-fatal):', e);
     }
+
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      await notifyImportComplete(
+        'kindle-importer', 'Kindle Highlights',
+        clippings.length,
+        '/app/explore?source=kindle'
+      );
+    } catch (e) { /* non-fatal */ }
     
     return NextResponse.json({
       imported: {

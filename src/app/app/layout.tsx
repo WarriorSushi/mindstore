@@ -18,6 +18,7 @@ import { GlobalDropZone } from "@/components/GlobalDropZone";
 import { KeyboardShortcuts, openKeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { QuickCapture } from "@/components/QuickCapture";
 import { MemoryDrawer } from "@/components/MemoryDrawer";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 interface NavItem {
   href: string;
@@ -197,6 +198,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Search className="w-[18px] h-[18px] text-zinc-400" />
           </button>
+          <NotificationCenter />
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
@@ -263,12 +265,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* ════════ DESKTOP SIDEBAR ════════ */}
       <aside className="hidden md:flex w-[220px] fixed left-0 top-0 h-screen flex-col z-30 bg-[#0a0a0b] border-r border-white/[0.04]" aria-label="Main navigation">
-        <Link href="/" className="h-14 flex items-center gap-2.5 px-5 border-b border-white/[0.04]">
-          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
-            <Brain className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
-        </Link>
+        <div className="h-14 flex items-center justify-between px-5 border-b border-white/[0.04]">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
+              <Brain className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
+          </Link>
+          <NotificationCenter />
+        </div>
         <nav className="flex-1 py-2 px-2.5 space-y-0.5 overflow-y-auto sidebar-scroll">
           {navSections.map((section) => (
             <div key={section.id}>

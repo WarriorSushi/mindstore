@@ -757,6 +757,16 @@ export async function POST(req: NextRequest) {
       console.error('Tree index build failed (non-fatal):', e);
     }
 
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      await notifyImportComplete(
+        'obsidian-importer', 'Obsidian Vault',
+        vault.notes.length,
+        '/app/explore?source=obsidian'
+      );
+    } catch (e) { /* non-fatal */ }
+
     return NextResponse.json({
       imported: {
         totalNotes: vault.notes.length,

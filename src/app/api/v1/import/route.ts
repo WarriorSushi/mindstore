@@ -235,6 +235,17 @@ export async function POST(req: NextRequest) {
       console.error('Tree index build failed (non-fatal):', e);
     }
 
+    // Send notification
+    try {
+      const { notifyImportComplete } = await import('@/server/notifications');
+      const sourceLabel = documents.length === 1 ? (documents[0] as any).title || 'ChatGPT' : 'ChatGPT';
+      await notifyImportComplete(
+        'chatgpt-importer', sourceLabel,
+        totalChunks,
+        '/app/explore'
+      );
+    } catch (e) { /* non-fatal */ }
+
     return NextResponse.json({
       imported: {
         documents: documents.length,
