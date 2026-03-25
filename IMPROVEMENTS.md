@@ -4,6 +4,35 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 16:00 UTC — Error State Audit: Stats, Languages, Domains + Codex Monitor
+
+### Error Handling Fixes (3 Pages)
+- **Stats page** (`/app/stats`): Added proper error state with retry button. Previously: `catch(() => setLoading(false))` silently swallowed fetch errors, leaving users on an empty screen with no explanation. Now: error message + "Try again" button.
+- **Languages page** (`/app/languages`):
+  - Added error state for initial data load with AlertTriangle icon + retry
+  - Added toast error notifications for batch tag, cross-language search, and language detection operations
+  - Previously: all 3 action handlers had `catch {}` — complete silence on failure
+  - Added `sonner` toast import
+- **Domains page** (`/app/domains`):
+  - Added error state for initial data load with retry
+  - Added toast errors for batch domain detection and text detection
+  - Previously: `catch {}` everywhere — users got no feedback on failure
+  - Added `sonner` toast import
+
+### Codebase Audit Results
+- **Build**: Clean — 0 errors, all 97 pages compile
+- **Plugin ports**: 34/34 complete (100%) — all ports in `src/server/plugins/ports/`
+- **Color violations**: Zero violet/purple/fuchsia (only a comment mentioning the ban)
+- **Error handling**: All critical pages now have proper error states
+- **Remaining silent catches**: Import page (non-critical history/plugin tab fetches), Resume page (template fetch — gracefully degrades), Chat page (follow-up generation — non-blocking), plus backend route auto-install blocks (intentionally silent)
+
+### Codex Monitor (read-only)
+- **2 new commits** since last cycle on `codex/local-dev`:
+  - `3a6a0d1` Complete analysis parity batch (mind-map-generator + sentiment-timeline ports with unit tests)
+  - `51a5e91` Port topic evolution into codex runtime
+- Codex is now porting analysis plugins in bulk with tests — strong convergence
+- Both branches have 34 plugin ports — frain/improve in `src/server/plugins/ports/`, codex in its runtime format
+
 ## 2026-03-25 15:29 UTC — UX Polish: Page Titles, Dynamic SEO, PWA Icons
 
 ### Dynamic Page Titles (all 33 pages)
