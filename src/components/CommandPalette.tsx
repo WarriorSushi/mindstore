@@ -470,7 +470,7 @@ export function CommandPalette() {
       {
         id: "obsidian-sync",
         icon: Layers,
-        iconColor: "text-purple-400",
+        iconColor: "text-teal-400",
         label: "Obsidian Vault Sync",
         desc: "Export knowledge as an Obsidian vault with frontmatter and wikilinks",
         keywords: ["obsidian", "vault", "sync", "export", "markdown", "wikilink", "backlink"],

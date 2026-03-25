@@ -231,7 +231,7 @@ export default function FingerprintPage() {
 function clusterColor(group: string): string {
   const colors: Record<string, string> = {
     chatgpt: '#10b981',
-    text: '#8b5cf6',
+    text: '#38bdf8',
     file: '#f59e0b',
     url: '#3b82f6',
   };

@@ -186,7 +186,7 @@
 }
 
 .hero-gradient {
-  background: linear-gradient(135deg, #8b5cf6, #d946ef, #8b5cf6, #a78bfa);
+  background: linear-gradient(135deg, #14b8a6, #38bdf8, #14b8a6, #5eead4);
   background-size: 300% 300%;
   animation: gradient-shift 6s ease infinite;
   -webkit-background-clip: text;
@@ -203,7 +203,7 @@
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0));
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0), rgba(20, 184, 166, 0.15), rgba(20, 184, 166, 0));
   opacity: 0;
   transition: opacity 0.3s;
   z-index: -1;
@@ -257,9 +257,24 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(20, 184, 166, 0.3);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(20, 184, 166, 0.5);
+}
+
+/* Sidebar scroll — ultra-thin scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
 }

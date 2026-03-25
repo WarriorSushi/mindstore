@@ -105,12 +105,9 @@ const severityConfig: Record<string, { color: string; bg: string; label: string 
 const TOPIC_COLORS = [
   '#14b8a6', '#38bdf8', '#34d399', '#fbbf24', '#22d3ee',
   '#fb7185', '#a3e635', '#fb923c', '#60a5fa', '#94a3b8',
-  '#2dd4bf', '#e879f0', '#facc15', '#f87171', '#4ade80',
+  '#2dd4bf', '#f59e0b', '#facc15', '#f87171', '#4ade80',
   '#67e8f9',
 ];
-// Replace #e879f0 (fuchsia-ish) with a safe color
-TOPIC_COLORS[11] = '#a78bfa'; // Actually, no — no violet. Use warm tone instead.
-TOPIC_COLORS[11] = '#f59e0b'; // amber-500
 
 export default function KnowledgeGapsPage() {
   const router = useRouter();
