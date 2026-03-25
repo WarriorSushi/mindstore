@@ -18,6 +18,10 @@ export * from './shared-vectors';
 // Import plugins
 export * from './kindle-importer';
 export * from './voice-to-memory';
+export * from './pocket-importer';
+export * from './spotify-importer';
+export * from './browser-bookmarks';
+export * as RedditSaved from './reddit-saved';
 
 // Analysis plugins  
 export * from './contradiction-finder';
@@ -26,6 +30,9 @@ export * from './topic-evolution';
 export * from './sentiment-timeline';
 export * from './knowledge-gaps';
 export * from './mind-map-generator';
+
+// AI plugins
+export * as ImageToMemory from './image-to-memory';
 
 // Action plugins
 export * from './blog-draft';
@@ -37,6 +44,7 @@ export * as ResumeBuilder from './resume-builder';
 
 // Export plugins
 export * as AnkiExport from './anki-export';
+export * as MarkdownBlogExport from './markdown-blog-export';
 
 // Import plugins (extended)
 export * as YouTubeTranscript from './youtube-transcript';
