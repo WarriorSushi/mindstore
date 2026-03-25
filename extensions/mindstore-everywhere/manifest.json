@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "MindStore Everywhere",
+  "description": "Capture pages and selections into MindStore.",
+  "version": "0.1.0",
+  "permissions": ["activeTab", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "MindStore Everywhere",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

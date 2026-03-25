@@ -263,3 +263,84 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(139, 92, 246, 0.5);
 }
+
+.docs-prose {
+  color: rgb(212 212 216);
+  line-height: 1.75;
+}
+
+.docs-prose h1,
+.docs-prose h2,
+.docs-prose h3 {
+  color: white;
+  letter-spacing: -0.03em;
+}
+
+.docs-prose h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.docs-prose h3 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.docs-prose p,
+.docs-prose ul,
+.docs-prose ol,
+.docs-prose pre,
+.docs-prose blockquote {
+  margin-top: 1rem;
+}
+
+.docs-prose ul,
+.docs-prose ol {
+  padding-left: 1.25rem;
+}
+
+.docs-prose li + li {
+  margin-top: 0.35rem;
+}
+
+.docs-prose a {
+  color: rgb(94 234 212);
+  text-decoration: none;
+}
+
+.docs-prose a:hover {
+  color: rgb(165 243 252);
+}
+
+.docs-prose code {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.15rem 0.4rem;
+  color: rgb(244 244 245);
+  font-size: 0.9em;
+}
+
+.docs-prose pre {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1rem;
+}
+
+.docs-prose pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.docs-prose blockquote {
+  border-left: 3px solid rgba(45, 212, 191, 0.35);
+  padding-left: 1rem;
+  color: rgb(161 161 170);
+}

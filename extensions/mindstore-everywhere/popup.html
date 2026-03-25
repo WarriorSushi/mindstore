@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MindStore Everywhere</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">MindStore Everywhere</p>
+        <div class="headline">
+          <h1>Capture and query from any page</h1>
+          <span id="sourceBadge" class="source-badge">Inspecting…</span>
+        </div>
+        <p id="contextSummary" class="subcopy">
+          Save the current selection, a page excerpt, or a supported conversation into MindStore.
+        </p>
+      </header>
+
+      <label class="field">
+        <span>MindStore URL</span>
+        <input id="baseUrl" type="url" placeholder="http://localhost:3000" />
+      </label>
+
+      <label class="field">
+        <span>API key</span>
+        <input id="apiKey" type="password" placeholder="msk_..." />
+        <small class="hint">Optional for local single-user mode. Recommended for hosted or shared deployments.</small>
+      </label>
+
+      <label class="field">
+        <span>Capture mode</span>
+        <select id="captureMode">
+          <option value="smart">Smart capture</option>
+          <option value="conversation">Conversation first</option>
+          <option value="selection">Selection first</option>
+          <option value="page">Page excerpt</option>
+        </select>
+      </label>
+
+      <div class="actions">
+        <button id="captureButton" class="primary">Save to MindStore</button>
+      </div>
+
+      <p id="status" class="status" aria-live="polite"></p>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Ask MindStore</p>
+            <h2>Search your memory without leaving the page</h2>
+          </div>
+        </div>
+
+        <label class="field compact">
+          <span>Query</span>
+          <input id="queryInput" type="text" placeholder="What have I saved about embeddings?" />
+        </label>
+
+        <button id="queryButton" class="secondary">Search Memories</button>
+        <div id="queryResults" class="results" aria-live="polite"></div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+  </html>

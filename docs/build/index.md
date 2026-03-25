@@ -1,0 +1,19 @@
+# Build Guide
+
+This section is for contributors and maintainers.
+
+## What It Should Cover
+
+- Repo layout and package boundaries.
+- [Plugin SDK and runtime contracts](./plugin-runtime.md).
+- [Capture contract](./capture-contract.md).
+- Browser extension setup and API key flow.
+- Testing strategy.
+- Release process.
+- Contribution workflow.
+
+## Contribution Standard
+
+- Prefer small, composable modules.
+- Document the why behind architecture decisions.
+- Keep built-in and community extension surfaces clearly separated.

@@ -5,7 +5,7 @@
  * Each entry has its manifest + metadata for the plugin store.
  */
 
-import { PluginManifest, PluginStoreEntry } from './types';
+import { PluginManifest, PluginStatus, PluginStoreEntry } from './types';
 
 // ─── PLUGIN MANIFESTS ────────────────────────────────────────────
 
@@ -61,8 +61,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'youtube-importer': {
-    slug: 'youtube-importer',
+  'youtube-transcript': {
+    slug: 'youtube-transcript',
+    aliases: ['youtube-importer'],
     name: 'YouTube Transcripts',
     description: 'Import transcripts from YouTube videos. Paste a URL and get the full transcript.',
     version: '1.0.0',
@@ -121,8 +122,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'reddit-importer': {
-    slug: 'reddit-importer',
+  'reddit-saved': {
+    slug: 'reddit-saved',
+    aliases: ['reddit-importer'],
     name: 'Reddit Saved Posts',
     description: 'Import your saved posts and comments from Reddit\'s data export.',
     version: '1.0.0',
@@ -279,8 +281,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'writing-analyzer': {
-    slug: 'writing-analyzer',
+  'writing-style': {
+    slug: 'writing-style',
+    aliases: ['writing-analyzer'],
     name: 'Writing Style Analyzer',
     description: 'Analyze your writing style — vocabulary, tone, complexity, and patterns.',
     version: '1.0.0',
@@ -543,7 +546,7 @@ export function buildStoreCatalog(
       author: manifest.author,
       capabilities: manifest.capabilities,
       installed: !!installed,
-      status: installed?.status as any,
+      status: installed?.status as PluginStatus | undefined,
       featured: FEATURED_PLUGINS.includes(manifest.slug),
       tags: buildTags(manifest),
     };
@@ -553,7 +556,7 @@ export function buildStoreCatalog(
 // Plugins featured in the store (shown prominently)
 const FEATURED_PLUGINS = [
   'kindle-importer',
-  'youtube-importer',
+  'youtube-transcript',
   'mind-map-generator',
   'flashcard-maker',
   'voice-to-memory',

@@ -1,5 +1,6 @@
 import { auth } from '@/server/auth';
 import { headers } from 'next/headers';
+import { getApiKeyFromHeaders, resolveApiKeyUserId } from '@/server/api-keys';
 
 const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -8,8 +9,9 @@ const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
  * 
  * Priority:
  * 1. NextAuth JWT session (if Google OAuth configured)
- * 2. x-user-id header (for API clients / MCP)
- * 3. Default UUID (single-user / self-hosted mode)
+ * 2. Bearer / API key auth (for extensions and API clients)
+ * 3. x-user-id header (for MCP and trusted internal clients)
+ * 4. Default UUID (single-user / self-hosted mode)
  */
 export async function getUserId(): Promise<string> {
   try {
@@ -23,6 +25,12 @@ export async function getUserId(): Promise<string> {
 
   try {
     const hdrs = await headers();
+    const apiKey = getApiKeyFromHeaders(hdrs);
+    if (apiKey) {
+      const apiKeyUserId = await resolveApiKeyUserId(apiKey);
+      if (apiKeyUserId) return apiKeyUserId;
+    }
+
     const headerUserId = hdrs.get('x-user-id');
     if (headerUserId) return headerUserId;
   } catch {

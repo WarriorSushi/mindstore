@@ -52,14 +52,29 @@ export function Onboarding() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const done = localStorage.getItem(ONBOARDING_KEY);
-      if (!done) {
-        setShow(true);
-        // Trigger entrance animation
-        requestAnimationFrame(() => setFadeIn(true));
+    const done = localStorage.getItem(ONBOARDING_KEY);
+    if (done) return;
+
+    let showFrame = 0;
+    let fadeFrame = 0;
+
+    showFrame = window.requestAnimationFrame(() => {
+      setShow(true);
+      fadeFrame = window.requestAnimationFrame(() => setFadeIn(true));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(showFrame);
+      window.cancelAnimationFrame(fadeFrame);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-    }
+    };
   }, []);
 
   function finish() {

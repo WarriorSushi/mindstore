@@ -1,15 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, Zap, Globe, Plug, Copy, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
-async function fetchSettings() {
-  try { const r = await fetch('/api/v1/settings'); return r.ok ? r.json() : null; } catch { return null; }
+type ProviderId = "openai" | "gemini" | "ollama" | "openrouter" | "custom";
+
+interface ProviderStatus {
+  configured?: boolean;
+  preview?: string;
+  url?: string;
+  model?: string;
 }
-async function fetchStats() {
-  try { const r = await fetch('/api/v1/stats'); return r.ok ? r.json() : null; } catch { return null; }
+
+interface SettingsResponse {
+  chatProvider?: string;
+  embeddingProvider?: string;
+  hasApiKey?: boolean;
+  providers?: Partial<Record<ProviderId, ProviderStatus>>;
+}
+
+interface StatsResponse {
+  totalMemories: number;
+  totalSources: number;
+  byType?: Record<string, number>;
+}
+
+interface ReindexStatusResponse {
+  total?: number;
+  withEmbeddings?: number;
+  withoutEmbeddings: number;
+  needsReindex: boolean;
+}
+
+interface ReindexBatchResponse {
+  processed: number;
+  remaining: number;
+  provider?: string;
+  message?: string;
+  error?: string;
+}
+
+interface ApiKeySummary {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+}
+
+interface ApiKeysResponse {
+  keys: ApiKeySummary[];
+}
+
+interface MutationResponse {
+  ok?: boolean;
+  error?: string;
+}
+
+interface CreateApiKeyResponse extends MutationResponse {
+  rawKey?: string | null;
+  apiKey?: ApiKeySummary;
+}
+
+async function fetchSettings(): Promise<SettingsResponse | null> {
+  try {
+    const response = await fetch("/api/v1/settings");
+    return response.ok ? ((await response.json()) as SettingsResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchStats(): Promise<StatsResponse | null> {
+  try {
+    const response = await fetch("/api/v1/stats");
+    return response.ok ? ((await response.json()) as StatsResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchApiKeys(): Promise<ApiKeysResponse> {
+  try {
+    const response = await fetch("/api/v1/api-keys");
+    return response.ok ? ((await response.json()) as ApiKeysResponse) : { keys: [] };
+  } catch {
+    return { keys: [] };
+  }
+}
+
+async function fetchReindexStatus(): Promise<ReindexStatusResponse | null> {
+  try {
+    const response = await fetch("/api/v1/reindex");
+    return response.ok ? ((await response.json()) as ReindexStatusResponse) : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function SettingsPage() {
@@ -20,13 +108,16 @@ export default function SettingsPage() {
   const [customApiKey, setCustomApiKey] = useState("");
   const [customApiUrl, setCustomApiUrl] = useState("");
   const [customApiModel, setCustomApiModel] = useState("");
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsResponse | null>(null);
   const [reindexing, setReindexing] = useState(false);
-  const [reindexStatus, setReindexStatus] = useState<any>(null);
+  const [reindexStatus, setReindexStatus] = useState<ReindexStatusResponse | null>(null);
   const [chatProvider, setChatProvider] = useState<string>("auto");
   const [savingChat, setSavingChat] = useState(false);
+  const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
+  const [creatingApiKey, setCreatingApiKey] = useState(false);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSettings().then((s) => {
@@ -34,12 +125,13 @@ export default function SettingsPage() {
       if (s?.chatProvider) setChatProvider(s.chatProvider);
     });
     fetchStats().then(setStats);
-    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
+    fetchApiKeys().then((data) => setApiKeys(data?.keys || []));
+    fetchReindexStatus().then(setReindexStatus);
   }, []);
 
   const handleSave = async (provider: string) => {
     setSaving(provider);
-    const body: any = {};
+    const body: Record<string, string> = {};
     if (provider === 'openai') body.apiKey = openaiKey.trim();
     if (provider === 'gemini') body.geminiKey = geminiKey.trim();
     if (provider === 'ollama') body.ollamaUrl = ollamaUrl.trim();
@@ -50,7 +142,7 @@ export default function SettingsPage() {
       body.customApiModel = customApiModel.trim();
     }
     const res = await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
+    const data = (await res.json()) as MutationResponse;
     setSaving(null);
     if (data.ok) {
       toast.success(`${provider} connected`);
@@ -75,7 +167,9 @@ export default function SettingsPage() {
       a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       toast.success("Backup downloaded");
-    } catch (err: any) { toast.error(err.message); }
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   const handleClear = async () => {
@@ -90,9 +184,8 @@ export default function SettingsPage() {
     setReindexing(true);
     try {
       // Check status first
-      const statusRes = await fetch('/api/v1/reindex');
-      const status = await statusRes.json();
-      if (!status.needsReindex) {
+      const status = await fetchReindexStatus();
+      if (!status?.needsReindex) {
         toast.success("All memories already have embeddings!");
         setReindexing(false);
         return;
@@ -102,17 +195,20 @@ export default function SettingsPage() {
       let remaining = status.withoutEmbeddings;
       while (remaining > 0) {
         const res = await fetch('/api/v1/reindex', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batchSize: 50 }) });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-        const data = await res.json();
+        if (!res.ok) {
+          const error = (await res.json()) as MutationResponse;
+          throw new Error(error.error || "Reindex failed");
+        }
+        const data = (await res.json()) as ReindexBatchResponse;
         remaining = data.remaining;
         if (remaining > 0) toast(`${data.processed} done, ${remaining} remaining…`);
       }
       toast.success("All memories now have embeddings! Semantic search enabled.");
-    } catch (err: any) {
-      toast.error(err.message || "Reindex failed");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Reindex failed"));
     }
     setReindexing(false);
-    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
+    fetchReindexStatus().then(setReindexStatus);
   };
 
   const handleSetChatProvider = async (provider: string) => {
@@ -124,7 +220,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatProvider: provider }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as MutationResponse;
       if (data.ok) {
         toast.success(provider === 'auto' ? 'Chat provider set to auto-detect' : `Chat will use ${provider}`);
       } else {
@@ -134,6 +230,56 @@ export default function SettingsPage() {
       toast.error('Failed to save preference');
     }
     setSavingChat(false);
+  };
+
+  const handleCreateApiKey = async () => {
+    setCreatingApiKey(true);
+    try {
+      const res = await fetch('/api/v1/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'MindStore Everywhere' }),
+      });
+      const data = (await res.json()) as CreateApiKeyResponse;
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create API key');
+      }
+      setNewApiKey(data.rawKey || null);
+      if (data.apiKey) {
+        setApiKeys((current) => [data.apiKey!, ...current.filter((key) => key.id !== data.apiKey?.id)]);
+      }
+      toast.success('MindStore Everywhere API key created');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to create API key'));
+    } finally {
+      setCreatingApiKey(false);
+    }
+  };
+
+  const handleCopyApiKey = async () => {
+    if (!newApiKey) return;
+    try {
+      await navigator.clipboard.writeText(newApiKey);
+      toast.success('API key copied');
+    } catch {
+      toast.error('Failed to copy API key');
+    }
+  };
+
+  const handleRevokeApiKey = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/api-keys?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = (await res.json()) as MutationResponse;
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to revoke API key');
+      }
+      setApiKeys((current) => current.filter((key) => key.id !== id));
+      toast.success('API key revoked');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Failed to revoke API key'));
+    }
   };
 
   const providers = settings?.providers || {};
@@ -187,8 +333,8 @@ export default function SettingsPage() {
           badgeColor="text-emerald-400 bg-emerald-500/10 border-emerald-500/15"
           connected={providers.gemini?.configured}
           preview={providers.gemini?.preview}
-          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (e: any) => setGeminiKey(e.target.value) }}
+          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setGeminiKey(event.target.value) }}
           onSave={() => handleSave('gemini')}
           saving={saving === 'gemini'}
           disabled={!geminiKey.trim()}
@@ -204,8 +350,8 @@ export default function SettingsPage() {
           badgeColor="text-zinc-400 bg-zinc-500/10 border-zinc-500/15"
           connected={providers.openai?.configured}
           preview={providers.openai?.preview}
-          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" className="text-emerald-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (e: any) => setOpenaiKey(e.target.value) }}
+          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-emerald-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setOpenaiKey(event.target.value) }}
           onSave={() => handleSave('openai')}
           saving={saving === 'openai'}
           disabled={!openaiKey.trim()}
@@ -221,8 +367,8 @@ export default function SettingsPage() {
           badgeColor="text-orange-400 bg-orange-500/10 border-orange-500/15"
           connected={providers.ollama?.configured}
           preview={providers.ollama?.url}
-          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" className="text-orange-400 font-medium">Ollama ↗</a></>}
-          inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (e: any) => setOllamaUrl(e.target.value) }}
+          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" rel="noreferrer" className="text-orange-400 font-medium">Ollama ↗</a></>}
+          inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (event: ChangeEvent<HTMLInputElement>) => setOllamaUrl(event.target.value) }}
           onSave={() => handleSave('ollama')}
           saving={saving === 'ollama'}
           disabled={!ollamaUrl.trim()}
@@ -238,8 +384,8 @@ export default function SettingsPage() {
           badgeColor="text-teal-400 bg-teal-500/10 border-teal-500/15"
           connected={providers.openrouter?.configured}
           preview={providers.openrouter?.preview}
-          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" className="text-teal-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (e: any) => setOpenrouterKey(e.target.value) }}
+          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-teal-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setOpenrouterKey(event.target.value) }}
           onSave={() => handleSave('openrouter')}
           saving={saving === 'openrouter'}
           disabled={!openrouterKey.trim()}
@@ -355,6 +501,99 @@ export default function SettingsPage() {
         </Stagger>
       )}
 
+      <Stagger>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">MindStore Everywhere</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-300">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-medium">Browser capture and extension keys</p>
+                  <p className="text-[12px] text-zinc-500">Create API keys for MindStore Everywhere and future external clients.</p>
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/docs/import-guides/browser-extension"
+              className="text-[11px] text-teal-300 hover:text-teal-200"
+            >
+              Setup docs
+            </Link>
+          </div>
+
+          {newApiKey && (
+            <div className="rounded-2xl border border-teal-500/20 bg-teal-500/[0.06] p-3 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-teal-300">Copy This Now</p>
+              <p className="text-[12px] text-zinc-300">MindStore only shows the raw key once after creation.</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 overflow-x-auto rounded-xl bg-black/30 px-3 py-2 text-[11px] text-zinc-200">
+                  {newApiKey}
+                </code>
+                <button
+                  onClick={handleCopyApiKey}
+                  className="h-10 px-3 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.04] transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleCreateApiKey}
+              disabled={creatingApiKey}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-[12px] font-medium transition-all"
+            >
+              {creatingApiKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+              Generate API key
+            </button>
+            <Link
+              href="/docs/api-reference/capture"
+              className="inline-flex items-center h-10 px-4 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
+            >
+              Capture API docs
+            </Link>
+          </div>
+
+          <div className="space-y-2">
+            {apiKeys.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/[0.08] px-4 py-3 text-[12px] text-zinc-500">
+                No API keys created yet.
+              </div>
+            ) : (
+              apiKeys.map((apiKey) => (
+                <div
+                  key={apiKey.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-zinc-200">{apiKey.name}</p>
+                    <p className="text-[11px] text-zinc-500">
+                      Created {formatTimestamp(apiKey.createdAt)}
+                      {apiKey.lastUsedAt ? ` · Last used ${formatTimestamp(apiKey.lastUsedAt)}` : " · Unused yet"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRevokeApiKey(apiKey.id)}
+                    className="h-9 px-3 rounded-xl border border-red-500/20 text-[12px] font-medium text-red-400 hover:bg-red-500/5"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+      </Stagger>
+
       {/* ─── Data ─── */}
       <Stagger>
       <div className="space-y-3">
@@ -383,19 +622,21 @@ export default function SettingsPage() {
           <ActionButton icon={<Upload className="w-4 h-4" />} label="Restore" onClick={() => {
             const input = document.createElement("input");
             input.type = "file"; input.accept = ".json";
-            input.onchange = async (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (!file) return;
-              try {
-                const data = JSON.parse(await file.text());
-                if (!data.memories) throw new Error("Invalid format");
-                const res = await fetch('/api/v1/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-                if (!res.ok) throw new Error('Failed');
-                const r = await res.json();
-                fetchStats().then(setStats);
-                toast.success(`Restored ${r.imported} memories`);
-              } catch (err: any) { toast.error(err.message); }
-            };
+              input.onchange = async (event) => {
+                const file = (event.target as HTMLInputElement).files?.[0];
+                if (!file) return;
+                try {
+                  const data = JSON.parse(await file.text());
+                  if (!data.memories) throw new Error("Invalid format");
+                  const res = await fetch('/api/v1/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                  if (!res.ok) throw new Error('Failed');
+                  const r = await res.json();
+                  fetchStats().then(setStats);
+                  toast.success(`Restored ${r.imported} memories`);
+                } catch (error: unknown) {
+                  toast.error(getErrorMessage(error));
+                }
+              };
             input.click();
           }} />
           <ActionButton icon={<Key className="w-4 h-4" />} label="Remove Keys" onClick={handleRemoveAll} />
@@ -412,7 +653,7 @@ export default function SettingsPage() {
           <span className="text-zinc-300 font-medium">MindStore</span> — personal knowledge base. Import conversations, notes, and articles. Search semantically. Connect to any AI via MCP.
         </p>
         <p className="text-[11px] text-zinc-600 mt-2">
-          Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-teal-400 hover:underline">WarriorSushi</a> · v0.3
+          Built by <a href="https://github.com/WarriorSushi" target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">WarriorSushi</a> · v0.3
         </p>
       </div>
       </Stagger>
@@ -420,7 +661,23 @@ export default function SettingsPage() {
   );
 }
 
-function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: any) {
+interface ProviderCardProps {
+  name: string;
+  icon: ReactNode;
+  iconColor: string;
+  badge: string;
+  badgeColor: string;
+  connected?: boolean;
+  preview?: string;
+  description: ReactNode;
+  inputProps: InputHTMLAttributes<HTMLInputElement>;
+  onSave: () => void;
+  saving: boolean;
+  disabled: boolean;
+  buttonColor: string;
+}
+
+function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: ProviderCardProps) {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
       <div className="p-4 space-y-3">
@@ -462,7 +719,7 @@ function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, pre
   );
 }
 
-function ActionButton({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+function ActionButton({ icon, label, onClick, danger }: { icon: ReactNode; label: string; onClick: () => void; danger?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -479,7 +736,7 @@ function ActionButton({ icon, label, onClick, danger }: { icon: React.ReactNode;
 }
 
 function ChatProviderOption({ name, description, icon, iconColor, active, onClick, available }: {
-  name: string; description: string; icon: React.ReactNode; iconColor: string;
+  name: string; description: string; icon: ReactNode; iconColor: string;
   active: boolean; onClick: () => void; available: boolean;
 }) {
   return (
@@ -514,4 +771,17 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
       )}
     </button>
   );
+}
+
+function formatTimestamp(value?: string | null) {
+  if (!value) return "just now";
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
+function getErrorMessage(error: unknown, fallback = "Something went wrong") {
+  return error instanceof Error ? error.message : fallback;
 }

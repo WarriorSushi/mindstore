@@ -76,8 +76,13 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 ];
 
 export function KeyboardShortcuts() {
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  return <KeyboardShortcutsModal key={pathname} pathname={pathname} />;
+}
+
+function KeyboardShortcutsModal({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false);
 
   // Listen for "?" key to toggle
   useEffect(() => {
@@ -119,11 +124,6 @@ export function KeyboardShortcuts() {
     window.addEventListener("keydown", handleKey, true);
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [open]);
-
-  // Close on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   const close = useCallback(() => setOpen(false), []);
 

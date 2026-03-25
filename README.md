@@ -10,7 +10,7 @@ Import your ChatGPT conversations, Obsidian vault, Notion pages — then search 
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 
-[**Try It →**](https://mindstore-sandy.vercel.app) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai)
+[**Try It →**](https://mindstore-sandy.vercel.app) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai) · [**Docs**](./docs/index.md)
 
 </div>
 
@@ -43,6 +43,9 @@ Track your intellectual growth. A 0-10 fitness tracker for your brain — measur
 
 ### 🔌 MCP Server
 Connect your MindStore to **any AI** — Claude Desktop, Cursor, VS Code, OpenClaw. Your AI gets full context about you automatically.
+
+### 🌐 MindStore Everywhere
+A browser companion for capturing selections, pages, and supported AI conversations straight into MindStore, with lightweight on-page recall.
 
 ## How It Works
 

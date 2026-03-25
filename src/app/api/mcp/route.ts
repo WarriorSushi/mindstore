@@ -4,6 +4,8 @@ import { sql } from 'drizzle-orm';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { getUserId } from '@/server/user';
+import { pluginRuntime } from '@/server/plugins/runtime';
+import { getInstalledPluginMap } from '@/server/plugins/state';
 
 /**
  * MindStore MCP Server — Streamable HTTP transport
@@ -31,7 +33,7 @@ async function getMcpUserId(): Promise<string> {
   }
 }
 
-const TOOLS = [
+const CORE_TOOLS = [
   {
     name: 'search_mind',
     description: 'Search your personal knowledge base semantically. Returns relevant memories from your conversations, notes, documents, and more.',
@@ -67,7 +69,7 @@ const TOOLS = [
   },
 ];
 
-const RESOURCES = [
+const CORE_RESOURCES = [
   {
     uri: 'mindstore://profile',
     name: 'Knowledge Profile',
@@ -142,18 +144,18 @@ async function toolGetProfile(): Promise<string> {
     ORDER BY count DESC LIMIT 10
   `);
 
-  const row = (stats as any[])[0] || {};
+  const row = ((stats as unknown as StatsRow[])?.[0]) || ({} as Partial<StatsRow>);
   const total = parseInt(row.total) || 0;
 
   if (total === 0) {
     return 'The knowledge base is empty. No memories have been imported yet.';
   }
 
-  const typeBreakdown = (byType as any[])
+  const typeBreakdown = (byType as unknown as ByTypeRow[])
     .map(r => `  - ${r.source_type}: ${r.count} memories`)
     .join('\n');
 
-  const topSourcesList = (topSources as any[])
+  const topSourcesList = (topSources as unknown as TopSourceRow[])
     .map(r => `  - "${r.source_title || 'Untitled'}" (${r.source_type}): ${r.count} chunks`)
     .join('\n');
 
@@ -193,11 +195,11 @@ async function resourceRecent(): Promise<string> {
     ORDER BY created_at DESC LIMIT 10
   `);
 
-  if (!(recent as any[]).length) {
+  if (!(recent as unknown as RecentRow[]).length) {
     return 'No memories yet.';
   }
 
-  const formatted = (recent as any[]).map((r, i) => {
+  const formatted = (recent as unknown as RecentRow[]).map((r, i) => {
     const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : 'unknown';
     return `[${i + 1}] "${r.source_title || 'Untitled'}" (${r.source_type}, ${date})\n${r.content.slice(0, 300)}${r.content.length > 300 ? '...' : ''}`;
   }).join('\n\n---\n\n');
@@ -215,6 +217,15 @@ function jsonRpcError(id: unknown, code: number, message: string) {
   return { jsonrpc: '2.0' as const, id, error: { code, message } };
 }
 
+async function getPluginBindings() {
+  const installedMap = await getInstalledPluginMap();
+  return {
+    tools: pluginRuntime.getMcpTools(installedMap),
+    resources: pluginRuntime.getMcpResources(installedMap),
+    prompts: pluginRuntime.getPrompts(installedMap),
+  };
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -222,12 +233,23 @@ const CORS_HEADERS = {
 };
 
 export async function GET() {
+  const bindings = await getPluginBindings();
+
   // Discovery endpoint — return server info
   return NextResponse.json({
     name: 'mindstore',
     version: '0.2.0',
     description: 'Your personal MindStore — searchable knowledge from your conversations, notes, and documents',
-    capabilities: { tools: TOOLS, resources: RESOURCES },
+    capabilities: {
+      tools: [...CORE_TOOLS, ...bindings.tools.map((binding) => binding.tool.definition)],
+      resources: [...CORE_RESOURCES, ...bindings.resources.map((binding) => ({
+        uri: binding.resource.uri,
+        name: binding.resource.name,
+        description: binding.resource.description,
+        mimeType: binding.resource.mimeType,
+      }))],
+      prompts: bindings.prompts.map((binding) => binding.prompt.definition),
+    },
     status: 'active',
   }, { headers: CORS_HEADERS });
 }
@@ -241,27 +263,37 @@ export async function POST(request: NextRequest) {
 
     switch (method) {
       case 'initialize':
+        {
+          const bindings = await getPluginBindings();
         response = jsonRpcResponse(id, {
           protocolVersion: '2024-11-05',
           serverInfo: { name: 'mindstore', version: '0.2.0' },
           capabilities: {
-            tools: { listChanged: false },
-            resources: { subscribe: false, listChanged: false },
+            tools: { listChanged: bindings.tools.length > 0 },
+            resources: { subscribe: false, listChanged: bindings.resources.length > 0 },
+            prompts: { listChanged: bindings.prompts.length > 0 },
           },
         });
         break;
+      }
 
       case 'notifications/initialized':
         // Client acknowledges initialization — no response needed for notifications
         return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 
       case 'tools/list':
-        response = jsonRpcResponse(id, { tools: TOOLS });
+        {
+          const bindings = await getPluginBindings();
+          response = jsonRpcResponse(id, {
+            tools: [...CORE_TOOLS, ...bindings.tools.map((binding) => binding.tool.definition)],
+          });
+        }
         break;
 
       case 'tools/call': {
         const toolName = params?.name;
         const toolArgs = params?.arguments || {};
+        const bindings = await getPluginBindings();
 
         try {
           let text: string;
@@ -296,8 +328,24 @@ export async function POST(request: NextRequest) {
               });
               break;
 
-            default:
-              response = jsonRpcError(id, -32602, `Unknown tool: ${toolName}`);
+            default: {
+              const pluginTool = bindings.tools.find((binding) => binding.tool.definition.name === toolName);
+              if (!pluginTool) {
+                response = jsonRpcError(id, -32602, `Unknown tool: ${toolName}`);
+                break;
+              }
+
+              const userId = await getMcpUserId();
+              const result = await pluginTool.tool.handler(toolArgs, {
+                userId,
+                pluginSlug: pluginTool.pluginSlug,
+                pluginConfig: pluginTool.pluginConfig,
+              });
+
+              response = jsonRpcResponse(id, {
+                content: [{ type: 'text', text: result.text }],
+              });
+            }
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : 'Tool execution failed';
@@ -310,11 +358,25 @@ export async function POST(request: NextRequest) {
       }
 
       case 'resources/list':
-        response = jsonRpcResponse(id, { resources: RESOURCES });
+        {
+          const bindings = await getPluginBindings();
+          response = jsonRpcResponse(id, {
+            resources: [
+              ...CORE_RESOURCES,
+              ...bindings.resources.map((binding) => ({
+                uri: binding.resource.uri,
+                name: binding.resource.name,
+                description: binding.resource.description,
+                mimeType: binding.resource.mimeType,
+              })),
+            ],
+          });
+        }
         break;
 
       case 'resources/read': {
         const uri = params?.uri;
+        const bindings = await getPluginBindings();
         try {
           let text: string;
 
@@ -325,9 +387,21 @@ export async function POST(request: NextRequest) {
             case 'mindstore://recent':
               text = await resourceRecent();
               break;
-            default:
-              response = jsonRpcError(id, -32602, `Unknown resource: ${uri}`);
+            default: {
+              const pluginResource = bindings.resources.find((binding) => binding.resource.uri === uri);
+              if (!pluginResource) {
+                response = jsonRpcError(id, -32602, `Unknown resource: ${uri}`);
+                break;
+              }
+
+              const userId = await getMcpUserId();
+              text = await pluginResource.resource.read({
+                userId,
+                pluginSlug: pluginResource.pluginSlug,
+                pluginConfig: pluginResource.pluginConfig,
+              });
               break;
+            }
           }
 
           if (!response) {
@@ -339,6 +413,36 @@ export async function POST(request: NextRequest) {
           const msg = err instanceof Error ? err.message : 'Resource read failed';
           response = jsonRpcError(id, -32603, msg);
         }
+        break;
+      }
+
+      case 'prompts/list': {
+        const bindings = await getPluginBindings();
+        response = jsonRpcResponse(id, {
+          prompts: bindings.prompts.map((binding) => binding.prompt.definition),
+        });
+        break;
+      }
+
+      case 'prompts/get': {
+        const bindings = await getPluginBindings();
+        const promptName = params?.name;
+        const promptArgs = params?.arguments || {};
+        const prompt = bindings.prompts.find((binding) => binding.prompt.definition.name === promptName);
+
+        if (!prompt) {
+          response = jsonRpcError(id, -32602, `Unknown prompt: ${promptName}`);
+          break;
+        }
+
+        const userId = await getMcpUserId();
+        const rendered = await prompt.prompt.render(promptArgs, {
+          userId,
+          pluginSlug: prompt.pluginSlug,
+          pluginConfig: prompt.pluginConfig,
+        });
+
+        response = jsonRpcResponse(id, rendered);
         break;
       }
 
@@ -361,4 +465,29 @@ export async function POST(request: NextRequest) {
 
 export async function OPTIONS() {
   return new NextResponse(null, { headers: CORS_HEADERS });
+}
+interface StatsRow {
+  total: string;
+  sources: string;
+  earliest: string | Date | null;
+  latest: string | Date | null;
+}
+
+interface ByTypeRow {
+  source_type: string;
+  count: string;
+}
+
+interface TopSourceRow {
+  source_title: string | null;
+  source_type: string;
+  count: string;
+}
+
+interface RecentRow {
+  id: string;
+  content: string;
+  source_type: string;
+  source_title: string | null;
+  created_at: string | Date | null;
 }

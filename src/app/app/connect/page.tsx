@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plug, Copy, Check, ExternalLink, Brain, Terminal, Shield, Zap, Server } from "lucide-react";
+import { useState, useEffect, useSyncExternalStore } from "react";
+import { Copy, Check, ExternalLink, Brain, Terminal, Shield, Zap, Server } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
@@ -14,24 +14,43 @@ interface ConnectionConfig {
   supported: boolean;
 }
 
+const DEFAULT_API_ENDPOINT = "https://mindstore-sandy.vercel.app/api/mcp";
+
+function subscribeToWindowLocation() {
+  return () => {};
+}
+
+function getApiEndpointSnapshot() {
+  if (typeof window === "undefined") {
+    return DEFAULT_API_ENDPOINT;
+  }
+
+  return `${window.location.origin}/api/mcp`;
+}
+
 export default function ConnectPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [stats, setStats] = useState({ memories: 0, sources: 0 });
-  const [apiEndpoint, setApiEndpoint] = useState("");
   const [activeClient, setActiveClient] = useState("Claude Desktop");
+  const apiEndpoint = useSyncExternalStore(
+    subscribeToWindowLocation,
+    getApiEndpointSnapshot,
+    () => DEFAULT_API_ENDPOINT
+  );
 
   useEffect(() => {
-    loadStats();
-    setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore-sandy.vercel.app/api/mcp");
-  }, []);
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/v1/stats");
+        const data = await res.json();
+        setStats({ memories: data.totalMemories || 0, sources: data.totalSources || 0 });
+      } catch {
+        // Ignore stats fetch failures and leave the empty state in place.
+      }
+    }
 
-  async function loadStats() {
-    try {
-      const res = await fetch('/api/v1/stats');
-      const data = await res.json();
-      setStats({ memories: data.totalMemories || 0, sources: data.totalSources || 0 });
-    } catch { /* ignore */ }
-  }
+    void loadStats();
+  }, []);
 
   function copyToClipboard(text: string, id: string) {
     navigator.clipboard.writeText(text);
@@ -49,24 +68,12 @@ export default function ConnectPage() {
   }
 }`;
 
-  const claudeDesktopConfig = `{
-  "mcpServers": {
-    "mindstore": {
-      "command": "npx",
-      "args": ["mindstore-mcp"],
-      "env": {
-        "MINDSTORE_URL": "${apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}"
-      }
-    }
-  }
-}`;
-
   const clients: ConnectionConfig[] = [
     {
       name: "Claude Desktop",
       icon: "🤖",
       description: "Add MindStore to Claude Desktop via MCP config",
-      configSnippet: claudeDesktopConfig,
+      configSnippet: mcpConfig,
       docsUrl: "https://modelcontextprotocol.io/quickstart/user",
       supported: true,
     },
@@ -173,7 +180,7 @@ export default function ConnectPage() {
             >
               <span className="text-[13px]">{c.icon}</span>
               <span className="hidden sm:inline">{c.name}</span>
-              <span className="sm:hidden">{c.name.split(' ')[0]}</span>
+              <span className="sm:hidden">{c.name.split(" ")[0]}</span>
             </button>
           ))}
         </div>
@@ -246,10 +253,10 @@ export default function ConnectPage() {
         </div>
         <div className="flex items-center gap-2">
           <code className="flex-1 bg-white/[0.04] border border-white/[0.06] px-3.5 py-2.5 rounded-xl text-[12px] font-mono text-zinc-300 overflow-x-auto">
-            {apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}
+            {apiEndpoint}
           </code>
           <button
-            onClick={() => copyToClipboard(apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp", "endpoint")}
+            onClick={() => copyToClipboard(apiEndpoint, "endpoint")}
             className="h-9 w-9 rounded-xl border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all active:scale-[0.95] shrink-0"
           >
             {copied === "endpoint" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}

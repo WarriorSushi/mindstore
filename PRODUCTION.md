@@ -7,9 +7,11 @@
 Go to your Vercel project → Settings → Environment Variables → Add these:
 
 ```
-DATABASE_URL=postgres://mindstore:mindstore2026secure@148.135.137.47:5432/mindstore?sslmode=require
-AUTH_SECRET=ms_auth_2026_kj8x9mQ4wR7vL3pN
+DATABASE_URL=postgres://<user>:<password>@<host>:5432/<database>?sslmode=require
+AUTH_SECRET=<generate-a-new-secret>
 ```
+
+If you ever used credentials that were previously committed to this repository, treat them as compromised and rotate them before deploying.
 
 **Optional (for Google login):**
 ```
@@ -49,13 +51,13 @@ You should see:
 
 Tables should already exist. If not, run locally:
 ```bash
-DATABASE_URL=postgres://mindstore:mindstore2026secure@148.135.137.47:5432/mindstore?sslmode=require npm run migrate
+DATABASE_URL=postgres://<user>:<password>@<host>:5432/<database>?sslmode=require npm run migrate
 ```
 
 ## Architecture
 
 - **Frontend:** Next.js on Vercel (Edge/Serverless)
-- **Database:** PostgreSQL with pgvector + pg_trgm (148.135.137.47)
+- **Database:** PostgreSQL with pgvector + pg_trgm
 - **AI Providers:** Gemini (free) / OpenAI / Ollama — configurable per-user via Settings
 - **Auth:** NextAuth v5 with Google OAuth (optional — works without auth in single-user mode)
 - **MCP:** `/api/mcp` endpoint for Claude Desktop, Cursor, etc.

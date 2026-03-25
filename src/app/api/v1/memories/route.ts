@@ -2,6 +2,7 @@ import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { generateEmbeddings } from '@/server/embeddings';
+import { createMemory } from '@/server/memory-ingest';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -86,31 +87,16 @@ export async function POST(req: NextRequest) {
 
     if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
 
-    // Generate embedding using available provider
-    let embStr: string | null = null;
-    try {
-      const embeddings = await generateEmbeddings([content]);
-      if (embeddings && embeddings.length > 0) {
-        embStr = `[${embeddings[0].join(',')}]`;
-      }
-    } catch { /* skip */ }
+    const memory = await createMemory({
+      userId,
+      content,
+      sourceType,
+      sourceId,
+      sourceTitle,
+      metadata,
+    });
 
-    const id = crypto.randomUUID();
-    const meta = JSON.stringify(metadata || {});
-
-    if (embStr) {
-      await db.execute(sql`
-        INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, metadata, created_at, imported_at)
-        VALUES (${id}, ${userId}::uuid, ${content}, ${embStr}::vector, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
-      `);
-    } else {
-      await db.execute(sql`
-        INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, metadata, created_at, imported_at)
-        VALUES (${id}, ${userId}::uuid, ${content}, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
-      `);
-    }
-
-    return NextResponse.json({ id });
+    return NextResponse.json(memory);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });

@@ -12,8 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
-import { eq, sql } from 'drizzle-orm';
-import { buildStoreCatalog, getPluginManifest, PLUGIN_MANIFESTS } from '@/server/plugins/registry';
+import { eq } from 'drizzle-orm';
+import { FEATURED_PLUGIN_SLUGS, pluginRuntime } from '@/server/plugins/runtime';
 import type { PluginStatus } from '@/server/plugins/types';
 
 export async function GET(req: NextRequest) {
@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
 
     // ─── Single plugin detail ─────────────────────────────────
     if (slug) {
-      const manifest = getPluginManifest(slug);
+      const canonicalSlug = pluginRuntime.resolveSlug(slug) ?? slug;
+      const manifest = pluginRuntime.getManifest(canonicalSlug);
       if (!manifest) {
         return NextResponse.json({ error: 'Plugin not found' }, { status: 404 });
       }
@@ -34,11 +35,12 @@ export async function GET(req: NextRequest) {
       const [dbRecord] = await db
         .select()
         .from(schema.plugins)
-        .where(eq(schema.plugins.slug, slug))
+        .where(eq(schema.plugins.slug, canonicalSlug))
         .limit(1);
 
       return NextResponse.json({
         ...manifest,
+        source: pluginRuntime.resolvePlugin(canonicalSlug)?.descriptor.source ?? 'builtin',
         installed: !!dbRecord,
         status: dbRecord?.status || null,
         config: dbRecord?.config || {},
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
     );
 
     // Build catalog
-    let catalog = buildStoreCatalog(installedMap);
+    let catalog = pluginRuntime.buildStoreCatalog(installedMap, FEATURED_PLUGIN_SLUGS);
 
     // Filter by category
     if (category) {
@@ -79,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     // Count summary
     const summary = {
-      total: Object.keys(PLUGIN_MANIFESTS).length,
+      total: pluginRuntime.getAllManifests().length,
       installed: installedPlugins.length,
       active: installedPlugins.filter((p) => p.status === 'active').length,
       byCategory: {
@@ -107,7 +109,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plugin slug is required' }, { status: 400 });
     }
 
-    const manifest = getPluginManifest(slug);
+    const canonicalSlug = pluginRuntime.resolveSlug(slug) ?? slug;
+    const manifest = pluginRuntime.getManifest(canonicalSlug);
     if (!manifest) {
       return NextResponse.json({ error: `Unknown plugin: ${slug}` }, { status: 404 });
     }
@@ -119,7 +122,7 @@ export async function POST(req: NextRequest) {
         const [existing] = await db
           .select()
           .from(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .limit(1);
 
         if (existing) {
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
         const [installed] = await db
           .insert(schema.plugins)
           .values({
-            slug: manifest.slug,
+            slug: canonicalSlug,
             name: manifest.name,
             description: manifest.description,
             version: manifest.version,
@@ -148,9 +151,14 @@ export async function POST(req: NextRequest) {
               hooks: manifest.hooks,
               routes: manifest.routes,
               mcpTools: manifest.mcpTools,
+              aliases: manifest.aliases || [],
             },
           })
           .returning();
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onInstall', {
+          pluginConfig: (installed.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ 
           message: `${manifest.name} installed successfully`,
@@ -162,12 +170,16 @@ export async function POST(req: NextRequest) {
       case 'uninstall': {
         const [deleted] = await db
           .delete(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!deleted) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onUninstall', {
+          pluginConfig: (deleted.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ 
           message: `${manifest.name} uninstalled successfully`,
@@ -179,12 +191,16 @@ export async function POST(req: NextRequest) {
         const [updated] = await db
           .update(schema.plugins)
           .set({ status: 'active' as PluginStatus, updatedAt: new Date(), lastError: null })
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!updated) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onEnable', {
+          pluginConfig: (updated.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ message: `${manifest.name} enabled`, plugin: updated });
       }
@@ -194,12 +210,16 @@ export async function POST(req: NextRequest) {
         const [updated] = await db
           .update(schema.plugins)
           .set({ status: 'disabled' as PluginStatus, updatedAt: new Date() })
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!updated) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onDisable', {
+          pluginConfig: (updated.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ message: `${manifest.name} disabled`, plugin: updated });
       }
@@ -214,7 +234,7 @@ export async function POST(req: NextRequest) {
         const [existing] = await db
           .select()
           .from(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .limit(1);
 
         if (!existing) {
@@ -226,7 +246,7 @@ export async function POST(req: NextRequest) {
         const [updated] = await db
           .update(schema.plugins)
           .set({ config: mergedConfig, updatedAt: new Date() })
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         return NextResponse.json({ message: `${manifest.name} configured`, plugin: updated });

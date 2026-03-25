@@ -1,84 +1,76 @@
-import { getUserId } from '@/server/user';
-import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/server/db';
-import { buildTreeIndex } from '@/server/retrieval';
-import { generateEmbeddings } from '@/server/embeddings';
-import { sql } from 'drizzle-orm';
-import JSZip from 'jszip';
+import JSZip from "jszip";
+import { NextRequest, NextResponse } from "next/server";
+import { importDocuments, type ImportDocument } from "@/server/import-service";
+import { getUserId } from "@/server/user";
 
-/**
- * Clean a filename into a readable title.
- * Strips file extensions, Notion UUIDs (32-char hex), and path prefixes.
- * "My Page abc123def456789012345678901234.md" → "My Page"
- */
-function cleanTitle(filename: string): string {
-  return filename
-    .replace(/^.*[\/\\]/, '')           // strip path
-    .replace(/\.(md|txt|markdown)$/i, '') // strip extension
-    .replace(/\s+[a-f0-9]{20,}$/i, '')  // strip Notion-style hex ID suffix (20+ hex chars)
-    .replace(/\s+[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, '') // strip standard UUID
-    .trim() || filename;
-}
-
-// Chunking — intelligent paragraph/sentence splitting
-function chunkText(text: string, maxChunkSize = 1000): string[] {
-  const trimmed = text.trim();
-  if (!trimmed) return [];
-  
-  // Short content — don't split, return as-is
-  if (trimmed.length <= maxChunkSize) return [trimmed];
-  
-  const paragraphs = trimmed.split(/\n{2,}/);
-  const chunks: string[] = [];
-  let current = '';
-
-  for (const para of paragraphs) {
-    if (current.length + para.length > maxChunkSize && current.length > 0) {
-      chunks.push(current.trim());
-      current = '';
+interface ChatGptExportConversation {
+  title?: string;
+  create_time?: number;
+  mapping?: Record<
+    string,
+    {
+      parent?: string;
+      children?: string[];
+      message?: {
+        author?: { role?: string };
+        content?: { parts?: unknown[] };
+      };
     }
-    current += para + '\n\n';
-  }
-  if (current.trim()) chunks.push(current.trim());
-
-  // Filter out whitespace-only fragments from splitting, but keep short meaningful text
-  return chunks.filter(c => c.trim().length > 0);
+  >;
 }
 
-// ChatGPT export parser — walks the conversation tree to preserve message order
-function parseChatGPT(json: any): Array<{ title: string; content: string; timestamp: Date }> {
-  const results: Array<{ title: string; content: string; timestamp: Date }> = [];
+function cleanTitle(filename: string): string {
+  return (
+    filename
+      .replace(/^.*[\/\\]/, "")
+      .replace(/\.(md|txt|markdown)$/i, "")
+      .replace(/\s+[a-f0-9]{20,}$/i, "")
+      .replace(/\s+[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, "")
+      .trim() || filename
+  );
+}
 
-  for (const conv of (Array.isArray(json) ? json : [])) {
-    const title = conv.title || 'Untitled Conversation';
+function parseChatGPT(json: unknown): ImportDocument[] {
+  if (!Array.isArray(json)) {
+    return [];
+  }
+
+  const conversations = json as ChatGptExportConversation[];
+  const results: ImportDocument[] = [];
+
+  for (const conversation of conversations) {
+    const title = conversation.title || "Untitled Conversation";
     const messages: string[] = [];
 
-    if (conv.mapping) {
-      // Walk the tree using parent/children links to get correct order
+    if (conversation.mapping) {
       const visited = new Set<string>();
-      function walk(nodeId: string) {
-        if (visited.has(nodeId)) return;
-        visited.add(nodeId);
-        const node = conv.mapping[nodeId];
-        if (!node) return;
+      const walk = (nodeId: string) => {
+        if (visited.has(nodeId)) {
+          return;
+        }
 
-        const msg = node.message;
-        if (msg?.content?.parts) {
-          const role = msg.author?.role || 'unknown';
-          const text = msg.content.parts.filter((p: any) => typeof p === 'string').join('\n');
-          if (text.trim() && role !== 'system') {
+        visited.add(nodeId);
+        const node = conversation.mapping?.[nodeId];
+        if (!node) {
+          return;
+        }
+
+        const parts = node.message?.content?.parts;
+        if (Array.isArray(parts)) {
+          const role = node.message?.author?.role || "unknown";
+          const text = parts.filter((part): part is string => typeof part === "string").join("\n");
+          if (text.trim() && role !== "system") {
             messages.push(`${role}: ${text}`);
           }
         }
 
-        for (const childId of (node.children || [])) {
+        for (const childId of node.children || []) {
           walk(childId);
         }
-      }
+      };
 
-      // Find root nodes (no parent or parent not in mapping)
-      for (const [id, node] of Object.entries(conv.mapping) as [string, any][]) {
-        if (!node.parent || !conv.mapping[node.parent]) {
+      for (const [id, node] of Object.entries(conversation.mapping)) {
+        if (!node.parent || !conversation.mapping[node.parent]) {
           walk(id);
         }
       }
@@ -87,8 +79,10 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
     if (messages.length > 0) {
       results.push({
         title,
-        content: messages.join('\n\n'),
-        timestamp: new Date((conv.create_time || 0) * 1000),
+        content: messages.join("\n\n"),
+        sourceType: "chatgpt",
+        contentType: "conversation",
+        timestamp: new Date((conversation.create_time || 0) * 1000),
       });
     }
   }
@@ -96,155 +90,118 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
   return results;
 }
 
-/**
- * POST /api/v1/import
- * Body: multipart form with files + source_type
- * Or JSON: { source_type, documents: [{ title, content }] }
- */
 export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
-    
-    const contentType = req.headers.get('content-type') || '';
-    let documents: Array<{ title: string; content: string; sourceType: string; sourceId?: string; timestamp?: Date }> = [];
+    const documents = await parseImportRequest(req);
+    const imported = await importDocuments({ userId, documents });
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const sourceType = formData.get('source_type') as string || 'text';
-      const files = formData.getAll('files') as File[];
-
-      for (const file of files) {
-        const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
-        
-        if (isZip) {
-          // Handle ZIP files (ChatGPT exports come as ZIP containing conversations.json)
-          const buffer = await file.arrayBuffer();
-          const zip = await JSZip.loadAsync(buffer);
-          
-          for (const [filename, zipEntry] of Object.entries(zip.files)) {
-            if (zipEntry.dir) continue;
-            const entryText = await zipEntry.async('text');
-            
-            if (filename.endsWith('.json') && (sourceType === 'chatgpt' || filename.includes('conversations'))) {
-              try {
-                const parsed = parseChatGPT(JSON.parse(entryText));
-                documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
-              } catch { /* skip non-ChatGPT JSON files in ZIP */ }
-            } else if (filename.endsWith('.md') || filename.endsWith('.txt')) {
-              documents.push({ title: cleanTitle(filename), content: entryText, sourceType: sourceType || 'file' });
-            }
-          }
-        } else {
-          const text = await file.text();
-          
-          if (sourceType === 'chatgpt' && file.name.endsWith('.json')) {
-            const parsed = parseChatGPT(JSON.parse(text));
-            documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
-          } else {
-            documents.push({ title: cleanTitle(file.name), content: text, sourceType });
-          }
-        }
-      }
-    } else {
-      const body = await req.json();
-      
-      if (body.documents) {
-        // Standard import format: { documents: [{ title, content, sourceType, sourceId }] }
-        documents = body.documents;
-      } else if (body.memories) {
-        // Restore from export format: { memories: [{ content, source, sourceId, sourceTitle }] }
-        documents = body.memories.map((m: any) => ({
-          title: m.sourceTitle || 'Restored',
-          content: m.content,
-          sourceType: m.source || 'text',
-          sourceId: m.sourceId || null,
-          timestamp: m.timestamp ? new Date(m.timestamp) : undefined,
-        }));
-      }
-    }
-
-    // Filter out empty documents
-    documents = documents.filter(d => d.content && d.content.trim().length > 0);
-
-    if (documents.length === 0) {
-      return NextResponse.json({ error: 'No documents to import' }, { status: 400 });
-    }
-
-    // Chunk all documents
-    let totalChunks = 0;
-    const allChunks: Array<{ content: string; sourceType: string; sourceTitle: string; sourceId?: string; timestamp?: Date }> = [];
-
-    for (const doc of documents) {
-      const chunks = chunkText(doc.content);
-      for (const chunk of chunks) {
-        allChunks.push({
-          content: chunk,
-          sourceType: doc.sourceType,
-          sourceTitle: doc.title,
-          sourceId: doc.sourceId,
-          timestamp: doc.timestamp,
-        });
-      }
-      totalChunks += chunks.length;
-    }
-
-    // Generate embeddings using available provider (OpenAI, Gemini, or Ollama)
-    // Skip for large imports to avoid Vercel timeout (embeddings can be added later)
-    let embeddings: number[][] | null = null;
-    const MAX_EMBED_CHUNKS = 100; // ~10s for Gemini batch
-    if (allChunks.length <= MAX_EMBED_CHUNKS) {
-      try {
-        embeddings = await generateEmbeddings(allChunks.map(c => c.content));
-      } catch (e) {
-        console.error('Embedding failed, storing without vectors:', e);
-      }
-    }
-
-    // Insert into PostgreSQL (batched for performance — 50 per transaction)
-    const BATCH_SIZE = 50;
-    for (let b = 0; b < allChunks.length; b += BATCH_SIZE) {
-      const batch = allChunks.slice(b, b + BATCH_SIZE);
-      
-      // Use a transaction for each batch
-      for (let i = 0; i < batch.length; i++) {
-        const chunk = batch[i];
-        const globalIdx = b + i;
-        const embedding = embeddings?.[globalIdx];
-        const memId = crypto.randomUUID();
-        const ts = (chunk.timestamp || new Date()).toISOString();
-
-        if (embedding) {
-          const embStr = `[${embedding.join(',')}]`;
-          await db.execute(sql`
-            INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, created_at, imported_at)
-            VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${embStr}::vector, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}::timestamptz, NOW())
-          `);
-        } else {
-          await db.execute(sql`
-            INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, created_at, imported_at)
-            VALUES (${memId}, ${userId}::uuid, ${chunk.content}, ${chunk.sourceType}, ${chunk.sourceId || null}, ${chunk.sourceTitle}, ${ts}::timestamptz, NOW())
-          `);
-        }
-      }
-    }
-
-    // Rebuild tree index after import
-    try {
-      await buildTreeIndex(userId);
-    } catch (e) {
-      console.error('Tree index build failed (non-fatal):', e);
-    }
-
-    return NextResponse.json({
-      imported: {
-        documents: documents.length,
-        chunks: totalChunks,
-        embedded: embeddings ? embeddings.length : 0,
-        embeddingsSkipped: allChunks.length > MAX_EMBED_CHUNKS,
-      },
-    });
+    return NextResponse.json({ imported });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message === "No documents to import" ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
+}
+
+async function parseImportRequest(req: NextRequest): Promise<ImportDocument[]> {
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    return parseMultipartImportRequest(req);
+  }
+
+  return parseJsonImportRequest(req);
+}
+
+async function parseMultipartImportRequest(req: NextRequest): Promise<ImportDocument[]> {
+  const formData = await req.formData();
+  const sourceType = (formData.get("source_type") as string) || "text";
+  const files = formData.getAll("files") as File[];
+  const documents: ImportDocument[] = [];
+
+  for (const file of files) {
+    const isZip =
+      file.name.endsWith(".zip") ||
+      file.type === "application/zip" ||
+      file.type === "application/x-zip-compressed";
+
+    if (isZip) {
+      const buffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(buffer);
+
+      for (const [filename, zipEntry] of Object.entries(zip.files)) {
+        if (zipEntry.dir) {
+          continue;
+        }
+
+        const entryText = await zipEntry.async("text");
+
+        if (filename.endsWith(".json") && (sourceType === "chatgpt" || filename.includes("conversations"))) {
+          try {
+            documents.push(...parseChatGPT(JSON.parse(entryText)));
+          } catch {
+            continue;
+          }
+          continue;
+        }
+
+        if (filename.endsWith(".md") || filename.endsWith(".txt")) {
+          documents.push({
+            title: cleanTitle(filename),
+            content: entryText,
+            sourceType: sourceType || "file",
+            contentType: "document",
+          });
+        }
+      }
+
+      continue;
+    }
+
+    const text = await file.text();
+    if (sourceType === "chatgpt" && file.name.endsWith(".json")) {
+      documents.push(...parseChatGPT(JSON.parse(text)));
+      continue;
+    }
+
+    documents.push({
+      title: cleanTitle(file.name),
+      content: text,
+      sourceType,
+      contentType: "document",
+    });
+  }
+
+  return documents;
+}
+
+async function parseJsonImportRequest(req: NextRequest): Promise<ImportDocument[]> {
+  const body = await req.json();
+
+  if (Array.isArray(body?.documents)) {
+    return body.documents as ImportDocument[];
+  }
+
+  if (Array.isArray(body?.memories)) {
+    return body.memories.map((memory: Record<string, unknown>) => ({
+      title: asString(memory.sourceTitle) || "Restored",
+      content: asString(memory.content) || "",
+      sourceType: asString(memory.source) || "text",
+      sourceId: asString(memory.sourceId) || null,
+      timestamp: memory.timestamp ? new Date(String(memory.timestamp)) : undefined,
+      metadata: isRecord(memory.metadata) ? memory.metadata : {},
+      contentType: (asString(memory.contentType) as ImportDocument["contentType"]) || "text",
+    }));
+  }
+
+  return [];
+}
+
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
