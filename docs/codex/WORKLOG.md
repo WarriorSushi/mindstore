@@ -207,3 +207,38 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run typecheck`
 - `npm run test`
 - `npm run build`
+
+### 2026-03-25: Writing Style Port
+
+#### Scope
+
+- Port the `frain` Writing Style Analyzer into the codex runtime-first branch.
+- Preserve a dedicated analyzer page while moving the analysis engine into a reusable server module.
+- Turn Writing Style into a real codex plugin page instead of widget-only metadata.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/writing-style.ts` as the extracted writing-style analysis engine and profile builder.
+- Added `GET /api/v1/plugins/writing-style` as a thin route wrapper around the shared port module.
+- Added `/app/writing` with the codex-side analyzer UI for complexity, tone, phrase usage, source comparison, and style evolution.
+- Updated plugin registry metadata so Writing Style now declares a page surface in addition to its dashboard widget.
+- Added unit coverage for readability metrics, tone classification, syllable counting, and complexity scoring.
+- Added user docs and a release note for the port.
+
+#### Decisions
+
+- Writing Style should be treated as an analysis-page plugin, not only a dashboard widget.
+- The first codex-side page keeps the highest-signal analysis surfaces instead of copying every UI detail verbatim from the frain line.
+- Pure text analysis belongs in a reusable local engine with no provider dependency.
+
+#### Risks and Follow-Ups
+
+- The current page is a streamlined codex version; deeper charting polish and more visual detail can still be layered on later.
+- The broader analysis parity batch still needs Knowledge Gaps, Topic Evolution, Sentiment Timeline, and Mind Map Generator.
+- Source labels in the page are currently raw source keys; a richer display map can improve polish later.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`

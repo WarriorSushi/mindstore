@@ -287,13 +287,14 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     name: 'Writing Style Analyzer',
     description: 'Analyze your writing style — vocabulary, tone, complexity, and patterns.',
     version: '1.0.0',
-    type: 'mcp',
+    type: 'extension',
     category: 'analysis',
     icon: 'PenLine',
     author: 'MindStore',
-    capabilities: ['read:memories', 'ui:widgets'],
-    hooks: ['onInstall', 'onUninstall'],
+    capabilities: ['read:memories', 'ui:widgets', 'ui:pages'],
+    hooks: ['onInstall', 'onUninstall', 'onDashboard'],
     ui: {
+      pages: [{ path: 'writing', title: 'Writing Style', icon: 'PenLine', showInSidebar: false }],
       dashboardWidgets: [
         {
           id: 'writing-style-overview',
