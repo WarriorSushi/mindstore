@@ -7,6 +7,7 @@ MindStore's plugin runtime exists to make extension safe, documented, and predic
 - `mindstore.config.ts` is the source of truth for loaded plugins and deployment mode.
 - `@mindstore/plugin-sdk` defines manifests, hooks, MCP surfaces, settings, and UI metadata.
 - `@mindstore/plugin-runtime` resolves canonical slugs, aliases, installation state, and active MCP bindings.
+- Plugin config is now validated from manifest schema and can be edited from the product UI.
 
 ## Why This Exists
 
@@ -25,5 +26,5 @@ The original plugin list was useful for product planning, but community contribu
 
 - Background job registration
 - Safer external package loading for true third-party plugins
-- UI rendering for settings and widgets driven directly from schema
+- UI rendering for widgets driven directly from schema
 - Contract tests for plugin manifests and runtime bindings

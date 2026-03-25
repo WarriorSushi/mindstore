@@ -130,6 +130,21 @@ export async function POST(req: NextRequest) {
         }
 
         // Install
+        const normalizedInstall = pluginRuntime.validateAndNormalizeConfig(canonicalSlug, config, {
+          existingConfig: {},
+          includeDefaults: true,
+        });
+
+        if (!normalizedInstall.isValid) {
+          return NextResponse.json(
+            {
+              error: 'Plugin configuration is invalid',
+              fieldErrors: normalizedInstall.errors,
+            },
+            { status: 400 }
+          );
+        }
+
         const [installed] = await db
           .insert(schema.plugins)
           .values({
@@ -142,10 +157,7 @@ export async function POST(req: NextRequest) {
             icon: manifest.icon,
             category: manifest.category,
             author: manifest.author,
-            config: config || manifest.ui?.settingsSchema?.reduce((acc, field) => {
-              if (field.default !== undefined) acc[field.key] = field.default;
-              return acc;
-            }, {} as Record<string, unknown>) || {},
+            config: normalizedInstall.config,
             metadata: {
               capabilities: manifest.capabilities,
               hooks: manifest.hooks,
@@ -241,15 +253,31 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
 
-        const mergedConfig = { ...(existing.config as Record<string, unknown>), ...config };
+        const normalizedConfig = pluginRuntime.validateAndNormalizeConfig(canonicalSlug, config, {
+          existingConfig: (existing.config as Record<string, unknown>) || {},
+        });
+
+        if (!normalizedConfig.isValid) {
+          return NextResponse.json(
+            {
+              error: 'Plugin configuration is invalid',
+              fieldErrors: normalizedConfig.errors,
+            },
+            { status: 400 }
+          );
+        }
 
         const [updated] = await db
           .update(schema.plugins)
-          .set({ config: mergedConfig, updatedAt: new Date() })
+          .set({ config: normalizedConfig.config, updatedAt: new Date() })
           .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
-        return NextResponse.json({ message: `${manifest.name} configured`, plugin: updated });
+        return NextResponse.json({
+          message: `${manifest.name} configured`,
+          plugin: updated,
+          fieldErrors: {},
+        });
       }
 
       default:

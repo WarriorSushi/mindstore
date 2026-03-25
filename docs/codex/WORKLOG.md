@@ -45,10 +45,12 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Added API key generation, revocation, and bearer-token resolution for browser extension and external client auth.
 - Added a real `MindStore Everywhere` setup section in Settings with API key management and doc links.
 - Upgraded the browser extension popup with smarter source detection, richer capture modes, and lightweight query flow.
+- Added manifest-driven plugin settings validation plus generated settings forms in the Plugins UI.
 - Expanded docs with:
   - browser extension guide
   - capture API reference
   - plugin authoring and plugin runtime notes
+  - plugin settings reference
   - deployment modes
   - MCP client setup
   - release note for capture and extension work

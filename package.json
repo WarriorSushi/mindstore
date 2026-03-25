@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/server/capture.ts src/server/plugins src/app/api/mcp/route.ts src/app/api/v1/capture src/app/api/v1/import/route.ts src/app/api/v1/plugins/route.ts src/app/app/connect/page.tsx src/components/KeyboardShortcuts.tsx src/components/Onboarding.tsx packages tests extensions",
+    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/server/capture.ts src/server/plugins src/app/api/mcp/route.ts src/app/api/v1/capture src/app/api/v1/import/route.ts src/app/api/v1/plugins/route.ts src/app/app/connect/page.tsx src/app/app/plugins/page.tsx src/components/KeyboardShortcuts.tsx src/components/Onboarding.tsx packages tests extensions",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

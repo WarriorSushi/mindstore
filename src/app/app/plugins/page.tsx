@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Puzzle, Search, X, Loader2, Check, AlertTriangle, ChevronRight,
-  Upload, BarChart3, Zap, FolderDown, Cpu, Star, Filter,
+  Upload, BarChart3, Zap, FolderDown, Cpu, Star,
   BookOpen, FileText, Play, Bookmark, Gem, MessageCircle, AtSign,
   Highlighter, BookmarkCheck, Send, Music, FileStack,
   Network, SearchX, TrendingUp, PenLine, Heart,
@@ -14,6 +14,7 @@ import {
   Power, PowerOff, Settings, Trash2,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import type { PluginSettingField } from "@mindstore/plugin-sdk";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -41,6 +42,26 @@ interface PluginSummary {
   installed: number;
   active: number;
   byCategory: Record<string, number>;
+}
+
+interface PluginDetail extends Plugin {
+  longDescription?: string;
+  config?: Record<string, unknown>;
+  source?: "builtin" | "external";
+  ui?: {
+    settingsSchema?: PluginSettingField[];
+  };
+  installedAt?: string | null;
+  lastError?: string | null;
+}
+
+interface PluginMutationResponse {
+  message?: string;
+  error?: string;
+  fieldErrors?: Record<string, string>;
+  plugin?: {
+    config?: Record<string, unknown>;
+  };
 }
 
 // ─── Icon Map ─────────────────────────────────────────────────────
@@ -88,7 +109,6 @@ const TYPE_LABELS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────────
 
 export default function PluginsPage() {
-  const router = useRouter();
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [summary, setSummary] = useState<PluginSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +117,10 @@ export default function PluginsPage() {
   const [filter, setFilter] = useState<'all' | 'installed' | 'available'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
+  const [pluginDetails, setPluginDetails] = useState<Record<string, PluginDetail>>({});
+  const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
+  const [configDrafts, setConfigDrafts] = useState<Record<string, Record<string, unknown>>>({});
+  const [configErrors, setConfigErrors] = useState<Record<string, Record<string, string>>>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ─── Fetch plugins ──────────────────────────────────────────
@@ -118,6 +142,44 @@ export default function PluginsPage() {
 
   useEffect(() => { fetchPlugins(); }, [fetchPlugins]);
 
+  const loadPluginDetail = useCallback(async (slug: string, force = false) => {
+    if (!force && (pluginDetails[slug] || detailLoading[slug])) {
+      return;
+    }
+
+    setDetailLoading((current) => ({ ...current, [slug]: true }));
+
+    try {
+      const response = await fetch(`/api/v1/plugins?slug=${encodeURIComponent(slug)}`);
+      const data = (await response.json()) as PluginDetail & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load plugin details");
+      }
+
+      setPluginDetails((current) => ({ ...current, [slug]: data }));
+      setConfigDrafts((current) => ({
+        ...current,
+        [slug]: { ...(data.config || {}) },
+      }));
+      setConfigErrors((current) => ({
+        ...current,
+        [slug]: {},
+      }));
+    } catch (error) {
+      console.error("Failed to load plugin detail:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to load plugin details");
+    } finally {
+      setDetailLoading((current) => ({ ...current, [slug]: false }));
+    }
+  }, [detailLoading, pluginDetails]);
+
+  useEffect(() => {
+    if (expandedPlugin) {
+      void loadPluginDetail(expandedPlugin);
+    }
+  }, [expandedPlugin, loadPluginDetail]);
+
   // ─── Plugin action ─────────────────────────────────────────
 
   const pluginAction = async (slug: string, action: string) => {
@@ -128,11 +190,78 @@ export default function PluginsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, action }),
       });
-      if (res.ok) {
-        await fetchPlugins();
+      const data = (await res.json()) as PluginMutationResponse;
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to ${action} plugin`);
       }
+
+      toast.success(data.message || "Plugin updated");
+      await fetchPlugins();
+      await loadPluginDetail(slug, true);
     } catch (err) {
       console.error('Plugin action failed:', err);
+      toast.error(err instanceof Error ? err.message : "Plugin action failed");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const updateConfigDraft = (slug: string, key: string, value: unknown) => {
+    setConfigDrafts((current) => ({
+      ...current,
+      [slug]: {
+        ...(current[slug] || {}),
+        [key]: value,
+      },
+    }));
+
+    setConfigErrors((current) => ({
+      ...current,
+      [slug]: {
+        ...(current[slug] || {}),
+        [key]: "",
+      },
+    }));
+  };
+
+  const configurePlugin = async (slug: string) => {
+    setActionLoading(`${slug}:configure`);
+
+    try {
+      const response = await fetch("/api/v1/plugins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          action: "configure",
+          config: configDrafts[slug] || {},
+        }),
+      });
+
+      const data = (await response.json()) as PluginMutationResponse;
+
+      if (!response.ok) {
+        if (data.fieldErrors) {
+          setConfigErrors((current) => ({
+            ...current,
+            [slug]: data.fieldErrors || {},
+          }));
+        }
+
+        throw new Error(data.error || "Failed to save plugin settings");
+      }
+
+      setConfigErrors((current) => ({
+        ...current,
+        [slug]: {},
+      }));
+
+      toast.success(data.message || "Plugin settings saved");
+      await fetchPlugins();
+      await loadPluginDetail(slug, true);
+    } catch (error) {
+      console.error("Plugin configure failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save plugin settings");
     } finally {
       setActionLoading(null);
     }
@@ -305,6 +434,11 @@ export default function PluginsPage() {
               const colors = CATEGORY_COLORS[plugin.category] || CATEGORY_COLORS.import;
               const isExpanded = expandedPlugin === plugin.slug;
               const isActioning = actionLoading?.startsWith(plugin.slug);
+              const detail = pluginDetails[plugin.slug];
+              const settingsSchema = detail?.ui?.settingsSchema ?? [];
+              const configDraft = configDrafts[plugin.slug] ?? {};
+              const fieldErrors = configErrors[plugin.slug] ?? {};
+              const isDetailLoading = !!detailLoading[plugin.slug];
 
               return (
                 <div
@@ -385,6 +519,12 @@ export default function PluginsPage() {
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-0 border-t border-white/[0.04] mt-0">
                       <div className="pt-3.5 space-y-3">
+                        {isDetailLoading && !detail ? (
+                          <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-4 text-[12px] text-zinc-500">
+                            Loading plugin details…
+                          </div>
+                        ) : (
+                          <>
                         {/* Meta row */}
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
                           <span>v{plugin.version}</span>
@@ -394,12 +534,24 @@ export default function PluginsPage() {
                           <span className={`${colors.text}`}>{plugin.category}</span>
                           <span className="text-zinc-700">·</span>
                           <span>{TYPE_LABELS[plugin.type]}</span>
+                          {detail?.source && (
+                            <>
+                              <span className="text-zinc-700">·</span>
+                              <span>{detail.source === "external" ? "Community plugin" : "Built-in plugin"}</span>
+                            </>
+                          )}
                         </div>
 
                         {/* Description */}
                         <p className="text-[13px] text-zinc-400 leading-relaxed">
-                          {plugin.description}
+                          {detail?.longDescription || plugin.description}
                         </p>
+
+                        {detail?.lastError && (
+                          <div className="rounded-xl border border-red-500/20 bg-red-500/[0.05] px-3 py-2 text-[12px] text-red-200">
+                            {detail.lastError}
+                          </div>
+                        )}
 
                         {/* Capabilities */}
                         {plugin.capabilities && plugin.capabilities.length > 0 && (
@@ -413,6 +565,18 @@ export default function PluginsPage() {
                               </span>
                             ))}
                           </div>
+                        )}
+
+                        {settingsSchema.length > 0 && (
+                          <PluginSettingsSection
+                            disabled={!plugin.installed}
+                            fields={settingsSchema}
+                            values={configDraft}
+                            errors={fieldErrors}
+                            saving={actionLoading === `${plugin.slug}:configure`}
+                            onChange={(key, value) => updateConfigDraft(plugin.slug, key, value)}
+                            onSave={() => configurePlugin(plugin.slug)}
+                          />
                         )}
 
                         {/* Action buttons */}
@@ -474,6 +638,8 @@ export default function PluginsPage() {
                             </button>
                           )}
                         </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -497,4 +663,154 @@ export default function PluginsPage() {
       </Stagger>
     </PageTransition>
   );
+}
+
+interface PluginSettingsSectionProps {
+  fields: PluginSettingField[];
+  values: Record<string, unknown>;
+  errors: Record<string, string>;
+  disabled: boolean;
+  saving: boolean;
+  onChange: (key: string, value: unknown) => void;
+  onSave: () => void;
+}
+
+function PluginSettingsSection({
+  fields,
+  values,
+  errors,
+  disabled,
+  saving,
+  onChange,
+  onSave,
+}: PluginSettingsSectionProps) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-3.5 space-y-3">
+      <div>
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-zinc-400" />
+          <h4 className="text-[13px] font-medium text-zinc-200">Plugin Settings</h4>
+        </div>
+        <p className="mt-1 text-[11px] text-zinc-500">
+          {disabled
+            ? "Install this plugin before configuring it."
+            : "These fields are generated from the plugin manifest settings schema."}
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {fields.map((field) => (
+          <PluginSettingInput
+            key={field.key}
+            field={field}
+            value={values[field.key]}
+            error={errors[field.key]}
+            disabled={disabled || saving}
+            onChange={(value) => onChange(field.key, value)}
+          />
+        ))}
+      </div>
+
+      {!disabled && (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="h-8 px-3.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-[12px] font-medium text-sky-300 hover:bg-sky-500/15 active:scale-[0.97] transition-all disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Settings className="w-3.5 h-3.5" />}
+            Save settings
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface PluginSettingInputProps {
+  field: PluginSettingField;
+  value: unknown;
+  error?: string;
+  disabled: boolean;
+  onChange: (value: unknown) => void;
+}
+
+function PluginSettingInput({ field, value, error, disabled, onChange }: PluginSettingInputProps) {
+  const inputClassName =
+    "w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[12px] text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-sky-500/30 disabled:opacity-60";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[12px] font-medium text-zinc-300">{field.label}</label>
+        {field.required && <span className="text-[10px] uppercase tracking-[0.08em] text-zinc-600">Required</span>}
+      </div>
+
+      {field.description && (
+        <p className="text-[11px] leading-relaxed text-zinc-500">{field.description}</p>
+      )}
+
+      {field.type === "boolean" ? (
+        <label className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-[12px] text-zinc-300">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.checked)}
+            className="h-4 w-4 rounded border-white/[0.16] bg-transparent"
+          />
+          <span>{field.placeholder || "Enabled"}</span>
+        </label>
+      ) : field.type === "textarea" ? (
+        <textarea
+          value={stringValue(value)}
+          disabled={disabled}
+          placeholder={field.placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} min-h-[92px] resize-y`}
+        />
+      ) : field.type === "select" ? (
+        <select
+          value={stringValue(value)}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} h-10`}
+        >
+          {!field.required && <option value="">Select an option</option>}
+          {(field.options ?? []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={field.type === "number" ? "number" : field.type === "password" ? "password" : "text"}
+          value={field.type === "number" ? numberValue(value) : stringValue(value)}
+          disabled={disabled}
+          placeholder={field.placeholder}
+          min={field.validation?.min}
+          max={field.validation?.max}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${inputClassName} h-10`}
+        />
+      )}
+
+      {field.type === "file" && (
+        <p className="text-[10px] text-zinc-600">
+          File settings are currently stored as text values or paths. Rich file upload support is a later step.
+        </p>
+      )}
+
+      {error ? <p className="text-[11px] text-red-300">{error}</p> : null}
+    </div>
+  );
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : value == null ? "" : String(value);
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
 }

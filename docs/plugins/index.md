@@ -19,3 +19,4 @@ Plugins are how MindStore becomes a platform instead of a single app.
 ## Authoring
 
 - [Plugin Authoring](./authoring.md)
+- [Plugin Settings](./settings.md)

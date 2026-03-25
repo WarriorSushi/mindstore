@@ -87,4 +87,89 @@ describe("plugin runtime", () => {
       },
     });
   });
+
+  it("builds defaults and validates manifest-driven plugin settings", () => {
+    const runtime = createPluginRuntime(
+      defineMindStoreConfig({
+        plugins: [
+          definePlugin({
+            manifest: {
+              slug: "configurable",
+              name: "Configurable Plugin",
+              description: "Plugin with schema-backed settings",
+              version: "0.1.0",
+              type: "extension",
+              category: "action",
+              icon: "sparkles",
+              author: "MindStore",
+              ui: {
+                settingsSchema: [
+                  {
+                    key: "enabled",
+                    label: "Enabled",
+                    type: "boolean",
+                    default: true,
+                  },
+                  {
+                    key: "batchSize",
+                    label: "Batch Size",
+                    type: "number",
+                    default: 25,
+                    validation: {
+                      min: 1,
+                      max: 50,
+                    },
+                  },
+                  {
+                    key: "mode",
+                    label: "Mode",
+                    type: "select",
+                    required: true,
+                    options: [
+                      { label: "Fast", value: "fast" },
+                      { label: "Accurate", value: "accurate" },
+                    ],
+                  },
+                ],
+              },
+            },
+          }),
+        ],
+      })
+    );
+
+    expect(runtime.buildDefaultConfig("configurable")).toEqual({
+      enabled: true,
+      batchSize: 25,
+    });
+
+    expect(
+      runtime.validateAndNormalizeConfig("configurable", {
+        enabled: "yes",
+        batchSize: "12",
+        mode: "fast",
+      })
+    ).toEqual({
+      config: {
+        enabled: true,
+        batchSize: 12,
+        mode: "fast",
+      },
+      errors: {},
+      isValid: true,
+    });
+
+    const invalid = runtime.validateAndNormalizeConfig("configurable", {
+      enabled: "maybe",
+      batchSize: "80",
+      mode: "turbo",
+    });
+
+    expect(invalid.isValid).toBe(false);
+    expect(invalid.errors).toEqual({
+      enabled: "Enabled must be true or false.",
+      batchSize: "Batch Size must be at most 50.",
+      mode: "Mode must be one of the allowed options.",
+    });
+  });
 });
