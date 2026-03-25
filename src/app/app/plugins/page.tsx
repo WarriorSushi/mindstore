@@ -101,6 +101,7 @@ const PLUGIN_ROUTES: Record<string, string> = {
   'newsletter-writer': '/app/newsletter',
   'voice-to-memory': '/app/voice',
   'image-to-memory': '/app/vision',
+  'custom-rag': '/app/retrieval',
 };
 
 // ─── Component ────────────────────────────────────────────────────

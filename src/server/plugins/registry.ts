@@ -503,7 +503,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'custom-rag': {
     slug: 'custom-rag',
     name: 'Custom RAG Strategies',
-    description: 'Swap retrieval strategies: HyDE, reranking, parent-child chunking, and more.',
+    description: 'Swap retrieval strategies: HyDE, reranking, parent-child chunking, contextual compression, and more.',
     version: '1.0.0',
     type: 'extension',
     category: 'ai',
@@ -511,6 +511,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate'],
     hooks: ['onInstall', 'onUninstall', 'onSearch'],
+    ui: {
+      pages: [{ path: 'retrieval', title: 'Retrieval', icon: 'Cog', showInSidebar: true }],
+    },
   },
 
   'domain-embeddings': {
