@@ -248,8 +248,11 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'analysis',
     icon: 'SearchX',
     author: 'MindStore',
-    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:widgets'],
+    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:widgets', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'gaps', title: 'Knowledge Gaps', icon: 'SearchX', showInSidebar: false }],
+    },
   },
 
   'contradiction-finder': {

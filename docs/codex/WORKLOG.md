@@ -242,3 +242,38 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run lint:ci`
 - `npm run typecheck`
 - `npm run test`
+
+### 2026-03-25: Knowledge Gaps Port
+
+#### Scope
+
+- Port Knowledge Gaps into the codex runtime-first branch.
+- Create a codex-side shared vector/clustering helper for the rest of the analysis batch.
+- Add a dedicated page, thin route, tests, and docs for the feature.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/shared-vectors.ts` for embedding parsing, cosine similarity, k-means clustering, keyword extraction, and topic labeling.
+- Added `src/server/plugins/ports/knowledge-gaps.ts` as the extracted Knowledge Gaps analysis module.
+- Added `GET /api/v1/plugins/knowledge-gaps` as a thin route wrapper.
+- Added `/app/gaps` with codex-side topic coverage, gap review, and suggestion UI.
+- Updated plugin registry metadata so Knowledge Gaps now declares a page surface.
+- Added unit coverage and docs for the feature.
+
+#### Decisions
+
+- Shared vector math now lives in one codex helper instead of being re-copied into each analysis route.
+- Knowledge Gaps keeps AI suggestions optional; the core topic-gap analysis remains local and deterministic.
+- The first codex page focuses on the highest-signal workflow rather than copying every frain interaction detail.
+
+#### Risks and Follow-Ups
+
+- The fetched `origin/frain/improve` ref still does not expose the new `ports/*` extraction that frain reported, so codex is still rebuilding some ports from visible route/page implementations.
+- Topic Evolution, Sentiment Timeline, and Mind Map Generator should reuse the new shared vector helper next.
+- The current page is a streamlined codex version and can still gain richer visualization over time.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`

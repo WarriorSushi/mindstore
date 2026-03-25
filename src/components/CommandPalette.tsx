@@ -6,7 +6,7 @@ import {
   Search, LayoutDashboard, MessageSquare, Upload, Compass,
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
-  Plus, Download, RefreshCw, Zap, Clock, Bookmark, Layers, Mic, PenLine,
+  Plus, Download, RefreshCw, Zap, Clock, Bookmark, Layers, Mic, PenLine, SearchX,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,6 +52,7 @@ const NAV_ITEMS = [
   { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all memories" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you" },
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
+  { href: "/app/gaps", icon: SearchX, label: "Knowledge Gaps", desc: "Find sparse topics and missing bridges" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition from your knowledge" },
