@@ -4,6 +4,43 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 15:29 UTC — UX Polish: Page Titles, Dynamic SEO, PWA Icons
+
+### Dynamic Page Titles (all 33 pages)
+- **`src/lib/use-page-title.ts`** — lightweight `usePageTitle()` hook
+- Every app page now sets `document.title` to `"Page Name — MindStore"`
+- Pages: Home, Chat, Explore, Import, Flashcards, Blog Writer, Newsletter, Resume Builder, Knowledge Gaps, Sentiment Analysis, Topic Evolution, Writing Style, Mind Map, Collections, Stats, Insights, Fingerprint, Duplicates, Learning Paths, Meeting Prep, Voice, Vision, RAG Settings, Languages, Domain Embeddings, Anki Export, Blog Export, Notion Sync, Obsidian Sync, Plugins, Connect AI, Settings, Learn
+- Improves: multi-tab clarity, browser history, accessibility (screen readers)
+
+### Dynamic robots.ts
+- Replaced static `public/robots.txt` with `src/app/robots.ts`
+- Sitemap URL now uses `NEXT_PUBLIC_URL` env var instead of hardcoded Vercel URL
+- Matches existing `sitemap.ts` approach
+
+### PWA Icons
+- Generated 192x192 and 512x512 PNG icons from SVG favicon
+- Added `apple-touch-icon.png` (180x180) for iOS home screen
+- Updated `manifest.json` with `maskable` purpose icons
+- MindStore now passes Chrome's PWA installability checks
+
+### Codebase Audit Results (no issues found)
+- **TypeScript**: 0 errors, 0 warnings
+- **Build**: Clean — all 37 pages + 55 API routes compile successfully
+- **Color violations**: Zero violet/purple/fuchsia anywhere in codebase
+- **Plugin ports**: 34/34 complete (100%)
+- **Error handling**: error.tsx + not-found.tsx both present with proper UX
+- **Accessibility**: skip-to-content, focus-visible rings, reduced-motion support, keyboard navigation (j/k/Enter/Esc) across explore & detail views
+- **Empty states**: Present on Explore, Duplicates, Anki, Flashcards, Notifications
+- **Responsive**: Mobile bottom nav, safe-area-inset, hamburger menu, responsive grids
+- **Loading states**: Skeleton loading component + per-page loading indicators
+
+### Codex Monitor (read-only)
+- 3 new commits since last cycle on `codex/local-dev`:
+  - `51a5e91` Port topic evolution into codex runtime
+  - `fa9124a` Port knowledge gaps and shared vector helpers
+  - `b2f93bc` Port writing style analyzer into codex runtime
+- Codex is steadily porting analysis plugins — convergence continuing
+
 ## 2026-03-25 14:59 UTC — Final Plugin Ports: 100% Coverage · Codex Monitor
 
 ### Plugin Ports: ALL REMAINING 7 PLUGINS → 100% Complete
