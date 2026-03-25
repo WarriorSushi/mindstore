@@ -1628,3 +1628,30 @@ _Automated 30-min improvement cycles by Frain_
   - Embedding coverage progress bar visualization
 - **Design**: Teal primary, OLED black base, glass borders. Zero violet/purple/fuchsia.
 - **Branch**: `frain/improve` (commit `82aacfa`)
+
+## 2026-03-25 05:29 UTC — Quick Capture + Memory Detail Drawer + Mobile FAB
+- **What**: Two major UX features that reduce friction for the core workflows
+- **Quick Capture Modal** (`⌘⇧N` / `Ctrl+Shift+N`):
+  - Instant note or URL capture from anywhere in the app — no navigation required
+  - Two modes: Note (text with optional title) and URL (auto-extract page content)
+  - Auto-detects pasted URLs and switches to URL mode
+  - `⌘+Enter` to save, auto-close after success
+  - Accessible from: keyboard shortcut, Command Palette, sidebar button
+  - Mobile-optimized: slides up from bottom on mobile, centered modal on desktop
+  - Uses existing `/api/v1/memories` (note) and `/api/v1/import-url` (URL) endpoints
+- **Memory Detail Drawer** (slide-in panel):
+  - Click any memory → slide-in panel shows full details without page navigation
+  - Content: full text, source type badge, word count, timeline, tags, metadata, source link
+  - Actions: Pin/Unpin (toggle), Copy content, Delete (with confirmation)
+  - Source links open in new tab for URLs
+  - Replaces old behavior of redirect-to-Explore with a query string
+  - Event-driven via `CustomEvent("mindstore:open-memory")` — usable from any component
+  - Dashboard pinned memories and recent activity now open drawer on click
+- **Mobile FAB**: Teal floating action button (⚡) above bottom nav for quick capture
+  - Hidden on chat page (where keyboard is primary), visible everywhere else
+  - Rounded-2xl, shadow, spring-feel active state
+- **Sidebar**: Added "Quick Capture" button in desktop sidebar footer with `⌘⇧N` shortcut hint
+- **Command Palette**: Added "Quick Capture" action with keywords and ⇧N shortcut
+- **Keyboard Shortcuts**: Updated help modal with `⌘⇧N` shortcut
+- **Design**: OLED black base, teal accent, glass borders. Zero violet/purple/fuchsia.
+- **Branch**: `frain/improve` (commit `030c61f`)
