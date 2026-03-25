@@ -58,7 +58,7 @@ export default function LandingPage() {
           style={{ animationDelay: "-7s" }}
         />
         <div
-          className="orb w-64 h-64 bg-indigo-600 -bottom-32 left-1/3"
+          className="orb w-64 h-64 bg-teal-800 -bottom-32 left-1/3"
           style={{ animationDelay: "-14s" }}
         />
 
@@ -245,6 +245,71 @@ export default function LandingPage() {
               <p className="text-[13px] text-zinc-500 leading-[1.65]">
                 {feature.desc}
               </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════ PLUGIN ECOSYSTEM ═══════ */}
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+        <div className="text-center mb-14">
+          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-sky-500/10 text-sky-400 border border-sky-500/15 mb-4">
+            Plugin Ecosystem
+          </span>
+          <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
+            33 plugins. Infinite possibilities.
+          </h2>
+          <p className="text-[15px] text-zinc-500 max-w-xl mx-auto leading-relaxed">
+            Import from anywhere, analyze everything, export to anything. Every plugin is free and built-in.
+          </p>
+        </div>
+
+        {/* Plugin category cards */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+          {[
+            { label: "Import", count: 12, color: "text-blue-400", bg: "from-blue-500/10", desc: "Kindle, YouTube, Twitter, Spotify, Notion…" },
+            { label: "Analysis", count: 6, color: "text-teal-400", bg: "from-teal-500/10", desc: "Mind maps, sentiment, gaps, writing style" },
+            { label: "Action", count: 6, color: "text-amber-400", bg: "from-amber-500/10", desc: "Flashcards, blog writer, resume builder" },
+            { label: "Export", count: 4, color: "text-emerald-400", bg: "from-emerald-500/10", desc: "Anki, Obsidian, Notion, Markdown" },
+            { label: "AI Tools", count: 5, color: "text-sky-400", bg: "from-sky-500/10", desc: "Voice, vision, RAG, multi-language" },
+          ].map((cat) => (
+            <div key={cat.label} className={`rounded-2xl border border-white/[0.06] bg-gradient-to-b ${cat.bg} to-transparent p-4 text-center hover:bg-white/[0.04] transition-all`}>
+              <p className={`text-[28px] font-bold ${cat.color} tabular-nums`}>{cat.count}</p>
+              <p className="text-[13px] font-semibold text-white mt-1">{cat.label}</p>
+              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{cat.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Plugin highlights row */}
+        <div className="grid md:grid-cols-3 gap-3">
+          {[
+            {
+              icon: Network,
+              title: "Interactive Mind Maps",
+              desc: "See your knowledge as a visual topology. Clusters, connections, and themes emerge from your data automatically.",
+              color: "text-sky-400",
+              border: "border-sky-500/15",
+            },
+            {
+              icon: Sparkles,
+              title: "Voice & Vision Import",
+              desc: "Record voice memos that auto-transcribe. Upload photos and screenshots — AI describes them as searchable memories.",
+              color: "text-teal-400",
+              border: "border-teal-500/15",
+            },
+            {
+              icon: GraduationCap,
+              title: "Learn From Your Brain",
+              desc: "Auto-generate flashcards, detect knowledge gaps, track how your interests evolve, and build learning paths.",
+              color: "text-amber-400",
+              border: "border-amber-500/15",
+            },
+          ].map((h) => (
+            <div key={h.title} className={`rounded-2xl border ${h.border} bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all`}>
+              <h.icon className={`w-5 h-5 ${h.color} mb-3`} />
+              <h3 className="text-[14px] font-semibold mb-1.5">{h.title}</h3>
+              <p className="text-[13px] text-zinc-500 leading-[1.65]">{h.desc}</p>
             </div>
           ))}
         </div>

@@ -9,6 +9,7 @@ import {
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
   Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
+  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,6 +52,14 @@ const NAV_ITEMS = [
   { href: "/app/newsletter", icon: Mail, label: "Newsletter", desc: "Curate a digest from your recent knowledge" },
   { href: "/app/voice", icon: Mic, label: "Voice Capture", desc: "Record thoughts and transcribe to memory" },
   { href: "/app/vision", icon: Camera, label: "Image Analysis", desc: "Upload images and describe with AI" },
+  { href: "/app/retrieval", icon: SlidersHorizontal, label: "RAG Strategies", desc: "Configure retrieval and reranking settings" },
+  { href: "/app/languages", icon: Languages, label: "Languages", desc: "Multi-language detection and cross-language search" },
+  { href: "/app/domains", icon: Dna, label: "Domain Embeddings", desc: "Specialized embeddings for different knowledge domains" },
+  { href: "/app/anki", icon: Download, label: "Anki Export", desc: "Export flashcards as Anki-compatible decks" },
+  { href: "/app/export", icon: FolderDown, label: "Blog Export", desc: "Export memories as Hugo, Jekyll, Astro, or Next.js" },
+  { href: "/app/notion-sync", icon: BookOpen, label: "Notion Sync", desc: "Push memories to a Notion database" },
+  { href: "/app/obsidian-sync", icon: Gem, label: "Obsidian Sync", desc: "Export as an Obsidian vault with wikilinks" },
+  { href: "/app/plugins", icon: Puzzle, label: "Plugin Store", desc: "Browse and manage 33 plugins" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
