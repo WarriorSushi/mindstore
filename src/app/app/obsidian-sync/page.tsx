@@ -157,7 +157,7 @@ export default function ObsidianSyncPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {[
           { label: 'Notes', value: preview?.filteredCount || 0, icon: FileText, color: 'text-teal-400' },
           { label: 'Words', value: preview?.totalWords ? `${(preview.totalWords / 1000).toFixed(0)}k` : '0', icon: Hash, color: 'text-sky-400' },
@@ -194,7 +194,7 @@ export default function ObsidianSyncPage() {
           {/* Folder Structure */}
           <div className="mb-4">
             <label className="text-xs text-zinc-500 mb-2 block">Folder Structure</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {FOLDER_OPTIONS.map(opt => (
                 <button
                   key={opt.value}

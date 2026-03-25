@@ -14,3 +14,4 @@ export * from './contradiction-finder';
 export * from './blog-draft';
 export * from './conversation-prep';
 export * from './writing-style';
+export * from './newsletter-writer';

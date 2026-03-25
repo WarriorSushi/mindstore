@@ -323,7 +323,7 @@ export default function NotionSyncPage() {
       {config?.connected && config.databaseId && (
         <>
           {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             {[
               { label: 'Total Synced', value: config.totalSynced || 0, icon: CheckCircle, color: 'text-emerald-400' },
               { label: 'Unsynced', value: preview?.unsyncedCount || 0, icon: AlertTriangle, color: 'text-amber-400' },
