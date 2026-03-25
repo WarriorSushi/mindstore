@@ -106,6 +106,8 @@ const PLUGIN_ROUTES: Record<string, string> = {
   'domain-embeddings': '/app/domains',
   'anki-export': '/app/anki',
   'markdown-blog-export': '/app/export',
+  'notion-sync': '/app/notion-sync',
+  'obsidian-sync': '/app/obsidian-sync',
 };
 
 // ─── Component ────────────────────────────────────────────────────

@@ -209,7 +209,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'notion-importer': {
     slug: 'notion-importer',
     name: 'Notion Import (Enhanced)',
-    description: 'Full Notion workspace import with database support — not just pages.',
+    description: 'Full Notion workspace import with database support, not just pages. Upload your Notion export ZIP with CSV databases.',
     version: '1.0.0',
     type: 'extension',
     category: 'import',
@@ -217,6 +217,13 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['write:memories', 'files:read', 'write:embeddings'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      importTab: {
+        label: 'Notion',
+        icon: 'FileStack',
+        acceptedFileTypes: ['.zip'],
+      },
+    },
   },
 
   // ─── Analysis Plugins ─────────────────────────────────────────
@@ -407,7 +414,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'obsidian-sync': {
     slug: 'obsidian-sync',
     name: 'Obsidian Vault Sync',
-    description: 'Two-way sync between MindStore and your Obsidian vault.',
+    description: 'Two-way sync between MindStore and your Obsidian vault. Export as .md with frontmatter, wikilinks, and backlinks.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -415,12 +422,15 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'write:memories', 'files:read', 'files:write', 'background:jobs'],
     hooks: ['onInstall', 'onUninstall', 'onMemoryCreate', 'onMemoryUpdate'],
+    ui: {
+      pages: [{ path: 'obsidian-sync', title: 'Obsidian Sync', icon: 'Gem', showInSidebar: true }],
+    },
   },
 
   'notion-sync': {
     slug: 'notion-sync',
     name: 'Notion Sync',
-    description: 'Sync MindStore memories to a Notion workspace as a searchable database.',
+    description: 'Push MindStore memories to a Notion database. Structured properties, source types, tags, and full content.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -428,6 +438,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'network:fetch', 'background:jobs'],
     hooks: ['onInstall', 'onUninstall', 'onMemoryCreate'],
+    ui: {
+      pages: [{ path: 'notion-sync', title: 'Notion Sync', icon: 'FileStack', showInSidebar: true }],
+    },
   },
 
   'anki-export': {

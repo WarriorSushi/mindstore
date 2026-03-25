@@ -8,7 +8,8 @@ import {
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem, Mic, Camera,
+  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
+  AtSign, BookmarkCheck, Music, Highlighter,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -1297,7 +1298,7 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
   const [expanded, setExpanded] = useState(false);
 
   const typeIcons: Record<string, any> = {
-    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera,
+    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter,
   };
   const typeColors: Record<string, string> = {
     chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
@@ -1312,6 +1313,13 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
     reddit: "text-orange-400 bg-orange-500/10 border-orange-500/15",
     audio: "text-teal-400 bg-teal-500/10 border-teal-500/15",
     image: "text-sky-400 bg-sky-500/10 border-sky-500/15",
+    notion: "text-zinc-300 bg-zinc-500/10 border-zinc-500/15",
+    twitter: "text-sky-400 bg-sky-500/10 border-sky-500/15",
+    telegram: "text-teal-400 bg-teal-500/10 border-teal-500/15",
+    pocket: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
+    instapaper: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
+    spotify: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15",
+    readwise: "text-amber-400 bg-amber-500/10 border-amber-500/15",
   };
 
   const displayed = expanded ? sources : sources.slice(0, 3);

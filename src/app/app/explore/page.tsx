@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -42,6 +42,13 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10" },
   audio: { icon: Mic, color: "text-teal-400 bg-teal-500/10" },
   image: { icon: Camera, color: "text-sky-400 bg-sky-500/10" },
+  notion: { icon: StickyNote, color: "text-zinc-300 bg-zinc-500/10" },
+  twitter: { icon: AtSign, color: "text-sky-400 bg-sky-500/10" },
+  telegram: { icon: Send, color: "text-teal-400 bg-teal-500/10" },
+  pocket: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10" },
+  instapaper: { icon: BookmarkCheck, color: "text-emerald-400 bg-emerald-500/10" },
+  spotify: { icon: Music, color: "text-emerald-400 bg-emerald-500/10" },
+  readwise: { icon: Highlighter, color: "text-amber-400 bg-amber-500/10" },
 };
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [

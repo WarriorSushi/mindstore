@@ -8,7 +8,8 @@ import {
   Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
-  Clock, Pin, BarChart3, BookOpen, FileBox, PlayCircle, Bookmark, Gem, Mic, Camera,
+  Clock, Pin, BarChart3, BookOpen, FileBox, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
+  AtSign, Send, BookmarkCheck, Music, Highlighter,
 } from "lucide-react";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
@@ -374,8 +375,8 @@ export default function DashboardPage() {
                       </div>
                     )}
                     {searchResults.map((r: any, i: number) => {
-                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera };
-                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10" };
+                      const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
+                      const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
                       const Icon = typeIcons[r.sourceType] || FileText;
                       const color = typeColors[r.sourceType] || "text-zinc-400 bg-zinc-500/10";
                       return (
@@ -448,8 +449,8 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10" };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -504,8 +505,8 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {stats.recentMemories.map((mem: any, i: number) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera };
-                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10" };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
+                const typeColors: Record<string, string> = { chatgpt: "text-green-400 bg-green-500/10", file: "text-blue-400 bg-blue-500/10", url: "text-orange-400 bg-orange-500/10", text: "text-teal-400 bg-teal-500/10", kindle: "text-amber-400 bg-amber-500/10", document: "text-blue-400 bg-blue-500/10", youtube: "text-red-400 bg-red-500/10", bookmark: "text-sky-400 bg-sky-500/10", obsidian: "text-teal-400 bg-teal-500/10", reddit: "text-orange-400 bg-orange-500/10", audio: "text-teal-400 bg-teal-500/10", image: "text-sky-400 bg-sky-500/10", notion: "text-zinc-300 bg-zinc-500/10", twitter: "text-sky-400 bg-sky-500/10", telegram: "text-teal-400 bg-teal-500/10", pocket: "text-emerald-400 bg-emerald-500/10", instapaper: "text-emerald-400 bg-emerald-500/10", spotify: "text-emerald-400 bg-emerald-500/10", readwise: "text-amber-400 bg-amber-500/10" };
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
@@ -579,6 +580,7 @@ export default function DashboardPage() {
                      src.type === 'reddit' ? <MessageSquare className="w-3.5 h-3.5 text-orange-400" /> :
                      src.type === 'audio' ? <Mic className="w-3.5 h-3.5 text-teal-400" /> :
                      src.type === 'image' ? <Camera className="w-3.5 h-3.5 text-sky-400" /> :
+                     src.type === 'notion' ? <StickyNote className="w-3.5 h-3.5 text-zinc-300" /> :
                      <FileText className="w-3.5 h-3.5 text-blue-400" />}
                   </div>
                   <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>

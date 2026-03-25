@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare, Mic, Camera } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare, Mic, Camera, AtSign, Send, BookmarkCheck, Music, Highlighter, Key } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit";
+type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit" | "twitter" | "telegram" | "pocket" | "spotify" | "readwise";
 
 interface PluginTab {
   slug: string;
@@ -28,6 +28,11 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "youtube", label: "YouTube", icon: PlayCircle, desc: "Transcripts" },
   { id: "bookmarks", label: "Bookmarks", icon: Bookmark, desc: "Browser" },
   { id: "reddit", label: "Reddit", icon: MessageSquare, desc: "Saved posts" },
+  { id: "twitter", label: "Twitter/X", icon: AtSign, desc: "Bookmarks" },
+  { id: "telegram", label: "Telegram", icon: Send, desc: "Messages" },
+  { id: "pocket", label: "Pocket", icon: BookmarkCheck, desc: "Articles" },
+  { id: "spotify", label: "Spotify", icon: Music, desc: "Listening" },
+  { id: "readwise", label: "Readwise", icon: Highlighter, desc: "Highlights" },
 ];
 
 // Plugin icon mapping — maps manifest icon names to actual components
@@ -81,6 +86,28 @@ export default function ImportPage() {
   // ─── Reddit-specific state ───────────────────────────────
   const [rdPreview, setRdPreview] = useState<any>(null);
   const [rdParsing, setRdParsing] = useState(false);
+
+  // ─── Notion Enhanced state ────────────────────────────────
+  const [notionPreview, setNotionPreview] = useState<any>(null);
+  const [notionParsing, setNotionParsing] = useState(false);
+
+  // ─── Twitter/X state ──────────────────────────────────────
+  const [twParsing, setTwParsing] = useState(false);
+
+  // ─── Telegram state ───────────────────────────────────────
+  const [tgParsing, setTgParsing] = useState(false);
+
+  // ─── Pocket/Instapaper state ──────────────────────────────
+  const [pkParsing, setPkParsing] = useState(false);
+  const [pkFormat, setPkFormat] = useState<'pocket' | 'instapaper'>('pocket');
+
+  // ─── Spotify state ────────────────────────────────────────
+  const [spParsing, setSpParsing] = useState(false);
+
+  // ─── Readwise state ───────────────────────────────────────
+  const [rwToken, setRwToken] = useState("");
+  const [rwImporting, setRwImporting] = useState(false);
+  const [rwTokenSaved, setRwTokenSaved] = useState(false);
 
   // Fetch import history on mount
   const refreshHistory = useCallback(async () => {
@@ -506,6 +533,248 @@ export default function ImportPage() {
     }
   };
 
+  // ─── Notion Enhanced Import (ZIP) ────────────────────────
+
+  // ─── TWITTER IMPORT HANDLER ─────────────────────────────────
+
+  const handleTwitterImport = async (file: File) => {
+    setTwParsing(true);
+    try {
+      const text = await file.text();
+      setState("uploading"); setProgress(30);
+      setProgressText("Importing Twitter bookmarks…");
+      const res = await fetch('/api/v1/plugins/twitter-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import-archive', data: text }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`${data.imported} tweets imported${data.skipped > 0 ? ` (${data.skipped} duplicates skipped)` : ''}`);
+      toast.success(`Imported ${data.imported} tweets`, {
+        description: `${data.total} found · ${data.skipped} duplicates skipped`,
+      });
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    } finally {
+      setTwParsing(false);
+    }
+  };
+
+  // ─── TELEGRAM IMPORT HANDLER ────────────────────────────────
+
+  const handleTelegramImport = async (file: File) => {
+    setTgParsing(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      setState("uploading"); setProgress(30);
+      setProgressText("Importing Telegram messages…");
+      const res = await fetch('/api/v1/plugins/telegram-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import', data }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const result = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`${result.imported} message groups from "${result.chatName || 'Telegram'}"${result.skipped > 0 ? ` (${result.skipped} duplicates skipped)` : ''}`);
+      toast.success(`Imported ${result.imported} message groups`, {
+        description: `${result.totalMessages} messages → ${result.groups} groups`,
+      });
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    } finally {
+      setTgParsing(false);
+    }
+  };
+
+  // ─── POCKET / INSTAPAPER IMPORT HANDLER ─────────────────────
+
+  const handlePocketImport = async (file: File) => {
+    setPkParsing(true);
+    try {
+      const text = await file.text();
+      const action = pkFormat === 'pocket' ? 'import-pocket' : 'import-instapaper';
+      setState("uploading"); setProgress(30);
+      setProgressText(`Importing ${pkFormat === 'pocket' ? 'Pocket' : 'Instapaper'} articles…`);
+      const res = await fetch('/api/v1/plugins/pocket-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, data: text }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`${data.imported} articles imported from ${data.source}${data.skipped > 0 ? ` (${data.skipped} duplicates skipped)` : ''}`);
+      toast.success(`Imported ${data.imported} articles`, {
+        description: `From ${data.source} · ${data.total} found · ${data.skipped} duplicates skipped`,
+      });
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    } finally {
+      setPkParsing(false);
+    }
+  };
+
+  // ─── SPOTIFY IMPORT HANDLER ─────────────────────────────────
+
+  const handleSpotifyImport = async (file: File) => {
+    setSpParsing(true);
+    try {
+      const text = await file.text();
+      setState("uploading"); setProgress(30);
+      setProgressText("Building music taste profile…");
+      const res = await fetch('/api/v1/plugins/spotify-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import', data: text }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      setState("done"); setProgress(100);
+      setProgressText(`Music profile built! ${data.stats.totalHours}h of listening · ${data.stats.uniqueArtists} artists · Top: ${data.stats.topArtist}`);
+      toast.success(`Spotify profile created`, {
+        description: `${data.stats.totalStreams.toLocaleString()} streams · ${data.stats.totalHours}h · ${data.stats.uniqueArtists} artists`,
+      });
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    } finally {
+      setSpParsing(false);
+    }
+  };
+
+  // ─── READWISE IMPORT HANDLER ────────────────────────────────
+
+  const handleReadwiseSaveToken = async () => {
+    if (!rwToken.trim()) return;
+    try {
+      const res = await fetch('/api/v1/plugins/readwise-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save-token', token: rwToken.trim() }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Token validation failed');
+      }
+      setRwTokenSaved(true);
+      toast.success('Readwise token saved and validated');
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleReadwiseImport = async () => {
+    setRwImporting(true);
+    try {
+      setState("uploading"); setProgress(30);
+      setProgressText("Fetching highlights from Readwise…");
+      const res = await fetch('/api/v1/plugins/readwise-importer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import', token: rwToken.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const e = await res.json();
+        throw new Error(e.error || 'Import failed');
+      }
+      const data = await res.json();
+      setState("done"); setProgress(100);
+      if (data.imported === 0) {
+        setProgressText(data.message || 'No new highlights to import');
+        toast.info(data.message || 'No new highlights');
+      } else {
+        setProgressText(`${data.imported} highlights from ${data.booksProcessed} sources${data.skipped > 0 ? ` (${data.skipped} duplicates skipped)` : ''}`);
+        toast.success(`Imported ${data.imported} Readwise highlights`, {
+          description: `${data.booksProcessed} books/articles · ${data.totalHighlights} total highlights`,
+        });
+      }
+      refreshHistory();
+    } catch (err: any) {
+      toast.error(err.message);
+      setState("error"); setProgressText(err.message);
+    } finally {
+      setRwImporting(false);
+    }
+  };
+
+  // ─── Readwise config check on tab switch ────────────────────
+  useEffect(() => {
+    if (tab === 'readwise') {
+      fetch('/api/v1/plugins/readwise-importer?action=config')
+        .then(r => r.json())
+        .then(d => {
+          if (d.hasToken) setRwTokenSaved(true);
+        })
+        .catch(() => {});
+    }
+  }, [tab]);
+  const handleNotionZipPreview = async (file: File) => {
+    setNotionParsing(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('action', 'preview');
+      const res = await fetch('/api/v1/plugins/notion-importer', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success) {
+        setNotionPreview(data.stats);
+      } else {
+        toast.error(data.error || 'Failed to parse Notion export');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Parse error');
+    } finally {
+      setNotionParsing(false);
+    }
+  };
+
+  const handleNotionZipImport = async () => {
+    if (!notionPreview?._file) return;
+    setState("uploading"); setProgressText("Importing Notion workspace...");
+    try {
+      const form = new FormData();
+      form.append('file', notionPreview._file);
+      form.append('action', 'import');
+      const res = await fetch('/api/v1/plugins/notion-importer', { method: 'POST', body: form });
+      const data = await res.json();
+      if (data.success) {
+        setProgress(100);
+        setProgressText(`Imported ${data.imported} memories (${data.pages} pages, ${data.databaseRows} database rows)`);
+        setState("done");
+        refreshHistory();
+        setNotionPreview(null);
+      } else {
+        throw new Error(data.error || 'Import failed');
+      }
+    } catch (err: any) {
+      setProgressText(err.message);
+      setState("error");
+    }
+  };
+
   const handleNotionImport = async (files: FileList | null) => {
     if (!files?.length) return; setState("parsing"); setProgressText("Cleaning Notion files…");
     // Notion exports have UUIDs in filenames and content links
@@ -568,7 +837,7 @@ export default function ImportPage() {
 
       {/* Source Selector */}
       <Stagger>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-8 gap-2">
         {BASE_TABS.map((t) => (
           <button
             key={t.id}
@@ -585,7 +854,7 @@ export default function ImportPage() {
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
         {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved'].includes(pt.slug))
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved', 'twitter-importer', 'telegram-importer', 'pocket-importer', 'spotify-importer', 'readwise-importer'].includes(pt.slug))
           .map((pt) => {
           const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
           const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
@@ -878,15 +1147,97 @@ export default function ImportPage() {
             <>
               <div className="text-[12px] text-zinc-500 space-y-1">
                 <p className="text-zinc-300 font-medium">Export from Notion</p>
-                <p>Settings → Export → Markdown & CSV → Extract ZIP → Select .md files</p>
+                <p>Settings → Export → Markdown & CSV → Upload the ZIP file <span className="text-teal-400">(recommended)</span> or extract and select .md files</p>
               </div>
-              <DropZone
-                id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
-                onFiles={(f) => handleNotionImport(f)}
-                title="Drop Notion files"
-                subtitle=".md files — UUIDs auto-cleaned"
-                icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
-              />
+
+              {notionPreview ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                          <StickyNote className="w-4 h-4 text-teal-400" />
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-medium text-white">{notionPreview.totalPages} pages found</p>
+                          <p className="text-[11px] text-zinc-500">
+                            {notionPreview.totalDatabases} database{notionPreview.totalDatabases !== 1 ? 's' : ''}
+                            {' · '}{(notionPreview.totalWords / 1000).toFixed(0)}k words
+                          </p>
+                        </div>
+                      </div>
+                      <button onClick={() => setNotionPreview(null)} className="text-[11px] text-zinc-600 hover:text-zinc-400">Change</button>
+                    </div>
+
+                    {/* Database info */}
+                    {notionPreview.databases?.length > 0 && (
+                      <div className="pt-2 border-t border-white/[0.04]">
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Databases</p>
+                        {notionPreview.databases.map((db: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.02]">
+                            <span className="text-xs text-zinc-300">{db.name}</span>
+                            <span className="text-[10px] text-teal-400">{db.rowCount} rows</span>
+                            <span className="text-[10px] text-zinc-600 ml-auto">{db.columns.length} cols</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Sample pages */}
+                    {notionPreview.samplePages?.length > 0 && (
+                      <div className="pt-2 border-t border-white/[0.04] max-h-[200px] overflow-y-auto space-y-1">
+                        {notionPreview.samplePages.map((p: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/[0.02]">
+                            <span className={`text-[10px] px-1 py-0.5 rounded ${p.type === 'database-page' ? 'bg-sky-500/10 text-sky-400' : 'bg-teal-500/10 text-teal-400'}`}>
+                              {p.type === 'database-page' ? 'DB' : 'Page'}
+                            </span>
+                            <span className="text-xs text-zinc-400 truncate flex-1">{p.name}</span>
+                            <span className="text-[10px] text-zinc-600">{p.wordCount}w</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleNotionZipImport}
+                    disabled={busy}
+                    className="w-full h-10 rounded-xl text-[13px] font-medium bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <StickyNote className="w-4 h-4" />}
+                    Import {notionPreview.totalPages} Notion pages
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <DropZone
+                    id="notion-zip-upload" accept=".zip" disabled={busy || notionParsing}
+                    onFile={(f: File) => {
+                      // Store file reference for later import
+                      const preview = { _file: f };
+                      handleNotionZipPreview(f).then(() => {
+                        setNotionPreview((prev: any) => prev ? { ...prev, _file: f } : null);
+                      });
+                    }}
+                    title={notionParsing ? "Parsing Notion export..." : "Drop Notion export ZIP"}
+                    subtitle={notionParsing ? "Analyzing pages and databases..." : ".zip file — pages + databases supported"}
+                    icon={notionParsing
+                      ? <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                      : <StickyNote className="w-6 h-6 text-zinc-600" />
+                    }
+                  />
+                  <div className="text-center">
+                    <span className="text-[10px] text-zinc-600">or</span>
+                  </div>
+                  <DropZone
+                    id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
+                    onFiles={(f) => handleNotionImport(f)}
+                    title="Drop individual .md files"
+                    subtitle="For pre-extracted exports"
+                    icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
+                  />
+                </div>
+              )}
             </>
           )}
           {tab === "kindle" && (
@@ -1427,8 +1778,8 @@ export default function ImportPage() {
                   </label>
                 </div>
               ) : (
+                /* existing Reddit preview UI */
                 <div className="space-y-4">
-                  {/* Stats card */}
                   <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
                     <div className="px-4 py-3 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-orange-500/[0.08] border border-orange-500/15 flex items-center justify-center shrink-0">
@@ -1443,15 +1794,8 @@ export default function ImportPage() {
                           {rdPreview.stats.dateRange.oldest && ` · ${rdPreview.stats.dateRange.oldest} – ${rdPreview.stats.dateRange.newest}`}
                         </p>
                       </div>
-                      <button
-                        onClick={() => setRdPreview(null)}
-                        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
-                      >
-                        Change
-                      </button>
+                      <button onClick={() => setRdPreview(null)} className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors shrink-0">Change</button>
                     </div>
-
-                    {/* Stats bar */}
                     <div className="border-t border-white/[0.04] px-4 py-2.5">
                       <div className="flex items-center gap-4 text-[11px]">
                         <div className="flex items-center gap-1.5">
@@ -1473,85 +1817,319 @@ export default function ImportPage() {
                         )}
                       </div>
                     </div>
-
-                    {/* Subreddits */}
                     {rdPreview.stats.subreddits?.length > 0 && (
                       <div className="border-t border-white/[0.04] px-4 py-2.5">
-                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">
-                          Subreddits
-                        </p>
+                        <p className="text-[10px] text-zinc-600 font-medium uppercase tracking-wider mb-2">Subreddits</p>
                         <div className="flex flex-wrap gap-1.5">
                           {rdPreview.stats.subreddits.slice(0, 15).map((s: any, i: number) => (
-                            <span
-                              key={i}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/[0.06] border border-orange-500/10 text-[10px] text-orange-300/80"
-                            >
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-500/[0.06] border border-orange-500/10 text-[10px] text-orange-300/80">
                               r/{s.name}
                               <span className="text-zinc-600 tabular-nums">{s.count}</span>
                             </span>
                           ))}
                           {rdPreview.stats.subreddits.length > 15 && (
-                            <span className="text-[10px] text-zinc-600 self-center">
-                              +{rdPreview.stats.subreddits.length - 15} more
-                            </span>
+                            <span className="text-[10px] text-zinc-600 self-center">+{rdPreview.stats.subreddits.length - 15} more</span>
                           )}
                         </div>
                       </div>
                     )}
-
-                    {/* Sample items */}
                     {rdPreview.sampleItems?.length > 0 && (
                       <div className="border-t border-white/[0.04] max-h-[220px] overflow-y-auto">
                         {rdPreview.sampleItems.map((item: any, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0"
-                          >
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              item.type === 'comment'
-                                ? 'bg-blue-500/[0.08] border border-blue-500/15'
-                                : 'bg-orange-500/[0.08] border border-orange-500/15'
-                            }`}>
-                              {item.type === 'comment' ? (
-                                <MessageSquare className="w-3 h-3 text-blue-400" />
-                              ) : (
-                                <FileText className="w-3 h-3 text-orange-400" />
-                              )}
+                          <div key={i} className="flex items-center gap-3 px-4 py-2 hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] last:border-b-0">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'comment' ? 'bg-blue-500/[0.08] border border-blue-500/15' : 'bg-orange-500/[0.08] border border-orange-500/15'}`}>
+                              {item.type === 'comment' ? <MessageSquare className="w-3 h-3 text-blue-400" /> : <FileText className="w-3 h-3 text-orange-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[11px] text-zinc-300 truncate">{item.title}</p>
                               <p className="text-[10px] text-zinc-600 truncate">
-                                r/{item.subreddit}
-                                {item.score > 0 && ` · ${item.score} pts`}
-                                {item.date && ` · ${item.date}`}
+                                r/{item.subreddit}{item.score > 0 && ` · ${item.score} pts`}{item.date && ` · ${item.date}`}
                               </p>
-                              {item.preview && (
-                                <p className="text-[10px] text-zinc-600 truncate mt-0.5 italic">
-                                  {item.preview}
-                                </p>
-                              )}
+                              {item.preview && <p className="text-[10px] text-zinc-600 truncate mt-0.5 italic">{item.preview}</p>}
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {/* Import button */}
-                  <button
-                    onClick={handleRdImport}
-                    disabled={busy}
-                    className="w-full h-11 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                  >
-                    {busy ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <MessageSquare className="w-4 h-4" />
-                    )}
+                  <button onClick={handleRdImport} disabled={busy} className="w-full h-11 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-[13px] font-semibold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                     Import {rdPreview.stats.totalItems.toLocaleString()} Reddit Items
                   </button>
                 </div>
               )}
+            </>
+          )}
+
+          {/* ─── Twitter/X Tab ───────────────────────────── */}
+          {tab === "twitter" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Twitter/X Bookmarks</p>
+                <p>Download your Twitter data archive and upload the <code className="text-[11px] text-sky-400/80 bg-sky-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">bookmarks.js</code> or <code className="text-[11px] text-sky-400/80 bg-sky-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">tweets.js</code> file.</p>
+                <p className="text-zinc-600">Settings → Your Account → Download an archive of your data → Extract ZIP → Find data/bookmarks.js</p>
+              </div>
+              <label
+                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                  ${twParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-sky-500/30 hover:bg-sky-500/[0.03]'}`}
+              >
+                {twParsing ? (
+                  <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
+                ) : (
+                  <AtSign className="w-6 h-6 text-sky-400" />
+                )}
+                <span className="text-[12px] text-zinc-400 font-medium">
+                  {twParsing ? 'Importing tweets…' : 'Drop bookmarks.js or tweets.js'}
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  .js file from Twitter data export
+                </span>
+                <input
+                  type="file"
+                  accept=".js,.json"
+                  className="hidden"
+                  disabled={twParsing || busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleTwitterImport(f);
+                  }}
+                />
+              </label>
+            </>
+          )}
+
+          {/* ─── Telegram Tab ────────────────────────────── */}
+          {tab === "telegram" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Telegram Messages</p>
+                <p>Export from Telegram Desktop: Settings → Advanced → Export Telegram Data → Choose <strong className="text-zinc-400">JSON</strong> format.</p>
+                <p className="text-zinc-600">Upload the <code className="text-[11px] text-teal-400/80 bg-teal-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">result.json</code> file from the export folder.</p>
+              </div>
+              <label
+                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                  ${tgParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-teal-500/30 hover:bg-teal-500/[0.03]'}`}
+              >
+                {tgParsing ? (
+                  <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                ) : (
+                  <Send className="w-6 h-6 text-teal-400" />
+                )}
+                <span className="text-[12px] text-zinc-400 font-medium">
+                  {tgParsing ? 'Importing messages…' : 'Drop result.json from Telegram export'}
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  JSON format only · Saved messages, chats, and channels
+                </span>
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  disabled={tgParsing || busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleTelegramImport(f);
+                  }}
+                />
+              </label>
+            </>
+          )}
+
+          {/* ─── Pocket / Instapaper Tab ─────────────────── */}
+          {tab === "pocket" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Pocket or Instapaper</p>
+                <p>
+                  <strong className="text-zinc-400">Pocket:</strong>{" "}
+                  <a href="https://getpocket.com/export" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">getpocket.com/export</a>
+                  {" "}→ Download HTML
+                </p>
+                <p>
+                  <strong className="text-zinc-400">Instapaper:</strong>{" "}
+                  <a href="https://www.instapaper.com/export" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">instapaper.com/export</a>
+                  {" "}→ Download CSV
+                </p>
+              </div>
+
+              {/* Format toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPkFormat('pocket')}
+                  className={`flex-1 h-9 rounded-xl text-[12px] font-medium transition-all ${
+                    pkFormat === 'pocket'
+                      ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-300'
+                      : 'bg-white/[0.02] border border-white/[0.06] text-zinc-500 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  Pocket (HTML)
+                </button>
+                <button
+                  onClick={() => setPkFormat('instapaper')}
+                  className={`flex-1 h-9 rounded-xl text-[12px] font-medium transition-all ${
+                    pkFormat === 'instapaper'
+                      ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-300'
+                      : 'bg-white/[0.02] border border-white/[0.06] text-zinc-500 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  Instapaper (CSV)
+                </button>
+              </div>
+
+              <label
+                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                  ${pkParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-emerald-500/30 hover:bg-emerald-500/[0.03]'}`}
+              >
+                {pkParsing ? (
+                  <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+                ) : (
+                  <BookmarkCheck className="w-6 h-6 text-emerald-400" />
+                )}
+                <span className="text-[12px] text-zinc-400 font-medium">
+                  {pkParsing ? 'Importing articles…' : `Drop ${pkFormat === 'pocket' ? 'ril_export.html' : 'instapaper-export.csv'}`}
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  {pkFormat === 'pocket' ? '.html file from Pocket export' : '.csv file from Instapaper export'}
+                </span>
+                <input
+                  type="file"
+                  accept={pkFormat === 'pocket' ? '.html,.htm' : '.csv'}
+                  className="hidden"
+                  disabled={pkParsing || busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handlePocketImport(f);
+                  }}
+                />
+              </label>
+            </>
+          )}
+
+          {/* ─── Spotify Tab ─────────────────────────────── */}
+          {tab === "spotify" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Spotify Listening History</p>
+                <p>Request your data from{" "}
+                  <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">
+                    spotify.com/account/privacy
+                  </a>
+                  {" "}→ Download your data (takes a few days).
+                </p>
+                <p className="text-zinc-600">Upload <code className="text-[11px] text-emerald-400/80 bg-emerald-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">StreamingHistory_music_0.json</code> from the ZIP.</p>
+              </div>
+
+              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  💡 This builds a <strong className="text-zinc-400">music taste profile</strong> from your listening data. 
+                  After import, ask MindStore: <em className="text-teal-400/70">"What kind of music do I like?"</em> or <em className="text-teal-400/70">"Who are my top artists?"</em>
+                </p>
+              </div>
+
+              <label
+                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
+                  ${spParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-emerald-500/30 hover:bg-emerald-500/[0.03]'}`}
+              >
+                {spParsing ? (
+                  <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+                ) : (
+                  <Music className="w-6 h-6 text-emerald-400" />
+                )}
+                <span className="text-[12px] text-zinc-400 font-medium">
+                  {spParsing ? 'Building taste profile…' : 'Drop StreamingHistory JSON file'}
+                </span>
+                <span className="text-[10px] text-zinc-600">
+                  .json file from Spotify privacy data export
+                </span>
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  disabled={spParsing || busy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleSpotifyImport(f);
+                  }}
+                />
+              </label>
+            </>
+          )}
+
+          {/* ─── Readwise Tab ────────────────────────────── */}
+          {tab === "readwise" && (
+            <>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-zinc-300 font-medium">Import Readwise Highlights</p>
+                <p>Import all your highlights from books, articles, tweets, and podcasts via the Readwise API.</p>
+                <p className="text-zinc-600">
+                  Get your API token at{" "}
+                  <a href="https://readwise.io/access_token" target="_blank" rel="noopener noreferrer" className="text-amber-400/70 hover:text-amber-400 transition-colors">
+                    readwise.io/access_token
+                  </a>
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Token input */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                    <input
+                      type="password"
+                      placeholder="Readwise API token"
+                      value={rwToken}
+                      onChange={(e) => { setRwToken(e.target.value); setRwTokenSaved(false); }}
+                      className="w-full h-10 pl-9 pr-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
+                    />
+                  </div>
+                  <button
+                    onClick={handleReadwiseSaveToken}
+                    disabled={!rwToken.trim() || rwTokenSaved}
+                    className={`h-10 px-4 rounded-xl text-[12px] font-medium shrink-0 transition-all active:scale-[0.97] flex items-center gap-1.5 ${
+                      rwTokenSaved
+                        ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                        : 'bg-amber-500/90 hover:bg-amber-500 disabled:opacity-40 text-black'
+                    }`}
+                  >
+                    {rwTokenSaved ? (
+                      <><CheckCircle className="w-3.5 h-3.5" /> Verified</>
+                    ) : (
+                      'Validate'
+                    )}
+                  </button>
+                </div>
+
+                {/* Import button */}
+                {rwTokenSaved && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
+                      <p className="text-[11px] text-zinc-500 leading-relaxed">
+                        ✨ Token verified! Click Import to fetch all your highlights. Readwise will sync: 
+                        <strong className="text-zinc-400"> books, articles, tweets, podcasts</strong>. 
+                        Re-importing only fetches new highlights since the last sync.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleReadwiseImport}
+                      disabled={rwImporting || busy}
+                      className="w-full h-11 rounded-xl bg-amber-500/90 hover:bg-amber-500 disabled:opacity-40 text-[13px] font-semibold text-black transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      {rwImporting ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Fetching from Readwise…</>
+                      ) : (
+                        <><Highlighter className="w-4 h-4" /> Import All Highlights</>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {!rwTokenSaved && !rwToken.trim() && (
+                  <div className="text-center py-4">
+                    <p className="text-[11px] text-zinc-600">Enter your Readwise API token above to get started</p>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -1578,7 +2156,7 @@ export default function ImportPage() {
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
-                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera };
+                const typeIcons: Record<string, any> = { chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpenCheck, document: FileBox, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera, notion: StickyNote, twitter: AtSign, telegram: Send, pocket: BookmarkCheck, instapaper: BookmarkCheck, spotify: Music, readwise: Highlighter };
                 const typeColors: Record<string, string> = {
                   chatgpt: "text-green-400 bg-green-500/10",
                   file: "text-blue-400 bg-blue-500/10",
@@ -1592,6 +2170,13 @@ export default function ImportPage() {
                   reddit: "text-orange-400 bg-orange-500/10",
                   audio: "text-teal-400 bg-teal-500/10",
                   image: "text-sky-400 bg-sky-500/10",
+                  notion: "text-zinc-300 bg-zinc-500/10",
+                  twitter: "text-sky-400 bg-sky-500/10",
+                  telegram: "text-teal-400 bg-teal-500/10",
+                  pocket: "text-emerald-400 bg-emerald-500/10",
+                  instapaper: "text-emerald-400 bg-emerald-500/10",
+                  spotify: "text-emerald-400 bg-emerald-500/10",
+                  readwise: "text-amber-400 bg-amber-500/10",
                 };
                 const Icon = typeIcons[src.type] || FileText;
                 const color = typeColors[src.type] || "text-zinc-400 bg-zinc-500/10";
