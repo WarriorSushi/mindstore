@@ -2,6 +2,8 @@ import JSZip from "jszip";
 import { NextRequest, NextResponse } from "next/server";
 import { importDocuments, type ImportDocument } from "@/server/import-service";
 import { getUserId } from "@/server/user";
+import { getInstalledPluginMap } from "@/server/plugins/state";
+import { applyDocumentHookTransforms } from "@/server/plugins/ingestion";
 
 interface ChatGptExportConversation {
   title?: string;
@@ -94,9 +96,27 @@ export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
     const documents = await parseImportRequest(req);
-    const imported = await importDocuments({ userId, documents });
+    const installedPlugins = await getInstalledPluginMap();
+    const transformed = await applyDocumentHookTransforms({
+      hookName: "onImport",
+      installedPlugins,
+      userId,
+      documents,
+      event: {
+        surface: "api:v1:import",
+        requestContentType: req.headers.get("content-type") || "application/json",
+      },
+      metadata: {
+        source: "manual-import",
+      },
+    });
+    const imported = await importDocuments({ userId, documents: transformed.documents });
 
-    return NextResponse.json({ imported });
+    return NextResponse.json({
+      imported,
+      hooksTriggered: transformed.hooksTriggered,
+      transformsApplied: transformed.transformsApplied,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     const status = message === "No documents to import" ? 400 : 500;

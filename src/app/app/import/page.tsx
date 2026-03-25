@@ -7,13 +7,18 @@ import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
-type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit";
+type Tab = string;
 
-interface PluginTab {
-  slug: string;
-  label: string;
-  icon: string;
-  desc: string;
+interface RuntimeImportTab {
+  pluginSlug: string;
+  definition: {
+    label: string;
+    icon: string;
+    acceptedFileTypes?: string[];
+  };
+  openPath: string | null;
+  routePath: string | null;
+  source: "builtin" | "external";
 }
 
 const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
@@ -35,6 +40,15 @@ const PLUGIN_ICON_MAP: Record<string, any> = {
   BookOpen, FileText, Globe, MessageCircle, Type, StickyNote, Puzzle, PlayCircle, Bookmark, Gem,
 };
 
+const BUILTIN_PLUGIN_IMPORT_SLUGS = [
+  "kindle-importer",
+  "pdf-epub-parser",
+  "youtube-transcript",
+  "browser-bookmarks",
+  "obsidian-importer",
+  "reddit-saved",
+];
+
 interface ImportSource {
   id: string;
   type: string;
@@ -54,7 +68,7 @@ export default function ImportPage() {
   const [importHistory, setImportHistory] = useState<ImportSource[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [totalMemories, setTotalMemories] = useState(0);
-  const [pluginTabs, setPluginTabs] = useState<PluginTab[]>([]);
+  const [pluginTabs, setPluginTabs] = useState<RuntimeImportTab[]>([]);
   
   // ─── Kindle-specific state ───────────────────────────────
   const [kindlePreview, setKindlePreview] = useState<any>(null);
@@ -107,22 +121,14 @@ export default function ImportPage() {
 
   useEffect(() => { refreshHistory(); }, [refreshHistory]);
 
-  // Fetch installed import plugins to add their tabs dynamically
+  // Fetch active import plugins from the runtime
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/v1/plugins?category=import&installed=true');
+        const res = await fetch('/api/v1/plugins/runtime?action=imports');
         if (!res.ok) return;
         const data = await res.json();
-        const importPlugins = (data.plugins || [])
-          .filter((p: any) => p.status === 'active' && p.slug)
-          .map((p: any) => ({
-            slug: p.slug,
-            label: p.name?.replace(/\s*(Importer|Import|Plugin)$/i, '') || p.slug,
-            icon: p.icon || 'Puzzle',
-            desc: p.description?.substring(0, 20) || '',
-          }));
-        setPluginTabs(importPlugins);
+        setPluginTabs(data.imports || []);
       } catch {}
     })();
   }, []);
@@ -533,6 +539,7 @@ export default function ImportPage() {
 
   const reset = () => { setState("idle"); setProgress(0); setProgressText(""); };
   const busy = state === "parsing" || state === "uploading";
+  const activePluginTab = pluginTabs.find((pluginTab) => pluginTab.pluginSlug === tab) || null;
 
   return (
     <PageTransition className="space-y-5 md:space-y-6">
@@ -585,13 +592,13 @@ export default function ImportPage() {
         ))}
         {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
         {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved'].includes(pt.slug))
+          .filter((pt) => !BUILTIN_PLUGIN_IMPORT_SLUGS.includes(pt.pluginSlug))
           .map((pt) => {
-          const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
-          const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
+          const tabId = pt.pluginSlug;
+          const PluginTabIcon = PLUGIN_ICON_MAP[pt.definition.icon] || Puzzle;
           return (
             <button
-              key={pt.slug}
+              key={pt.pluginSlug}
               onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
               className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
                 tab === tabId
@@ -600,7 +607,7 @@ export default function ImportPage() {
               }`}
             >
               <PluginTabIcon className={`w-5 h-5 ${tab === tabId ? "text-amber-400" : "text-zinc-500"}`} />
-              <span className={`text-[11px] font-medium ${tab === tabId ? "text-amber-300" : "text-zinc-400"}`}>{pt.label}</span>
+              <span className={`text-[11px] font-medium ${tab === tabId ? "text-amber-300" : "text-zinc-400"}`}>{pt.definition.label}</span>
               <span className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider">plugin</span>
             </button>
           );
@@ -1554,6 +1561,10 @@ export default function ImportPage() {
               )}
             </>
           )}
+
+          {activePluginTab && (
+            <PluginImportPanel pluginTab={activePluginTab} />
+          )}
         </div>
       </div>
       </Stagger>
@@ -1694,5 +1705,80 @@ function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subt
         }}
       />
     </>
+  );
+}
+
+function PluginImportPanel({ pluginTab }: { pluginTab: RuntimeImportTab }) {
+  const acceptedFileTypes = pluginTab.definition.acceptedFileTypes || [];
+  const PluginTabIcon = PLUGIN_ICON_MAP[pluginTab.definition.icon] || Puzzle;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-500/15 bg-amber-500/[0.04] p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/[0.08]">
+          <PluginTabIcon className="h-5 w-5 text-amber-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-zinc-200">{pluginTab.definition.label}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
+            This importer is registered through the plugin runtime. It can contribute file types, importer entry points, and ingestion hooks without changing the core app shell.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">Accepted Files</p>
+          {acceptedFileTypes.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {acceptedFileTypes.map((fileType) => (
+                <span
+                  key={`${pluginTab.pluginSlug}:${fileType}`}
+                  className="rounded-md border border-white/[0.08] bg-black/20 px-2 py-1 text-[11px] text-zinc-300"
+                >
+                  {fileType}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[12px] text-zinc-500">This importer does not declare file extensions. It may be URL- or credential-driven.</p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">Integration Surface</p>
+          <div className="mt-2 space-y-2 text-[12px] text-zinc-400">
+            <p>Plugin slug: <span className="font-mono text-zinc-300">{pluginTab.pluginSlug}</span></p>
+            {pluginTab.routePath ? <p>API route: <span className="font-mono text-zinc-300">{pluginTab.routePath}</span></p> : null}
+            <p>Source: {pluginTab.source === "external" ? "Community plugin" : "Built-in plugin"}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {pluginTab.openPath ? (
+          <Link
+            href={pluginTab.openPath}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-amber-500/10 px-4 text-[12px] font-medium text-amber-300 transition-all hover:bg-amber-500/15"
+          >
+            <ArrowUpRight className="h-3.5 w-3.5" />
+            Open importer
+          </Link>
+        ) : null}
+        <Link
+          href="/app/plugins"
+          className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-[12px] font-medium text-zinc-300 transition-all hover:bg-white/[0.05]"
+        >
+          <Puzzle className="h-3.5 w-3.5" />
+          Manage plugin
+        </Link>
+      </div>
+
+      {!pluginTab.openPath && !pluginTab.routePath ? (
+        <p className="text-[11px] text-zinc-600">
+          This plugin is registered and discoverable, but it does not yet expose a dedicated importer page on this branch.
+        </p>
+      ) : null}
+    </div>
   );
 }

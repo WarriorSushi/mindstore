@@ -23,6 +23,7 @@ The original plugin list was useful for product planning, but community contribu
 - Widgets and panels
 - Lifecycle hooks such as install, enable, disable, and import
 - Manual job execution with persisted run summaries
+- Runtime-discovered import tabs and importer metadata
 
 ## What Still Needs To Grow
 

@@ -69,6 +69,15 @@ export interface PluginJobBinding {
   run: (options?: { reason?: string; userId?: string }) => Promise<PluginJobResult>;
 }
 
+export interface PluginImportTabBinding {
+  pluginSlug: string;
+  definition: NonNullable<NonNullable<PluginManifest["ui"]>["importTab"]>;
+  pluginConfig: Record<string, unknown>;
+  openPath: string | null;
+  routePath: string | null;
+  source: "builtin" | "external";
+}
+
 export interface PluginConfigValidationResult {
   config: Record<string, unknown>;
   errors: Record<string, string>;
@@ -151,6 +160,26 @@ export function createPluginRuntime(config: MindStoreConfig) {
 
   function getJobDefinitions(slug: string): PluginJobDefinition[] {
     return resolvePlugin(slug)?.descriptor.plugin.manifest.jobs ?? [];
+  }
+
+  function getImportTabs(installedPlugins: Map<string, InstalledPluginState>): PluginImportTabBinding[] {
+    return plugins.flatMap(({ plugin, source }) => {
+      const installed = resolveInstalledState(plugin.manifest.slug, installedPlugins);
+      if (!isPluginActive(installed) || !plugin.manifest.ui?.importTab) {
+        return [];
+      }
+
+      return [
+        {
+          pluginSlug: plugin.manifest.slug,
+          definition: plugin.manifest.ui.importTab,
+          pluginConfig: installed?.config ?? {},
+          openPath: resolvePluginPageHref(plugin.manifest),
+          routePath: plugin.manifest.routes?.[0]?.path ?? null,
+          source,
+        },
+      ];
+    });
   }
 
   function buildDefaultConfig(slug: string): Record<string, unknown> {
@@ -445,6 +474,7 @@ export function createPluginRuntime(config: MindStoreConfig) {
     getSettingsSchema,
     getDashboardWidgetDefinitions,
     getJobDefinitions,
+    getImportTabs,
     buildDefaultConfig,
     validateAndNormalizeConfig,
     resolveSlug,
@@ -482,6 +512,15 @@ function buildTags(manifest: PluginManifest): string[] {
   if (manifest.ui?.dashboardWidgets?.length) tags.push("dashboard");
   if (manifest.jobs?.length) tags.push("jobs");
   return tags;
+}
+
+function resolvePluginPageHref(manifest: PluginManifest): string | null {
+  const firstPage = manifest.ui?.pages?.[0];
+  if (!firstPage?.path) {
+    return null;
+  }
+
+  return firstPage.path.startsWith("/") ? firstPage.path : `/app/${firstPage.path}`;
 }
 
 function validateRuntimeSurfaces(plugin: MindStorePluginModule) {

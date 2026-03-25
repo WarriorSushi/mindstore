@@ -28,6 +28,7 @@ A capture payload may include:
 - Canonicalize `sourceType`.
 - Preserve metadata in the `memories.metadata` column.
 - Route the normalized document through the shared import pipeline.
+- Allow active plugins to transform or enrich capture batches before indexing.
 
 ## Why This Matters
 

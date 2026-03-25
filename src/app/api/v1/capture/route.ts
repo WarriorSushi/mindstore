@@ -3,8 +3,8 @@ import type { CapturePayload } from "@mindstore/plugin-sdk";
 import { importDocuments } from "@/server/import-service";
 import { getUserId } from "@/server/user";
 import { normalizeCaptureBatch } from "@/server/capture";
-import { pluginRuntime } from "@/server/plugins/runtime";
 import { getInstalledPluginMap } from "@/server/plugins/state";
+import { applyDocumentHookTransforms } from "@/server/plugins/ingestion";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,30 +14,33 @@ export async function POST(req: NextRequest) {
     const documents = normalizeCaptureBatch(captures);
     const installedPlugins = await getInstalledPluginMap();
 
-    const hookResults = await pluginRuntime.runHookForActivePlugins(installedPlugins, "onCapture", {
+    const transformed = await applyDocumentHookTransforms({
+      hookName: "onCapture",
+      installedPlugins,
       userId,
+      documents,
       event: {
         surface: "api:v1:capture",
         captures,
-        documents,
       },
       metadata: {
         source: "browser-extension",
       },
     });
 
-    const imported = await importDocuments({ userId, documents });
+    const imported = await importDocuments({ userId, documents: transformed.documents });
 
     return NextResponse.json({
       imported,
-      captures: documents.map((document) => ({
+      captures: transformed.documents.map((document) => ({
         title: document.title,
         sourceType: document.sourceType,
-        captureMode: document.captureMode,
-        sourceApp: document.sourceApp,
-        url: document.url ?? null,
+        captureMode: document.metadata?.["captureMode"] ?? null,
+        sourceApp: document.metadata?.["sourceApp"] ?? null,
+        url: typeof document.sourceId === "string" ? document.sourceId : null,
       })),
-      hooksTriggered: hookResults.length,
+      hooksTriggered: transformed.hooksTriggered,
+      transformsApplied: transformed.transformsApplied,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Capture failed";

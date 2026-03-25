@@ -84,6 +84,12 @@ export interface PluginHookResult {
   error?: string;
 }
 
+export interface PluginDocumentTransform {
+  documents?: CaptureOrImportDocument[];
+  appendDocuments?: CaptureOrImportDocument[];
+  metadataPatch?: Record<string, unknown>;
+}
+
 export interface PluginSettingField {
   key: string;
   label: string;
@@ -307,6 +313,16 @@ export interface CapturePayload {
   pageText?: string;
   conversationText?: string;
   metadata?: Record<string, unknown>;
+}
+
+export interface CaptureOrImportDocument {
+  title: string;
+  content: string;
+  sourceType: string;
+  sourceId?: string | null;
+  metadata?: Record<string, unknown>;
+  contentType?: string;
+  timestamp?: Date | string;
 }
 
 export interface PluginPrompt {
