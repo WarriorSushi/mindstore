@@ -5,7 +5,7 @@ import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
 
-const DOCS_ROOT = path.join(process.cwd(), "docs");
+const DOCS_ROOT = "docs";
 
 export interface DocPage {
   slug: string[];
