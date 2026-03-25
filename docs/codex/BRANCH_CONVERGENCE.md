@@ -63,7 +63,7 @@ Port `frain` features into the codex architecture in slices.
 
 - `kindle-importer`
 - `flashcard-maker` (completed on codex as the first reference port)
-- `voice-to-memory`
+- `voice-to-memory` (completed on codex with shared AI/transcription plumbing)
 
 These are the reference ports that teach the pattern for the rest.
 
@@ -136,3 +136,12 @@ Convergence is succeeding when:
 - plugin surfaced in navigation and docs
 
 Use it as the template for the next ports.
+
+`voice-to-memory` is now the second end-to-end example:
+
+- shared AI/transcription client
+- media-oriented validation and persistence
+- preserved workflow page
+- thin API route over reusable server logic
+
+Use it as the template for audio or file-based AI plugins.

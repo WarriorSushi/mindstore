@@ -26,6 +26,7 @@ The original plugin list was useful for product planning, but community contribu
 - Per-user scheduled job records plus a shared due-job execution endpoint
 - Runtime-discovered import tabs and importer metadata
 - Route-to-runtime action plugin ports, starting with Flashcard Maker
+- Media-aware AI plugin ports, now including Voice-to-Memory
 
 ## What Still Needs To Grow
 

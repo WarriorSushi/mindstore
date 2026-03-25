@@ -488,6 +488,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['write:memories', 'network:fetch', 'files:read'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'voice', title: 'Voice', icon: 'Mic', showInSidebar: true }],
+    },
   },
 
   'image-to-memory': {

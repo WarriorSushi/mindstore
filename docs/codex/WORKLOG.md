@@ -119,6 +119,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The branches still diverge heavily in implementation style; feature parity requires structured ports, not a single blind merge.
 - DCO enforcement may require current contributors to update their commit habits with `Signed-off-by:` lines.
 - The first `frain` feature port is now underway with Flashcard Maker; this is the new reference slice for future convergence work.
+- Shared AI client extraction plus Voice-to-Memory now define the convergence pattern for media-aware AI plugins.
 
 ### Verification
 
@@ -165,3 +166,41 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run test`
 - `npm run build`
 - `npm run test:e2e` (currently blocked locally by Playwright `webServer` startup timeout)
+
+### 2026-03-25: Shared AI Client and Voice-to-Memory Port
+
+#### Scope
+
+- Extract a shared AI client so text-generation and transcription plugins stop duplicating provider-resolution logic.
+- Refactor Flashcard Maker onto the shared AI client.
+- Port Voice-to-Memory from the `frain` feature line into the codex runtime-first branch.
+
+#### Changes Completed
+
+- Added `src/server/ai-client.ts` for shared text-generation and transcription provider resolution plus no-throw caller helpers.
+- Refactored Flashcard Maker to use the shared AI client instead of an embedded provider implementation.
+- Added `voice_recordings` schema and migration coverage.
+- Added `src/server/plugins/ports/voice-to-memory.ts` as the extracted voice/transcription/save-to-memory port module.
+- Added `GET/POST /api/v1/plugins/voice-to-memory` as the thin API wrapper.
+- Added `/app/voice` and surfaced it in navigation, plugin metadata, and the command palette.
+- Added unit coverage for shared AI config resolution and voice-title helpers.
+- Added docs for the shared AI layer and Voice-to-Memory feature.
+
+#### Decisions
+
+- Shared provider-resolution belongs in `src/server/ai-client.ts`, not inside plugin routes.
+- Voice recordings are stored as metadata plus transcript today; raw audio asset retention remains a follow-up.
+- Voice-to-Memory should use the same `createMemory(...)` ingestion path as other app-generated memories.
+
+#### Risks and Follow-Ups
+
+- The new shared AI client is used by Flashcard Maker and Voice-to-Memory first; other AI-heavy routes still need migration.
+- Voice-to-Memory currently supports OpenAI Whisper and Gemini transcription paths; broader provider support is still future work.
+- Raw audio retention, richer playback UX, and deeper job automation are intentionally deferred to keep the first convergence port clean.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`

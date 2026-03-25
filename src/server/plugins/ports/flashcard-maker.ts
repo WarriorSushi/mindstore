@@ -1,18 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/server/db";
+import { callTextPrompt, getTextGenerationConfig } from "@/server/ai-client";
 import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 
 const PLUGIN_SLUG = "flashcard-maker";
 const DECK_COLORS = ["teal", "sky", "emerald", "amber", "cyan", "rose", "lime", "orange"];
-
-interface AIConfig {
-  type: "openai-compatible" | "gemini" | "ollama";
-  url: string;
-  key?: string;
-  model: string;
-  extraHeaders?: Record<string, string>;
-}
 
 export interface FlashcardSM2State {
   easeFactor: number;
@@ -339,7 +332,13 @@ export async function generateFlashcards(userId: string, input: FlashcardGenerat
     };
   }
 
-  const aiConfig = getAIConfig(await getChatSettings());
+  const aiConfig = await getTextGenerationConfig({
+    openai: "gpt-4o-mini",
+    openrouter: "anthropic/claude-3.5-haiku",
+    gemini: "gemini-2.0-flash-lite",
+    ollama: "llama3.2",
+    custom: "default",
+  });
   if (!aiConfig) {
     throw new Error("No AI provider configured");
   }
@@ -366,7 +365,10 @@ RULES:
 Output a JSON array only.`;
 
   const prompt = `Generate ${limit} flashcards from this knowledge:\n\n${memoryTexts}`;
-  const response = await callAI(aiConfig, prompt, system);
+  const response = await callTextPrompt(aiConfig, prompt, system, {
+    temperature: 0.3,
+    maxTokens: 4096,
+  });
   if (!response) {
     throw new Error("AI generation failed");
   }
@@ -471,127 +473,6 @@ async function loadCandidateMemories(userId: string, input: FlashcardGenerationR
     ORDER BY RANDOM()
     LIMIT 15
   `) as Promise<Array<Record<string, unknown>>>;
-}
-
-async function getChatSettings() {
-  const rows = await db.execute(sql`
-    SELECT key, value FROM settings
-    WHERE key IN (
-      'openai_api_key', 'gemini_api_key', 'ollama_url',
-      'openrouter_api_key', 'custom_api_key', 'custom_api_url', 'custom_api_model',
-      'chat_provider'
-    )
-  `);
-
-  const config: Record<string, string> = {};
-  for (const row of rows as unknown as Array<{ key: string; value: string }>) {
-    config[row.key] = row.value;
-  }
-  return config;
-}
-
-function getAIConfig(config: Record<string, string>): AIConfig | null {
-  const preferred = config.chat_provider;
-  const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
-  const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
-  const ollamaUrl = config.ollama_url || process.env.OLLAMA_URL;
-  const openrouterKey = config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
-  const customKey = config.custom_api_key;
-  const customUrl = config.custom_api_url;
-  const customModel = config.custom_api_model;
-
-  if (preferred === "openrouter" && openrouterKey) {
-    return {
-      type: "openai-compatible",
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      key: openrouterKey,
-      model: "anthropic/claude-3.5-haiku",
-      extraHeaders: { "HTTP-Referer": "https://mindstore.app", "X-Title": "MindStore" },
-    };
-  }
-  if (preferred === "custom" && customKey && customUrl) {
-    return { type: "openai-compatible", url: customUrl, key: customKey, model: customModel || "default" };
-  }
-  if (preferred === "gemini" && geminiKey) {
-    return { type: "gemini", url: "", key: geminiKey, model: "gemini-2.0-flash-lite" };
-  }
-  if (preferred === "openai" && openaiKey) {
-    return { type: "openai-compatible", url: "https://api.openai.com/v1/chat/completions", key: openaiKey, model: "gpt-4o-mini" };
-  }
-  if (preferred === "ollama" && ollamaUrl) {
-    return { type: "ollama", url: ollamaUrl, model: "llama3.2" };
-  }
-
-  if (geminiKey) return { type: "gemini", url: "", key: geminiKey, model: "gemini-2.0-flash-lite" };
-  if (openaiKey) return { type: "openai-compatible", url: "https://api.openai.com/v1/chat/completions", key: openaiKey, model: "gpt-4o-mini" };
-  if (openrouterKey) {
-    return {
-      type: "openai-compatible",
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      key: openrouterKey,
-      model: "anthropic/claude-3.5-haiku",
-      extraHeaders: { "HTTP-Referer": "https://mindstore.app", "X-Title": "MindStore" },
-    };
-  }
-  if (customKey && customUrl) return { type: "openai-compatible", url: customUrl, key: customKey, model: customModel || "default" };
-  if (ollamaUrl) return { type: "ollama", url: ollamaUrl, model: "llama3.2" };
-  return null;
-}
-
-async function callAI(aiConfig: AIConfig, prompt: string, system: string): Promise<string | null> {
-  try {
-    if (aiConfig.type === "gemini") {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${aiConfig.model}:generateContent?key=${aiConfig.key}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
-        }),
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
-    }
-
-    if (aiConfig.type === "ollama") {
-      const response = await fetch(`${aiConfig.url}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
-          stream: false,
-          options: { temperature: 0.3 },
-        }),
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data.message?.content || null;
-    }
-
-    const response = await fetch(aiConfig.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${aiConfig.key}`,
-        ...(aiConfig.extraHeaders || {}),
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
-        temperature: 0.3,
-        max_tokens: 4096,
-      }),
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
-  } catch {
-    return null;
-  }
 }
 
 function parseJsonArray(response: string): unknown[] {

@@ -219,6 +219,30 @@ export const flashcardDecks = pgTable('flashcard_decks', {
   index('idx_flashcard_decks_updated').on(table.updatedAt),
 ]);
 
+export const voiceRecordings = pgTable('voice_recordings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title'),
+  transcript: text('transcript'),
+  durationSeconds: real('duration_seconds'),
+  audioSize: integer('audio_size'),
+  audioFormat: text('audio_format').default('webm'),
+  language: text('language'),
+  provider: text('provider'),
+  model: text('model'),
+  confidence: real('confidence'),
+  wordCount: integer('word_count'),
+  savedAsMemory: integer('saved_as_memory').default(0).notNull(),
+  memoryId: uuid('memory_id').references(() => memories.id),
+  metadata: jsonb('metadata').default({}).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_voice_recordings_user').on(table.userId),
+  index('idx_voice_recordings_created').on(table.createdAt),
+  index('idx_voice_recordings_saved').on(table.savedAsMemory),
+]);
+
 // API Keys (for MCP server auth)
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').defaultRandom().primaryKey(),

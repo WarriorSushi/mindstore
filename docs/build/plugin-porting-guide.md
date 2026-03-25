@@ -174,10 +174,10 @@ Reason: good stress test for capture, media ingestion, provider handling, and sc
 ## Current Porting Status
 
 - `flashcard-maker`: ported on `codex/local-dev` as the first full convergence example
+- `voice-to-memory`: ported on `codex/local-dev` with the shared AI client path
 - `kindle-importer`: still pending
-- `voice-to-memory`: still pending
 
-Flashcard Maker is the reference because it exercises the hardest useful path so far:
+Flashcard Maker is still the first reference because it exercises the action-plugin pattern:
 
 - dedicated UI page
 - AI-backed action route
@@ -185,6 +185,14 @@ Flashcard Maker is the reference because it exercises the hardest useful path so
 - review algorithm logic
 - runtime-aware plugin registration
 - docs plus unit coverage
+
+Voice-to-Memory is the second reference because it exercises the media/plugin path:
+
+- browser microphone capture
+- transcription provider resolution
+- media-specific validation
+- save-to-memory integration
+- reusable shared AI/transcription client usage
 
 ## Copyability Assessment
 
