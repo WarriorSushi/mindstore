@@ -10,6 +10,8 @@ import {
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight, Type,
   Clock, Pin, BarChart3, BookOpen, FileBox, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote,
   AtSign, Send, BookmarkCheck, Music, Highlighter,
+  Layers, AlertTriangle, Target,
+  type LucideIcon,
 } from "lucide-react";
 import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
@@ -24,6 +26,40 @@ async function fetchStats() {
   } catch { return null; }
 }
 
+async function fetchWidgets() {
+  try {
+    const res = await fetch('/api/v1/dashboard-widgets');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.widgets || [];
+  } catch { return []; }
+}
+
+interface DashboardWidget {
+  id: string;
+  type: string;
+  title: string;
+  icon: string;
+  color: string;
+  href: string;
+  data: Record<string, any>;
+}
+
+// ─── Widget icon map ──────────────────────────────────────────
+const WIDGET_ICONS: Record<string, LucideIcon> = {
+  Layers, TrendingUp, Zap, Database, BookOpen, Clock, Network,
+  AlertTriangle, Target, BarChart3,
+};
+
+const WIDGET_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  teal:    { bg: 'bg-teal-500/[0.06]',    border: 'border-teal-500/15',    text: 'text-teal-400',    dot: 'bg-teal-400' },
+  sky:     { bg: 'bg-sky-500/[0.06]',     border: 'border-sky-500/15',     text: 'text-sky-400',     dot: 'bg-sky-400' },
+  emerald: { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+  amber:   { bg: 'bg-amber-500/[0.06]',   border: 'border-amber-500/15',   text: 'text-amber-400',   dot: 'bg-amber-400' },
+  red:     { bg: 'bg-red-500/[0.06]',     border: 'border-red-500/15',     text: 'text-red-400',     dot: 'bg-red-400' },
+  blue:    { bg: 'bg-blue-500/[0.06]',    border: 'border-blue-500/15',    text: 'text-blue-400',    dot: 'bg-blue-400' },
+};
+
 type SetupTab = "gemini" | "openai" | "ollama";
 
 export default function DashboardPage() {
@@ -37,6 +73,7 @@ export default function DashboardPage() {
   const [setupTab, setSetupTab] = useState<SetupTab>("gemini");
   const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
   const [searchQuery, setSearchQuery] = useState("");
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([]);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const [searching, setSearching] = useState(false);
@@ -45,6 +82,7 @@ export default function DashboardPage() {
     Promise.all([
       checkApiKey().then((data) => setHasKey(data.hasApiKey)),
       fetchStats().then(setStats),
+      fetchWidgets().then(setWidgets),
     ]).then(() => setLoaded(true));
     setDemo(isDemoMode());
   }, []);
@@ -430,6 +468,156 @@ export default function DashboardPage() {
       {stats?.dailyActivity?.length > 0 && total > 0 && (
         <Stagger>
           <ActivityChart data={stats.dailyActivity} />
+        </Stagger>
+      )}
+
+      {/* ─── Dashboard Widgets — Plugin Insights ─── */}
+      {widgets.length > 0 && total > 0 && (
+        <Stagger>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-1.5 px-1">
+              <Sparkles className="w-3 h-3 text-teal-400" />
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Insights</p>
+              <span className="text-[10px] text-zinc-600 tabular-nums">{widgets.length}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-2.5">
+              {widgets.map((w) => {
+                const colors = WIDGET_COLORS[w.color] || WIDGET_COLORS.teal;
+                const Icon = WIDGET_ICONS[w.icon] || Zap;
+                return (
+                  <Link key={w.id} href={w.href}>
+                    <div className={`group relative rounded-2xl border ${colors.border} ${colors.bg} p-3.5 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
+                      <div className="flex items-center gap-1.5 mb-2.5">
+                        <Icon className={`w-3.5 h-3.5 ${colors.text}`} />
+                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">{w.title}</span>
+                      </div>
+                      
+                      {/* Widget-specific content */}
+                      {w.id === 'flashcards' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">
+                            {w.data.dueCards > 0 ? (
+                              <span className="text-amber-400">{w.data.dueCards} due</span>
+                            ) : (
+                              <span className="text-emerald-400">✓ caught up</span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            {w.data.totalCards} cards · {w.data.masteryRate}% mastered
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'growth' && (
+                        <div>
+                          <div className="flex items-baseline gap-1.5">
+                            <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.thisWeek}</p>
+                            {w.data.trend !== 0 && (
+                              <span className={`text-[11px] font-semibold ${w.data.trend > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {w.data.trend > 0 ? '↑' : '↓'}{Math.abs(w.data.trend)}%
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            this week{w.data.today > 0 ? ` · ${w.data.today} today` : ''}
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'embedding-coverage' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">
+                            {w.data.coverage}%
+                          </p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            {w.data.embedded}/{w.data.total} embedded
+                          </p>
+                          {w.data.unembedded > 0 && (
+                            <div className="mt-1.5 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  w.data.coverage >= 90 ? 'bg-emerald-500/60' :
+                                  w.data.coverage >= 50 ? 'bg-amber-500/60' : 'bg-red-500/60'
+                                }`}
+                                style={{ width: `${w.data.coverage}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {w.id === 'sources-diversity' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.sourceCount}</p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">source types</p>
+                          <div className="flex gap-0.5 mt-1.5 flex-wrap">
+                            {w.data.sources.slice(0, 5).map((s: any) => {
+                              const sourceLabels: Record<string, string> = {
+                                chatgpt: 'GPT', text: 'TXT', file: 'FILE', url: 'URL',
+                                kindle: 'KDL', youtube: 'YT', reddit: 'RDT', obsidian: 'OBS',
+                                notion: 'NTN', twitter: 'X', telegram: 'TG', spotify: 'SPT',
+                                readwise: 'RW', document: 'DOC', bookmark: 'BKM',
+                              };
+                              return (
+                                <span key={s.type} className="text-[8px] font-bold uppercase tracking-wider text-zinc-600 bg-white/[0.04] rounded px-1 py-[1px]">
+                                  {sourceLabels[s.type] || s.type.slice(0, 3).toUpperCase()}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {w.id === 'content-depth' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.avgWords}</p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            avg words · {w.data.deepPct}% deep
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'time-span' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.spanLabel}</p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            of knowledge history
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'connections' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">{w.data.totalConnections}</p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            cross-references
+                          </p>
+                        </div>
+                      )}
+
+                      {w.id === 'contradictions' && (
+                        <div>
+                          <p className="text-[20px] font-semibold tracking-[-0.02em] tabular-nums">
+                            {w.data.unresolved > 0 ? (
+                              <span className="text-amber-400">{w.data.unresolved}</span>
+                            ) : (
+                              <span className="text-emerald-400">0</span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-zinc-600 mt-0.5">
+                            unresolved · {w.data.resolved} resolved
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Hover arrow */}
+                      <ChevronRight className="absolute top-3.5 right-3 w-3 h-3 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </Stagger>
       )}
 
