@@ -4,6 +4,32 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 16:29 UTC — Navigation Consistency: Back Buttons Removed + Entrance Animations
+
+### Removed Redundant Back-to-Plugins Buttons (7 Pages)
+- **Notion Sync**, **Obsidian Sync**: Removed `window.history.back()` buttons
+- **Retrieval**, **Languages**, **Domains**: Removed `router.push('/app/plugins')` / `Link href="/app/plugins"` buttons
+- **Vision**, **Voice**: Removed `Link href="/app/plugins"` buttons
+- **Why**: All 7 pages are now directly accessible from the sidebar — the back buttons were navigation cruft from when they were only reachable via the Plugin Store. Other pages (Dashboard, Chat, Explore, etc.) never had back buttons, creating inconsistency.
+- **Also fixed**: Standardized header description text sizing to `text-[13px]` (was `text-xs` or `text-sm` on some pages)
+
+### Added Entrance Animations to 6 Pages Missing PageTransition
+- **Domains**, **Languages**, **Fingerprint**, **Notion Sync**, **Obsidian Sync**, **Retrieval** — all now wrapped in `<PageTransition>` for smooth fade-in entrance matching every other page
+- **Chat** and **Learn** intentionally excluded (interactive input-first pages where animation would feel slow)
+- **30 of 32 app pages** now have consistent entrance animations
+
+### Codebase Audit Results
+- **Build**: Clean — 0 errors, all pages compile
+- **Color violations**: Zero violet/purple/fuchsia
+- **Plugin ports**: 34/34 complete (100%)
+- **Console debris**: Zero `console.log` — only `console.error` in catch blocks (appropriate)
+- **Silent catches**: 38 total, but most are backend auto-install blocks or intentionally non-critical frontend fetches (chat SSE parsing, template loading, history loading)
+
+### Codex Monitor (read-only)
+- No new commits since last cycle on `codex/local-dev`
+- Latest: `3a6a0d1` Complete analysis parity batch (mind-map-generator + sentiment-timeline ports)
+- Both branches at 34 plugin ports — full convergence on extraction layer
+
 ## 2026-03-25 16:00 UTC — Error State Audit: Stats, Languages, Domains + Codex Monitor
 
 ### Error Handling Fixes (3 Pages)
