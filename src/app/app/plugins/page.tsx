@@ -55,6 +55,7 @@ interface PluginDetail extends Plugin {
     jobs: number;
   };
   jobRuns?: Record<string, PluginJobRun>;
+  jobSchedules?: Record<string, PluginJobSchedule>;
   ui?: {
     settingsSchema?: PluginSettingField[];
   };
@@ -90,12 +91,23 @@ interface PluginJobRun {
   details?: string[];
 }
 
+interface PluginJobSchedule {
+  enabled: boolean;
+  intervalMinutes: number;
+  nextRunAt?: string | null;
+  lastRunAt?: string | null;
+  lastStatus?: string | null;
+  lastSummary?: string | null;
+  lastError?: string | null;
+}
+
 interface PluginMutationResponse {
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string>;
   result?: PluginJobRun;
   jobId?: string;
+  schedule?: PluginJobSchedule;
   plugin?: {
     config?: Record<string, unknown>;
   };
@@ -266,6 +278,36 @@ export default function PluginsPage() {
     } catch (error) {
       console.error("Plugin job failed:", error);
       toast.error(error instanceof Error ? error.message : "Failed to run plugin job");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const configurePluginJobSchedule = async (slug: string, jobId: string, enabled: boolean) => {
+    setActionLoading(`${slug}:configure-job-schedule:${jobId}`);
+    try {
+      const response = await fetch("/api/v1/plugins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          action: "configure-job-schedule",
+          jobId,
+          enabled,
+          intervalMinutes: 1440,
+        }),
+      });
+
+      const data = (await response.json()) as PluginMutationResponse;
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update job schedule");
+      }
+
+      toast.success(data.message || (enabled ? "Job schedule enabled" : "Job schedule disabled"));
+      await loadPluginDetail(slug, true);
+    } catch (error) {
+      console.error("Job schedule update failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update job schedule");
     } finally {
       setActionLoading(null);
     }
@@ -504,6 +546,7 @@ export default function PluginsPage() {
               const dashboardWidgets = detail?.dashboardWidgets ?? [];
               const jobs = detail?.jobs ?? [];
               const jobRuns = detail?.jobRuns ?? {};
+              const jobSchedules = detail?.jobSchedules ?? {};
               const configDraft = configDrafts[plugin.slug] ?? {};
               const fieldErrors = configErrors[plugin.slug] ?? {};
               const isDetailLoading = !!detailLoading[plugin.slug];
@@ -640,11 +683,13 @@ export default function PluginsPage() {
                             widgets={dashboardWidgets}
                             jobs={jobs}
                             jobRuns={jobRuns}
+                            jobSchedules={jobSchedules}
                             pluginInstalled={plugin.installed}
                             pluginActive={plugin.status === "active"}
                             actionLoading={actionLoading}
                             slug={plugin.slug}
                             onRunJob={runPluginJob}
+                            onConfigureSchedule={configurePluginJobSchedule}
                           />
                         )}
 
@@ -760,22 +805,26 @@ interface PluginRuntimeSurfacesSectionProps {
   widgets: PluginDetailWidget[];
   jobs: PluginDetailJob[];
   jobRuns: Record<string, PluginJobRun>;
+  jobSchedules: Record<string, PluginJobSchedule>;
   pluginInstalled: boolean;
   pluginActive: boolean;
   slug: string;
   actionLoading: string | null;
   onRunJob: (slug: string, jobId: string) => void;
+  onConfigureSchedule: (slug: string, jobId: string, enabled: boolean) => void;
 }
 
 function PluginRuntimeSurfacesSection({
   widgets,
   jobs,
   jobRuns,
+  jobSchedules,
   pluginInstalled,
   pluginActive,
   slug,
   actionLoading,
   onRunJob,
+  onConfigureSchedule,
 }: PluginRuntimeSurfacesSectionProps) {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-3.5 space-y-3">
@@ -822,7 +871,13 @@ function PluginRuntimeSurfacesSection({
           <div className="space-y-2">
             {jobs.map((job) => {
               const runState = jobRuns[job.id];
+              const schedule = jobSchedules[job.id];
               const loadingKey = `${slug}:run-job:${job.id}`;
+              const scheduleLoadingKey = `${slug}:configure-job-schedule:${job.id}`;
+              const autoRunEnabled = schedule?.enabled ?? false;
+              const canConfigureSchedule =
+                pluginInstalled && pluginActive && job.trigger === "scheduled";
+
               return (
                 <div
                   key={job.id}
@@ -840,27 +895,87 @@ function PluginRuntimeSurfacesSection({
                       {job.scheduleLabel && (
                         <p className="mt-1 text-[10px] text-zinc-600">{job.scheduleLabel}</p>
                       )}
-                    </div>
-                    <button
-                      onClick={() => onRunJob(slug, job.id)}
-                      disabled={!pluginInstalled || !pluginActive || actionLoading === loadingKey}
-                      className="h-8 shrink-0 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 text-[12px] font-medium text-sky-300 transition-all hover:bg-sky-500/15 disabled:opacity-50"
-                    >
-                      {actionLoading === loadingKey ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        "Run now"
+                      {job.trigger === "scheduled" && (
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-zinc-600">
+                          <span className={`rounded-full border px-2 py-0.5 ${
+                            autoRunEnabled
+                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                              : "border-white/[0.08] bg-white/[0.03] text-zinc-500"
+                          }`}>
+                            {autoRunEnabled ? "Auto-run enabled" : "Auto-run disabled"}
+                          </span>
+                          {schedule?.nextRunAt ? (
+                            <span>Next run {formatRelativeTime(schedule.nextRunAt)}</span>
+                          ) : null}
+                          {schedule?.lastRunAt ? (
+                            <span>Last schedule {formatRelativeTime(schedule.lastRunAt)}</span>
+                          ) : null}
+                        </div>
                       )}
-                    </button>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {job.trigger === "scheduled" && (
+                        <button
+                          onClick={() => onConfigureSchedule(slug, job.id, !autoRunEnabled)}
+                          disabled={!canConfigureSchedule || actionLoading === scheduleLoadingKey}
+                          className={`h-8 rounded-lg border px-3 text-[12px] font-medium transition-all disabled:opacity-50 ${
+                            autoRunEnabled
+                              ? "border-white/[0.08] bg-white/[0.04] text-zinc-300 hover:bg-white/[0.06]"
+                              : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15"
+                          }`}
+                        >
+                          {actionLoading === scheduleLoadingKey ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : autoRunEnabled ? (
+                            "Disable auto-run"
+                          ) : (
+                            "Enable auto-run"
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onRunJob(slug, job.id)}
+                        disabled={!pluginInstalled || !pluginActive || actionLoading === loadingKey}
+                        className="h-8 shrink-0 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 text-[12px] font-medium text-sky-300 transition-all hover:bg-sky-500/15 disabled:opacity-50"
+                      >
+                        {actionLoading === loadingKey ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          "Run now"
+                        )}
+                      </button>
+                    </div>
                   </div>
 
-                  {runState?.summary && (
-                    <div className="mt-3 rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2">
-                      <p className="text-[11px] text-zinc-300">{runState.summary}</p>
-                      {runState.lastRunAt && (
-                        <p className="mt-1 text-[10px] text-zinc-600">
-                          Last run {formatRelativeTime(runState.lastRunAt)}
-                        </p>
+                  {(runState?.summary || schedule?.lastSummary || schedule?.lastError) && (
+                    <div className="mt-3 space-y-2">
+                      {runState?.summary && (
+                        <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2">
+                          <p className="text-[11px] text-zinc-300">{runState.summary}</p>
+                          {runState.lastRunAt && (
+                            <p className="mt-1 text-[10px] text-zinc-600">
+                              Last manual run {formatRelativeTime(runState.lastRunAt)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {(schedule?.lastSummary || schedule?.lastError) && (
+                        <div className={`rounded-lg border px-2.5 py-2 ${
+                          schedule?.lastError
+                            ? "border-amber-500/20 bg-amber-500/[0.06]"
+                            : "border-white/[0.05] bg-black/20"
+                        }`}>
+                          <p className={`text-[11px] ${
+                            schedule?.lastError ? "text-amber-100" : "text-zinc-300"
+                          }`}>
+                            {schedule?.lastError || schedule?.lastSummary}
+                          </p>
+                          {schedule?.lastRunAt && (
+                            <p className="mt-1 text-[10px] text-zinc-600">
+                              Last scheduled run {formatRelativeTime(schedule.lastRunAt)}
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

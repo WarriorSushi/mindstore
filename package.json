@@ -11,12 +11,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/server/capture.ts src/server/extension.ts src/server/mcp src/server/plugins src/app/api/mcp/route.ts src/app/api/v1/capture src/app/api/v1/extension src/app/api/v1/import/route.ts src/app/api/v1/plugins/route.ts src/app/api/v1/settings/route.ts src/app/app/connect/page.tsx src/app/app/plugins/page.tsx src/app/app/settings/page.tsx src/components/KeyboardShortcuts.tsx src/components/Onboarding.tsx packages tests extensions",
+    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/server/capture.ts src/server/extension.ts src/server/mcp src/server/plugin-jobs.ts src/server/plugins src/server/run-plugin-jobs.ts src/app/api/mcp/route.ts src/app/api/v1/capture src/app/api/v1/extension src/app/api/v1/import/route.ts src/app/api/v1/plugin-jobs src/app/api/v1/plugins/route.ts src/app/api/v1/settings/route.ts src/app/app/connect/page.tsx src/app/app/plugins/page.tsx src/app/app/settings/page.tsx src/components/KeyboardShortcuts.tsx src/components/Onboarding.tsx packages tests extensions",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "migrate": "npx tsx src/server/migrate.ts"
+    "migrate": "npx tsx src/server/migrate.ts",
+    "jobs:run-due": "npx tsx src/server/run-plugin-jobs.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

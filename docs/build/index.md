@@ -10,6 +10,7 @@ This section is for contributors and maintainers.
 - [MindStore Everywhere build notes](./mindstore-everywhere.md).
 - [Provider access](./provider-access.md).
 - [Ingestion hooks](./ingestion-hooks.md).
+- [MCP server](./mcp-server.md).
 - Plugin widget and job runtime flow.
 - Browser extension setup and API key flow.
 - Testing strategy.

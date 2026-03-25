@@ -185,6 +185,26 @@ export const plugins = pgTable('plugins', {
   index('idx_plugins_category').on(table.category),
 ]);
 
+export const pluginJobSchedules = pgTable('plugin_job_schedules', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  pluginSlug: text('plugin_slug').notNull(),
+  jobId: text('job_id').notNull(),
+  enabled: integer('enabled').default(1).notNull(),
+  intervalMinutes: integer('interval_minutes').default(1440).notNull(),
+  nextRunAt: timestamp('next_run_at'),
+  lastRunAt: timestamp('last_run_at'),
+  lastStatus: text('last_status'),
+  lastSummary: text('last_summary'),
+  lastError: text('last_error'),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_plugin_job_schedule_user_plugin_job').on(table.userId, table.pluginSlug, table.jobId),
+  index('idx_plugin_job_schedule_due').on(table.enabled, table.nextRunAt),
+]);
+
 // API Keys (for MCP server auth)
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').defaultRandom().primaryKey(),

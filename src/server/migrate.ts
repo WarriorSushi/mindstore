@@ -182,6 +182,28 @@ async function migrate() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category)`);
 
+  // Plugin job schedules
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS plugin_job_schedules (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      plugin_slug TEXT NOT NULL,
+      job_id TEXT NOT NULL,
+      enabled INT NOT NULL DEFAULT 1,
+      interval_minutes INT NOT NULL DEFAULT 1440,
+      next_run_at TIMESTAMPTZ,
+      last_run_at TIMESTAMPTZ,
+      last_status TEXT,
+      last_summary TEXT,
+      last_error TEXT,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, plugin_slug, job_id)
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugin_job_schedule_due ON plugin_job_schedules(enabled, next_run_at)`);
+
   // API Keys
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS api_keys (

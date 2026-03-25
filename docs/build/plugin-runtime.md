@@ -23,11 +23,12 @@ The original plugin list was useful for product planning, but community contribu
 - Widgets and panels
 - Lifecycle hooks such as install, enable, disable, and import
 - Manual job execution with persisted run summaries
+- Per-user scheduled job records plus a shared due-job execution endpoint
 - Runtime-discovered import tabs and importer metadata
 
 ## What Still Needs To Grow
 
-- Scheduled/background job registration beyond manual runs
+- Richer schedule editing, worker execution, and retry orchestration beyond the current interval-based groundwork
 - Safer external package loading for true third-party plugins
 - Richer widget layouts beyond the current generic card renderer
 - Contract tests for plugin manifests and runtime bindings

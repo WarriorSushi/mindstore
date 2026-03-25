@@ -60,14 +60,20 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Added a runtime requirements and provider-access model so users can see what MindStore actually requires today and what auth modes are planned next.
 - Added branch roadmap documentation tying provider access, MCP modernization, runtime integration, jobs, and extension work into one sequence.
 - Refactored MCP logic into a shared runtime module and added an official MCP SDK-backed server builder so the current route and future SDK path share the same definitions.
+- Added persistent per-user plugin job schedules plus a due-job runner endpoint so scheduled plugin jobs can move from metadata into real automation groundwork.
+- Added a CLI due-job runner (`npm run jobs:run-due`) so self-hosted cron/VPS setups can execute scheduled plugin work without waiting for a dedicated worker service.
+- Upgraded the Plugins page to show scheduled job state, next-run timing, scheduled execution summaries, and one-click auto-run toggles.
+- Migrated `POST` and `DELETE /api/mcp` onto the official MCP TypeScript SDK transport in JSON-response mode while preserving the simple discovery `GET`.
 - Expanded docs with:
   - browser extension guide
   - capture API reference
   - extension setup API reference
   - provider access guide
+  - MCP server architecture notes
   - plugin authoring and plugin runtime notes
   - plugin settings reference
   - plugin widgets and jobs reference
+  - plugin job API reference
   - ingestion hook contract
   - plugin importer guide
   - MindStore Everywhere build notes
@@ -79,7 +85,9 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
   - release note for plugin runtime surfaces
   - release note for plugin-aware ingestion
   - release note for extension setup and connectivity
+  - release note for MCP SDK route and plugin scheduling groundwork
 - Tightened settings-page typing so the codex lint ratchet stays green.
+- Added unit coverage for plugin scheduling time computation.
 
 ### Decisions
 
@@ -97,9 +105,9 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The visible `origin/frain/*` refs still lag the VPS status updates.
 - MCP is now more runtime-aware, but a full official SDK migration is still a follow-up.
 - Browser capture now has an authenticated path, but richer extension UX, stronger hosted auth ergonomics, and more robust site adapters are still follow-up work.
-- MCP routing is still custom JSON-RPC rather than the official MCP TypeScript SDK; the current pass improves adoption and docs, but a protocol-level migration is still follow-up work.
+- The MCP route now uses the official SDK transport for request handling, but it is still in stateless JSON-response mode rather than richer streaming/session modes.
 - Next.js/Turbopack still emits a tracing warning for the docs filesystem loader in `src/lib/docs.ts`; builds succeed, but the loader should be revisited for cleaner static tracing.
-- Plugin jobs currently support manual execution and persisted summaries; full scheduling/worker integration is still a follow-up.
+- Plugin jobs now support persisted schedules and due-job execution, but they still need a long-running worker or cron-backed runner for fully automatic operation.
 - Local dev route-type generation under `.next/dev/types` can still be malformed; the codex branch now routes production `build` and `typecheck` through `tsconfig.build.json` as the stable workaround.
 - Many import plugins still need richer dedicated UIs or OAuth flows; runtime import tabs currently provide the shared discovery layer and fallback panel.
 
