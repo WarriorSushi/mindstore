@@ -170,8 +170,11 @@ export default function AnkiExportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-teal-400" />
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-teal-500/60" />
+          <span className="text-[11px] text-zinc-700 font-medium">Loading flashcard decks…</span>
+        </div>
       </div>
     );
   }
@@ -180,28 +183,15 @@ export default function AnkiExportPage() {
     <PageTransition>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
         {/* ─── Header ──────────────────────────────── */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push('/app/plugins')}
-            className="p-2 rounded-xl border border-zinc-800/60 bg-zinc-900/50 hover:bg-zinc-800/60 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 text-zinc-400" />
-          </button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-teal-500/10 border border-teal-500/20">
-                <Download className="w-6 h-6 text-teal-400" />
-              </div>
-              Anki Export
-            </h1>
-            <p className="text-zinc-500 mt-1">Export your flashcards for Anki spaced repetition</p>
-          </div>
+        <div>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Anki Export</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">Export your flashcards for Anki spaced repetition</p>
         </div>
 
         {/* ─── No Flashcards State ─────────────────── */}
         {decks.length === 0 || totalCards === 0 ? (
           <div className="text-center py-16 space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-800/60 border border-zinc-700/40 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
               <Layers className="w-8 h-8 text-zinc-600" />
             </div>
             <div>
@@ -226,7 +216,7 @@ export default function AnkiExportPage() {
                   { label: 'Selected', value: selectedDecks.size > 0 ? selectedDecks.size : decks.length, icon: Check },
                   { label: 'Cards to Export', value: selectedCardCount, icon: Download },
                 ].map((stat) => (
-                  <div key={stat.label} className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/60">
+                  <div key={stat.label} className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                     <div className="flex items-center gap-2 mb-1">
                       <stat.icon className="w-3.5 h-3.5 text-zinc-500" />
                       <span className="text-xs text-zinc-500">{stat.label}</span>
@@ -251,16 +241,16 @@ export default function AnkiExportPage() {
 
               <div className="space-y-2">
                 {decks.map(deck => (
-                  <div key={deck.id} className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 overflow-hidden">
+                  <div key={deck.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
                     <div
-                      className="flex items-center gap-3 p-4 cursor-pointer hover:bg-zinc-800/30 transition-colors"
+                      className="flex items-center gap-3 p-4 cursor-pointer hover:bg-white/[0.04] transition-colors"
                       onClick={() => toggleDeck(deck.id)}
                     >
                       {/* Checkbox */}
                       <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                         selectedDecks.has(deck.id) || selectedDecks.size === 0
                           ? 'bg-teal-500/20 border-teal-500/60'
-                          : 'border-zinc-700 bg-zinc-800/40'
+                          : 'border-white/[0.08] bg-white/[0.04]'
                       }`}>
                         {(selectedDecks.has(deck.id) || selectedDecks.size === 0) && (
                           <Check className="w-3 h-3 text-teal-400" />
@@ -271,7 +261,7 @@ export default function AnkiExportPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-white">{deck.name}</span>
-                          <span className="text-xs text-zinc-500 bg-zinc-800/60 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-zinc-500 bg-white/[0.04] px-2 py-0.5 rounded-full">
                             {deck.cardCount} cards
                           </span>
                         </div>
@@ -283,7 +273,7 @@ export default function AnkiExportPage() {
                       {/* Preview toggle */}
                       <button
                         onClick={(e) => { e.stopPropagation(); loadPreview(deck.id); }}
-                        className="p-1.5 rounded-lg hover:bg-zinc-700/40 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
                       >
                         {previewDeck === deck.id ? (
                           <ChevronDown className="w-4 h-4 text-zinc-400" />
@@ -295,7 +285,7 @@ export default function AnkiExportPage() {
 
                     {/* Preview panel */}
                     {previewDeck === deck.id && (
-                      <div className="border-t border-zinc-800/60 bg-zinc-950/40 p-4 space-y-2">
+                      <div className="border-t border-white/[0.06] bg-black/20 p-4 space-y-2">
                         {previewLoading ? (
                           <div className="flex items-center gap-2 text-zinc-500">
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -306,7 +296,7 @@ export default function AnkiExportPage() {
                         ) : (
                           <>
                             {previewCards.slice(0, 5).map(card => (
-                              <div key={card.id} className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/40 space-y-1">
+                              <div key={card.id} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] space-y-1">
                                 <div className="text-sm text-white font-medium">
                                   <span className="text-teal-400 text-xs mr-2">Q:</span>
                                   {card.front}
@@ -318,7 +308,7 @@ export default function AnkiExportPage() {
                                 {card.tags.length > 0 && (
                                   <div className="flex gap-1 mt-1">
                                     {card.tags.map(t => (
-                                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/60 text-zinc-500">
+                                      <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-500">
                                         {t}
                                       </span>
                                     ))}
@@ -351,7 +341,7 @@ export default function AnkiExportPage() {
                     className={`p-4 rounded-2xl border text-left transition-all ${
                       selectedFormat === fmt.id
                         ? 'bg-teal-500/5 border-teal-500/30 ring-1 ring-teal-500/20'
-                        : 'bg-zinc-900/40 border-zinc-800/60 hover:border-zinc-700/60'
+                        : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.08]'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
@@ -372,13 +362,13 @@ export default function AnkiExportPage() {
             </div>
 
             {/* ─── Options ─────────────────────────── */}
-            <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/60 space-y-3">
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
               <h3 className="text-sm font-semibold text-white">Options</h3>
               <label className="flex items-center gap-3 cursor-pointer">
                 <div
                   onClick={() => setIncludeMetadata(!includeMetadata)}
                   className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                    includeMetadata ? 'bg-teal-500/30' : 'bg-zinc-700/60'
+                    includeMetadata ? 'bg-teal-500/30' : 'bg-white/[0.06]'
                   }`}
                 >
                   <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${
@@ -432,7 +422,7 @@ export default function AnkiExportPage() {
             </button>
 
             {/* ─── How to Import ────────────────────── */}
-            <div className="p-5 rounded-2xl bg-zinc-900/40 border border-zinc-800/60 space-y-4">
+            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Info className="w-4 h-4 text-teal-400" />
                 How to Import into Anki
