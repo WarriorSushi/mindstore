@@ -9,3 +9,4 @@
 
 export * as kindleImporter from './kindle-importer';
 export * as contradictionFinder from './contradiction-finder';
+export * as voiceToMemory from './voice-to-memory';
