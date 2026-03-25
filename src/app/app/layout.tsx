@@ -354,6 +354,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
+      {/* ════════ MOBILE FAB — Quick Capture ════════ */}
+      {!isChat && (
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("mindstore:quick-capture"))}
+          className={cn(
+            "md:hidden fixed z-50",
+            "right-4 bottom-[68px]",
+            "w-12 h-12 rounded-2xl",
+            "bg-teal-500 shadow-lg shadow-teal-500/25",
+            "flex items-center justify-center",
+            "active:scale-90 transition-transform",
+          )}
+          aria-label="Quick Capture"
+        >
+          <Zap className="w-5 h-5 text-white" />
+        </button>
+      )}
+
       {/* ════════ MOBILE BOTTOM NAV ════════ */}
       <nav className={cn(
         "md:hidden fixed bottom-0 inset-x-0 z-50 safe-bottom",
