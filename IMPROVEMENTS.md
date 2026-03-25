@@ -4,6 +4,37 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 04:29 UTC — Plugin Store Redesign + Landing Page Plugin Showcase + Command Palette Completion
+- **Phase**: Post-Plugin Polish — UX excellence pass
+- **Context**: All 33 plugins built, sidebar grouped, colors purged. This cycle focuses on three high-impact UX improvements: the Plugin Store (the central hub for 33 plugins), the landing page (first impression for new users), and the command palette (primary power-user navigation tool).
+
+### Plugin Store Redesign (`/app/plugins`)
+  - **Featured Spotlight section**: 3 curated plugins (Mind Map Generator, Voice-to-Memory, Flashcard Maker) displayed in rich gradient cards with capabilities badges, type labels, and prominent CTAs
+  - **Browse view with category sections**: Netflix-style layout — each category (AI Tools, Analysis, Action, Import, Export & Sync) gets its own section with header, count, and "View all" button
+  - **Grid/List toggle**: Switch between 3-column card grid and compact list view with persistent preference
+  - **Stats strip**: Total/Active/Installed badges with mini category dot indicators aligned right
+  - **Enhanced search**: Result count indicator, Escape to clear, focus border animation
+  - **Direct Open buttons**: Active plugins with routes show "Open →" button directly on cards — no expand needed
+  - **Category filter pills + install filter + view toggle** all in one responsive toolbar
+  - **Empty state**: "Clear all filters" button when no results match
+  - **Before**: Flat list of 33 plugins, basic expand/collapse
+  - **After**: Premium app store experience with visual hierarchy, featured discovery, and category browsing
+
+### Landing Page — Plugin Ecosystem Showcase
+  - **New section** between Innovation Features and Why MindStore
+  - **5 category cards**: Import (12), Analysis (6), Action (6), Export (4), AI Tools (5) — each with count, color accent, and example plugins
+  - **3 feature highlight cards**: Interactive Mind Maps, Voice & Vision Import, Learn From Your Brain
+  - **Fixed**: Replaced `indigo-600` background orb with `teal-800` — cleaner palette, zero purple-adjacent colors
+
+### Command Palette — Complete Navigation
+  - **9 missing pages added** to ⌘K navigation: RAG Strategies, Languages, Domain Embeddings, Anki Export, Blog Export, Notion Sync, Obsidian Sync, Plugin Store
+  - **All 30+ app pages** now discoverable via command palette
+  - **New icon imports**: Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem
+
+- **Design**: OLED black base, teal primary, sky secondary. Zero violet/purple/fuchsia. Premium Silicon Valley aesthetic throughout.
+- **Build**: Clean build pass, zero errors, all pages render.
+- **Branch**: `frain/improve` (commits `217876b`, `2b98a63`)
+
 ## 2026-03-25 04:00 UTC — Grouped Sidebar Navigation + Complete Color Purge
 - **Phase**: Post-Plugin Polish — UX architecture & design consistency
 - **Context**: With all 33 plugins built, the sidebar had grown to 29 flat navigation items — an overwhelming wall of links. Additionally, violet/purple/fuchsia colors had crept into 9 files across the codebase, violating our design mandate. This cycle fixes both.
