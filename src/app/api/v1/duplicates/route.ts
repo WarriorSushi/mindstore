@@ -1,0 +1,162 @@
+import { getUserId } from '@/server/user';
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/server/db';
+import { sql } from 'drizzle-orm';
+
+/**
+ * GET /api/v1/duplicates?threshold=0.92&limit=20
+ * 
+ * Find near-duplicate memories using pgvector cosine similarity.
+ * Returns pairs of memories with similarity scores above the threshold.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const threshold = parseFloat(searchParams.get('threshold') || '0.92');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
+    const userId = await getUserId();
+
+    // Find pairs of memories with high cosine similarity
+    // Uses pgvector's <=> (cosine distance) operator
+    // Cosine distance = 1 - cosine_similarity, so we want distance < (1 - threshold)
+    const maxDistance = 1 - threshold;
+
+    const pairs = await db.execute(sql`
+      SELECT 
+        a.id AS id_a,
+        a.content AS content_a,
+        a.source_type AS source_type_a,
+        a.source_title AS source_title_a,
+        a.source_id AS source_id_a,
+        a.created_at AS created_at_a,
+        a.metadata AS metadata_a,
+        CHAR_LENGTH(a.content) AS length_a,
+        b.id AS id_b,
+        b.content AS content_b,
+        b.source_type AS source_type_b,
+        b.source_title AS source_title_b,
+        b.source_id AS source_id_b,
+        b.created_at AS created_at_b,
+        b.metadata AS metadata_b,
+        CHAR_LENGTH(b.content) AS length_b,
+        1 - (a.embedding <=> b.embedding) AS similarity
+      FROM memories a
+      INNER JOIN memories b ON a.id < b.id
+      WHERE a.user_id = ${userId}::uuid
+        AND b.user_id = ${userId}::uuid
+        AND a.embedding IS NOT NULL
+        AND b.embedding IS NOT NULL
+        AND (a.embedding <=> b.embedding) < ${maxDistance}
+      ORDER BY (a.embedding <=> b.embedding) ASC
+      LIMIT ${limit}
+    `) as any[];
+
+    const duplicates = pairs.map((row: any) => ({
+      similarity: Math.round(row.similarity * 100),
+      memoryA: {
+        id: row.id_a,
+        content: row.content_a,
+        sourceType: row.source_type_a,
+        sourceTitle: row.source_title_a || 'Untitled',
+        sourceId: row.source_id_a,
+        createdAt: row.created_at_a,
+        metadata: row.metadata_a || {},
+        contentLength: parseInt(row.length_a),
+      },
+      memoryB: {
+        id: row.id_b,
+        content: row.content_b,
+        sourceType: row.source_type_b,
+        sourceTitle: row.source_title_b || 'Untitled',
+        sourceId: row.source_id_b,
+        createdAt: row.created_at_b,
+        metadata: row.metadata_b || {},
+        contentLength: parseInt(row.length_b),
+      },
+    }));
+
+    return NextResponse.json({
+      duplicates,
+      count: duplicates.length,
+      threshold,
+    });
+  } catch (error: any) {
+    console.error('[duplicates]', error);
+    return NextResponse.json({ duplicates: [], count: 0, error: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/v1/duplicates
+ * 
+ * Merge two duplicate memories:
+ * - action: "keep_a" | "keep_b" | "merge" | "delete_both"
+ * - idA, idB: the two memory IDs
+ * - mergedContent: (only for "merge") the combined content to keep
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const userId = await getUserId();
+    const body = await req.json();
+    const { action, idA, idB, mergedContent } = body;
+
+    if (!idA || !idB) {
+      return NextResponse.json({ error: 'Missing idA or idB' }, { status: 400 });
+    }
+    if (!['keep_a', 'keep_b', 'merge', 'delete_both'].includes(action)) {
+      return NextResponse.json({ error: 'Invalid action. Use: keep_a, keep_b, merge, delete_both' }, { status: 400 });
+    }
+
+    // Verify ownership
+    const [memA] = await db.execute(sql`
+      SELECT id, content FROM memories WHERE id = ${idA}::uuid AND user_id = ${userId}::uuid
+    `) as any[];
+    const [memB] = await db.execute(sql`
+      SELECT id, content FROM memories WHERE id = ${idB}::uuid AND user_id = ${userId}::uuid
+    `) as any[];
+
+    if (!memA || !memB) {
+      return NextResponse.json({ error: 'One or both memories not found' }, { status: 404 });
+    }
+
+    let result = { kept: 0, deleted: 0, merged: false };
+
+    switch (action) {
+      case 'keep_a':
+        await db.execute(sql`DELETE FROM memories WHERE id = ${idB}::uuid AND user_id = ${userId}::uuid`);
+        result = { kept: 1, deleted: 1, merged: false };
+        break;
+
+      case 'keep_b':
+        await db.execute(sql`DELETE FROM memories WHERE id = ${idA}::uuid AND user_id = ${userId}::uuid`);
+        result = { kept: 1, deleted: 1, merged: false };
+        break;
+
+      case 'merge':
+        if (!mergedContent?.trim()) {
+          return NextResponse.json({ error: 'mergedContent required for merge action' }, { status: 400 });
+        }
+        // Update memory A with merged content, delete memory B
+        await db.execute(sql`
+          UPDATE memories 
+          SET content = ${mergedContent.trim()}, 
+              embedding = NULL,
+              updated_at = NOW()
+          WHERE id = ${idA}::uuid AND user_id = ${userId}::uuid
+        `);
+        await db.execute(sql`DELETE FROM memories WHERE id = ${idB}::uuid AND user_id = ${userId}::uuid`);
+        result = { kept: 1, deleted: 1, merged: true };
+        break;
+
+      case 'delete_both':
+        await db.execute(sql`DELETE FROM memories WHERE id IN (${idA}::uuid, ${idB}::uuid) AND user_id = ${userId}::uuid`);
+        result = { kept: 0, deleted: 2, merged: false };
+        break;
+    }
+
+    return NextResponse.json({ ok: true, action, ...result });
+  } catch (error: any) {
+    console.error('[duplicates:merge]', error);
+    return NextResponse.json({ error: error.message || 'Merge failed' }, { status: 500 });
+  }
+}
