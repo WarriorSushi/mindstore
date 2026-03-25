@@ -8,6 +8,7 @@ import {
   CheckCircle2, Eye, Copy, Info, BookOpen,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ const FRAMEWORK_COLORS: Record<string, string> = {
 // ─── Component ────────────────────────────────────────────────
 
 export default function MarkdownBlogExportPage() {
+  usePageTitle("Blog Export");
   const router = useRouter();
   const [templates, setTemplates] = useState<ExportTemplate[]>([]);
   const [stats, setStats] = useState({ total: 0, sourceTypes: [] as SourceStat[] });

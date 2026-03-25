@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Brain, RefreshCw, Loader2 } from 'lucide-react';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
@@ -16,6 +17,7 @@ const GraphCanvas = dynamic(
 );
 
 export default function FingerprintPage() {
+  usePageTitle("Knowledge Fingerprint");
   const [data, setData] = useState<{ nodes: any[]; edges: any[]; clusters: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'3d' | 'stats'>('3d');

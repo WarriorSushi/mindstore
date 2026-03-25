@@ -17,6 +17,7 @@ import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 import {
   type ChatMessage,
   type Conversation,
@@ -133,6 +134,7 @@ async function generateFollowUps(
 }
 
 export default function ChatPage() {
+  usePageTitle("Chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

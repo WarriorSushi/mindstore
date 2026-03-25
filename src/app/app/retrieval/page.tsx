@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ const STRATEGY_META: Record<RAGStrategy, {
 // ─── Component ──────────────────────────────────────────────────
 
 export default function RetrievalPage() {
+  usePageTitle("RAG Settings");
   const router = useRouter();
   const [config, setConfig] = useState<RAGConfig | null>(null);
   const [strategies, setStrategies] = useState<Record<string, StrategyInfo>>({});

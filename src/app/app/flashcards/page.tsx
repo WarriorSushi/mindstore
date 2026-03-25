@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ const GRADE_CONFIG = [
 // ─── Page Component ───────────────────────────────────────────
 
 export default function FlashcardsPage() {
+  usePageTitle("Flashcards");
   const [view, setView] = useState<"decks" | "deck-detail" | "review" | "generate">("decks");
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);

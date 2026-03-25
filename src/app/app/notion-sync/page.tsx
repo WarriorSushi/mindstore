@@ -7,6 +7,7 @@ import {
   Filter, Zap, History, ArrowUpRight, Eye, Plus, Trash2, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface SyncConfig {
   connected: boolean;
@@ -40,6 +41,7 @@ interface PreviewData {
 }
 
 export default function NotionSyncPage() {
+  usePageTitle("Notion Sync");
   const [config, setConfig] = useState<SyncConfig | null>(null);
   const [history, setHistory] = useState<SyncRecord[]>([]);
   const [preview, setPreview] = useState<PreviewData | null>(null);

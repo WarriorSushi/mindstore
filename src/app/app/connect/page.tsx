@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plug, Copy, Check, ExternalLink, Brain, Terminal, Shield, Zap, Server } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface ConnectionConfig {
   name: string;
@@ -15,6 +16,7 @@ interface ConnectionConfig {
 }
 
 export default function ConnectPage() {
+  usePageTitle("Connect AI");
   const [copied, setCopied] = useState<string | null>(null);
   const [stats, setStats] = useState({ memories: 0, sources: 0 });
   const [apiEndpoint, setApiEndpoint] = useState("");

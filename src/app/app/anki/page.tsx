@@ -8,6 +8,7 @@ import {
   CheckCircle2, Copy,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ interface CardPreview {
 // ─── Component ────────────────────────────────────────────────
 
 export default function AnkiExportPage() {
+  usePageTitle("Anki Export");
   const router = useRouter();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [formats, setFormats] = useState<ExportFormat[]>([]);

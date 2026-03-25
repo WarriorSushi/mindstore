@@ -7,6 +7,7 @@ import {
   Tag, Link2, Code, Clock, Hash, BookOpen, Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface SyncConfig {
   vaultName: string;
@@ -38,6 +39,7 @@ const FOLDER_OPTIONS = [
 ];
 
 export default function ObsidianSyncPage() {
+  usePageTitle("Obsidian Sync");
   const [config, setConfig] = useState<SyncConfig | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [loading, setLoading] = useState(true);

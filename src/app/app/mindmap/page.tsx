@@ -8,6 +8,7 @@ import {
   MessageSquare, FileText, Globe, Type, BookOpenCheck, FileBox, Gem,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -812,6 +813,7 @@ function TopicPanel({
 // ─── Main Page ──────────────────────────────────────────────────
 
 export default function MindMapPage() {
+  usePageTitle("Mind Map");
   const [data, setData] = useState<MindMapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState<TopicNode | null>(null);

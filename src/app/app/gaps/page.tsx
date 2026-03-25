@@ -10,6 +10,7 @@ import {
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ const TOPIC_COLORS = [
 ];
 
 export default function KnowledgeGapsPage() {
+  usePageTitle("Knowledge Gaps");
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -6,6 +6,7 @@ import { getSourceType } from "@/lib/source-types";
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit" | "twitter" | "telegram" | "pocket" | "spotify" | "readwise";
@@ -50,6 +51,7 @@ interface ImportSource {
 }
 
 export default function ImportPage() {
+  usePageTitle("Import");
   const [tab, setTab] = useState<Tab>("chatgpt");
   const [state, setState] = useState<ImportState>("idle");
   const [progress, setProgress] = useState(0);

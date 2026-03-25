@@ -10,6 +10,7 @@ import {
 import { getSourceType } from '@/lib/source-types';
 import { toast } from 'sonner';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface MemoryInfo {
   id: string;
@@ -31,6 +32,7 @@ interface DuplicatePair {
 type MergeAction = 'keep_a' | 'keep_b' | 'merge' | 'delete_both';
 
 export default function DuplicatesPage() {
+  usePageTitle("Duplicates");
   const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
   const [loading, setLoading] = useState(true);
   const [threshold, setThreshold] = useState(92);

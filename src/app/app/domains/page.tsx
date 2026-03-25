@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ const DOMAIN_COLORS: Record<string, { bg: string; border: string; text: string; 
 // ─── Component ──────────────────────────────────────────────────
 
 export default function DomainEmbeddingsPage() {
+  usePageTitle("Domain Embeddings");
   const [config, setConfig] = useState<Config | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);

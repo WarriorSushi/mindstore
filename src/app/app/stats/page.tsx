@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { getSourceType } from "@/lib/source-types";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // Source type config delegated to shared module: getSourceType()
 
@@ -48,6 +49,7 @@ function formatMonth(monthStr: string): string {
 }
 
 export default function StatsPage() {
+  usePageTitle("Stats");
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const growthCanvasRef = useRef<HTMLCanvasElement>(null);

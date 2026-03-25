@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ const LANG_FLAGS: Record<string, string> = {
 // ─── Component ──────────────────────────────────────────────────
 
 export default function MultiLanguagePage() {
+  usePageTitle("Languages");
   const [stats, setStats] = useState<Stats | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(true);

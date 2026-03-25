@@ -8,6 +8,7 @@ import {
 import { checkApiKey, streamChat } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface Message {
   role: "user" | "assistant";
@@ -88,6 +89,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function LearnPage() {
+  usePageTitle("Learn");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ const SECTION_ACCENTS = [
 // ─── Component ───────────────────────────────────────────────
 
 export default function ConversationPrepPage() {
+  usePageTitle("Meeting Prep");
   const [view, setView] = useState<"home" | "create" | "detail">("home");
   const [history, setHistory] = useState<BriefingSummary[]>([]);
   const [activeBriefing, setActiveBriefing] = useState<Briefing | null>(null);

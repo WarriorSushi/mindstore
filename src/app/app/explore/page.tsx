@@ -18,6 +18,7 @@ import {
   findMatchingSavedSearch,
   describeSavedSearch,
 } from "@/lib/saved-searches";
+import { usePageTitle } from "@/lib/use-page-title";
 import {
   addSearchToHistory,
   getSearchHistory,
@@ -91,6 +92,7 @@ const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
 ];
 
 export default function ExplorePage() {
+  usePageTitle("Explore");
   const searchParams = useSearchParams();
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);

@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ function renderMarkdown(md: string): string {
 // ─── Component ───────────────────────────────────────────────
 
 export default function ResumeBuilderPage() {
+  usePageTitle("Resume Builder");
   const [view, setView] = useState<"list" | "create" | "edit" | "preview">("list");
   const [resumes, setResumes] = useState<ResumeSummary[]>([]);
   const [activeResume, setActiveResume] = useState<Resume | null>(null);

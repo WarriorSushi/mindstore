@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 async function fetchSettings() {
   try { const r = await fetch('/api/v1/settings'); return r.ok ? r.json() : null; } catch { return null; }
@@ -28,6 +29,7 @@ interface HealthData {
 }
 
 export default function SettingsPage() {
+  usePageTitle("Settings");
   const [openaiKey, setOpenaiKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");

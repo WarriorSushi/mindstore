@@ -10,6 +10,7 @@ import {
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -108,6 +109,7 @@ function formatDate(dateStr: string): string {
 // ─── Main Component ─────────────────────────────────────────────
 
 export default function SentimentPage() {
+  usePageTitle("Sentiment Analysis");
   const router = useRouter();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [daily, setDaily] = useState<DailyMood[]>([]);

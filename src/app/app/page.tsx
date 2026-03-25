@@ -18,6 +18,7 @@ import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
+import { usePageTitle } from "@/lib/use-page-title";
 
 async function fetchStats() {
   try {
@@ -64,6 +65,7 @@ const WIDGET_COLORS: Record<string, { bg: string; border: string; text: string; 
 type SetupTab = "gemini" | "openai" | "ollama";
 
 export default function DashboardPage() {
+  usePageTitle("Home");
   const [hasKey, setHasKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [testing, setTesting] = useState(false);

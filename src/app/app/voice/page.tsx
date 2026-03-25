@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -115,6 +116,7 @@ function formatFileSize(bytes: number): string {
 // ─── Component ────────────────────────────────────────────────
 
 export default function VoicePage() {
+  usePageTitle("Voice");
   // Recording state
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);

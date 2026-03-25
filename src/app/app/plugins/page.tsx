@@ -15,6 +15,7 @@ import {
   ArrowRight, ExternalLink, Sparkles, Package, Grid3X3, LayoutList,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -120,6 +121,7 @@ const SECTION_ORDER: PluginCategory[] = ['ai', 'analysis', 'action', 'import', '
 // ─── Component ────────────────────────────────────────────────────
 
 export default function PluginsPage() {
+  usePageTitle("Plugins");
   const router = useRouter();
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [summary, setSummary] = useState<PluginSummary | null>(null);

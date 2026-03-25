@@ -13,6 +13,7 @@ import { getSourceType } from '@/lib/source-types';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { openMemoryDrawer } from '@/components/MemoryDrawer';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ function formatNumber(n: number): string {
 // ─── Component ──────────────────────────────────────────────────
 
 export default function CollectionsPage() {
+  usePageTitle("Collections");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [stats, setStats] = useState<CollectionStats | null>(null);
   const [loading, setLoading] = useState(true);

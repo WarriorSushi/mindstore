@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ function formatFileSize(bytes: number): string {
 // ─── Component ────────────────────────────────────────────────
 
 export default function ImageToMemoryPage() {
+  usePageTitle("Vision");
   // State
   const [view, setView] = useState<ViewMode>("upload");
   const [images, setImages] = useState<ImageAnalysis[]>([]);

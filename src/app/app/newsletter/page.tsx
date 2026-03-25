@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -233,6 +234,7 @@ function relativeTime(dateStr: string) {
 // ─── Component ───────────────────────────────────────────────
 
 export default function NewsletterPage() {
+  usePageTitle("Newsletter");
   // ─── State ───────────────────────────────────────────
   const [view, setView] = useState<"list" | "create" | "edit" | "preview">("list");
   const [newsletters, setNewsletters] = useState<NewsletterSummary[]>([]);

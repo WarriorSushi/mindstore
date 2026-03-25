@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ const STATUS_CONFIG = {
 // ─── Component ───────────────────────────────────────────────
 
 export default function BlogPage() {
+  usePageTitle("Blog Writer");
   // State
   const [view, setView] = useState<"list" | "create" | "edit" | "preview">("list");
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { useRouter } from 'next/navigation';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ const shiftConfig: Record<string, { icon: any; color: string; bg: string; label:
 // ─── Main Component ─────────────────────────────────────────────────
 
 export default function TopicEvolutionPage() {
+  usePageTitle("Topic Evolution");
   const router = useRouter();
   const [timeline, setTimeline] = useState<TimelinePeriod[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
