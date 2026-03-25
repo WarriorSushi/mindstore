@@ -496,8 +496,11 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'ai',
     icon: 'Languages',
     author: 'MindStore',
-    capabilities: ['read:memories', 'write:embeddings'],
+    capabilities: ['read:memories', 'write:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall', 'onImport', 'onSearch'],
+    ui: {
+      pages: [{ path: 'languages', title: 'Languages', icon: 'Languages', showInSidebar: true }],
+    },
   },
 
   'custom-rag': {
@@ -519,14 +522,17 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'domain-embeddings': {
     slug: 'domain-embeddings',
     name: 'Domain-Specific Embeddings',
-    description: 'Use specialized embedding models for medical, legal, or code domains.',
+    description: 'Use specialized embedding models for medical, legal, code, and financial domains. Better search for specialized content.',
     version: '1.0.0',
-    type: 'prompt',
+    type: 'extension',
     category: 'ai',
     icon: 'Dna',
     author: 'MindStore',
-    capabilities: ['write:embeddings'],
+    capabilities: ['write:embeddings', 'read:memories', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'domains', title: 'Domains', icon: 'Dna', showInSidebar: true }],
+    },
   },
 };
 

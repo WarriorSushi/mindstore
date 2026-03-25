@@ -102,6 +102,8 @@ const PLUGIN_ROUTES: Record<string, string> = {
   'voice-to-memory': '/app/voice',
   'image-to-memory': '/app/vision',
   'custom-rag': '/app/retrieval',
+  'multi-language': '/app/languages',
+  'domain-embeddings': '/app/domains',
 };
 
 // ─── Component ────────────────────────────────────────────────────
