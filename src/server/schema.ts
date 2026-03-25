@@ -252,3 +252,35 @@ export const apiKeys = pgTable('api_keys', {
   lastUsedAt: timestamp('last_used_at'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// === NOTIFICATIONS SYSTEM ===
+
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'import_complete',      // "45 Kindle highlights imported"
+  'analysis_ready',       // "Contradiction scan found 3 conflicts"
+  'review_due',           // "12 flashcards due for review"
+  'plugin_event',         // generic plugin activity
+  'system',               // app updates, tips, onboarding
+  'export_ready',         // "Anki deck ready for download"
+  'connection_found',     // "New connection discovered between X and Y"
+  'milestone',            // "You've reached 1,000 memories!"
+]);
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  type: notificationTypeEnum('type').notNull(),
+  title: text('title').notNull(),
+  body: text('body'),
+  icon: text('icon'),                           // lucide icon name
+  color: text('color').default('teal'),         // teal, sky, emerald, amber, red
+  href: text('href'),                           // optional deep link to relevant page
+  pluginSlug: text('plugin_slug'),              // which plugin generated this
+  metadata: jsonb('metadata').default({}),       // extra data (count, ids, etc.)
+  read: integer('read').default(0),              // 0=unread, 1=read (using integer for SQLite compat)
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('idx_notifications_user').on(table.userId),
+  index('idx_notifications_user_read').on(table.userId, table.read),
+  index('idx_notifications_created').on(table.createdAt),
+]);
