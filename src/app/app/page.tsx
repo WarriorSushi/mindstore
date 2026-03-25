@@ -9,7 +9,7 @@ import {
   Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
   Clock, Pin, BarChart3, BookOpen,
-  Layers, AlertTriangle, Target, Copy,
+  Layers, AlertTriangle, Target, Copy, FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
@@ -49,7 +49,7 @@ interface DashboardWidget {
 // ─── Widget icon map ──────────────────────────────────────────
 const WIDGET_ICONS: Record<string, LucideIcon> = {
   Layers, TrendingUp, Zap, Database, BookOpen, Clock, Network,
-  AlertTriangle, Target, BarChart3, Copy,
+  AlertTriangle, Target, BarChart3, Copy, FolderOpen,
 };
 
 const WIDGET_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {

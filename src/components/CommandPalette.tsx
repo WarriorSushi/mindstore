@@ -9,7 +9,7 @@ import {
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
   Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
-  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3, Copy,
+  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3, Copy, FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getSourceType } from "@/lib/source-types";
@@ -51,6 +51,7 @@ const NAV_ITEMS = [
   { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
   { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
   { href: "/app/duplicates", icon: Copy, label: "Duplicate Detector", desc: "Find and merge near-duplicate memories" },
+  { href: "/app/collections", icon: FolderOpen, label: "Collections", desc: "Auto-organized knowledge groups" },
   { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
   { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
   { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
@@ -385,6 +386,18 @@ export function CommandPalette() {
         keywords: ["duplicate", "duplicates", "merge", "similar", "copy", "copies", "dedup", "clean", "cleanup", "redundant"],
         action: () => {
           router.push("/app/duplicates");
+          setOpen(false);
+        },
+      },
+      {
+        id: "collections",
+        icon: FolderOpen,
+        iconColor: "text-teal-400",
+        label: "Browse Collections",
+        desc: "Auto-organized knowledge groups based on topic similarity",
+        keywords: ["collections", "groups", "organize", "topics", "clusters", "categories", "folders", "auto", "topology"],
+        action: () => {
+          router.push("/app/collections");
           setOpen(false);
         },
       },

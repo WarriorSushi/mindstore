@@ -318,6 +318,40 @@ async function getDuplicatesWidget(userId: string): Promise<Widget | null> {
   } catch { return null; }
 }
 
+async function getCollectionsWidget(userId: string): Promise<Widget | null> {
+  try {
+    // Count memories with embeddings to estimate collections viability
+    const rows = await db.execute(sql`
+      SELECT 
+        COUNT(*)::int AS total_memories,
+        COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END)::int AS with_embeddings,
+        COUNT(DISTINCT source_type)::int AS source_types
+      FROM memories 
+      WHERE user_id = ${userId}::uuid
+    `);
+    const r = (rows as any[])[0];
+    if (!r || r.with_embeddings < 10) return null;
+
+    // Estimate collection count based on memory count
+    const estimatedCollections = Math.min(12, Math.max(3, Math.floor(r.with_embeddings / 5)));
+
+    return {
+      id: 'collections',
+      type: 'knowledge',
+      title: 'Collections',
+      icon: 'FolderOpen',
+      color: 'teal',
+      href: '/app/collections',
+      data: {
+        estimatedCollections,
+        totalMemories: r.with_embeddings,
+        sourceTypes: r.source_types,
+        label: `~${estimatedCollections} topics`,
+      },
+    };
+  } catch { return null; }
+}
+
 // ─── GET Handler ────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -335,6 +369,7 @@ export async function GET(req: NextRequest) {
       getConnectionsWidget(userId),
       getContradictionsWidget(userId),
       getDuplicatesWidget(userId),
+      getCollectionsWidget(userId),
     ]);
 
     const widgets: Widget[] = results
