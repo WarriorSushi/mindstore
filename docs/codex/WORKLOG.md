@@ -502,3 +502,37 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The Import page itself still has a large pre-existing lint backlog, so codex kept the current branch lint ratchet scoped rather than expanding it to the full file.
 - Notion Sync is still pending; this port only closes the importer side.
 - Remaining Batch C work is now concentrated in Twitter, Telegram, Pocket, Readwise, Spotify, and other frain-only import/media flows.
+
+### 2026-03-25: Batch C/D/E Completion & Convergence Audit (Frain)
+
+#### Scope
+
+- Complete all remaining plugin ports from frain/improve to codex/local-dev.
+- Audit full convergence status after all batches are done.
+
+#### Status: ALL PLUGIN PORTS COMPLETE
+
+Every plugin from the convergence plan has been ported:
+
+- **Batch C (Imports):** twitter-importer, telegram-importer, pocket-importer, readwise-importer, spotify-importer, image-to-memory — all ported with ports, routes, docs, and tests.
+- **Batch D (Export/Sync):** anki-export, markdown-blog-export, notion-sync, obsidian-sync — all ported.
+- **Batch E (Advanced AI):** custom-rag, domain-embeddings, multi-language — all ported.
+
+#### Quality Metrics
+
+- **TypeScript:** Clean `tsc --noEmit` — zero errors
+- **Tests:** 42 files, 225 tests, all passing
+- **Build:** `next build` succeeds, all pages render
+- **Color violations:** Zero (no violet/purple/fuchsia anywhere)
+- **Port coverage:** 35 port modules in `src/server/plugins/ports/`, 35 API routes, 42 plugin docs
+
+#### What Remains for Full Branch Convergence
+
+The plugin porting mission is done. Remaining divergence (343 files) is:
+1. **UI pages** (38 app pages differ — content/styling divergence, not architecture)
+2. **Root docs/meta** (README, CONTRIBUTING, LICENSE, GOVERNANCE, etc.)
+3. **Config files** (package.json deps, tsconfig, vitest, playwright)
+4. **Browser extension** (mindstore-everywhere — minor differences)
+5. **Packages** (plugin-sdk, plugin-runtime, example-community-plugin)
+
+None of these are plugin ports. The next convergence phase is UI page reconciliation and root-level doc merge.
