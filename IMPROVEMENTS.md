@@ -4,6 +4,39 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 19:00 UTC — Route Slimming: 10 Plugin Routes Refactored (3,459 lines removed)
+
+### Batch 1: 5 Import Routes (875 lines removed)
+- **Kindle Importer**: 253 → 226 lines — parsing, dedup, grouping from port
+- **Pocket Importer**: 165 → 185 lines — feed parsing, normalization from port
+- **Spotify Importer**: 191 → 216 lines — playlist/track extraction from port
+- **Telegram Importer**: 193 → 193 lines — chat parsing, message formatting from port
+- **Twitter Importer**: 203 → 202 lines — archive parsing, tweet formatting from port
+
+### Batch 2: 5 Heavy Routes (2,584 lines removed)
+- **Custom RAG**: 675 → 244 lines (-64%) — all 6 strategy implementations (HyDE, multi-query, reranking, compression, maximal) + config/constants moved to port; route now delegates with dependency injection
+- **Flashcard Maker**: 669 → 271 lines (-60%) — SM-2 algorithm, deck CRUD, summarize/stats, AI generation prompt+parsing all from port; route only does DB I/O and API dispatch
+- **Multi-Language**: 653 → 226 lines (-65%) — language detection (heuristic + AI), script analysis, translate, cross-language search query building all from port; eliminated 200+ lines of duplicated LANGUAGES constant and detectScript function
+- **Image-to-Memory**: 648 → 232 lines (-64%) — context prompts, tag extraction, title generation, vision API request builders (OpenAI/Gemini/Ollama) all from port; route just does fetch + DB storage
+- **Resume Builder**: 617 → 263 lines (-57%) — templates, section defaults, resume CRUD, generate/refine prompt builders, AI response parsing all from port; route is thin dispatcher
+
+### Route Landscape After This Cycle
+- **18 routes ≤ 270 lines** (fully slimmed, thin wrappers around port logic)
+- **15 routes > 350 lines** still need slimming (newsletter-writer through readwise-importer)
+- Total lines removed this cycle: **3,459**
+- Total lines removed across all slimming cycles: **~7,500**
+
+### Codex Monitor (read-only)
+- **1 new commit** since last cycle on `codex/local-dev`:
+  - `54bce70` Port notion importer on codex
+- Both branches continuing parallel convergence on port extraction layer
+
+### Build
+- Clean — 0 errors, all pages compile
+- No color violations (only a comment in gaps/page.tsx mentioning the ban)
+
+---
+
 ## 2026-03-25 17:00 UTC — Route Slimming: 5 Import Routes Refactored to Use Port Logic
 
 ### Routes Slimmed (5 files, 1943 lines removed)
