@@ -1190,3 +1190,31 @@ _Automated 30-min improvement cycles by Frain_
     - Only renders when there's actual activity data (zero visual noise for inactive users)
   - **Design**: Matches MindStore's design language — dark rounded cards, violet gradients, zinc-toned typography, smooth transitions
 - **Branch**: `frain/improve` (commit `b5ede6c`)
+
+## 2026-03-25 00:29 UTC — Voice-to-Memory Plugin (#29) — Phase 5 Begins
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #19 in build order · First AI Enhancement
+- **Research**: Analyzed MindStore's schema — already supports `audio` content type and has a `media` table with `transcript` field, but no voice recording infrastructure. Studied the Whisper API (OpenAI) and Gemini's multimodal audio capabilities. Browser MediaRecorder API with opus/webm codec is the modern standard for in-browser audio capture. FFT-based audio visualization (AnalyserNode) provides real-time visual feedback during recording.
+- **Finding**: This is the first plugin that captures *new* knowledge directly (not importing existing data). Every other plugin so far processes pre-existing content — Voice-to-Memory lets users think aloud and capture fleeting thoughts. The infrastructure gap: no voice recording table, no transcription route, no audio capture UI.
+- **Implemented**:
+  - **Backend** (`/api/v1/plugins/voice-to-memory`):
+    - `voice_recordings` table — auto-created: id, title, transcript, duration, audio size/format, language, provider, model, word count, saved_as_memory flag, memory_id link
+    - **Transcription**: OpenAI Whisper (primary, verbose_json response with segments + language detection) and Gemini Flash (fallback, uses inline audio data). Auto-detects best available provider.
+    - **GET actions**: `recordings` (paginated list), `stats` (aggregated metrics), `check` (provider availability)
+    - **POST actions**: multipart audio upload → transcribe, `save` (creates embedded memory from recording), `delete`, `update` (title editing)
+    - Auto-generates titles from first sentence of transcript, truncated at 60 chars
+    - Generates embeddings when saving as memory for full semantic search
+    - 25MB file size limit matching Whisper API constraints
+  - **Frontend** (`/app/voice`) — Full recording studio:
+    - **Audio visualizer**: 32-bar real-time FFT frequency display during recording, color-coded: teal (loud), sky (medium), zinc (quiet)
+    - **Recording flow**: idle → recording (with timer) → transcribing (spinner) → done (transcript + save/discard)
+    - **Transcript view**: editable title (inline edit with Enter/Escape), full transcript text, word count, language, provider info
+    - **One-click save**: "Save to Knowledge Base" creates an embedded memory with `audio` source type
+    - **Recording history**: list of all recordings with status (saved = emerald checkmark, unsaved = mic icon), duration, word count, relative timestamp, hover-to-reveal save/delete actions
+    - **Stats row**: 4 stat cards (total recordings, total time, words captured, saved count)
+    - **Provider check**: amber warning banner when no API key is configured, with link to Settings
+    - **Back navigation**: arrow back to Plugins page
+  - **Plugin Store**: Added "Open" button for ALL installed plugins that have dedicated pages (13 plugins mapped). Users can now navigate directly from Plugins → Open → Plugin Page. Route mapping covers: Mind Map, Evolution, Sentiment, Gaps, Writing, Flashcards, Blog, Prep, Paths, Resume, Newsletter, Voice.
+  - **Navigation**: Added Voice (Mic icon) to sidebar nav between Newsletter and Insights
+  - **Registry**: Updated voice-to-memory manifest with UI page declaration
+- **Design**: Teal primary, no violet/purple/fuchsia anywhere. OLED black, glass borders, rounded-2xl cards. Recording indicator uses red pulse animation. Completion uses emerald. Provider badge shows teal dot + provider name.
+- **Branch**: `frain/improve` (commit `22f660d`)
