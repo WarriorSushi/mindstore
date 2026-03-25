@@ -4,6 +4,65 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 03:29 UTC — Phase 6 Import Page Integration — All 16 Source Tabs Complete
+- **Phase**: 6 (Export/Sync & OAuth Plugins) · Frontend integration for Phase 6 importers
+- **Context**: Phase 6 backends were built last cycle (Twitter, Telegram, Pocket, Spotify, Readwise) but had NO frontend UI on the Import page. Users couldn't access these importers without manually hitting API endpoints. This cycle closes that gap — all 5 importers now have full Import page tabs.
+- **Implemented**:
+
+### Import Page — 5 New Tabs
+  - **Twitter/X** (AtSign icon, sky accent):
+    - Instructions for downloading Twitter data archive
+    - File drop zone for `bookmarks.js` or `tweets.js` files
+    - Reads file as text, sends raw content to `/api/v1/plugins/twitter-importer`
+    - Result shows imported count, duplicates skipped
+  - **Telegram** (Send icon, teal accent):
+    - Instructions for Telegram Desktop JSON export
+    - File drop zone for `result.json`
+    - Parses JSON client-side, sends data object to backend
+    - Shows message groups imported, chat name, message count
+  - **Pocket / Instapaper** (BookmarkCheck icon, emerald accent):
+    - **Format toggle**: Switch between Pocket (HTML) and Instapaper (CSV)
+    - Instructions with direct links to export pages for both services
+    - Reads file as text, sends to appropriate backend action
+    - Shows articles imported, source, duplicates skipped
+  - **Spotify** (Music icon, emerald accent):
+    - Instructions with link to Spotify privacy data page
+    - Info box explaining the taste profile feature with example queries
+    - File drop zone for `StreamingHistory_music_0.json`
+    - Shows hours, artists, top artist from the built profile
+  - **Readwise** (Highlighter icon, amber accent):
+    - API token input with Key icon, password field, Validate button
+    - Token validation via Readwise API with success/error feedback
+    - Once validated: info card explaining incremental sync, Import button
+    - Checks for saved token on tab switch (auto-populates verified state)
+    - Shows highlights imported, books processed, duplicates skipped
+
+### Source Type Recognition — App-Wide Update
+  - **Dashboard**: All 3 typeIcons/typeColors maps updated with twitter (sky), telegram (teal), pocket/instapaper (emerald), spotify (emerald), readwise (amber)
+  - **Explore**: typeConfig extended with all 6 new types + icons + colors
+  - **Chat**: Source cards recognize all new types with proper accent colors
+  - **Import History**: All new types show correct icons and colors in the import log
+
+### Grid Layout
+  - Updated from 11-column to 8-column responsive grid (`grid-cols-4 md:grid-cols-8`) to accommodate 16 source tabs in a clean 2-row layout
+  - Plugin tab filter updated to exclude all 11 built-in importers from dynamic plugin tabs
+
+- **Design**: OLED black, teal/sky/emerald/amber accents per source type. Zero violet/purple/fuchsia. Glass borders, rounded-2xl cards.
+- **Build**: Clean build pass, zero errors.
+- **Phase 6 Progress**: All backends + frontends complete for all 33 plugins!
+  1. ✅ Notion Sync (#26) — full backend + frontend
+  2. ✅ Obsidian Vault Sync (#25) — full backend + frontend
+  3. ✅ Readwise Importer (#7) — backend + Import tab
+  4. ✅ Twitter/X Bookmarks (#1) — backend + Import tab
+  5. ✅ Telegram Saved Messages (#5) — backend + Import tab
+  6. ✅ Pocket/Instapaper (#4) — backend + Import tab
+  7. ✅ Spotify Listening History (#10) — backend + Import tab
+  8. ✅ Notion Enhanced (#11) — backend + Import tab
+  9. ✅ Anki Deck Export (#27) — backend + frontend page
+  10. ✅ Markdown Blog Export (#28) — backend + frontend page
+- **🎉 ALL 33 PLUGINS COMPLETE — ENTIRE PLUGIN SYSTEM BUILT!**
+- **Branch**: `frain/improve` (commit `34c2798`)
+
 ## 2026-03-25 00:59 UTC — Image-to-Memory Plugin (#30) — Phase 5 Continues
 - **Phase**: 5 (AI Enhancement Plugins) · Plugin #20 in build order · Second AI Enhancement
 - **Context**: Phase 5 continues after Voice-to-Memory (#29). Image-to-Memory (#30) lets users upload images — photos, screenshots, whiteboards, diagrams — and get AI-generated descriptions saved as searchable knowledge.
