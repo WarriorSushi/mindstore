@@ -4,6 +4,68 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 00:59 UTC — Image-to-Memory Plugin (#30) — Phase 5 Continues
+- **Phase**: 5 (AI Enhancement Plugins) · Plugin #20 in build order · Second AI Enhancement
+- **Context**: Phase 5 continues after Voice-to-Memory (#29). Image-to-Memory (#30) lets users upload images — photos, screenshots, whiteboards, diagrams — and get AI-generated descriptions saved as searchable knowledge.
+- **Implemented**:
+
+### Image-to-Memory (#30) — NEW
+  - **Full backend API route** (`/api/v1/plugins/image-to-memory`):
+    - **Multi-provider Vision AI**: GPT-4o (OpenAI), Gemini Flash (Google), LLaVA (Ollama), OpenRouter — auto-detects best available or respects chat_provider preference
+    - **8 context types** with specialized analysis prompts:
+      - `general` — AI decides best approach
+      - `screenshot` — app/website content extraction
+      - `whiteboard` — handwritten notes transcription + diagram description
+      - `document` — scanned document OCR-style text extraction
+      - `diagram` — flowchart/architecture structure analysis
+      - `photo` — scene, subjects, setting, mood description
+      - `chart` — data visualization interpretation
+      - `meme` — cultural reference and humor explanation
+    - **Auto-tag extraction**: AI generates 3-8 relevant tags per image, parsed from structured TAGS: [...] format in response. Tags stored as PostgreSQL text array.
+    - **Re-analysis**: Re-analyze any image with different context type or custom prompt. Stored image data (base64 for images ≤500KB) enables re-processing without re-upload.
+    - **Save as memory**: Creates embedded memory with `image` source_type. Full content includes title, description, tags, context type. Embedding generated for semantic search.
+    - **8 API actions**: images (list), stats (aggregates), check (provider availability), analyze (multipart upload), save, reanalyze, delete, update (title)
+    - **`image_analyses` table**: Auto-created with id, title, description, image_data, size/format, tags[], context_type, provider, model, word_count, saved_as_memory, memory_id
+    - **File validation**: JPEG, PNG, GIF, WebP, BMP, TIFF accepted. 20MB size limit.
+    - **Auto-install**: Plugin auto-installs in DB on first use
+  - **Full frontend page** (`/app/vision`) — 3 views:
+    - **Upload view**:
+      - Drag-and-drop zone with camera icon, file type info, visual feedback on drag-over
+      - Image preview with file info (name, size, format)
+      - 8 context type selector cards (2×4 grid) with icons and descriptions
+      - Custom prompt textarea for additional analysis instructions
+      - Full-width "Analyze with AI" button with loading state
+    - **Gallery view**:
+      - Grid mode: 3-column image cards with thumbnails, titles, description preview, saved status, tags count, relative timestamp
+      - List mode: Compact rows with mini thumbnail, title, context type, word count, timestamp, saved checkmark
+      - Grid/list toggle buttons
+      - Empty state with upload CTA
+    - **Detail view**:
+      - Full image preview in rounded container
+      - Editable title (click to edit, Enter to save, Escape to cancel)
+      - Metadata: context type, word count, provider, model, file size, timestamp
+      - Tag pills with teal accent
+      - Full AI description panel with BookOpen icon header
+      - Action bar: Re-analyze, Save to Memory, Delete
+      - Saved state: emerald badge with checkmark
+  - **Source type recognition**: Added `image` source type across the entire app:
+    - Dashboard: recent activity, pinned memories, sources section — Camera icon with sky accent
+    - Explore: typeConfig with Camera icon and sky color
+    - Chat: source cards with sky accent and border
+    - Import: history section with image type icon and color
+  - **Also added `audio` source type** to all pages (was missing from dashboard/explore/chat/import after Voice-to-Memory)
+  - **Navigation**: Sidebar entry ("Vision" with Camera icon), Command Palette action (searchable by image/photo/screenshot/vision/picture/camera/upload/scan/whiteboard/diagram/ocr), Command Palette nav entry
+  - **Plugin Store**: Route mapping added for direct "Open" button
+- **Design**: OLED black, teal primary, sky secondary. Zero violet/purple/fuchsia. Glass borders, rounded-2xl cards. Drag-drop zone with teal highlight. Gallery thumbnails with smooth hover opacity transitions.
+- **Phase 5 Progress**:
+  1. ✅ Voice-to-Memory (#29)
+  2. ✅ Image-to-Memory (#30) ← NEW
+  3. ⬜ Custom RAG Strategies (#32)
+  4. ⬜ Multi-Language Support (#31)
+  5. ⬜ Domain-Specific Embeddings (#33)
+- **Next**: Custom RAG Strategies (#32) — pluggable retrieval strategies (HyDE, reranking, contextual compression)
+- **Branch**: `frain/improve` (commit `0e96a37`)
+
 ## 2026-03-24 23:59 UTC — Newsletter Writer Plugin (Phase 4, Plugin #21) — PHASE 4 COMPLETE! 🎉
 - **Context**: Phase 4 of the Plugin System build — Action Plugins. Newsletter Writer is the **6th and final Action Plugin**, completing Phase 4.
 - **Implemented**:
