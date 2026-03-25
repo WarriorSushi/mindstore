@@ -4,6 +4,43 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 04:00 UTC — Grouped Sidebar Navigation + Complete Color Purge
+- **Phase**: Post-Plugin Polish — UX architecture & design consistency
+- **Context**: With all 33 plugins built, the sidebar had grown to 29 flat navigation items — an overwhelming wall of links. Additionally, violet/purple/fuchsia colors had crept into 9 files across the codebase, violating our design mandate. This cycle fixes both.
+
+### Sidebar UX Overhaul
+  - **7 logical sections** with collapsible groups:
+    - **Core** (always visible): Home, Chat, Import, Explore
+    - **Knowledge**: Learn, Mind Map, Fingerprint, Insights
+    - **Analysis**: Evolution, Sentiment, Gaps, Writing Style
+    - **Create**: Flashcards, Blog Writer, Prep, Learn Paths, Resume, Newsletter
+    - **AI Tools**: Voice, Vision, Retrieval, Languages, Domains
+    - **Sync & Export**: Anki Export, Blog Export, Notion Sync, Obsidian Sync
+    - **System** (always visible): Plugins, Connect AI, Settings
+  - **Collapsible sections**: Click section headers to expand/collapse with smooth max-height CSS animations
+  - **Auto-expand**: When navigating to a page, its parent section auto-expands
+  - **Section headers**: 10px uppercase tracking-widest labels with chevron rotation indicators
+  - **Separator**: Subtle border between Core section and collapsible groups
+  - **Ultra-thin scrollbar**: 3px width, near-invisible, for sidebar overflow
+  - **Mobile menu**: Also uses grouped navigation with same section structure
+  - **Fingerprint page**: Now accessible from sidebar (was missing from flat nav)
+
+### Complete Color Purge — Zero Violet/Purple/Fuchsia
+  - **9 files fixed**, every instance of banned colors replaced:
+    - `globals.css` — hero-gradient (#8b5cf6/#d946ef/#a78bfa → #14b8a6/#38bdf8/#5eead4), glow-card, scrollbar thumb (rgba(139,92,246) → rgba(20,184,166))
+    - `mindmap/page.tsx` — 11 color violations: TOPIC_COLORS array (removed #8b5cf6 violet + #a855f7 purple), SOURCE_ICONS text/obsidian colors, root node color, canvas root gradient (#a78bfa/#7c3aed → #5eead4/#0d9488), loading spinner, CTA button, view-all link
+    - `fingerprint/page.tsx` — text source color #8b5cf6 → #38bdf8
+    - `fingerprint/route.ts` — API cluster color #8b5cf6 → #38bdf8
+    - `opengraph-image.tsx` — OG image gradient + radial gradients → teal/sky
+    - `layout.tsx` — theme-color meta tag #7c3aed → #14b8a6
+    - `CommandPalette.tsx` — Obsidian icon text-purple-400 → text-teal-400
+    - `gaps/page.tsx` — Removed #e879f0 fuchsia + #a78bfa violet reassignment hack
+  - **Verification**: Full codebase grep confirms ZERO remaining violations (except one Notion API string value which is Notion's own color name, not our UI)
+
+- **Design**: OLED black base, teal primary, sky secondary. Premium Silicon Valley aesthetic. Zero AI-slop fingerprints.
+- **Build**: Clean build pass, zero errors.
+- **Branch**: `frain/improve` (commit `443a974`)
+
 ## 2026-03-25 03:29 UTC — Phase 6 Import Page Integration — All 16 Source Tabs Complete
 - **Phase**: 6 (Export/Sync & OAuth Plugins) · Frontend integration for Phase 6 importers
 - **Context**: Phase 6 backends were built last cycle (Twitter, Telegram, Pocket, Spotify, Readwise) but had NO frontend UI on the Import page. Users couldn't access these importers without manually hitting API endpoints. This cycle closes that gap — all 5 importers now have full Import page tabs.
