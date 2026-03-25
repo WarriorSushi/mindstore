@@ -62,7 +62,7 @@ interface MindMapData {
 // ─── Layout Constants ────────────────────────────────────────────
 
 const TOPIC_COLORS = [
-  '#8b5cf6', // violet
+  '#0d9488', // teal
   '#3b82f6', // blue
   '#10b981', // emerald
   '#f59e0b', // amber
@@ -71,8 +71,8 @@ const TOPIC_COLORS = [
   '#06b6d4', // cyan
   '#f97316', // orange
   '#84cc16', // lime
-  '#a855f7', // purple
-  '#14b8a6', // teal
+  '#0ea5e9', // sky
+  '#14b8a6', // teal-light
   '#e11d48', // rose
 ];
 
@@ -364,10 +364,10 @@ function MindMapCanvas({
       ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
 
       if (node.isRoot) {
-        // Root: violet gradient
+        // Root: teal gradient
         const grad = ctx.createRadialGradient(node.x - r * 0.3, node.y - r * 0.3, 0, node.x, node.y, r);
-        grad.addColorStop(0, '#a78bfa');
-        grad.addColorStop(1, '#7c3aed');
+        grad.addColorStop(0, '#5eead4');
+        grad.addColorStop(1, '#0d9488');
         ctx.fillStyle = grad;
       } else {
         // Topic/subtopic: colored fill
@@ -789,7 +789,7 @@ function TopicPanel({
           {topic.memoryCount > 5 && (
             <button
               onClick={() => router.push(`/app/explore?q=${encodeURIComponent(topic.label)}`)}
-              className="flex items-center gap-1 mt-2 text-[11px] text-violet-400 hover:text-violet-300 transition-colors"
+              className="flex items-center gap-1 mt-2 text-[11px] text-teal-400 hover:text-teal-300 transition-colors"
             >
               View all {topic.memoryCount} in Explore
               <ChevronRight className="w-3 h-3" />
@@ -878,8 +878,8 @@ export default function MindMapPage() {
           {loading ? (
             <div className="flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.06]" style={{ height: 'calc(100dvh - 180px)' }}>
               <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
                 </div>
                 <p className="text-[13px] text-zinc-500">Clustering your memories…</p>
               </div>
@@ -893,7 +893,7 @@ export default function MindMapPage() {
                 <p className="text-[13px] text-zinc-400">{error}</p>
                 <button
                   onClick={loadData}
-                  className="px-4 py-2 rounded-xl bg-violet-600 text-white text-[13px] font-medium hover:bg-violet-500 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-teal-600 text-white text-[13px] font-medium hover:bg-teal-500 transition-colors"
                 >
                   Try again
                 </button>
