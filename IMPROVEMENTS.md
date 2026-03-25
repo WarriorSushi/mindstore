@@ -4,6 +4,46 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 08:59 UTC — Duplicate Detector + Command Palette Memory Drawer Integration
+
+### Duplicate Detector (`/app/duplicates`)
+- **New API**: `/api/v1/duplicates` — pgvector cosine similarity scan
+  - GET: Find near-duplicate pairs above configurable threshold
+  - POST: Resolve duplicates with 4 actions (keep_a, keep_b, merge, delete_both)
+- **Page UI**: Full duplicate management workflow
+  - Adjustable similarity threshold (75–99%) with live slider
+  - Collapsed pair view: similarity badge, source type badges, word count comparison
+  - Expanded comparison: side-by-side memory content with dates and word counts
+  - "Suggested" indicator on longer/newer memory
+  - 4 action buttons: Keep First (emerald), Keep Second (sky), Merge Both (teal), Delete Both (red)
+  - Stats strip: pairs found + resolved count tracker
+  - Empty state with suggestion to lower threshold
+  - Color-coded severity: red ≥98%, amber ≥95%, sky for lower
+- **Sidebar**: Added to Analysis section
+- **Command Palette**: Navigation + quick action entry with keywords
+
+### Command Palette → Memory Drawer
+- **Search results now open the Memory Drawer** instead of navigating to Explore
+  - Click any ⌘K search result → slide-in panel with full memory details, related memories, actions
+  - "View all results for [query]" link at bottom opens Explore with full search
+  - Zero page navigation friction — inspect memories in-place
+
+### Dashboard Search → Memory Drawer
+- Quick search results on dashboard now open Memory Drawer on click
+  - Was: static div with no interaction
+  - Now: clickable buttons that open full memory inspection panel
+
+### Dashboard Widget: Duplicates
+- New widget in Insights row showing duplicate pair count
+- Color-coded: amber if >5 pairs, sky otherwise
+- Links directly to /app/duplicates for resolution
+
+### Misc
+- Fixed Notion sync API: `purple` → `default` color (last banned color reference)
+
+- **Design**: OLED black base, teal accent, glass borders. Zero violet/purple/fuchsia.
+- **Branch**: `frain/improve` (commit `8d7821b`)
+
 ## 2026-03-25 04:29 UTC — Plugin Store Redesign + Landing Page Plugin Showcase + Command Palette Completion
 - **Phase**: Post-Plugin Polish — UX excellence pass
 - **Context**: All 33 plugins built, sidebar grouped, colors purged. This cycle focuses on three high-impact UX improvements: the Plugin Store (the central hub for 33 plugins), the landing page (first impression for new users), and the command palette (primary power-user navigation tool).
