@@ -1,0 +1,191 @@
+/**
+ * Spotify Listening History Importer — Portable logic module
+ *
+ * Extracted from the route for convergence with codex runtime.
+ * Handles: parsing Spotify streaming history JSON, building music taste profiles.
+ */
+
+// ─── Types ────────────────────────────────────────────────────
+
+export interface SpotifyStream {
+  artistName: string;
+  trackName: string;
+  albumName?: string;
+  msPlayed: number;
+  endTime?: string;
+  ts?: string;
+  platform?: string;
+  reason_start?: string;
+  reason_end?: string;
+  shuffle?: boolean;
+  skipped?: boolean;
+}
+
+export interface ArtistProfile {
+  name: string;
+  totalMs: number;
+  trackCount: number;
+  topTracks: { name: string; plays: number; totalMs: number }[];
+  albums: Set<string>;
+}
+
+export interface MusicProfile {
+  totalListeningMs: number;
+  uniqueArtists: number;
+  uniqueTracks: number;
+  topArtists: ArtistProfile[];
+  listeningByMonth: Record<string, number>;
+  tasteProfile: string;
+}
+
+// ─── Parser ───────────────────────────────────────────────────
+
+/**
+ * Parse Spotify streaming history JSON.
+ * Supports both standard and extended export formats.
+ */
+export function parseSpotifyData(rawData: string): SpotifyStream[] {
+  const data = JSON.parse(rawData);
+  if (!Array.isArray(data)) throw new Error('Expected JSON array');
+
+  return data.map((item: any) => ({
+    artistName: item.artistName || item.master_metadata_album_artist_name || 'Unknown Artist',
+    trackName: item.trackName || item.master_metadata_track_name || 'Unknown Track',
+    albumName: item.albumName || item.master_metadata_album_album_name || undefined,
+    msPlayed: item.msPlayed || item.ms_played || 0,
+    endTime: item.endTime || undefined,
+    ts: item.ts || undefined,
+    platform: item.platform || undefined,
+    reason_start: item.reason_start || undefined,
+    reason_end: item.reason_end || undefined,
+    shuffle: item.shuffle ?? undefined,
+    skipped: item.skipped ?? undefined,
+  }));
+}
+
+// ─── Profile Builder ─────────────────────────────────────────
+
+/**
+ * Build a music taste profile from streaming data.
+ * Filters out short plays (<30s), aggregates by artist/track/month.
+ */
+export function buildMusicProfile(streams: SpotifyStream[]): MusicProfile {
+  const artistMap = new Map<string, ArtistProfile>();
+  const trackSet = new Set<string>();
+  const monthMap: Record<string, number> = {};
+  let totalMs = 0;
+
+  for (const stream of streams) {
+    if (stream.msPlayed < 30000) continue;
+
+    totalMs += stream.msPlayed;
+    const trackKey = `${stream.artistName} - ${stream.trackName}`;
+    trackSet.add(trackKey);
+
+    const artist = artistMap.get(stream.artistName) || {
+      name: stream.artistName,
+      totalMs: 0,
+      trackCount: 0,
+      topTracks: [],
+      albums: new Set<string>(),
+    };
+    artist.totalMs += stream.msPlayed;
+
+    const existingTrack = artist.topTracks.find(t => t.name === stream.trackName);
+    if (existingTrack) {
+      existingTrack.plays++;
+      existingTrack.totalMs += stream.msPlayed;
+    } else {
+      artist.topTracks.push({ name: stream.trackName, plays: 1, totalMs: stream.msPlayed });
+      artist.trackCount++;
+    }
+
+    if (stream.albumName) artist.albums.add(stream.albumName);
+    artistMap.set(stream.artistName, artist);
+
+    const date = stream.ts || stream.endTime;
+    if (date) {
+      const month = date.slice(0, 7);
+      monthMap[month] = (monthMap[month] || 0) + stream.msPlayed;
+    }
+  }
+
+  const topArtists = Array.from(artistMap.values())
+    .sort((a, b) => b.totalMs - a.totalMs)
+    .slice(0, 50);
+
+  for (const artist of topArtists) {
+    artist.topTracks.sort((a, b) => b.totalMs - a.totalMs);
+    artist.topTracks = artist.topTracks.slice(0, 5);
+  }
+
+  const tasteProfile = formatTasteProfile(topArtists, totalMs, trackSet.size, artistMap.size);
+
+  return {
+    totalListeningMs: totalMs,
+    uniqueArtists: artistMap.size,
+    uniqueTracks: trackSet.size,
+    topArtists,
+    listeningByMonth: monthMap,
+    tasteProfile,
+  };
+}
+
+// ─── Formatters ──────────────────────────────────────────────
+
+function formatTasteProfile(
+  topArtists: ArtistProfile[],
+  totalMs: number,
+  uniqueTracks: number,
+  uniqueArtists: number,
+): string {
+  const hours = Math.round(totalMs / 3600000);
+  const top5 = topArtists.slice(0, 5).map(a => a.name);
+
+  return [
+    `## My Music Taste Profile`,
+    '',
+    `Total listening time: ${hours} hours across ${uniqueTracks} unique tracks by ${uniqueArtists} artists.`,
+    '',
+    `### Top Artists`,
+    ...topArtists.slice(0, 10).map((a, i) => {
+      const hrs = Math.round(a.totalMs / 3600000 * 10) / 10;
+      return `${i + 1}. **${a.name}** — ${hrs}h, ${a.trackCount} tracks${a.albums.size > 0 ? `, ${a.albums.size} albums` : ''}`;
+    }),
+    '',
+    `### Most Played Tracks`,
+    ...topArtists.slice(0, 5).flatMap(a =>
+      a.topTracks.slice(0, 2).map(t => `- "${t.name}" by ${a.name} (${t.plays} plays)`)
+    ),
+    '',
+    `### Listening Patterns`,
+    `My most-listened artists are ${top5.join(', ')}.`,
+  ].join('\n');
+}
+
+export function formatArtistContent(artist: ArtistProfile): string {
+  const hours = Math.round(artist.totalMs / 3600000 * 10) / 10;
+  return [
+    `## ${artist.name}`,
+    '',
+    `Listening time: ${hours} hours`,
+    `Unique tracks: ${artist.trackCount}`,
+    artist.albums.size > 0 ? `Albums: ${Array.from(artist.albums).slice(0, 10).join(', ')}` : '',
+    '',
+    '### Top Tracks',
+    ...artist.topTracks.map(t => `- "${t.name}" (${t.plays} plays)`),
+  ].filter(Boolean).join('\n');
+}
+
+export function formatMonthlyListening(listeningByMonth: Record<string, number>): string {
+  const months = Object.entries(listeningByMonth).sort(([a], [b]) => a.localeCompare(b));
+
+  return [
+    '## Listening History by Month',
+    '',
+    ...months.map(([month, ms]) => {
+      const hours = Math.round((ms as number) / 3600000 * 10) / 10;
+      return `- **${month}**: ${hours} hours`;
+    }),
+  ].join('\n');
+}
