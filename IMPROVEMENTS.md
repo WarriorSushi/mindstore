@@ -1978,3 +1978,26 @@ Following the [plugin-porting-guide.md](docs/build/plugin-porting-guide.md):
 
 - **Design**: OLED black base, teal accent, glass borders. Zero AI slop colors.
 - **Branch**: `frain/improve` (commit `e917b0a`)
+
+## 2026-03-25 14:00 UTC — Plugin Porting Batch 4 (6 more plugins)
+- **What**: Extract portable logic from 6 more plugin routes into `src/server/plugins/ports/`
+- **Purpose**: Convergence with codex runtime — make routes thin wrappers around shared logic
+
+### Newly Ported Plugins
+1. **pocket-importer** — Pocket HTML parser + Instapaper CSV parser, article formatter
+2. **spotify-importer** — Streaming history JSON parser, music taste profile builder, artist/monthly formatters
+3. **browser-bookmarks** — Netscape bookmark HTML parser, HTML entity decoder, readable text extractor, content formatter
+4. **reddit-saved** — Full CSV/JSON parsing (GDPR export, reference CSV, Reddit JSON), content formatting, stats builder, chunking
+5. **image-to-memory** — Context prompts (8 types), tag extraction, vision API request builders (OpenAI/Gemini/Ollama), memory formatter
+6. **markdown-blog-export** — 5 templates (Hugo/Jekyll/Astro/Next.js/Plain), frontmatter generator, slug/file naming, Astro config
+
+### Port Progress
+- **Total ported**: 23 modules (22 plugins + shared-vectors)
+- **Remaining**: 11 (custom-rag, domain-embeddings, multi-language, notion-importer, notion-sync, obsidian-importer, obsidian-sync, pdf-epub-parser, readwise-importer, telegram-importer, twitter-importer)
+- All ports export pure logic — no DB, no Next.js, no route wiring
+
+### Codex Branch Monitor
+- Latest: `503ef02` — "Port kindle importer into codex runtime"
+- 5 commits: kindle port, convergence program, shared AI client + voice port, flashcard port, DCO governance
+
+- **Branch**: `frain/improve` (commit `8e78492`)
