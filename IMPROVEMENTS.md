@@ -4,6 +4,29 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 12:29 UTC — Newsletter Port · Responsive Fixes · Codex Monitor
+
+### Plugin Port: Newsletter Writer
+- Extracted route logic into `src/server/plugins/ports/newsletter-writer.ts`
+- Uses shared `ai-caller` instead of ~70 lines of duplicated AI provider config
+- Pure functions: `suggestThemes()`, `generateNewsletter()`, `refineSection()`, `updateNewsletter()`
+- All exports namespaced (`NEWSLETTER_TONES`, `generateNewsleterId`, etc.) to avoid conflicts with blog-draft port
+- Total ports now: kindle-importer, contradiction-finder, voice-to-memory, writing-style, blog-draft, conversation-prep, **newsletter-writer** (7 of ~15 Slice 3+4 plugins)
+
+### Responsive Fixes
+- **Notion Sync page**: Stats grid was hard `grid-cols-4` — now `grid-cols-2 sm:grid-cols-4` for mobile
+- **Obsidian Sync page**: Same stats grid fix + folder structure options `grid-cols-1 sm:grid-cols-3`
+
+### Codex Monitor (read-only)
+- 2 new commits on `codex/local-dev`:
+  - `30621d4` Extract shared AI client and port voice plugin
+  - `bb56dd7` Port flashcard maker into codex runtime
+- Codex now has its own `src/server/ai-client.ts` (shared AI caller parallel to our `ai-caller.ts`)
+- Voice-to-memory ported independently on codex with schema + docs + tests
+- Convergence progressing well — both branches now have 3+ shared plugin ports
+
+---
+
 ## 2026-03-25 11:29 UTC — Shared AI Caller · Plugin Ports · Design Consistency
 
 ### Shared AI Caller (`src/server/plugins/ai-caller.ts`)
