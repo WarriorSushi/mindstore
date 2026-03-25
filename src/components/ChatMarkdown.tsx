@@ -1,7 +1,13 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, createContext, useContext } from "react";
 import { Check, Copy } from "lucide-react";
+
+/** Citation interaction context — threaded through the markdown tree */
+const CitationContext = createContext<{
+  onHover?: (index: number | null) => void;
+  onClick?: (index: number) => void;
+}>({});
 
 /**
  * Lightweight markdown renderer for chat messages.
@@ -10,10 +16,27 @@ import { Check, Copy } from "lucide-react";
  * | tables |, task lists (- [ ] / - [x]), \n
  * No heavy dependencies — just regex + React.
  */
-export function ChatMarkdown({ content }: { content: string }) {
+export function ChatMarkdown({
+  content,
+  onCitationHover,
+  onCitationClick,
+}: {
+  content: string;
+  onCitationHover?: (index: number | null) => void;
+  onCitationClick?: (index: number) => void;
+}) {
   if (!content) return null;
 
   const blocks = parseBlocks(content);
+
+  if (onCitationHover || onCitationClick) {
+    return (
+      <CitationContext.Provider value={{ onHover: onCitationHover, onClick: onCitationClick }}>
+        <div className="space-y-1.5 break-words [overflow-wrap:anywhere]">{blocks}</div>
+      </CitationContext.Provider>
+    );
+  }
+
   return <div className="space-y-1.5 break-words [overflow-wrap:anywhere]">{blocks}</div>;
 }
 
@@ -393,11 +416,11 @@ function TaskList({ items }: { items: { checked: boolean; content: string }[] })
   );
 }
 
-/** Parse inline markdown: **bold**, *italic*, `code`, [links](url) */
+/** Parse inline markdown: **bold**, *italic*, `code`, [links](url), [N] citations */
 function parseInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  // Match inline patterns: **bold**, *italic*, _italic_, `code`, [text](url)
-  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
+  // Match inline patterns: **bold**, *italic*, _italic_, `code`, [text](url), [N] bare citation
+  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_|`(.+?)`|\[(.+?)\]\((.+?)\)|\[(\d{1,2})\](?!\())/g;
 
   let lastIndex = 0;
   let match;
@@ -452,6 +475,11 @@ function parseInline(text: string): React.ReactNode[] {
           {match[6]}
         </a>
       );
+    } else if (match[8]) {
+      // [N] citation reference — render as interactive badge
+      nodes.push(
+        <CitationBadge key={match.index} index={parseInt(match[8], 10)} />
+      );
     }
 
     lastIndex = match.index + match[0].length;
@@ -463,4 +491,36 @@ function parseInline(text: string): React.ReactNode[] {
   }
 
   return nodes.length > 0 ? nodes : [text];
+}
+
+/** Interactive citation badge — [1], [2], etc. in AI responses */
+function CitationBadge({ index }: { index: number }) {
+  const { onHover, onClick } = useContext(CitationContext);
+  const sourceIndex = index - 1; // Convert 1-based citation to 0-based array index
+
+  if (!onHover && !onClick) {
+    // No handlers — render as plain styled badge
+    return (
+      <span className="inline-flex items-center justify-center w-[16px] h-[16px] rounded text-[9px] font-bold tabular-nums bg-white/[0.06] text-zinc-500 align-[1px] mx-[1px]">
+        {index}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center justify-center w-[16px] h-[16px] rounded text-[9px] font-bold tabular-nums bg-teal-500/10 text-teal-400 border border-teal-500/15 hover:bg-teal-500/20 hover:border-teal-500/25 transition-all cursor-pointer align-[1px] mx-[1px] active:scale-90"
+      onMouseEnter={() => onHover?.(sourceIndex)}
+      onMouseLeave={() => onHover?.(null)}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick?.(sourceIndex);
+      }}
+      title={`Source [${index}]`}
+    >
+      {index}
+    </button>
+  );
 }

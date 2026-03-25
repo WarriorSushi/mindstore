@@ -14,6 +14,7 @@ import {
 import { getSourceType } from "@/lib/source-types";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
+import { openMemoryDrawer } from "@/components/MemoryDrawer";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -156,6 +157,7 @@ export default function ChatPage() {
   const [thinking, setThinking] = useState(false); // true while waiting for first token
   const [thinkingStep, setThinkingStep] = useState<"searching" | "found" | "generating" | null>(null);
   const [searchResultCount, setSearchResultCount] = useState(0);
+  const [highlightedCitation, setHighlightedCitation] = useState<{ msgIndex: number; sourceIndex: number } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [historySearch, setHistorySearch] = useState("");
@@ -384,6 +386,7 @@ export default function ChatPage() {
               score: r.score,
               id: r.memoryId || r.id || "",
               preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
+              content: r.content || "",
             })),
           },
         ];
@@ -424,6 +427,7 @@ export default function ChatPage() {
             score: r.score,
             id: r.memoryId || r.id || "",
             preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
+            content: r.content || "",
           })),
         },
       ];
@@ -492,6 +496,17 @@ export default function ChatPage() {
       abortRef.current = null;
     }
   };
+
+  /** Regenerate a specific assistant response — re-sends the preceding user question */
+  const handleRegenerateAt = useCallback((messageIndex: number) => {
+    // Find the user message that triggered this assistant response
+    const userMsg = messages.slice(0, messageIndex).reverse().find((m) => m.role === "user");
+    if (!userMsg) return;
+    // Remove messages from this assistant message onward and re-send
+    setMessages((prev) => prev.slice(0, messageIndex));
+    // Small delay so state updates first
+    setTimeout(() => handleSend(userMsg.content), 50);
+  }, [messages]);
 
   /** Stop the current streaming response */
   const handleStop = useCallback(() => {
@@ -880,7 +895,34 @@ export default function ChatPage() {
                   >
                     <div className="text-[13px] leading-[1.6] break-words [overflow-wrap:anywhere]">
                       {msg.content ? (
-                        <ChatMarkdown content={msg.content} />
+                        <ChatMarkdown
+                          content={msg.content}
+                          {...(msg.role === "assistant" && msg.sources?.length ? {
+                            onCitationHover: (sourceIndex) => {
+                              if (sourceIndex !== null) {
+                                setHighlightedCitation({ msgIndex: i, sourceIndex });
+                              } else {
+                                setHighlightedCitation(null);
+                              }
+                            },
+                            onCitationClick: (sourceIndex) => {
+                              const source = msg.sources?.[sourceIndex];
+                              if (source?.id) {
+                                openMemoryDrawer({
+                                  id: source.id,
+                                  content: source.content || source.preview || "",
+                                  source: source.type,
+                                  sourceId: "",
+                                  sourceTitle: source.title || "Untitled",
+                                  timestamp: "",
+                                  importedAt: "",
+                                  metadata: {},
+                                  pinned: false,
+                                });
+                              }
+                            },
+                          } : {})}
+                        />
                       ) : loading && i === messages.length - 1 ? (
                         <span className="flex items-center gap-2 text-zinc-500">
                           <span className="flex gap-[3px] items-center">
@@ -906,7 +948,10 @@ export default function ChatPage() {
                     {msg.sources &&
                       msg.sources.length > 0 &&
                       msg.content && (
-                        <SourceCards sources={msg.sources} />
+                        <SourceCards
+                          sources={msg.sources}
+                          highlightedIndex={highlightedCitation?.msgIndex === i ? highlightedCitation.sourceIndex : null}
+                        />
                       )}
                   </div>
                   {/* Hover action buttons */}
@@ -918,6 +963,7 @@ export default function ChatPage() {
                           // Find the preceding user message as context for the title
                           messages.slice(0, i).reverse().find((m) => m.role === "user")?.content || ""
                         }
+                        onRegenerate={!loading ? () => handleRegenerateAt(i) : undefined}
                       />
                     ) : (
                       <MessageCopyButton content={msg.content} side="left" />
@@ -1257,8 +1303,8 @@ function MessageCopyButton({ content, side }: { content: string; side: "left" | 
   );
 }
 
-/** Action buttons (Copy + Save to Memory) for assistant messages */
-function MessageActions({ content, question }: { content: string; question: string }) {
+/** Action buttons (Copy + Save to Memory + Regenerate) for assistant messages */
+function MessageActions({ content, question, onRegenerate }: { content: string; question: string; onRegenerate?: () => void }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1348,15 +1394,53 @@ function MessageActions({ content, question }: { content: string; question: stri
           {saved ? "Saved" : saving ? "Saving…" : "Save"}
         </span>
       </button>
+
+      {/* Regenerate button */}
+      {onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          className={cn(
+            "w-6 h-6 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
+            "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30 transition-all",
+          )}
+          title="Regenerate response"
+        >
+          <RotateCcw className="w-3 h-3 text-zinc-500" />
+        </button>
+      )}
     </div>
   );
 }
 
-/** Expandable source citations — Perplexity-style with previews & clickable links */
-function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string }> }) {
+/** Expandable source citations — Perplexity-style with previews & clickable memory drawer */
+function SourceCards({
+  sources,
+  highlightedIndex,
+}: {
+  sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string; content?: string }>;
+  highlightedIndex?: number | null;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const displayed = expanded ? sources : sources.slice(0, 3);
+
+  const handleOpenMemory = (s: typeof sources[0], e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (s.id) {
+      openMemoryDrawer({
+        id: s.id,
+        content: s.content || s.preview || "",
+        source: s.type,
+        sourceId: "",
+        sourceTitle: s.title || "Untitled",
+        timestamp: "",
+        importedAt: "",
+        metadata: {},
+        pinned: false,
+      });
+    }
+  };
 
   return (
     <div className="mt-2 pt-2 border-t border-white/[0.06]">
@@ -1380,26 +1464,40 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
           const Icon = st.icon;
           const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
           const isClickable = !!s.id;
+          const isHighlighted = highlightedIndex != null && j === highlightedIndex;
 
-          const cardContent = (
+          return (
             <div
+              key={j}
+              data-source-index={j}
+              onClick={isClickable ? (e) => handleOpenMemory(s, e) : undefined}
               className={cn(
-                "flex flex-col gap-1 px-2.5 py-2 rounded-lg border transition-colors",
-                isClickable
-                  ? "bg-white/[0.03] border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] cursor-pointer"
-                  : "bg-white/[0.03] border-white/[0.04]",
+                "flex flex-col gap-1 px-2.5 py-2 rounded-lg border transition-all duration-200",
+                isHighlighted
+                  ? "bg-teal-500/[0.08] border-teal-500/20 ring-1 ring-teal-500/15"
+                  : isClickable
+                    ? "bg-white/[0.03] border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] cursor-pointer"
+                    : "bg-white/[0.03] border-white/[0.04]",
               )}
             >
               {/* Header row: citation badge + icon + title + score */}
               <div className="flex items-center gap-2">
                 {/* Citation number badge */}
-                <span className="text-[9px] font-bold text-zinc-500 bg-white/[0.06] rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums">
+                <span className={cn(
+                  "text-[9px] font-bold rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums transition-colors",
+                  isHighlighted
+                    ? "bg-teal-500/20 text-teal-300"
+                    : "bg-white/[0.06] text-zinc-500"
+                )}>
                   {j + 1}
                 </span>
                 <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${st.bgColor}`}>
                   <Icon className={`w-2.5 h-2.5 ${st.textColor}`} />
                 </div>
-                <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0 font-medium">
+                <span className={cn(
+                  "text-[11px] truncate flex-1 min-w-0 font-medium transition-colors",
+                  isHighlighted ? "text-zinc-200" : "text-zinc-400"
+                )}>
                   {s.title || "Untitled"}
                 </span>
                 {scorePercent != null && (
@@ -1424,24 +1522,6 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
               )}
             </div>
           );
-
-          if (isClickable) {
-            return (
-              <a
-                key={j}
-                href={`/app/explore?q=${encodeURIComponent((s.title || s.preview || "").slice(0, 40))}`}
-                onClick={(e) => {
-                  // Prevent the click from bubbling to parent elements
-                  e.stopPropagation();
-                }}
-                className="block no-underline text-inherit"
-              >
-                {cardContent}
-              </a>
-            );
-          }
-
-          return <div key={j}>{cardContent}</div>;
         })}
       </div>
     </div>
