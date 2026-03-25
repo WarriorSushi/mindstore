@@ -560,7 +560,7 @@ export default function SettingsPage() {
                 {/* Storage Breakdown */}
                 <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
                   <p className="text-[12px] font-medium text-zinc-300">Storage Breakdown</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     <div className="text-center">
                       <p className="text-[16px] font-semibold text-zinc-200">{health.storage.contentSize}</p>
                       <p className="text-[10px] text-zinc-600">Content</p>
@@ -604,7 +604,7 @@ export default function SettingsPage() {
 
         {/* Stats */}
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Memories", value: stats?.totalMemories || 0 },
               { label: "Sources", value: stats?.totalSources || 0 },

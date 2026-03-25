@@ -418,13 +418,13 @@ export default function FlashcardsPage() {
 
             <Stagger>
               {/* Stats grid */}
-              <div className="grid grid-cols-3 gap-3 mb-8">
-                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                  <div className="text-[20px] font-semibold tabular-nums text-emerald-400">{correct}</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3 sm:p-4 text-center">
+                  <div className="text-[18px] sm:text-[20px] font-semibold tabular-nums text-emerald-400">{correct}</div>
                   <div className="text-[11px] text-zinc-500 mt-0.5">Correct</div>
                 </div>
-                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                  <div className="text-[20px] font-semibold tabular-nums text-rose-400">{total - correct}</div>
+                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3 sm:p-4 text-center">
+                  <div className="text-[18px] sm:text-[20px] font-semibold tabular-nums text-rose-400">{total - correct}</div>
                   <div className="text-[11px] text-zinc-500 mt-0.5">Missed</div>
                 </div>
                 <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
@@ -546,7 +546,7 @@ export default function FlashcardsPage() {
         {review.showAnswer && (
           <div className="mt-6" style={{ animation: "fc-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both" }}>
             <div className="text-[11px] text-zinc-600 text-center mb-3">How well did you know this?</div>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {GRADE_CONFIG.map(g => (
                 <button
                   key={g.grade}
@@ -777,7 +777,7 @@ export default function FlashcardsPage() {
 
           {/* Stats bar */}
           <Stagger>
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
                 { label: "Due", count: dueCards.length, color: "text-amber-400", icon: Clock },
                 { label: "New", count: newCards.length, color: "text-sky-400", icon: Sparkles },
@@ -893,7 +893,7 @@ export default function FlashcardsPage() {
         {/* Stats */}
         {stats && stats.totalCards > 0 && (
           <Stagger>
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3.5">
                 <div className="flex items-center gap-2 mb-1">
                   <Layers className="w-4 h-4 text-teal-400" />

@@ -30,3 +30,6 @@ export * from './mind-map-generator';
 // Action plugins
 export * from './blog-draft';
 export * from './conversation-prep';
+export * from './flashcard-maker';
+export * from './learning-paths';
+export * from './newsletter-writer';
