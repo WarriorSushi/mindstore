@@ -10,10 +10,12 @@ import {
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
   Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
   Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3, Copy, FolderOpen,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getSourceType } from "@/lib/source-types";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
+import { getSavedSearches, describeSavedSearch } from "@/lib/saved-searches";
 
 interface SearchResult {
   id: string;
@@ -555,6 +557,41 @@ export function CommandPalette() {
       }));
   }, [query, router]);
 
+  // ─── Saved Searches ───
+  const savedSearchItems: PaletteItem[] = useMemo(() => {
+    const saved = getSavedSearches();
+    if (saved.length === 0) return [];
+    const colorMap: Record<string, string> = {
+      teal: 'text-teal-400', sky: 'text-sky-400', emerald: 'text-emerald-400',
+      amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400',
+    };
+    // In no-query state, show pinned saved searches. With query, filter.
+    const filtered = query
+      ? saved.filter(s =>
+          s.name.toLowerCase().includes(query.toLowerCase()) ||
+          s.query.toLowerCase().includes(query.toLowerCase()) ||
+          describeSavedSearch(s).toLowerCase().includes(query.toLowerCase())
+        )
+      : saved.filter(s => s.pinned).slice(0, 5);
+
+    return filtered.map(s => ({
+      id: `saved-${s.id}`,
+      icon: <Star className={`w-4 h-4 ${s.pinned ? 'fill-current' : ''} ${colorMap[s.color] || colorMap.teal}`} />,
+      label: s.name,
+      description: describeSavedSearch(s),
+      action: () => {
+        const params = new URLSearchParams();
+        if (s.query) params.set('q', s.query);
+        if (s.sourceFilter) params.set('source', s.sourceFilter);
+        if (s.tagFilter) params.set('tag', s.tagFilter);
+        if (s.sortBy && s.sortBy !== 'newest') params.set('sort', s.sortBy);
+        router.push(`/app/explore?${params.toString()}`);
+        setOpen(false);
+      },
+      section: "actions" as const,
+    }));
+  }, [query, router]);
+
   // ─── Recent Conversations (no-query state only) ───
   const recentItems: PaletteItem[] = useMemo(() => {
     if (query) return [];
@@ -637,10 +674,11 @@ export function CommandPalette() {
     section: "search" as const,
   }] : [];
 
-  // Order: search results → view all → actions → recent conversations → navigation
+  // Order: search results → view all → saved searches → actions → recent conversations → navigation
   const allItems = [
     ...(query ? searchItems : []),
     ...viewAllItem,
+    ...savedSearchItems,
     ...(query ? actionItems : []),
     ...(!query ? recentItems : []),
     ...navItems,

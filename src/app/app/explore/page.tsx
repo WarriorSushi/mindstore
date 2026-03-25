@@ -3,11 +3,28 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import {
+  type SavedSearch,
+  getSavedSearches,
+  createSavedSearch,
+  useSavedSearch as applySavedSearch,
+  deleteSavedSearch,
+  togglePinSavedSearch,
+  findMatchingSavedSearch,
+  describeSavedSearch,
+} from "@/lib/saved-searches";
+import {
+  addSearchToHistory,
+  getSearchHistory,
+  clearSearchHistory,
+  removeSearchFromHistory,
+  type SearchHistoryItem,
+} from "@/lib/search-history";
 
 interface TagData {
   id: string;
@@ -123,6 +140,69 @@ export default function ExplorePage() {
   const [tagAssignOpen, setTagAssignOpen] = useState(false); // in detail view
   const [batchTagMenuOpen, setBatchTagMenuOpen] = useState(false); // in select mode toolbar
 
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [savedSearchMenuOpen, setSavedSearchMenuOpen] = useState(false);
+  const [saveSearchDialogOpen, setSaveSearchDialogOpen] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchColor, setSaveSearchColor] = useState<SavedSearch['color']>('teal');
+  const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
+
+  // Search history
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Load saved searches and search history on mount
+  useEffect(() => {
+    setSavedSearches(getSavedSearches());
+    setSearchHistory(getSearchHistory());
+  }, []);
+
+  const handleSaveSearch = useCallback(() => {
+    if (!saveSearchName.trim()) return;
+    const ss = createSavedSearch({
+      name: saveSearchName.trim(),
+      query: search,
+      sourceFilter: filter,
+      tagFilter: tagFilter,
+      sortBy,
+      color: saveSearchColor,
+    });
+    setSavedSearches(getSavedSearches());
+    setSaveSearchDialogOpen(false);
+    setSaveSearchName('');
+    setActiveSavedSearchId(ss.id);
+    toast.success(`Saved "${ss.name}"`);
+  }, [saveSearchName, search, filter, tagFilter, sortBy, saveSearchColor]);
+
+  const handleApplySavedSearch = useCallback((ss: SavedSearch) => {
+    applySavedSearch(ss.id);
+    setSearch(ss.query);
+    setFilter(ss.sourceFilter);
+    setTagFilter(ss.tagFilter);
+    setSortBy(ss.sortBy);
+    setActiveSavedSearchId(ss.id);
+    setSavedSearchMenuOpen(false);
+    setSavedSearches(getSavedSearches());
+    toast.success(`Applied "${ss.name}"`);
+  }, []);
+
+  const handleDeleteSavedSearch = useCallback((id: string, name: string) => {
+    deleteSavedSearch(id);
+    if (activeSavedSearchId === id) setActiveSavedSearchId(null);
+    setSavedSearches(getSavedSearches());
+    toast.success(`Deleted "${name}"`);
+  }, [activeSavedSearchId]);
+
+  const handleTogglePinSavedSearch = useCallback((id: string) => {
+    togglePinSavedSearch(id);
+    setSavedSearches(getSavedSearches());
+  }, []);
+
+  // Check if current search matches a saved search
+  const currentMatchesSaved = findMatchingSavedSearch({ query: search, sourceFilter: filter, tagFilter, sortBy });
+  const hasActiveFilters = search || filter || tagFilter || sortBy !== 'newest';
+
   // Derive unique source types from actual data
   const sourceTypeCounts = sources.reduce((acc, s) => {
     acc[s.type] = (acc[s.type] || 0) + s.itemCount;
@@ -228,6 +308,32 @@ export default function ExplorePage() {
       toast.success(`Copied ${selectedIds.size} memor${selectedIds.size === 1 ? 'y' : 'ies'} to clipboard`);
     });
   }, [selectedIds, memories]);
+
+  // ── Batch Pin/Unpin ──────────────────
+  const [batchPinning, setBatchPinning] = useState(false);
+
+  const handleBatchPin = useCallback(async (pinState: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBatchPinning(true);
+    let updated = 0;
+    const ids = Array.from(selectedIds);
+    for (let i = 0; i < ids.length; i += 10) {
+      const batch = ids.slice(i, i + 10);
+      const results = await Promise.allSettled(
+        batch.map(id =>
+          fetch('/api/v1/memories', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, pinned: pinState }),
+          })
+        )
+      );
+      updated += results.filter(r => r.status === 'fulfilled').length;
+    }
+    setMemories(prev => prev.map(m => selectedIds.has(m.id) ? { ...m, pinned: pinState } : m));
+    setBatchPinning(false);
+    toast.success(`${pinState ? 'Pinned' : 'Unpinned'} ${updated} memor${updated === 1 ? 'y' : 'ies'}`);
+  }, [selectedIds]);
 
   // ── Edit memory ──────────────────
   const startEditing = useCallback(() => {
@@ -617,6 +723,8 @@ export default function ExplorePage() {
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
           setSearchLayers(d.layers || null);
+          // Track search in history
+          addSearchToHistory(search, results.length);
         }).catch(() => {});
       } else {
         // No search query — list all memories
@@ -844,17 +952,233 @@ export default function ExplorePage() {
             ref={searchInputRef}
             placeholder="Search your knowledge…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-16 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
+            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => { /* delay so click events on history items fire first */ setTimeout(() => setSearchFocused(false), 200); }}
+            className="w-full h-10 pl-10 pr-24 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
           />
-          {search ? (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5">
-              <X className="w-3.5 h-3.5 text-zinc-500" />
-            </button>
-          ) : (
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
-          )}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {/* Saved searches toggle */}
+            {savedSearches.length > 0 && (
+              <button
+                onClick={() => setSavedSearchMenuOpen(!savedSearchMenuOpen)}
+                className={`p-1.5 rounded-lg transition-all ${
+                  savedSearchMenuOpen || activeSavedSearchId
+                    ? 'text-teal-400 bg-teal-500/10'
+                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.06]'
+                }`}
+                title="Saved searches"
+              >
+                <Star className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Save current search */}
+            {hasActiveFilters && !currentMatchesSaved && (
+              <button
+                onClick={() => { setSaveSearchDialogOpen(true); setSaveSearchName(search || 'My search'); }}
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-teal-400 hover:bg-teal-500/10 transition-all"
+                title="Save this search"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {search ? (
+              <button onClick={() => { setSearch(""); setActiveSavedSearchId(null); }} className="p-0.5">
+                <X className="w-3.5 h-3.5 text-zinc-500" />
+              </button>
+            ) : (
+              <kbd className="text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
+            )}
+          </div>
         </div>
+
+        {/* Saved Searches Dropdown */}
+        {savedSearchMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setSavedSearchMenuOpen(false)} />
+            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Saved Searches</span>
+                <span className="text-[10px] text-zinc-600">{savedSearches.length} saved</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                {savedSearches.map((ss) => {
+                  const colors: Record<string, string> = {
+                    teal: 'text-teal-400', sky: 'text-sky-400', emerald: 'text-emerald-400',
+                    amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400',
+                  };
+                  return (
+                    <div
+                      key={ss.id}
+                      className={`group flex items-center gap-2 px-3 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer ${
+                        activeSavedSearchId === ss.id ? 'bg-teal-500/[0.06]' : ''
+                      }`}
+                      onClick={() => handleApplySavedSearch(ss)}
+                    >
+                      <Star className={`w-3 h-3 shrink-0 ${ss.pinned ? 'fill-current' : ''} ${colors[ss.color] || colors.teal}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] text-zinc-200 truncate">{ss.name}</p>
+                        <p className="text-[10px] text-zinc-600 truncate">{describeSavedSearch(ss)}</p>
+                      </div>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleTogglePinSavedSearch(ss.id); }}
+                          className="p-1 rounded-md hover:bg-white/[0.08] transition-colors"
+                          title={ss.pinned ? 'Unpin' : 'Pin'}
+                        >
+                          <Pin className={`w-2.5 h-2.5 ${ss.pinned ? 'text-amber-400 fill-amber-400/30' : 'text-zinc-600'}`} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSavedSearch(ss.id, ss.name); }}
+                          className="p-1 rounded-md hover:bg-red-500/10 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 text-zinc-600 hover:text-red-400" />
+                        </button>
+                      </div>
+                      {ss.useCount > 0 && (
+                        <span className="text-[9px] text-zinc-700 tabular-nums shrink-0">{ss.useCount}×</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Save Search Dialog */}
+        {saveSearchDialogOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setSaveSearchDialogOpen(false)} />
+            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 p-4">
+              <h3 className="text-[13px] font-medium text-zinc-200 mb-3">Save this search</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={saveSearchName}
+                  onChange={(e) => setSaveSearchName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSearch(); if (e.key === 'Escape') setSaveSearchDialogOpen(false); }}
+                  placeholder="Search name..."
+                  className="w-full h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[12px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                  autoFocus
+                />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-zinc-600 mr-1">Color:</span>
+                  {(['teal', 'sky', 'emerald', 'amber', 'red', 'blue'] as const).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setSaveSearchColor(c)}
+                      className={`w-5 h-5 rounded-full transition-all ${
+                        saveSearchColor === c ? 'ring-2 ring-offset-1 ring-offset-[#131315]' : ''
+                      } ${
+                        c === 'teal' ? 'bg-teal-500 ring-teal-400' :
+                        c === 'sky' ? 'bg-sky-500 ring-sky-400' :
+                        c === 'emerald' ? 'bg-emerald-500 ring-emerald-400' :
+                        c === 'amber' ? 'bg-amber-500 ring-amber-400' :
+                        c === 'red' ? 'bg-red-500 ring-red-400' :
+                        'bg-blue-500 ring-blue-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="text-[10px] text-zinc-600 space-y-0.5">
+                  {search && <p>Query: "{search}"</p>}
+                  {filter && <p>Source: {filter}</p>}
+                  {tagFilter && <p>Tag: {tagFilter}</p>}
+                  {sortBy !== 'newest' && <p>Sort: {sortBy}</p>}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setSaveSearchDialogOpen(false)}
+                    className="h-7 px-3 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveSearch}
+                    disabled={!saveSearchName.trim()}
+                    className="h-7 px-3 rounded-lg text-[11px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all disabled:opacity-50 active:scale-[0.97]"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Active saved search indicator */}
+        {activeSavedSearchId && (() => {
+          const active = savedSearches.find(s => s.id === activeSavedSearchId);
+          if (!active) return null;
+          const colors: Record<string, string> = {
+            teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-400',
+            sky: 'border-sky-500/20 bg-sky-500/[0.06] text-sky-400',
+            emerald: 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400',
+            amber: 'border-amber-500/20 bg-amber-500/[0.06] text-amber-400',
+            red: 'border-red-500/20 bg-red-500/[0.06] text-red-400',
+            blue: 'border-blue-500/20 bg-blue-500/[0.06] text-blue-400',
+          };
+          return (
+            <div className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colors[active.color] || colors.teal}`}>
+              <Star className="w-3 h-3 fill-current" />
+              <span className="text-[11px] font-medium">{active.name}</span>
+              <button
+                onClick={() => { setActiveSavedSearchId(null); setSearch(''); setFilter(null); setTagFilter(null); setSortBy('newest'); }}
+                className="ml-auto p-0.5 hover:bg-white/[0.08] rounded transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Search History — shown when search is focused and empty */}
+        {searchFocused && !search && searchHistory.length > 0 && !savedSearchMenuOpen && !saveSearchDialogOpen && (
+          <>
+            <div className="fixed inset-0 z-15" onClick={() => setSearchFocused(false)} />
+            <div className="relative z-20 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3 h-3" />
+                  Recent Searches
+                </span>
+                <button
+                  onClick={() => { clearSearchHistory(); setSearchHistory([]); }}
+                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="py-1 max-h-48 overflow-y-auto">
+                {searchHistory.slice(0, 8).map((item) => (
+                  <div
+                    key={item.query}
+                    className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    onClick={() => { setSearch(item.query); setSearchFocused(false); }}
+                  >
+                    <Search className="w-3 h-3 text-zinc-700 shrink-0" />
+                    <span className="text-[12px] text-zinc-300 truncate flex-1">{item.query}</span>
+                    {item.resultCount !== undefined && (
+                      <span className="text-[10px] text-zinc-600 tabular-nums shrink-0">{item.resultCount} results</span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSearchFromHistory(item.query);
+                        setSearchHistory(getSearchHistory());
+                      }}
+                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
+                    >
+                      <X className="w-2.5 h-2.5 text-zinc-600" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </Stagger>
 
       {/* Filters + View + Sort */}
@@ -1084,6 +1408,28 @@ export default function ExplorePage() {
                     </>
                   )}
                 </div>
+                {/* Batch Pin/Unpin */}
+                {(() => {
+                  const selectedMems = memories.filter(m => selectedIds.has(m.id));
+                  const allPinned = selectedMems.length > 0 && selectedMems.every(m => m.pinned);
+                  return (
+                    <button
+                      onClick={() => handleBatchPin(!allPinned)}
+                      disabled={batchPinning}
+                      className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
+                      title={allPinned ? "Unpin selected" : "Pin selected"}
+                    >
+                      {batchPinning ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : allPinned ? (
+                        <PinOff className="w-3 h-3" />
+                      ) : (
+                        <Pin className="w-3 h-3" />
+                      )}
+                      <span className="hidden sm:inline">{allPinned ? "Unpin" : "Pin"}</span>
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={handleBatchCopy}
                   className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
