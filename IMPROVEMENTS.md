@@ -4,6 +4,82 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 14:59 UTC — Final Plugin Ports: 100% Coverage · Codex Monitor
+
+### Plugin Ports: ALL REMAINING 7 PLUGINS → 100% Complete
+- **`src/server/plugins/ports/notion-importer.ts`** (~290 lines)
+  - Notion ZIP parsing: `parseNotionExport()` — extracts pages + CSV databases from file map
+  - Title cleaning: `cleanNotionTitle()` — strips Notion UUID suffixes
+  - Content cleaning: `cleanNotionContent()` — removes redundant H1, internal links
+  - CSV parsing: `parseCSV()` — handles quoted fields, multi-line values
+  - Database rows: `databaseRowToContent()` — converts structured data to readable markdown
+  - Smart chunking: `smartChunk()` — heading-based splitting with paragraph fallback
+  - Import pipeline: `buildImportStats()`, `chunkPagesForImport()`, `stripCommonRoot()`
+  - Namespaced as `NotionImporter.*`
+
+- **`src/server/plugins/ports/notion-sync.ts`** (~300 lines)
+  - Notion API: `validateNotionToken()`, `listNotionDatabases()`, `createNotionDatabase()`
+  - Memory push: `pushMemoryToNotion()` — splits into Notion paragraph blocks (2000 char limit)
+  - Batch sync: `pushBatch()` — respects 3 req/s rate limit with 400ms delay
+  - Filter: `filterUnsyncedMemories()` — by synced ID set + source type
+  - Helpers: `formatSourceType()`, `defaultSyncConfig()`, `buildSyncRecord()`
+  - Namespaced as `NotionSync.*`
+
+- **`src/server/plugins/ports/obsidian-importer.ts`** (~400 lines)
+  - YAML parsing: `parseFrontmatter()` — handles arrays, booleans, numbers, inline arrays
+  - Extractors: `extractWikilinks()`, `extractInlineTags()`, `extractHeadings()`
+  - Note parsing: `parseNote()` — full ObsidianNote with tags, aliases, wikilinks, headings
+  - Vault analysis: `analyzeVault()` — link graph, backlinks, orphans, stats, date range
+  - Formatting: `formatNoteContent()` — metadata header, resolved wikilinks, link section
+  - Chunking: `chunkNote()`, `chunkAllNotes()` — heading-based with NoteChunk output
+  - Utilities: `stripVaultRoot()` — removes common vault prefix
+  - Namespaced as `ObsidianImporter.*`
+
+- **`src/server/plugins/ports/obsidian-sync.ts`** (~270 lines)
+  - Markdown generation: `memoryToMarkdown()` — YAML frontmatter, wikilinks, backlinks section
+  - Folder routing: `getMemoryFolder()` — flat, by-source, by-date structure
+  - Vault builder: `buildVaultFileMap()` — full file map with .obsidian config + README
+  - Preview: `buildExportPreview()` — source breakdown, folders, word count
+  - Utilities: `slugify()`, `defaultSyncConfig()`, `buildExportSyncRecord()`
+  - Namespaced as `ObsidianSync.*`
+
+- **`src/server/plugins/ports/custom-rag.ts`** (~350 lines)
+  - Strategies: `hydeRetrieve()`, `multiQueryRetrieve()`, `rerankRetrieve()`, `compressResults()`, `maximalRetrieve()`
+  - All strategies use dependency injection: `CallAI`, `RetrieveFn`, `EmbedFn`
+  - Strategy metadata: `STRATEGY_INFO` with name, description, pros/cons, latency, accuracy
+  - Config: `DEFAULT_CONFIG`, `RAGConfig` type
+  - RRF fusion in multi-query with appearance boost
+  - Namespaced as `CustomRAG.*`
+
+- **`src/server/plugins/ports/domain-embeddings.ts`** (~230 lines)
+  - 6 domain profiles: general, code, medical, legal, scientific, financial
+  - Detection: `detectDomain()` — keyword density scoring across all domains
+  - Helpers: `primaryDomain()`, `getDomainProfile()`, `availableModelsForDomain()`
+  - Each profile has recommended models with provider, dimensions, strengths
+  - Namespaced as `DomainEmbeddings.*`
+
+- **`src/server/plugins/ports/multi-language.ts`** (~200 lines)
+  - Script detection: `detectScript()` — 19 Unicode scripts with ratio analysis
+  - Heuristic detection: `heuristicDetect()` — high confidence for non-Latin, low for Latin
+  - AI detection: `aiDetectLanguage()` — JSON-based with injected `callAI`
+  - Combined: `detectLanguage()` — heuristic-first with AI fallback
+  - Translation: `translate()`, `translateQuery()` — injected AI
+  - Constants: `LANGUAGES` (52 languages), `supportedLanguages()`
+  - Namespaced as `MultiLanguage.*`
+
+- **Total ports: 34 of 34 plugin routes → 100% coverage** ✅
+  - 33 plugin logic modules + 1 shared-vectors utility
+  - All ports are pure logic: no HTTP, no DB, no framework deps
+  - AI and retrieval are dependency-injected for Codex runtime compatibility
+
+### Codex Monitor (read-only)
+- New commits on `codex/local-dev`:
+  - `7145b2c` Port contradiction finder into codex runtime
+  - `503ef02` Port kindle importer into codex runtime
+- Codex is independently porting plugins into its runtime — both branches converging
+
+---
+
 ## 2026-03-25 13:29 UTC — Anki Export + YouTube Transcript + Resume Builder Ports · Design Fixes
 
 ### Plugin Ports: Anki Export + YouTube Transcript + Resume Builder
