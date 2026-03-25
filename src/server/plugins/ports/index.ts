@@ -28,7 +28,7 @@ export * from './contradiction-finder';
 export * from './writing-style';
 export * from './topic-evolution';
 export * from './sentiment-timeline';
-export * from './knowledge-gaps';
+export * as KnowledgeGaps from './knowledge-gaps';
 export * from './mind-map-generator';
 
 // AI plugins
@@ -38,7 +38,7 @@ export * as ImageToMemory from './image-to-memory';
 export * from './blog-draft';
 export * from './conversation-prep';
 export * from './flashcard-maker';
-export * from './learning-paths';
+export * as LearningPaths from './learning-paths';
 export * from './newsletter-writer';
 export * as ResumeBuilder from './resume-builder';
 
