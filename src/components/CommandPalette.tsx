@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail,
+  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,6 +49,8 @@ const NAV_ITEMS = [
   { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Structured learning plans from your knowledge" },
   { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build professional resumes from your memories" },
   { href: "/app/newsletter", icon: Mail, label: "Newsletter", desc: "Curate a digest from your recent knowledge" },
+  { href: "/app/voice", icon: Mic, label: "Voice Capture", desc: "Record thoughts and transcribe to memory" },
+  { href: "/app/vision", icon: Camera, label: "Image Analysis", desc: "Upload images and describe with AI" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -426,6 +428,30 @@ export function CommandPalette() {
         keywords: ["newsletter", "digest", "weekly", "email", "curate", "summary", "roundup", "send", "mail", "report", "recap"],
         action: () => {
           router.push("/app/newsletter");
+          setOpen(false);
+        },
+      },
+      {
+        id: "voice-capture",
+        icon: Mic,
+        iconColor: "text-teal-400",
+        label: "Voice Capture",
+        desc: "Record voice thoughts and transcribe to memory",
+        keywords: ["voice", "record", "audio", "whisper", "transcribe", "microphone", "speak", "dictate", "capture"],
+        action: () => {
+          router.push("/app/voice");
+          setOpen(false);
+        },
+      },
+      {
+        id: "image-analysis",
+        icon: Camera,
+        iconColor: "text-teal-400",
+        label: "Image to Memory",
+        desc: "Upload an image and let AI describe it as searchable knowledge",
+        keywords: ["image", "photo", "screenshot", "vision", "picture", "camera", "upload", "scan", "whiteboard", "diagram", "ocr"],
+        action: () => {
+          router.push("/app/vision");
           setOpen(false);
         },
       },

@@ -8,7 +8,7 @@ import {
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem,
+  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem, Mic, Camera,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -1297,7 +1297,7 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
   const [expanded, setExpanded] = useState(false);
 
   const typeIcons: Record<string, any> = {
-    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare,
+    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare, audio: Mic, image: Camera,
   };
   const typeColors: Record<string, string> = {
     chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
@@ -1310,6 +1310,8 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
     bookmark: "text-sky-400 bg-sky-500/10 border-sky-500/15",
     obsidian: "text-teal-400 bg-teal-500/10 border-teal-500/15",
     reddit: "text-orange-400 bg-orange-500/10 border-orange-500/15",
+    audio: "text-teal-400 bg-teal-500/10 border-teal-500/15",
+    image: "text-sky-400 bg-sky-500/10 border-sky-500/15",
   };
 
   const displayed = expanded ? sources : sources.slice(0, 3);

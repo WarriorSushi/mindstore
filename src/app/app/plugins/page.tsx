@@ -100,6 +100,7 @@ const PLUGIN_ROUTES: Record<string, string> = {
   'resume-builder': '/app/resume',
   'newsletter-writer': '/app/newsletter',
   'voice-to-memory': '/app/voice',
+  'image-to-memory': '/app/vision',
 };
 
 // ─── Component ────────────────────────────────────────────────────
