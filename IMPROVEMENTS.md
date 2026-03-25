@@ -1655,3 +1655,51 @@ _Automated 30-min improvement cycles by Frain_
 - **Keyboard Shortcuts**: Updated help modal with `⌘⇧N` shortcut
 - **Design**: OLED black base, teal accent, glass borders. Zero violet/purple/fuchsia.
 - **Branch**: `frain/improve` (commit `030c61f`)
+
+## 2026-03-25 07:29 UTC — Related Memories Discovery + System Health Dashboard
+- **What**: Two major features that make MindStore feel like a professional, polished product
+
+### Related Memories Panel (Memory Drawer Upgrade)
+- **New API**: `/api/v1/memories/related?id=<memoryId>&limit=5`
+  - Vector cosine similarity search via pgvector
+  - Threshold filtering (>0.3 similarity) — no noise, only real connections
+  - Source-based fallback for memories without embeddings
+  - Returns similarity percentage for each match
+- **Drawer UI**: Collapsible "Related Memories" section with:
+  - Similarity badges (e.g., 87%) for vector matches
+  - Click to navigate between related memories (drill-down through knowledge)
+  - Source type icon + color for each related memory
+  - Content preview (120 chars) with ellipsis
+- **"Chat about this" button**: Sends memory content as context → opens Chat page
+- **Quick Actions row**: Chat + Copy buttons inline in the drawer
+
+### System Health Dashboard (Settings Overhaul)
+- **New API**: `/api/v1/health` — comprehensive system diagnostics:
+  - DB health check + PostgreSQL version
+  - Total memories, embedding coverage %, pinned count
+  - Embedding dimension breakdown (e.g., "1536d × 500")
+  - Source type breakdown with sizes (e.g., "chatgpt: 2.3 MB, 45%")
+  - Storage: content size, index size, total DB size
+  - 7-day activity sparkline data
+  - Plugin count (total/active), connection count, knowledge span
+- **Settings Tab Navigation**: Providers | System Health | Data
+  - Clean tab bar with icons and active state
+  - Each tab shows its own content section
+- **System Health Tab**:
+  - Status banner (healthy/issues) with DB version
+  - 4-metric grid: Total Memories, Embedded %, Storage, Connections
+  - Embedding coverage progress bar (green/amber/red based on %)
+  - Source breakdown bars with percentage visualization
+  - 7-day activity sparkline chart with day labels
+  - Storage breakdown: Content / Indexes / Total
+  - System info table: DB version, plugins, knowledge span, pinned count
+
+### Color Cleanups
+- Onboarding: rose/pink gradients → sky/teal/red
+- Export: Hugo pink → red
+- Learn: relationship pink → red
+- Mind Map: pink topic color → red
+- **Zero violet/purple/fuchsia/pink** — fully clean
+
+- **Design**: OLED black base, teal accent, glass borders. Zero AI slop colors.
+- **Branch**: `frain/improve` (commit `e917b0a`)
