@@ -1,12 +1,16 @@
 /**
- * Plugin Ports — Shared logic extracted from route files.
- *
- * Each port module contains the pure business logic for a plugin,
- * free of HTTP/NextRequest concerns. Routes become thin adapters.
- *
- * See: docs/build/plugin-porting-guide.md
+ * Plugin Ports — Portable logic modules for convergence with codex runtime
+ * 
+ * Each port extracts the core business logic from a plugin's route file,
+ * making it framework-agnostic and ready for Codex's SDK/runtime.
+ * 
+ * AI calling is injected (will use Codex's shared ai-client.ts).
+ * Route wiring is NOT included — each port is pure logic.
  */
 
-export * as kindleImporter from './kindle-importer';
-export * as contradictionFinder from './contradiction-finder';
-export * as voiceToMemory from './voice-to-memory';
+export * from './kindle-importer';
+export * from './voice-to-memory';
+export * from './contradiction-finder';
+export * from './blog-draft';
+export * from './conversation-prep';
+export * from './writing-style';
