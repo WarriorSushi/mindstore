@@ -8,7 +8,7 @@ import {
   FileText, Globe, MessageCircle, Type, ArrowRight,
   Plus, Download, Trash2, RefreshCw, Zap, Clock,
   Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
-  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser,
+  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -48,6 +48,7 @@ const NAV_ITEMS = [
   { href: "/app/prep", icon: Users, label: "Conversation Prep", desc: "Brief me before any meeting" },
   { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Structured learning plans from your knowledge" },
   { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build professional resumes from your memories" },
+  { href: "/app/newsletter", icon: Mail, label: "Newsletter", desc: "Curate a digest from your recent knowledge" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
@@ -413,6 +414,18 @@ export function CommandPalette() {
         keywords: ["resume", "cv", "career", "job", "professional", "experience", "skills", "hire", "work", "apply", "application"],
         action: () => {
           router.push("/app/resume");
+          setOpen(false);
+        },
+      },
+      {
+        id: "newsletter-writer",
+        icon: Mail,
+        iconColor: "text-teal-400",
+        label: "Newsletter Writer",
+        desc: "Curate a weekly digest from your recent knowledge",
+        keywords: ["newsletter", "digest", "weekly", "email", "curate", "summary", "roundup", "send", "mail", "report", "recap"],
+        action: () => {
+          router.push("/app/newsletter");
           setOpen(false);
         },
       },
