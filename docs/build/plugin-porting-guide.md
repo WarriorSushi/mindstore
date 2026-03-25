@@ -175,7 +175,7 @@ Reason: good stress test for capture, media ingestion, provider handling, and sc
 
 - `flashcard-maker`: ported on `codex/local-dev` as the first full convergence example
 - `voice-to-memory`: ported on `codex/local-dev` with the shared AI client path
-- `kindle-importer`: still pending
+- `kindle-importer`: ported on `codex/local-dev` as the importer reference port
 
 Flashcard Maker is still the first reference because it exercises the action-plugin pattern:
 
@@ -193,6 +193,13 @@ Voice-to-Memory is the second reference because it exercises the media/plugin pa
 - media-specific validation
 - save-to-memory integration
 - reusable shared AI/transcription client usage
+
+Kindle Importer is the importer reference because it exercises:
+
+- parser extraction
+- deduplication and grouping logic
+- preview-first import UX
+- codex shared import pipeline usage
 
 ## Copyability Assessment
 

@@ -61,7 +61,7 @@ Port `frain` features into the codex architecture in slices.
 
 ### Slice 2: Example plugin ports
 
-- `kindle-importer`
+- `kindle-importer` (completed on codex as the importer reference port)
 - `flashcard-maker` (completed on codex as the first reference port)
 - `voice-to-memory` (completed on codex with shared AI/transcription plumbing)
 
@@ -145,3 +145,12 @@ Use it as the template for the next ports.
 - thin API route over reusable server logic
 
 Use it as the template for audio or file-based AI plugins.
+
+`kindle-importer` is now the importer reference example:
+
+- parsing and dedup live in `src/server/plugins/ports/kindle-importer.ts`
+- route logic is thin
+- preview and import contracts are preserved
+- import storage flows through codex import primitives
+
+Use it as the template for file-based importer ports.

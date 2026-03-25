@@ -121,6 +121,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The first `frain` feature port is now underway with Flashcard Maker; this is the new reference slice for future convergence work.
 - Shared AI client extraction plus Voice-to-Memory now define the convergence pattern for media-aware AI plugins.
 - Branch convergence is now tracked as a formal multi-phase program in `docs/codex/CONVERGENCE_PROGRAM.md`.
+- Kindle Importer is now the codex-side importer reference port for future frain import feature convergence.
 
 ### Verification
 
