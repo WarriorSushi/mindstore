@@ -223,6 +223,19 @@ export function CommandPalette() {
         shortcut: "N",
       },
       {
+        id: "quick-capture",
+        icon: Zap,
+        iconColor: "text-teal-400",
+        label: "Quick Capture",
+        desc: "Capture a note or URL instantly",
+        keywords: ["quick", "capture", "note", "jot", "thought", "memo", "save", "remember"],
+        action: () => {
+          setOpen(false);
+          setTimeout(() => window.dispatchEvent(new CustomEvent("mindstore:quick-capture")), 100);
+        },
+        shortcut: "⇧N",
+      },
+      {
         id: "import-text",
         icon: Type,
         iconColor: "text-teal-400",

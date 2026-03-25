@@ -7,7 +7,7 @@ import {
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
   FileEdit, Users, Route, FileUser, Mail, Mic, Camera, SlidersHorizontal, Globe, Dna,
-  Download, FolderDown, FileStack, Gem, ChevronDown,
+  Download, FolderDown, FileStack, Gem, ChevronDown, Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,8 @@ import { Onboarding } from "@/components/Onboarding";
 import { CommandPalette } from "@/components/CommandPalette";
 import { GlobalDropZone } from "@/components/GlobalDropZone";
 import { KeyboardShortcuts, openKeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { QuickCapture } from "@/components/QuickCapture";
+import { MemoryDrawer } from "@/components/MemoryDrawer";
 
 interface NavItem {
   href: string;
@@ -163,6 +165,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <GlobalDropZone />
       {/* ════════ KEYBOARD SHORTCUTS HELP ════════ */}
       <KeyboardShortcuts />
+      {/* ════════ QUICK CAPTURE ════════ */}
+      <QuickCapture />
+      {/* ════════ MEMORY DETAIL DRAWER ════════ */}
+      <MemoryDrawer />
       {/* ════════ MOBILE HEADER ════════ */}
       <header className={cn(
         "md:hidden fixed top-0 inset-x-0 z-50 safe-top",
@@ -306,6 +312,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="px-4 py-3 border-t border-white/[0.04] space-y-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("mindstore:quick-capture"))}
+            className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-lg text-[12px] text-teal-500/80 hover:text-teal-400 hover:bg-teal-500/[0.06] transition-all"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span className="flex-1 text-left">Quick Capture</span>
+            <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px] text-zinc-600">⌘⇧N</kbd>
+          </button>
           <button
             onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
             className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-lg text-[12px] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-all"

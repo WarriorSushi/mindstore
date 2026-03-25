@@ -17,6 +17,7 @@ import { checkApiKey } from "@/lib/openai";
 import { isDemoMode, loadDemoData, clearDemoData } from "@/lib/demo";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { openMemoryDrawer } from "@/components/MemoryDrawer";
 
 async function fetchStats() {
   try {
@@ -642,7 +643,21 @@ export default function DashboardPage() {
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
-                  <Link key={mem.id || i} href={`/app/explore?q=${encodeURIComponent(mem.content.slice(0, 40))}`}>
+                  <button
+                    key={mem.id || i}
+                    onClick={() => openMemoryDrawer({
+                      id: mem.id,
+                      content: mem.content,
+                      source: mem.sourceType,
+                      sourceId: mem.sourceId,
+                      sourceTitle: mem.sourceTitle,
+                      timestamp: mem.createdAt,
+                      importedAt: mem.importedAt,
+                      metadata: mem.metadata,
+                      pinned: mem.metadata?.pinned === true,
+                    })}
+                    className="text-left w-full"
+                  >
                     <div className="group relative flex items-start gap-3 p-3.5 rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.04] to-amber-500/[0.01] hover:from-amber-500/[0.08] hover:to-amber-500/[0.03] hover:border-amber-500/20 transition-all active:scale-[0.98]">
                       <Pin className="absolute top-2.5 right-2.5 w-2.5 h-2.5 text-amber-500/40 fill-amber-400/20" />
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${color.split(' ').slice(1).join(' ')}`}>
@@ -653,7 +668,7 @@ export default function DashboardPage() {
                         <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mt-0.5">{mem.content}</p>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
@@ -698,7 +713,21 @@ export default function DashboardPage() {
                 const Icon = typeIcons[mem.sourceType] || FileText;
                 const color = typeColors[mem.sourceType] || "text-zinc-400 bg-zinc-500/10";
                 return (
-                  <Link key={mem.id || i} href={`/app/explore?q=${encodeURIComponent(mem.content.slice(0, 40))}`}>
+                  <button
+                    key={mem.id || i}
+                    onClick={() => openMemoryDrawer({
+                      id: mem.id,
+                      content: mem.content,
+                      source: mem.sourceType,
+                      sourceId: mem.sourceId,
+                      sourceTitle: mem.sourceTitle,
+                      timestamp: mem.createdAt,
+                      importedAt: mem.importedAt,
+                      metadata: mem.metadata,
+                      pinned: mem.metadata?.pinned === true,
+                    })}
+                    className="w-full text-left"
+                  >
                     <div className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${color.split(' ').slice(1).join(' ')}`}>
                         <Icon className={`w-3.5 h-3.5 ${color.split(' ')[0]}`} />
@@ -714,7 +743,7 @@ export default function DashboardPage() {
                         <span className="text-[10px] text-zinc-600 whitespace-nowrap">{formatRelativeTime(mem.createdAt)}</span>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>

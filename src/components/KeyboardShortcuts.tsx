@@ -24,6 +24,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     path: null,
     shortcuts: [
       { keys: ["⌘", "K"], label: "Open command palette" },
+      { keys: ["⌘", "⇧", "N"], label: "Quick capture (note or URL)" },
       { keys: ["?"], label: "Keyboard shortcuts (this modal)" },
     ],
   },
