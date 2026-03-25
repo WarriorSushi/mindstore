@@ -19,8 +19,9 @@ Use MindStore Everywhere when you want fast capture from any page without switch
 
 1. Open your Chromium-based browser extension settings.
 2. Turn on developer mode.
-3. Load `extensions/mindstore-everywhere` as an unpacked extension.
+3. Either load `extensions/mindstore-everywhere` as an unpacked extension or download the packaged ZIP from `/api/v1/extension/package`.
 4. Set the MindStore base URL in the popup.
+5. Use `Test connection` before the first capture.
 
 ## Recommended First Run
 
@@ -37,6 +38,6 @@ Use MindStore Everywhere when you want fast capture from any page without switch
 
 ## Current Limits
 
-- No hosted auth flow yet
+- Hosted setups still rely on API keys rather than a browser-native sign-in flow
 - Site adapters are heuristic and should keep improving
 - Query results are short excerpts, not full chat responses

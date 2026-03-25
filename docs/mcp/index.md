@@ -17,3 +17,4 @@ MindStore exposes knowledge through MCP so other AI clients can use the same mem
 ## Next Reading
 
 - [MCP Client Setup](./clients.md)
+- [MindStore Everywhere Quickstart](../getting-started/mindstore-everywhere.md)

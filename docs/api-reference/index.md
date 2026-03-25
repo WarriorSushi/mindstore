@@ -6,6 +6,7 @@ This section should document the surface area that builders can rely on.
 
 - Import APIs.
 - [Capture API](./capture.md)
+- [Extension Setup API](./extension-setup.md)
 - Search APIs.
 - Chat APIs.
 - Plugin APIs.

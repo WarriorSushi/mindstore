@@ -4,33 +4,41 @@ const baseUrlInput = document.getElementById("baseUrl");
 const apiKeyInput = document.getElementById("apiKey");
 const captureModeInput = document.getElementById("captureMode");
 const captureButton = document.getElementById("captureButton");
+const testConnectionButton = document.getElementById("testConnectionButton");
 const queryInput = document.getElementById("queryInput");
 const queryButton = document.getElementById("queryButton");
 const queryResults = document.getElementById("queryResults");
 const sourceBadge = document.getElementById("sourceBadge");
 const contextSummary = document.getElementById("contextSummary");
+const setupBadge = document.getElementById("setupBadge");
+const setupSummary = document.getElementById("setupSummary");
+const captureEndpoint = document.getElementById("captureEndpoint");
+const queryEndpoint = document.getElementById("queryEndpoint");
+const docsLink = document.getElementById("docsLink");
+const downloadLink = document.getElementById("downloadLink");
 const statusEl = document.getElementById("status");
 
 initialize();
 
 async function initialize() {
-  const { baseUrl = "http://localhost:3000", apiKey = "", captureMode = "smart" } = await chrome.storage.local.get([
-    "baseUrl",
-    "apiKey",
-    "captureMode",
-  ]);
+  const { baseUrl = "http://localhost:3000", apiKey = "", captureMode = "smart" } =
+    await chrome.storage.local.get(["baseUrl", "apiKey", "captureMode"]);
 
   baseUrlInput.value = baseUrl;
   apiKeyInput.value = apiKey;
   captureModeInput.value = captureMode;
+  renderSetupLinks(baseUrl);
 
-  await inspectActiveTab();
+  await Promise.all([inspectActiveTab(), refreshSetupStatus({ silent: true })]);
 }
 
 baseUrlInput.addEventListener("change", persistPreferences);
 apiKeyInput.addEventListener("change", persistPreferences);
 captureModeInput.addEventListener("change", persistPreferences);
 captureButton.addEventListener("click", handleCapture);
+testConnectionButton.addEventListener("click", () => {
+  void refreshSetupStatus({ interactive: true });
+});
 queryButton.addEventListener("click", handleQuery);
 queryInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -40,15 +48,18 @@ queryInput.addEventListener("keydown", (event) => {
 });
 
 async function persistPreferences() {
+  const baseUrl = baseUrlInput.value.trim();
   await chrome.storage.local.set({
-    baseUrl: baseUrlInput.value.trim(),
+    baseUrl,
     apiKey: apiKeyInput.value.trim(),
     captureMode: captureModeInput.value,
   });
+  renderSetupLinks(baseUrl);
+  void refreshSetupStatus({ silent: true });
 }
 
 async function handleCapture() {
-  const baseUrl = baseUrlInput.value.trim().replace(/\/$/, "");
+  const baseUrl = normalizeBaseUrl(baseUrlInput.value);
   const apiKey = apiKeyInput.value.trim();
   const captureMode = captureModeInput.value;
 
@@ -103,7 +114,7 @@ async function handleCapture() {
 }
 
 async function handleQuery() {
-  const baseUrl = baseUrlInput.value.trim().replace(/\/$/, "");
+  const baseUrl = normalizeBaseUrl(baseUrlInput.value);
   const apiKey = apiKeyInput.value.trim();
   const query = queryInput.value.trim();
 
@@ -158,11 +169,70 @@ async function inspectActiveTab() {
     const payload = await chrome.tabs.sendMessage(tab.id, { type: "mindstore:inspect" });
     const sourceLabel = payload?.sourceApp ? startCase(payload.sourceApp) : "Web";
     sourceBadge.textContent = sourceLabel;
-    contextSummary.textContent = payload?.summary || "Save the current page, selection, or supported conversation.";
+    contextSummary.textContent =
+      payload?.summary || "Save the current page, selection, or supported conversation.";
   } catch {
     sourceBadge.textContent = "Unavailable";
     contextSummary.textContent =
       "This page cannot be inspected automatically, but capture may still work on standard websites.";
+  }
+}
+
+async function refreshSetupStatus({ interactive = false, silent = false } = {}) {
+  const baseUrl = normalizeBaseUrl(baseUrlInput.value);
+  const apiKey = apiKeyInput.value.trim();
+
+  if (!baseUrl) {
+    renderSetupState("Add URL", "Enter your MindStore URL to test the extension setup.", "");
+    return;
+  }
+
+  testConnectionButton.disabled = true;
+
+  if (interactive) {
+    setStatus("Checking MindStore connection…");
+  }
+
+  try {
+    const headers = {};
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    const response = await fetch(`${baseUrl}/api/v1/extension/setup`, { headers });
+    const payload = await safeJson(response);
+
+    if (!response.ok) {
+      throw new Error(payload?.error || `Connection test failed with status ${response.status}`);
+    }
+
+    renderSetupLinks(payload?.connection?.baseUrl || baseUrl, payload);
+    renderSetupState(
+      payload?.auth?.authenticated || !apiKey ? "Connected" : "Auth required",
+      payload?.auth?.authenticated || !apiKey
+        ? `Ready for capture and query. Extension v${payload?.product?.extensionVersion || chrome.runtime.getManifest().version}.`
+        : "The server responded, but the provided API key was not accepted.",
+      payload?.auth?.authenticated || !apiKey ? "success" : "error"
+    );
+
+    if (interactive) {
+      setStatus("MindStore connection verified.", "success");
+    } else if (!silent) {
+      setStatus("MindStore connection updated.", "success");
+    }
+  } catch (error) {
+    renderSetupLinks(baseUrl);
+    renderSetupState(
+      "Unavailable",
+      "Could not reach the extension setup endpoint. Check your URL, deployment, and API key.",
+      "error"
+    );
+
+    if (interactive || !silent) {
+      setStatus(error instanceof Error ? error.message : "Connection test failed.", "error");
+    }
+  } finally {
+    testConnectionButton.disabled = false;
   }
 }
 
@@ -191,6 +261,27 @@ function setStatus(message, tone = "") {
   statusEl.className = tone ? `status ${tone}` : "status";
 }
 
+function renderSetupState(label, summary, tone) {
+  setupBadge.textContent = label;
+  setupBadge.className = tone ? `setup-badge ${tone}` : "setup-badge";
+  setupSummary.textContent = summary;
+}
+
+function renderSetupLinks(baseUrl, payload = null) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) || "http://localhost:3000";
+  const connection = payload?.connection || {
+    captureUrl: `${normalizedBaseUrl}/api/v1/capture`,
+    queryUrl: `${normalizedBaseUrl}/api/v1/capture/query`,
+    docsUrl: `${normalizedBaseUrl}/docs/getting-started/mindstore-everywhere`,
+    downloadUrl: `${normalizedBaseUrl}/api/v1/extension/package`,
+  };
+
+  captureEndpoint.textContent = connection.captureUrl;
+  queryEndpoint.textContent = connection.queryUrl;
+  docsLink.href = connection.docsUrl;
+  downloadLink.href = connection.downloadUrl;
+}
+
 function renderResults(results) {
   if (!Array.isArray(results) || results.length === 0) {
     renderEmptyState("No memories matched yet. Try importing more data or broadening the query.");
@@ -217,6 +308,10 @@ function renderResults(results) {
 
 function renderEmptyState(message) {
   queryResults.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+}
+
+function normalizeBaseUrl(value) {
+  return String(value || "").trim().replace(/\/$/, "");
 }
 
 async function safeJson(response) {

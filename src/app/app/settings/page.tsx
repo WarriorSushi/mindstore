@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, Zap, Globe, Plug, Copy, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -100,6 +100,18 @@ async function fetchReindexStatus(): Promise<ReindexStatusResponse | null> {
   }
 }
 
+function subscribeToWindowLocation() {
+  return () => {};
+}
+
+function getWindowOriginSnapshot() {
+  if (typeof window === "undefined") {
+    return "http://localhost:3000";
+  }
+
+  return window.location.origin;
+}
+
 export default function SettingsPage() {
   const [openaiKey, setOpenaiKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
@@ -118,6 +130,11 @@ export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
   const [creatingApiKey, setCreatingApiKey] = useState(false);
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const publicBaseUrl = useSyncExternalStore(
+    subscribeToWindowLocation,
+    getWindowOriginSnapshot,
+    () => "http://localhost:3000"
+  );
 
   useEffect(() => {
     fetchSettings().then((s) => {
@@ -263,6 +280,15 @@ export default function SettingsPage() {
       toast.success('API key copied');
     } catch {
       toast.error('Failed to copy API key');
+    }
+  };
+
+  const handleCopyBaseUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(publicBaseUrl);
+      toast.success("Base URL copied");
+    } catch {
+      toast.error("Failed to copy base URL");
     }
   };
 
@@ -560,6 +586,42 @@ export default function SettingsPage() {
             >
               Capture API docs
             </Link>
+            <a
+              href="/api/v1/extension/package"
+              className="inline-flex items-center h-10 px-4 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
+            >
+              Download extension ZIP
+            </a>
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[12px] font-medium text-zinc-200">Quick setup</p>
+                <p className="text-[11px] text-zinc-500 mt-1">Use this base URL in the browser extension popup, then test the connection before your first capture.</p>
+              </div>
+              <button
+                onClick={handleCopyBaseUrl}
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copy URL
+              </button>
+            </div>
+            <code className="block overflow-x-auto rounded-xl bg-black/30 px-3 py-2 text-[11px] text-zinc-200">
+              {publicBaseUrl}
+            </code>
+            <div className="grid gap-2 text-[12px] text-zinc-400 md:grid-cols-3">
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                1. Download the ZIP or load the unpacked extension folder in a Chromium browser.
+              </div>
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                2. Paste this MindStore URL into the popup. Add an API key for hosted or shared setups.
+              </div>
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                3. Use the popup&apos;s <span className="text-zinc-200">Test connection</span> button, then start capturing.
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

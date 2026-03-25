@@ -57,9 +57,105 @@ h1 {
   white-space: nowrap;
 }
 
+.setup-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d4d4d8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.setup-badge.success {
+  border-color: rgba(45, 212, 191, 0.24);
+  background: rgba(13, 148, 136, 0.16);
+  color: #99f6e4;
+}
+
+.setup-badge.error {
+  border-color: rgba(251, 113, 133, 0.24);
+  background: rgba(190, 24, 93, 0.12);
+  color: #fecdd3;
+}
+
+.setup-summary {
+  margin: 10px 0 0;
+  color: #a1a1aa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.setup-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.setup-item {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px;
+}
+
+.setup-item span {
+  display: block;
+  color: #a1a1aa;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.setup-item code {
+  display: block;
+  margin-top: 6px;
+  color: #ecfeff;
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.setup-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ghost-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: #d4d4d8;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .field {
   display: block;
   margin-top: 16px;
+}
+
+.setup-panel {
+  margin-top: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(94, 234, 212, 0.12);
+  background: linear-gradient(180deg, rgba(19, 78, 74, 0.24), rgba(255, 255, 255, 0.035));
+  padding: 16px;
 }
 
 .field.compact {
@@ -118,6 +214,12 @@ select {
   cursor: pointer;
 }
 
+.compact-button {
+  width: auto;
+  margin-top: 0;
+  min-width: 132px;
+}
+
 .primary:disabled {
   cursor: wait;
   opacity: 0.7;
@@ -126,6 +228,12 @@ select {
 .secondary:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+.ghost-link:hover,
+.secondary:hover,
+.primary:hover {
+  filter: brightness(1.05);
 }
 
 .status {

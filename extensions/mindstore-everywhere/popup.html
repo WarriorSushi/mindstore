@@ -40,6 +40,34 @@
         </select>
       </label>
 
+      <section class="setup-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-eyebrow">Connection</p>
+            <h2>Check your MindStore setup</h2>
+          </div>
+          <span id="setupBadge" class="setup-badge">Not checked</span>
+        </div>
+        <p id="setupSummary" class="setup-summary">
+          Test the server before your first capture so the extension knows where to send data.
+        </p>
+        <div class="setup-grid">
+          <div class="setup-item">
+            <span>Capture API</span>
+            <code id="captureEndpoint">/api/v1/capture</code>
+          </div>
+          <div class="setup-item">
+            <span>Query API</span>
+            <code id="queryEndpoint">/api/v1/capture/query</code>
+          </div>
+        </div>
+        <div class="setup-actions">
+          <button id="testConnectionButton" class="secondary compact-button">Test connection</button>
+          <a id="docsLink" class="ghost-link" href="#" target="_blank" rel="noreferrer">Docs</a>
+          <a id="downloadLink" class="ghost-link" href="#" target="_blank" rel="noreferrer">Download ZIP</a>
+        </div>
+      </section>
+
       <div class="actions">
         <button id="captureButton" class="primary">Save to MindStore</button>
       </div>

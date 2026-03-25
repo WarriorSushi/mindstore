@@ -17,6 +17,7 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 
 - [API Reference](./api-reference/index.md)
 - [Capture API](./api-reference/capture.md)
+- [Extension Setup API](./api-reference/extension-setup.md)
 - [Examples](./examples/index.md)
 - [Build Guide](./build/index.md)
 - [Architecture Decisions](./adr/0001-plugin-runtime-and-docs-first.md)
@@ -28,4 +29,5 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 - [Capture and Extension Release](./releases/2026-03-25-capture-and-extension.md)
 - [Plugin Runtime Surfaces Release](./releases/2026-03-25-plugin-runtime-surfaces.md)
 - [Plugin-Aware Ingestion Release](./releases/2026-03-25-plugin-ingestion-runtime.md)
+- [Extension Setup and Connectivity Release](./releases/2026-03-25-extension-setup-and-connectivity.md)
 - [Codex Worklog](./codex/WORKLOG.md)

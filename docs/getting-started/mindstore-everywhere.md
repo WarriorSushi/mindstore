@@ -12,10 +12,17 @@ MindStore Everywhere is the browser companion for MindStore. It lets you capture
 
 1. Open MindStore and go to `/app/settings`.
 2. In `MindStore Everywhere`, generate an API key if your deployment is hosted or shared.
-3. Open your browser extensions page and enable developer mode.
-4. Load the `extensions/mindstore-everywhere` folder as an unpacked extension.
-5. Set your MindStore base URL in the popup.
-6. Paste the API key if you created one.
+3. Download the packaged extension from `/api/v1/extension/package`, or load `extensions/mindstore-everywhere` as an unpacked extension in a Chromium browser.
+4. Paste your MindStore base URL into the popup.
+5. Paste the API key if you created one.
+6. Use the popup's `Test connection` button before your first capture.
+
+## What The Connection Check Verifies
+
+- The extension setup endpoint is reachable.
+- The capture and query URLs are the ones the extension should use.
+- A provided API key is accepted by the MindStore server.
+- The extension can open the right documentation and package URLs for the current deployment.
 
 ## Capture Modes
 
@@ -31,5 +38,6 @@ The extension popup also includes a lightweight query box. It sends your questio
 ## Troubleshooting
 
 - If capture works locally but not on a hosted instance, add an API key.
+- If the `Test connection` button fails, verify the base URL includes the correct protocol and host, for example `https://your-mindstore.example.com`.
 - If a conversation page falls back to page capture, switch to `Conversation first`.
 - If a page saves too much chrome or sidebar text, try selecting the exact content and use `Selection first`.
