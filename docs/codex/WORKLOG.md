@@ -277,3 +277,37 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run lint:ci`
 - `npm run typecheck`
 - `npm run test`
+
+### 2026-03-25: Topic Evolution Port
+
+#### Scope
+
+- Port Topic Evolution into the codex runtime-first branch.
+- Reuse the new shared vector/clustering helper instead of rebuilding topic math yet again.
+- Add a dedicated page, thin route, tests, and docs for the feature.
+
+#### Changes Completed
+
+- Added `src/server/plugins/ports/topic-evolution.ts` as the extracted timeline and shift-analysis module.
+- Added `GET /api/v1/plugins/topic-evolution` as a thin route wrapper.
+- Added `/app/evolution` with codex-side timeline, topic summary, and shift UI.
+- Added unit coverage for period construction and shift detection.
+- Added plugin docs and a release note for the port.
+
+#### Decisions
+
+- Topic Evolution should be built directly on top of `shared-vectors.ts` instead of carrying its own copy of clustering helpers.
+- The codex page focuses on the most important workflow surfaces first: trend line, topic summary, and shift interpretation.
+- Topic Evolution remains a local analysis feature with no provider dependency.
+
+#### Risks and Follow-Ups
+
+- The current page is still a streamlined codex version rather than the richest frain visualization pass.
+- Mind Map and Sentiment Timeline should now reuse the same shared vector layer next.
+- The fetched `origin/frain/improve` ref is still visibly behind the VPS update stream, so codex is still reconstructing some ports from visible route/page code.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
