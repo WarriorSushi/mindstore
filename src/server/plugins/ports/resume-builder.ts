@@ -422,7 +422,7 @@ async function embedResumeQuery(query: string) {
   }
 }
 
-function extractJsonObject(value: string) {
+export function extractJsonObject(value: string) {
   const match = value.match(/\{[\s\S]*\}/);
   if (!match) {
     throw new Error("Failed to parse AI response. Try again.");
@@ -430,7 +430,7 @@ function extractJsonObject(value: string) {
   return match[0];
 }
 
-function normalizeResumeSectionType(value: unknown): ResumeSection["type"] {
+export function normalizeResumeSectionType(value: unknown): ResumeSection["type"] {
   if (
     value === "header"
     || value === "summary"

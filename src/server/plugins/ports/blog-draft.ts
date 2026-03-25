@@ -398,7 +398,7 @@ async function embedQuery(query: string) {
   }
 }
 
-function slugify(value: string) {
+export function slugify(value: string) {
   return value.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || "blog-draft";
 }
 

@@ -352,28 +352,28 @@ async function embedLearningQuery(query: string) {
   }
 }
 
-function normalizeLearningDifficulty(value: unknown): LearningPath["difficulty"] {
+export function normalizeLearningDifficulty(value: unknown): LearningPath["difficulty"] {
   if (value === "beginner" || value === "intermediate" || value === "advanced" || value === "mixed") {
     return value;
   }
   return "mixed";
 }
 
-function normalizeLearningNodeType(value: unknown): LearningPathNode["type"] {
+export function normalizeLearningNodeType(value: unknown): LearningPathNode["type"] {
   if (value === "concept" || value === "practice" || value === "project" || value === "reading" || value === "milestone") {
     return value;
   }
   return "concept";
 }
 
-function normalizeLearningDepth(value: unknown): LearningPathNode["depth"] {
+export function normalizeLearningDepth(value: unknown): LearningPathNode["depth"] {
   if (value === "beginner" || value === "intermediate" || value === "advanced") {
     return value;
   }
   return "beginner";
 }
 
-function normalizeLearningResourceType(value: unknown): LearningPathResource["type"] {
+export function normalizeLearningResourceType(value: unknown): LearningPathResource["type"] {
   if (value === "article" || value === "video" || value === "book" || value === "exercise" || value === "tool") {
     return value;
   }

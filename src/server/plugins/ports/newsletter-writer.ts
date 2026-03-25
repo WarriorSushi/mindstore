@@ -401,7 +401,7 @@ function getDateNDaysAgo(days: number) {
   return new Date(Date.now() - days * 86400000).toISOString();
 }
 
-function normalizeNewsletterSectionType(value: unknown): NewsletterSection["type"] {
+export function normalizeNewsletterSectionType(value: unknown): NewsletterSection["type"] {
   if (value === "intro" || value === "topic" || value === "highlight" || value === "quicklinks" || value === "reflection" || value === "outro") {
     return value;
   }
