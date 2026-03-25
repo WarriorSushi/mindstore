@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid } from "lucide-react";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
@@ -93,10 +93,22 @@ export default function ExplorePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
 
+  // View mode state
+  const [viewMode, setViewMode] = useState<"list" | "compact">("list");
+
   // Infinite scroll state
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Derive unique source types from actual data
+  const sourceTypeCounts = sources.reduce((acc, s) => {
+    acc[s.type] = (acc[s.type] || 0) + s.itemCount;
+    return acc;
+  }, {} as Record<string, number>);
+  const activeSourceTypes = Object.entries(sourceTypeCounts)
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]); // Sort by count descending
 
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
@@ -631,6 +643,34 @@ export default function ExplorePage() {
           <div>
             <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Explore</h1>
             <p className="text-[13px] text-zinc-500 mt-0.5">{totalMemories.toLocaleString()} memories · {sources.length} sources</p>
+            {/* Source distribution mini-bar */}
+            {totalMemories > 0 && activeSourceTypes.length > 1 && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="flex h-[4px] rounded-full overflow-hidden bg-white/[0.04] w-32 sm:w-48">
+                  {activeSourceTypes.map(([type, count]) => {
+                    const pct = (count / totalMemories) * 100;
+                    const colorMap: Record<string, string> = {
+                      chatgpt: "bg-green-500/70", text: "bg-teal-500/70", file: "bg-blue-500/70",
+                      url: "bg-orange-500/70", kindle: "bg-amber-500/70", document: "bg-blue-500/70",
+                      youtube: "bg-red-500/70", bookmark: "bg-sky-500/70", obsidian: "bg-teal-500/70",
+                      reddit: "bg-orange-500/70", audio: "bg-teal-500/70", image: "bg-sky-500/70",
+                      notion: "bg-zinc-400/70", twitter: "bg-sky-500/70", telegram: "bg-teal-500/70",
+                      pocket: "bg-emerald-500/70", instapaper: "bg-emerald-500/70",
+                      spotify: "bg-emerald-500/70", readwise: "bg-amber-500/70",
+                    };
+                    return (
+                      <div
+                        key={type}
+                        className={`h-full ${colorMap[type] || "bg-zinc-500/70"}`}
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                        title={`${type}: ${count} (${Math.round(pct)}%)`}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="text-[9px] text-zinc-700">{activeSourceTypes.length} types</span>
+              </div>
+            )}
           </div>
           {memories.length > 0 && (
             <button
@@ -670,7 +710,7 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
-      {/* Filters + Sort */}
+      {/* Filters + View + Sort */}
       <Stagger>
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
@@ -681,16 +721,45 @@ export default function ExplorePage() {
               label="Pinned"
               icon={<Pin className="w-3 h-3" />}
             />
-            {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-              const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
-              if (count === 0) return null;
-              const Icon = typeConfig[type]?.icon || FileText;
+            {activeSourceTypes.map(([type, count]) => {
+              const cfg = typeConfig[type];
+              if (!cfg) return null;
+              const Icon = cfg.icon || FileText;
               return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
             })}
           </div>
 
-          {/* Sort Dropdown */}
-          {!search.trim() && memories.length > 0 && (
+          <div className="flex items-center gap-1 shrink-0">
+            {/* View Mode Toggle */}
+            {memories.length > 0 && (
+              <div className="hidden sm:flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 transition-all ${
+                    viewMode === "list"
+                      ? "bg-teal-500/15 text-teal-300"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                  title="List view"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("compact")}
+                  className={`p-1.5 transition-all ${
+                    viewMode === "compact"
+                      ? "bg-teal-500/15 text-teal-300"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                  title="Compact view"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Sort Dropdown */}
+            {!search.trim() && memories.length > 0 && (
             <div className="relative shrink-0">
               <button
                 onClick={() => setSortMenuOpen(!sortMenuOpen)}
@@ -732,35 +801,44 @@ export default function ExplorePage() {
               )}
             </div>
           )}
+          </div>
         </div>
       </Stagger>
 
       {/* Search Intelligence Indicators */}
-      {search.trim() && searchLayers && !loading && (
+      {search.trim() && !loading && (
         <Stagger>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-zinc-600 font-medium">Search layers</span>
-            <div className="flex items-center gap-1.5">
-              {searchLayers.bm25 > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                  🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
-                </span>
-              )}
-              {searchLayers.vector > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
-                  🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
-                </span>
-              )}
-              {searchLayers.tree > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                  🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
-                </span>
-              )}
-            </div>
-            {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
-              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
-                Connect AI for semantic search →
-              </Link>
+            <span className="text-[10px] text-teal-400/80 font-semibold tabular-nums">
+              {memories.length} result{memories.length !== 1 ? "s" : ""}
+            </span>
+            {searchLayers && (
+              <>
+                <span className="w-[3px] h-[3px] rounded-full bg-zinc-700" />
+                <span className="text-[10px] text-zinc-600 font-medium">via</span>
+                <div className="flex items-center gap-1.5">
+                  {searchLayers.bm25 > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                      🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                    </span>
+                  )}
+                  {searchLayers.vector > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
+                      🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                    </span>
+                  )}
+                  {searchLayers.tree > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                      🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                    </span>
+                  )}
+                </div>
+                {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
+                  <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
+                    Connect AI for semantic search →
+                  </Link>
+                )}
+              </>
             )}
           </div>
         </Stagger>
@@ -826,12 +904,69 @@ export default function ExplorePage() {
       )}
 
       {/* Memory Cards */}
-      <div ref={listRef} className="space-y-1.5">
+      <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-1.5"}>
         {memories.map((m, idx) => {
           const cfg = typeConfig[m.source] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10" };
           const Icon = cfg.icon;
           const isFocused = focusedIndex === idx;
           const isSelected = selectedIds.has(m.id);
+          const scorePercent = m.score ? Math.round(m.score * 100) : 0;
+
+          if (viewMode === "compact") {
+            // ═══ Compact View — dense rows for power users ═══
+            return (
+              <button
+                key={m.id}
+                onClick={() => {
+                  if (selectMode) { toggleSelect(m.id); }
+                  else { setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false); }
+                }}
+                className={`w-full text-left flex items-center gap-2.5 px-3 py-2 transition-all ${
+                  isSelected
+                    ? "bg-teal-500/[0.08] ring-1 ring-teal-500/20"
+                    : isFocused
+                    ? "bg-teal-500/[0.06]"
+                    : "hover:bg-white/[0.04]"
+                } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === memories.length - 1 ? "rounded-b-xl" : ""}`}
+              >
+                {selectMode && (
+                  <div className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                    isSelected ? "bg-teal-500 border-teal-500" : "border-white/[0.15] bg-white/[0.02]"
+                  }`}>
+                    {isSelected && <Check className="w-2 h-2 text-white" />}
+                  </div>
+                )}
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.color.split(" ").filter((c: string) => !c.startsWith("text-")).join(" ")}`}>
+                  <Icon className={`w-2.5 h-2.5 ${cfg.color.split(" ")[0]}`} />
+                </div>
+                <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0">{m.sourceTitle || "Untitled"}</span>
+                <span className="text-[12px] text-zinc-500 truncate flex-1">{m.content.replace(/\n/g, " ").slice(0, 120)}</span>
+                {search.trim() && scorePercent > 0 && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="w-10 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full bg-teal-500/60" style={{ width: `${Math.max(scorePercent, 8)}%` }} />
+                    </div>
+                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-6 text-right">{scorePercent}%</span>
+                  </div>
+                )}
+                <span className="text-[10px] text-zinc-700 tabular-nums shrink-0 w-10 text-right">
+                  {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </span>
+                {m.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 shrink-0 fill-amber-400/30" />}
+                {search.trim() && m.layers && (
+                  <span className="flex items-center gap-[2px] shrink-0" title={
+                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
+                  }>
+                    {m.layers.bm25 && <span className="w-[4px] h-[4px] rounded-full bg-blue-400/70" />}
+                    {m.layers.vector && <span className="w-[4px] h-[4px] rounded-full bg-teal-400/70" />}
+                    {m.layers.tree && <span className="w-[4px] h-[4px] rounded-full bg-emerald-400/70" />}
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          // ═══ List View — rich cards (default) ═══
           return (
             <button
               key={m.id}
@@ -865,6 +1000,22 @@ export default function ExplorePage() {
                   {m.source}
                 </span>
                 <span className="text-[11px] text-zinc-600 truncate flex-1">{m.sourceTitle}</span>
+                {/* Search relevance score */}
+                {search.trim() && scorePercent > 0 && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="w-12 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          scorePercent > 70 ? "bg-emerald-500/60" :
+                          scorePercent > 40 ? "bg-teal-500/60" :
+                          "bg-sky-500/60"
+                        }`}
+                        style={{ width: `${Math.max(scorePercent, 8)}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono">{scorePercent}%</span>
+                  </div>
+                )}
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
@@ -883,6 +1034,14 @@ export default function ExplorePage() {
                 )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
+              {/* Word count hint in list view */}
+              {!search.trim() && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px] text-zinc-700">
+                    {m.content.trim().split(/\s+/).length} words
+                  </span>
+                </div>
+              )}
             </button>
           );
         })}
@@ -905,8 +1064,42 @@ export default function ExplorePage() {
         )}
 
         {memories.length === 0 && !loading && (
-          <div className="text-center py-20 text-zinc-600 text-[13px]">
-            {totalMemories === 0 ? "No memories yet" : "No results"}
+          <div className="text-center py-16">
+            {totalMemories === 0 ? (
+              <div className="space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+                  <Search className="w-6 h-6 text-zinc-700" />
+                </div>
+                <div>
+                  <p className="text-[14px] text-zinc-400 font-medium">Your knowledge base is empty</p>
+                  <p className="text-[12px] text-zinc-600 mt-1">Import conversations, notes, or files to get started</p>
+                </div>
+                <Link
+                  href="/app/import"
+                  className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97] mt-2"
+                >
+                  Import your first memory
+                </Link>
+              </div>
+            ) : search.trim() ? (
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+                  <Search className="w-5 h-5 text-zinc-700" />
+                </div>
+                <p className="text-[13px] text-zinc-500">No results for &ldquo;{search}&rdquo;</p>
+                <p className="text-[11px] text-zinc-700">Try a different query or remove filters</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[13px] text-zinc-500">No memories match this filter</p>
+                <button
+                  onClick={() => setFilter(null)}
+                  className="text-[12px] text-teal-400 hover:text-teal-300 transition-colors"
+                >
+                  Clear filter →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
