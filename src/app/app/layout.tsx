@@ -6,7 +6,7 @@ import {
   Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings,
   GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
-  FileEdit, Users, Route, FileUser, Mail,
+  FileEdit, Users, Route, FileUser, Mail, Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -32,6 +32,7 @@ const navItems = [
   { href: "/app/paths", icon: Route, label: "Learn Paths" },
   { href: "/app/resume", icon: FileUser, label: "Resume" },
   { href: "/app/newsletter", icon: Mail, label: "Newsletter" },
+  { href: "/app/voice", icon: Mic, label: "Voice" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights" },
   { href: "/app/plugins", icon: Puzzle, label: "Plugins" },
   { href: "/app/connect", icon: Network, label: "Connect AI" },

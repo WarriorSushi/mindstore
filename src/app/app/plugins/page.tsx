@@ -85,6 +85,23 @@ const TYPE_LABELS: Record<string, string> = {
   prompt: 'Config',
 };
 
+// Plugin slug → app page route mapping
+const PLUGIN_ROUTES: Record<string, string> = {
+  'mind-map-generator': '/app/mindmap',
+  'topic-evolution': '/app/evolution',
+  'sentiment-timeline': '/app/sentiment',
+  'knowledge-gaps': '/app/gaps',
+  'writing-analyzer': '/app/writing',
+  'contradiction-finder': '/app/insights',
+  'flashcard-maker': '/app/flashcards',
+  'blog-draft': '/app/blog',
+  'conversation-prep': '/app/prep',
+  'learning-paths': '/app/paths',
+  'resume-builder': '/app/resume',
+  'newsletter-writer': '/app/newsletter',
+  'voice-to-memory': '/app/voice',
+};
+
 // ─── Component ────────────────────────────────────────────────────
 
 export default function PluginsPage() {
@@ -419,6 +436,16 @@ export default function PluginsPage() {
                         <div className="flex items-center gap-2 pt-1">
                           {plugin.installed ? (
                             <>
+                              {/* Open button for plugins with a page */}
+                              {plugin.status === 'active' && PLUGIN_ROUTES[plugin.slug] && (
+                                <button
+                                  onClick={() => router.push(PLUGIN_ROUTES[plugin.slug])}
+                                  className="h-8 px-4 rounded-lg bg-teal-500/10 border border-teal-500/20 text-[12px] font-medium text-teal-400 hover:bg-teal-500/15 active:scale-[0.97] transition-all flex items-center gap-1.5"
+                                >
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                  Open
+                                </button>
+                              )}
                               {plugin.status === 'active' ? (
                                 <button
                                   onClick={() => pluginAction(plugin.slug, 'disable')}
