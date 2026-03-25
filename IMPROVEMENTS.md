@@ -4,6 +4,65 @@ _Automated 30-min improvement cycles by Frain_
 
 ---
 
+## 2026-03-25 10:59 UTC — Notification Center · Plugin Activity Notifications
+
+### Notification Center (Bell Icon + Dropdown Panel)
+- **New DB table**: `notifications` with type enum:
+  - `import_complete` — "45 Kindle highlights imported"
+  - `analysis_ready` — "3 contradictions found"
+  - `review_due` — "12 flashcards due for review"
+  - `plugin_event` — generic plugin activity
+  - `system` — app updates, tips, onboarding
+  - `export_ready` — "Anki deck ready for download"
+  - `connection_found` — "New connection discovered"
+  - `milestone` — "You've reached 1,000 memories!"
+- **New API**: `/api/v1/notifications`
+  - GET: List with pagination, unread filter, total/unread counts
+  - POST: Create notification, mark-read, mark-all-read, clear-read, delete
+  - Auto-creates table on first access (zero-config migration)
+- **NotificationCenter component** (bell icon in header):
+  - Animated unread badge (teal, scales in) with 99+ cap
+  - Dropdown panel: notification list with type-colored icon, title, body, time-ago
+  - Click notification → mark as read + navigate to deep link
+  - Hover actions: mark read (✓), delete (×)
+  - Header actions: "Read all" (mark all read), "Clear" (delete read)
+  - Plugin source badge on each notification
+  - Auto-polls every 30 seconds for new notifications
+  - Click outside or Escape to close
+  - Empty state with descriptive message
+  - ARIA labels, keyboard navigation, focus management
+- **Positioned in**: Mobile header (between Search and Menu), Desktop sidebar header (next to logo)
+
+### Server-Side Notification Helpers (`src/server/notifications.ts`)
+- `createNotification()` — base function, never throws (best-effort)
+- `notifyImportComplete(pluginSlug, name, count, href)` — import notifications
+- `notifyAnalysisReady(pluginSlug, title, body, href)` — analysis notifications
+- `notifyMilestone(title, body)` — milestone celebrations
+- `notifyExportReady(pluginSlug, title, href)` — export notifications
+- `checkMilestones(totalMemories)` — auto-checks milestones at 100, 500, 1K, 2.5K, 5K, 10K, 25K, 50K, 100K
+
+### Plugin Integration (7 endpoints hooked up)
+- **Kindle Highlights** → notification on import complete
+- **YouTube Transcripts** → notification on transcript import
+- **PDF/EPUB Parser** → notification on document import
+- **Obsidian Vault Importer** → notification on vault import
+- **Browser Bookmarks** → notification on bookmarks import
+- **ChatGPT Import** (main `/api/v1/import`) → notification on conversation import
+- **Contradiction Finder** → notification when new contradictions discovered
+
+### Color System
+- import_complete → teal
+- analysis_ready → sky
+- review_due → amber
+- plugin_event → teal
+- system → zinc
+- export_ready → emerald
+- connection_found → sky
+- milestone → amber
+
+- **Design**: OLED black base, teal accent, glass borders. Zero violet/purple/fuchsia.
+- **Branch**: `frain/improve` (commit `202767a`)
+
 ## 2026-03-25 10:25 UTC — Saved Searches + Search History + Interactive Citations
 
 ### Saved Searches & Search History (Explore Power-User Upgrade)
