@@ -204,6 +204,22 @@ async function migrate() {
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugin_job_schedule_due ON plugin_job_schedules(enabled, next_run_at)`);
 
+  // Flashcard decks
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS flashcard_decks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT NOT NULL,
+      cards JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcard_decks_user ON flashcard_decks(user_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcard_decks_updated ON flashcard_decks(updated_at)`);
+
   // API Keys
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS api_keys (

@@ -118,6 +118,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - The repository remains MIT today; any future move to a stronger core license still requires deliberate contributor-rights and governance handling.
 - The branches still diverge heavily in implementation style; feature parity requires structured ports, not a single blind merge.
 - DCO enforcement may require current contributors to update their commit habits with `Signed-off-by:` lines.
+- The first `frain` feature port is now underway with Flashcard Maker; this is the new reference slice for future convergence work.
 
 ### Verification
 
@@ -126,3 +127,41 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run test`
 - `npm run build`
 - `npm run test:e2e`
+
+### 2026-03-25: Flashcard Maker Port
+
+#### Scope
+
+- Port the `frain` Flashcard Maker feature into the codex runtime-first branch as the first full convergence example.
+- Keep the user-facing page while extracting route logic into reusable server helpers.
+- Add user-owned deck persistence, unit coverage, and documentation so future ports have a concrete template.
+
+#### Changes Completed
+
+- Added `flashcard_decks` storage and migration coverage.
+- Added `src/server/plugins/ports/flashcard-maker.ts` as the extracted port module.
+- Added `GET/POST /api/v1/plugins/flashcard-maker` as a thin route wrapper around shared logic.
+- Added `/app/flashcards` and surfaced it in the sidebar and command palette.
+- Registered Flashcard Maker as a sidebar-visible plugin page in the plugin registry.
+- Added unit coverage for SM-2 state transitions and generated-card normalization.
+- Added user-facing and convergence docs for the port.
+
+#### Decisions
+
+- Flashcard decks are stored as user-owned application data, not embedded in plugin config blobs.
+- The first convergence port should preserve a real workflow page rather than forcing everything through generic plugin panels.
+- Ported feature logic should move into `src/server/plugins/ports/*` before any further runtime abstraction.
+
+#### Risks and Follow-Ups
+
+- The Flashcard Maker route still uses provider settings directly; a more unified model invocation layer is still a follow-up.
+- E2E coverage for this slice is currently blocked by the Playwright web server timing out during local startup, even though `build`, `lint`, `typecheck`, and unit tests pass.
+- Future convergence work should use Flashcard Maker as the template before porting Voice to Memory or importer-heavy slices.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e` (currently blocked locally by Playwright `webServer` startup timeout)

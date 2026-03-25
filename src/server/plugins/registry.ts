@@ -353,6 +353,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'flashcards', title: 'Flashcards', icon: 'Layers', showInSidebar: true }],
+    },
   },
 
   'newsletter-writer': {

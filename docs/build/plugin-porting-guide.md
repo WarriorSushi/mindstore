@@ -171,6 +171,21 @@ Reason: high user value, AI-powered, good test of action-plugin runtime conventi
 3. `voice-to-memory`
 Reason: good stress test for capture, media ingestion, provider handling, and scheduled follow-up work.
 
+## Current Porting Status
+
+- `flashcard-maker`: ported on `codex/local-dev` as the first full convergence example
+- `kindle-importer`: still pending
+- `voice-to-memory`: still pending
+
+Flashcard Maker is the reference because it exercises the hardest useful path so far:
+
+- dedicated UI page
+- AI-backed action route
+- persistent user-owned state
+- review algorithm logic
+- runtime-aware plugin registration
+- docs plus unit coverage
+
 ## Copyability Assessment
 
 ### Usually directly portable

@@ -62,7 +62,7 @@ Port `frain` features into the codex architecture in slices.
 ### Slice 2: Example plugin ports
 
 - `kindle-importer`
-- `flashcard-maker`
+- `flashcard-maker` (completed on codex as the first reference port)
 - `voice-to-memory`
 
 These are the reference ports that teach the pattern for the rest.
@@ -125,3 +125,14 @@ Convergence is succeeding when:
 - major `frain` capabilities appear on the codex branch
 - docs and runtime quality from codex remain intact
 - new work starts targeting one architecture instead of two
+
+## Latest Reference Port
+
+`flashcard-maker` is now the first end-to-end example of the convergence pattern:
+
+- feature UI retained
+- route logic extracted into `src/server/plugins/ports/flashcard-maker.ts`
+- codex-side schema and tests added
+- plugin surfaced in navigation and docs
+
+Use it as the template for the next ports.

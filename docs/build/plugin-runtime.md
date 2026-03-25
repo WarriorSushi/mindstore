@@ -25,6 +25,7 @@ The original plugin list was useful for product planning, but community contribu
 - Manual job execution with persisted run summaries
 - Per-user scheduled job records plus a shared due-job execution endpoint
 - Runtime-discovered import tabs and importer metadata
+- Route-to-runtime action plugin ports, starting with Flashcard Maker
 
 ## What Still Needs To Grow
 

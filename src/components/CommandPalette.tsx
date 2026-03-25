@@ -6,8 +6,7 @@ import {
   Search, LayoutDashboard, MessageSquare, Upload, Compass,
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
-  Plus, Download, Trash2, RefreshCw, Zap, Clock,
-  Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark,
+  Plus, Download, RefreshCw, Zap, Clock, Bookmark, Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,6 +15,21 @@ interface SearchResult {
   content: string;
   sourceType: string;
   sourceTitle: string;
+  score: number;
+}
+
+interface ChatHistoryConversation {
+  id: string;
+  title: string;
+  messages: unknown[];
+  updatedAt: string;
+}
+
+interface SearchApiResult {
+  memoryId: string;
+  content: string;
+  sourceType: string;
+  sourceTitle?: string | null;
   score: number;
 }
 
@@ -40,6 +54,7 @@ const NAV_ITEMS = [
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
+  { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition from your knowledge" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
   { href: "/app/settings", icon: Settings, label: "Settings", desc: "Providers & data" },
 ];
@@ -68,12 +83,7 @@ function getRecentConversations(): Array<{ id: string; title: string; updatedAt:
   try {
     const raw = localStorage.getItem("mindstore-chat-history");
     if (!raw) return [];
-    const convos = JSON.parse(raw) as Array<{
-      id: string;
-      title: string;
-      messages: any[];
-      updatedAt: string;
-    }>;
+    const convos = JSON.parse(raw) as ChatHistoryConversation[];
     return convos
       .filter((c) => c.messages.length > 0)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -155,7 +165,7 @@ export function CommandPalette() {
         if (res.ok) {
           const data = await res.json();
           setResults(
-            (data.results || []).map((r: any) => ({
+            ((data.results as SearchApiResult[] | undefined) || []).map((r) => ({
               id: r.memoryId,
               content: r.content,
               sourceType: r.sourceType,
@@ -256,8 +266,8 @@ export function CommandPalette() {
             a.click();
             URL.revokeObjectURL(a.href);
             toast.success("Backup downloaded");
-          } catch (err: any) {
-            toast.error(err.message || "Export failed");
+          } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : "Export failed");
           }
         },
       },
@@ -341,50 +351,50 @@ export function CommandPalette() {
   }, [query, recentConvos, router]);
 
   // Build items list
-  const navItems: PaletteItem[] = NAV_ITEMS
-    .filter((item) => {
-      if (!query) return true;
-      const q = query.toLowerCase();
-      return (
-        item.label.toLowerCase().includes(q) ||
-        item.desc.toLowerCase().includes(q)
-      );
+  const navItems: PaletteItem[] = useMemo(() => (
+    NAV_ITEMS
+      .filter((item) => {
+        if (!query) return true;
+        const q = query.toLowerCase();
+        return item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+      })
+      .map((item) => ({
+        id: `nav-${item.href}`,
+        icon: <item.icon className="w-4 h-4" />,
+        label: item.label,
+        description: item.desc,
+        action: () => {
+          router.push(item.href);
+          setOpen(false);
+        },
+        section: "navigation" as const,
+      }))
+  ), [query, router]);
+
+  const searchItems: PaletteItem[] = useMemo(() => (
+    results.map((result) => {
+      const Icon = typeIcons[result.sourceType] || FileText;
+      const color = typeColors[result.sourceType] || "text-zinc-400";
+      return {
+        id: `search-${result.id}`,
+        icon: <Icon className={`w-4 h-4 ${color}`} />,
+        label: result.sourceTitle,
+        description: result.content.slice(0, 80) + (result.content.length > 80 ? "…" : ""),
+        action: () => {
+          router.push(`/app/explore?q=${encodeURIComponent(result.sourceTitle)}`);
+          setOpen(false);
+        },
+        section: "search" as const,
+      };
     })
-    .map((item) => ({
-      id: `nav-${item.href}`,
-      icon: <item.icon className="w-4 h-4" />,
-      label: item.label,
-      description: item.desc,
-      action: () => {
-        router.push(item.href);
-        setOpen(false);
-      },
-      section: "navigation" as const,
-    }));
+  ), [results, router]);
 
-  const searchItems: PaletteItem[] = results.map((r) => {
-    const Icon = typeIcons[r.sourceType] || FileText;
-    const color = typeColors[r.sourceType] || "text-zinc-400";
-    return {
-      id: `search-${r.id}`,
-      icon: <Icon className={`w-4 h-4 ${color}`} />,
-      label: r.sourceTitle,
-      description: r.content.slice(0, 80) + (r.content.length > 80 ? "…" : ""),
-      action: () => {
-        router.push(`/app/explore?q=${encodeURIComponent(r.sourceTitle)}`);
-        setOpen(false);
-      },
-      section: "search" as const,
-    };
-  });
-
-  // Order: search results → actions → recent conversations → navigation
-  const allItems = [
+  const allItems = useMemo(() => ([
     ...(query ? searchItems : []),
     ...(query ? actionItems : []),
     ...(!query ? recentItems : []),
     ...navItems,
-  ];
+  ]), [actionItems, navItems, query, recentItems, searchItems]);
 
   // Reset index when items change
   useEffect(() => {

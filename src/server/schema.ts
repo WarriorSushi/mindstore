@@ -205,6 +205,20 @@ export const pluginJobSchedules = pgTable('plugin_job_schedules', {
   index('idx_plugin_job_schedule_due').on(table.enabled, table.nextRunAt),
 ]);
 
+export const flashcardDecks = pgTable('flashcard_decks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  color: text('color').notNull(),
+  cards: jsonb('cards').default([]).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_flashcard_decks_user').on(table.userId),
+  index('idx_flashcard_decks_updated').on(table.updatedAt),
+]);
+
 // API Keys (for MCP server auth)
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').defaultRandom().primaryKey(),
