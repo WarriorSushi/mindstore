@@ -54,3 +54,18 @@ export * as TwitterImporter from './twitter-importer';
 
 // Document parsing
 export * as PdfEpubParser from './pdf-epub-parser';
+
+// Notion integration
+export * as NotionImporter from './notion-importer';
+export * as NotionSync from './notion-sync';
+
+// Obsidian integration
+export * as ObsidianImporter from './obsidian-importer';
+export * as ObsidianSync from './obsidian-sync';
+
+// Advanced retrieval
+export * as CustomRAG from './custom-rag';
+export * as DomainEmbeddings from './domain-embeddings';
+
+// Multi-language
+export * as MultiLanguage from './multi-language';
