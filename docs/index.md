@@ -26,4 +26,5 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 - [Troubleshooting](./troubleshooting/index.md)
 - [Release Notes](./releases/2026-03-25-docs-foundation.md)
 - [Capture and Extension Release](./releases/2026-03-25-capture-and-extension.md)
+- [Plugin Runtime Surfaces Release](./releases/2026-03-25-plugin-runtime-surfaces.md)
 - [Codex Worklog](./codex/WORKLOG.md)

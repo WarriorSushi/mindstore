@@ -2,7 +2,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -21,13 +25,27 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@mindstore/plugin-sdk": ["./packages/plugin-sdk/src/index.ts"],
-      "@mindstore/plugin-sdk/*": ["./packages/plugin-sdk/src/*"],
-      "@mindstore/plugin-runtime": ["./packages/plugin-runtime/src/index.ts"],
-      "@mindstore/plugin-runtime/*": ["./packages/plugin-runtime/src/*"],
-      "@mindstore/example-community-plugin": ["./packages/example-community-plugin/src/index.ts"],
-      "@mindstore/example-community-plugin/*": ["./packages/example-community-plugin/src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@mindstore/plugin-sdk": [
+        "./packages/plugin-sdk/src/index.ts"
+      ],
+      "@mindstore/plugin-sdk/*": [
+        "./packages/plugin-sdk/src/*"
+      ],
+      "@mindstore/plugin-runtime": [
+        "./packages/plugin-runtime/src/index.ts"
+      ],
+      "@mindstore/plugin-runtime/*": [
+        "./packages/plugin-runtime/src/*"
+      ],
+      "@mindstore/example-community-plugin": [
+        "./packages/example-community-plugin/src/index.ts"
+      ],
+      "@mindstore/example-community-plugin/*": [
+        "./packages/example-community-plugin/src/*"
+      ]
     }
   },
   "include": [
@@ -35,9 +53,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "**/*.cts"
+    "**/*.cts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

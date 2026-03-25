@@ -28,6 +28,7 @@ export interface PluginManifest {
       acceptedFileTypes?: string[];
     };
   };
+  jobs?: PluginJobDefinition[];
   routes?: PluginRoute[];
   mcpTools?: MCPToolDefinition[];
   promptConfig?: {
@@ -110,14 +111,78 @@ export interface PluginPage {
 export interface PluginWidget {
   id: string;
   title: string;
+  description?: string;
   size: "small" | "medium" | "large";
   priority: number;
+  emptyState?: string;
+  cta?: {
+    label: string;
+    href?: string;
+  };
+}
+
+export interface PluginWidgetMetric {
+  label: string;
+  value: string;
+  tone?: "default" | "positive" | "warning" | "info";
+}
+
+export interface PluginWidgetItem {
+  label: string;
+  value?: string;
+}
+
+export interface PluginDashboardWidgetResult {
+  summary: string;
+  metrics?: PluginWidgetMetric[];
+  items?: PluginWidgetItem[];
+  updatedAt?: string;
 }
 
 export interface PluginRoute {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   description?: string;
+}
+
+export interface PluginJobDefinition {
+  id: string;
+  name: string;
+  description: string;
+  trigger: "manual" | "scheduled";
+  scheduleLabel?: string;
+}
+
+export interface PluginDashboardWidgetContext {
+  userId: string;
+  pluginSlug: string;
+  pluginConfig: Record<string, unknown>;
+}
+
+export interface PluginDashboardWidget {
+  id: string;
+  load: (
+    context: PluginDashboardWidgetContext
+  ) => Promise<PluginDashboardWidgetResult> | PluginDashboardWidgetResult;
+}
+
+export interface PluginJobContext {
+  userId: string;
+  pluginSlug: string;
+  pluginConfig: Record<string, unknown>;
+  reason?: string;
+}
+
+export interface PluginJobResult {
+  summary: string;
+  status?: "success" | "warning" | "error";
+  details?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface PluginJob {
+  id: string;
+  run: (context: PluginJobContext) => Promise<PluginJobResult> | PluginJobResult;
 }
 
 export interface MCPToolDefinition {
@@ -256,6 +321,10 @@ export interface MindStorePluginModule {
   manifest: PluginManifest;
   source?: "builtin" | "external";
   hooks?: Partial<Record<PluginHookName, (context: PluginHookContext) => Promise<PluginHookResult | void> | PluginHookResult | void>>;
+  dashboard?: {
+    widgets?: PluginDashboardWidget[];
+  };
+  jobs?: PluginJob[];
   mcp?: {
     tools?: PluginMcpTool[];
     resources?: PluginMcpResource[];

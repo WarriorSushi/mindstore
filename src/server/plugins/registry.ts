@@ -293,6 +293,22 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'ui:widgets'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      dashboardWidgets: [
+        {
+          id: 'writing-style-overview',
+          title: 'Writing Style',
+          description: 'A quick snapshot of how much you have written and where it comes from.',
+          size: 'medium',
+          priority: 20,
+          emptyState: 'Install and activate the plugin to see your writing profile.',
+          cta: {
+            label: 'Open Analyzer',
+            href: '/app/writing',
+          },
+        },
+      ],
+    },
   },
 
   'sentiment-timeline': {

@@ -23,6 +23,37 @@ async function fetchStats() {
   } catch { return null; }
 }
 
+async function fetchPluginWidgets() {
+  try {
+    const res = await fetch("/api/v1/plugins/runtime?action=dashboard");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.widgets || [];
+  } catch {
+    return [];
+  }
+}
+
+interface DashboardPluginWidget {
+  pluginSlug: string;
+  definition: {
+    id: string;
+    title: string;
+    description?: string;
+    size: "small" | "medium" | "large";
+    cta?: {
+      label: string;
+      href?: string;
+    };
+  };
+  data: {
+    summary: string;
+    metrics?: Array<{ label: string; value: string; tone?: "default" | "positive" | "warning" | "info" }>;
+    items?: Array<{ label: string; value?: string }>;
+    updatedAt?: string;
+  };
+}
+
 type SetupTab = "gemini" | "openai" | "ollama";
 
 export default function DashboardPage() {
@@ -39,11 +70,13 @@ export default function DashboardPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const [searching, setSearching] = useState(false);
+  const [pluginWidgets, setPluginWidgets] = useState<DashboardPluginWidget[]>([]);
 
   useEffect(() => {
     Promise.all([
       checkApiKey().then((data) => setHasKey(data.hasApiKey)),
       fetchStats().then(setStats),
+      fetchPluginWidgets().then(setPluginWidgets),
     ]).then(() => setLoaded(true));
     setDemo(isDemoMode());
   }, []);
@@ -425,6 +458,13 @@ export default function DashboardPage() {
         </div>
       </Stagger>
 
+      {/* Plugin Widgets */}
+      {pluginWidgets.length > 0 && (
+        <Stagger>
+          <PluginWidgetGrid widgets={pluginWidgets} />
+        </Stagger>
+      )}
+
       {/* Activity Chart — 14-day knowledge growth */}
       {stats?.dailyActivity?.length > 0 && total > 0 && (
         <Stagger>
@@ -589,6 +629,99 @@ export default function DashboardPage() {
       )}
     </PageTransition>
   );
+}
+
+function PluginWidgetGrid({ widgets }: { widgets: DashboardPluginWidget[] }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Plugin Widgets</p>
+        <Link href="/app/plugins" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
+          Manage plugins →
+        </Link>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {widgets.map((widget) => (
+          <div
+            key={`${widget.pluginSlug}:${widget.definition.id}`}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-teal-400" />
+                  <p className="text-[13px] font-medium text-zinc-200">{widget.definition.title}</p>
+                </div>
+                {widget.definition.description && (
+                  <p className="mt-1 text-[11px] text-zinc-500">{widget.definition.description}</p>
+                )}
+              </div>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-zinc-600">
+                {widget.pluginSlug}
+              </span>
+            </div>
+
+            <p className="mt-3 text-[12px] leading-relaxed text-zinc-300">{widget.data.summary}</p>
+
+            {widget.data.metrics && widget.data.metrics.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {widget.data.metrics.map((metric) => (
+                  <div
+                    key={`${widget.definition.id}:${metric.label}`}
+                    className={`rounded-xl border px-3 py-2 ${widgetMetricToneClass(metric.tone)}`}
+                  >
+                    <p className="text-[10px] uppercase tracking-[0.08em] text-zinc-500">{metric.label}</p>
+                    <p className="mt-1 text-[15px] font-semibold tracking-[-0.02em] text-zinc-100">{metric.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {widget.data.items && widget.data.items.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {widget.data.items.map((item) => (
+                  <div
+                    key={`${widget.definition.id}:${item.label}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-black/20 px-3 py-2"
+                  >
+                    <span className="text-[11px] text-zinc-500">{item.label}</span>
+                    <span className="text-[11px] font-medium text-zinc-300">{item.value || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="text-[10px] text-zinc-600">
+                {widget.data.updatedAt ? `Updated ${formatRelativeTime(widget.data.updatedAt)}` : "Runtime widget"}
+              </span>
+              {widget.definition.cta?.href ? (
+                <Link
+                  href={widget.definition.cta.href}
+                  className="text-[11px] font-medium text-teal-400 hover:text-teal-300 transition-colors"
+                >
+                  {widget.definition.cta.label} →
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function widgetMetricToneClass(tone?: "default" | "positive" | "warning" | "info") {
+  switch (tone) {
+    case "positive":
+      return "border-emerald-500/15 bg-emerald-500/[0.05]";
+    case "warning":
+      return "border-amber-500/15 bg-amber-500/[0.05]";
+    case "info":
+      return "border-sky-500/15 bg-sky-500/[0.05]";
+    default:
+      return "border-white/[0.05] bg-black/20";
+  }
 }
 
 /** Format a timestamp to relative time */

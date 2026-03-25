@@ -7,6 +7,7 @@ This section is for contributors and maintainers.
 - Repo layout and package boundaries.
 - [Plugin SDK and runtime contracts](./plugin-runtime.md).
 - [Capture contract](./capture-contract.md).
+- Plugin widget and job runtime flow.
 - Browser extension setup and API key flow.
 - Testing strategy.
 - Release process.

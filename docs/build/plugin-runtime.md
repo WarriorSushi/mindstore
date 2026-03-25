@@ -8,6 +8,7 @@ MindStore's plugin runtime exists to make extension safe, documented, and predic
 - `@mindstore/plugin-sdk` defines manifests, hooks, MCP surfaces, settings, and UI metadata.
 - `@mindstore/plugin-runtime` resolves canonical slugs, aliases, installation state, and active MCP bindings.
 - Plugin config is now validated from manifest schema and can be edited from the product UI.
+- Dashboard widgets and plugin jobs are now runtime-backed surfaces, not just manifest placeholders.
 
 ## Why This Exists
 
@@ -21,10 +22,11 @@ The original plugin list was useful for product planning, but community contribu
 - Settings schemas
 - Widgets and panels
 - Lifecycle hooks such as install, enable, disable, and import
+- Manual job execution with persisted run summaries
 
 ## What Still Needs To Grow
 
-- Background job registration
+- Scheduled/background job registration beyond manual runs
 - Safer external package loading for true third-party plugins
-- UI rendering for widgets driven directly from schema
+- Richer widget layouts beyond the current generic card renderer
 - Contract tests for plugin manifests and runtime bindings

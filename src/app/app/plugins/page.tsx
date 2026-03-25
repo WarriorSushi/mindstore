@@ -48,6 +48,13 @@ interface PluginDetail extends Plugin {
   longDescription?: string;
   config?: Record<string, unknown>;
   source?: "builtin" | "external";
+  dashboardWidgets?: PluginDetailWidget[];
+  jobs?: PluginDetailJob[];
+  runtimeSurfaces?: {
+    dashboardWidgets: number;
+    jobs: number;
+  };
+  jobRuns?: Record<string, PluginJobRun>;
   ui?: {
     settingsSchema?: PluginSettingField[];
   };
@@ -55,10 +62,40 @@ interface PluginDetail extends Plugin {
   lastError?: string | null;
 }
 
+interface PluginDetailWidget {
+  id: string;
+  title: string;
+  description?: string;
+  size: "small" | "medium" | "large";
+  priority: number;
+  emptyState?: string;
+  cta?: {
+    label: string;
+    href?: string;
+  };
+}
+
+interface PluginDetailJob {
+  id: string;
+  name: string;
+  description: string;
+  trigger: "manual" | "scheduled";
+  scheduleLabel?: string;
+}
+
+interface PluginJobRun {
+  lastRunAt?: string;
+  status?: "success" | "warning" | "error";
+  summary?: string;
+  details?: string[];
+}
+
 interface PluginMutationResponse {
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string>;
+  result?: PluginJobRun;
+  jobId?: string;
   plugin?: {
     config?: Record<string, unknown>;
   };
@@ -182,13 +219,13 @@ export default function PluginsPage() {
 
   // ─── Plugin action ─────────────────────────────────────────
 
-  const pluginAction = async (slug: string, action: string) => {
+  const pluginAction = async (slug: string, action: string, extra: Record<string, unknown> = {}) => {
     setActionLoading(`${slug}:${action}`);
     try {
       const res = await fetch('/api/v1/plugins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, action }),
+        body: JSON.stringify({ slug, action, ...extra }),
       });
       const data = (await res.json()) as PluginMutationResponse;
       if (!res.ok) {
@@ -201,6 +238,34 @@ export default function PluginsPage() {
     } catch (err) {
       console.error('Plugin action failed:', err);
       toast.error(err instanceof Error ? err.message : "Plugin action failed");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const runPluginJob = async (slug: string, jobId: string) => {
+    setActionLoading(`${slug}:run-job:${jobId}`);
+    try {
+      const response = await fetch("/api/v1/plugins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          action: "run-job",
+          jobId,
+        }),
+      });
+
+      const data = (await response.json()) as PluginMutationResponse;
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to run plugin job");
+      }
+
+      toast.success(data.result?.summary || data.message || "Plugin job completed");
+      await loadPluginDetail(slug, true);
+    } catch (error) {
+      console.error("Plugin job failed:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to run plugin job");
     } finally {
       setActionLoading(null);
     }
@@ -436,6 +501,9 @@ export default function PluginsPage() {
               const isActioning = actionLoading?.startsWith(plugin.slug);
               const detail = pluginDetails[plugin.slug];
               const settingsSchema = detail?.ui?.settingsSchema ?? [];
+              const dashboardWidgets = detail?.dashboardWidgets ?? [];
+              const jobs = detail?.jobs ?? [];
+              const jobRuns = detail?.jobRuns ?? {};
               const configDraft = configDrafts[plugin.slug] ?? {};
               const fieldErrors = configErrors[plugin.slug] ?? {};
               const isDetailLoading = !!detailLoading[plugin.slug];
@@ -567,6 +635,19 @@ export default function PluginsPage() {
                           </div>
                         )}
 
+                        {(dashboardWidgets.length > 0 || jobs.length > 0) && (
+                          <PluginRuntimeSurfacesSection
+                            widgets={dashboardWidgets}
+                            jobs={jobs}
+                            jobRuns={jobRuns}
+                            pluginInstalled={plugin.installed}
+                            pluginActive={plugin.status === "active"}
+                            actionLoading={actionLoading}
+                            slug={plugin.slug}
+                            onRunJob={runPluginJob}
+                          />
+                        )}
+
                         {settingsSchema.length > 0 && (
                           <PluginSettingsSection
                             disabled={!plugin.installed}
@@ -673,6 +754,129 @@ interface PluginSettingsSectionProps {
   saving: boolean;
   onChange: (key: string, value: unknown) => void;
   onSave: () => void;
+}
+
+interface PluginRuntimeSurfacesSectionProps {
+  widgets: PluginDetailWidget[];
+  jobs: PluginDetailJob[];
+  jobRuns: Record<string, PluginJobRun>;
+  pluginInstalled: boolean;
+  pluginActive: boolean;
+  slug: string;
+  actionLoading: string | null;
+  onRunJob: (slug: string, jobId: string) => void;
+}
+
+function PluginRuntimeSurfacesSection({
+  widgets,
+  jobs,
+  jobRuns,
+  pluginInstalled,
+  pluginActive,
+  slug,
+  actionLoading,
+  onRunJob,
+}: PluginRuntimeSurfacesSectionProps) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-3.5 space-y-3">
+      <div>
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-zinc-400" />
+          <h4 className="text-[13px] font-medium text-zinc-200">Runtime Surfaces</h4>
+        </div>
+        <p className="mt-1 text-[11px] text-zinc-500">
+          Widgets and jobs are declared by the plugin contract and executed through the shared runtime.
+        </p>
+      </div>
+
+      {widgets.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">Dashboard Widgets</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            {widgets.map((widget) => (
+              <div
+                key={widget.id}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-medium text-zinc-200">{widget.title}</p>
+                  <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-zinc-500">
+                    {widget.size}
+                  </span>
+                </div>
+                {widget.description && (
+                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{widget.description}</p>
+                )}
+                {widget.cta?.label && (
+                  <p className="mt-2 text-[10px] text-zinc-600">{widget.cta.label}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {jobs.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-zinc-600">Jobs</p>
+          <div className="space-y-2">
+            {jobs.map((job) => {
+              const runState = jobRuns[job.id];
+              const loadingKey = `${slug}:run-job:${job.id}`;
+              return (
+                <div
+                  key={job.id}
+                  className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[12px] font-medium text-zinc-200">{job.name}</p>
+                        <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] text-zinc-500">
+                          {job.trigger}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">{job.description}</p>
+                      {job.scheduleLabel && (
+                        <p className="mt-1 text-[10px] text-zinc-600">{job.scheduleLabel}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onRunJob(slug, job.id)}
+                      disabled={!pluginInstalled || !pluginActive || actionLoading === loadingKey}
+                      className="h-8 shrink-0 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 text-[12px] font-medium text-sky-300 transition-all hover:bg-sky-500/15 disabled:opacity-50"
+                    >
+                      {actionLoading === loadingKey ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        "Run now"
+                      )}
+                    </button>
+                  </div>
+
+                  {runState?.summary && (
+                    <div className="mt-3 rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2">
+                      <p className="text-[11px] text-zinc-300">{runState.summary}</p>
+                      {runState.lastRunAt && (
+                        <p className="mt-1 text-[10px] text-zinc-600">
+                          Last run {formatRelativeTime(runState.lastRunAt)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {!pluginInstalled || !pluginActive ? (
+            <p className="text-[10px] text-zinc-600">
+              Install and activate the plugin to run its jobs.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PluginSettingsSection({
@@ -813,4 +1017,17 @@ function stringValue(value: unknown) {
 
 function numberValue(value: unknown) {
   return typeof value === "number" ? String(value) : typeof value === "string" ? value : "";
+}
+
+function formatRelativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }

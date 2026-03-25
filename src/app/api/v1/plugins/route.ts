@@ -14,7 +14,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { eq } from 'drizzle-orm';
 import { FEATURED_PLUGIN_SLUGS, pluginRuntime } from '@/server/plugins/runtime';
+import { getInstalledPluginMap } from '@/server/plugins/state';
 import type { PluginStatus } from '@/server/plugins/types';
+import { getUserId } from '@/server/user';
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,6 +46,13 @@ export async function GET(req: NextRequest) {
         installed: !!dbRecord,
         status: dbRecord?.status || null,
         config: dbRecord?.config || {},
+        dashboardWidgets: pluginRuntime.getDashboardWidgetDefinitions(canonicalSlug),
+        jobs: pluginRuntime.getJobDefinitions(canonicalSlug),
+        runtimeSurfaces: {
+          dashboardWidgets: pluginRuntime.getDashboardWidgetDefinitions(canonicalSlug).length,
+          jobs: pluginRuntime.getJobDefinitions(canonicalSlug).length,
+        },
+        jobRuns: getJobRuns(dbRecord?.metadata),
         installedAt: dbRecord?.installedAt || null,
         lastError: dbRecord?.lastError || null,
       });
@@ -164,6 +173,9 @@ export async function POST(req: NextRequest) {
               routes: manifest.routes,
               mcpTools: manifest.mcpTools,
               aliases: manifest.aliases || [],
+              dashboardWidgets: manifest.ui?.dashboardWidgets || [],
+              jobs: manifest.jobs || [],
+              jobRuns: {},
             },
           })
           .returning();
@@ -280,9 +292,72 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // ─── RUN JOB ───────────────────────────────────────────
+      case 'run-job': {
+        const userId = await getUserId();
+        const jobId = typeof body.jobId === 'string' ? body.jobId : '';
+        const reason = typeof body.reason === 'string' ? body.reason : undefined;
+
+        if (!jobId) {
+          return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+        }
+
+        const [existing] = await db
+          .select()
+          .from(schema.plugins)
+          .where(eq(schema.plugins.slug, canonicalSlug))
+          .limit(1);
+
+        if (!existing) {
+          return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
+        }
+
+        const installedMap = await getInstalledPluginMap();
+        const jobBinding = pluginRuntime
+          .getJobs(installedMap, { userId, slug: canonicalSlug })
+          .find((job) => job.definition.id === jobId);
+
+        if (!jobBinding) {
+          return NextResponse.json(
+            { error: `Job ${jobId} is unavailable for this plugin. Make sure the plugin is active.` },
+            { status: 404 }
+          );
+        }
+
+        const result = await jobBinding.run({ userId, reason });
+        const now = new Date().toISOString();
+        const metadata = ((existing.metadata as Record<string, unknown>) || {}) as Record<string, unknown>;
+        const nextMetadata = {
+          ...metadata,
+          jobRuns: {
+            ...getJobRuns(metadata),
+            [jobId]: {
+              lastRunAt: now,
+              status: result.status ?? 'success',
+              summary: result.summary,
+              details: result.details ?? [],
+              metadata: result.metadata ?? {},
+            },
+          },
+        };
+
+        const [updated] = await db
+          .update(schema.plugins)
+          .set({ metadata: nextMetadata, updatedAt: new Date() })
+          .where(eq(schema.plugins.slug, canonicalSlug))
+          .returning();
+
+        return NextResponse.json({
+          message: `${manifest.name} job completed`,
+          result,
+          jobId,
+          plugin: updated,
+        });
+      }
+
       default:
         return NextResponse.json(
-          { error: `Unknown action: ${action}. Valid: install, uninstall, enable, disable, configure` },
+          { error: `Unknown action: ${action}. Valid: install, uninstall, enable, disable, configure, run-job` },
           { status: 400 }
         );
     }
@@ -290,4 +365,17 @@ export async function POST(req: NextRequest) {
     console.error('Plugin action error:', err);
     return NextResponse.json({ error: 'Plugin operation failed' }, { status: 500 });
   }
+}
+
+function getJobRuns(metadata: unknown): Record<string, unknown> {
+  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata)) {
+    return {};
+  }
+
+  const jobRuns = (metadata as Record<string, unknown>).jobRuns;
+  if (typeof jobRuns !== 'object' || jobRuns === null || Array.isArray(jobRuns)) {
+    return {};
+  }
+
+  return jobRuns as Record<string, unknown>;
 }

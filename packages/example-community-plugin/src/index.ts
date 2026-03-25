@@ -11,7 +11,7 @@ const communityHelloPlugin = definePlugin({
     category: "action",
     icon: "Sparkles",
     author: "MindStore Community",
-    capabilities: ["read:profile"],
+    capabilities: ["read:profile", "ui:widgets", "background:jobs"],
     hooks: ["onInstall", "onEnable"],
     ui: {
       settingsSchema: [
@@ -24,13 +24,82 @@ const communityHelloPlugin = definePlugin({
           placeholder: "Hello",
         },
       ],
+      dashboardWidgets: [
+        {
+          id: "community-hello-widget",
+          title: "Community Plugin Health",
+          description: "A sample widget rendered from an external plugin package.",
+          size: "small",
+          priority: 10,
+          cta: {
+            label: "Open Plugins",
+            href: "/app/plugins",
+          },
+        },
+      ],
     },
+    jobs: [
+      {
+        id: "community-hello-refresh",
+        name: "Refresh Greeting Snapshot",
+        description: "Generate a fresh summary showing the current sample plugin configuration.",
+        trigger: "manual",
+      },
+    ],
   },
   hooks: {
     async onInstall() {
       return { modified: false, data: { installed: true } };
     },
   },
+  dashboard: {
+    widgets: [
+      {
+        id: "community-hello-widget",
+        load(context) {
+          const prefix =
+            typeof context.pluginConfig.greetingPrefix === "string"
+              ? context.pluginConfig.greetingPrefix
+              : "Hello";
+          return {
+            summary: "External plugins can contribute dashboard UI without editing the core app.",
+            metrics: [
+              { label: "Greeting", value: prefix, tone: "positive" },
+              { label: "Surface", value: "Dashboard" },
+            ],
+            items: [
+              { label: "Plugin", value: "Community Hello" },
+              { label: "User", value: context.userId.slice(0, 8) },
+            ],
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      },
+    ],
+  },
+  jobs: [
+    {
+      id: "community-hello-refresh",
+      run(context) {
+        const prefix =
+          typeof context.pluginConfig.greetingPrefix === "string"
+            ? context.pluginConfig.greetingPrefix
+            : "Hello";
+        return {
+          status: "success",
+          summary: `${prefix} from the external plugin runtime.`,
+          details: [
+            "Manual job execution works for community plugins.",
+            "Job runs are persisted on the plugin record for later inspection.",
+          ],
+          metadata: {
+            greetingPrefix: prefix,
+            reason: context.reason ?? "manual",
+          },
+        };
+      },
+    },
+  ],
   mcp: {
     tools: [
       {

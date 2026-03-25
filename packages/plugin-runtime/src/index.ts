@@ -1,15 +1,19 @@
 import type {
   MindStoreConfig,
   MindStorePluginModule,
+  PluginDashboardWidgetResult,
   PluginHookContext,
   PluginHookName,
+  PluginJobResult,
   PluginManifest,
+  PluginJobDefinition,
   PluginStatus,
   PluginStoreEntry,
   PluginPrompt,
   PluginMcpResource,
   PluginMcpTool,
   PluginSettingField,
+  PluginWidget,
 } from "@mindstore/plugin-sdk";
 
 export interface InstalledPluginState {
@@ -51,6 +55,20 @@ export interface PluginPromptBinding {
   pluginConfig: Record<string, unknown>;
 }
 
+export interface PluginDashboardWidgetBinding {
+  pluginSlug: string;
+  definition: PluginWidget;
+  pluginConfig: Record<string, unknown>;
+  load: () => Promise<PluginDashboardWidgetResult>;
+}
+
+export interface PluginJobBinding {
+  pluginSlug: string;
+  definition: PluginJobDefinition;
+  pluginConfig: Record<string, unknown>;
+  run: (options?: { reason?: string; userId?: string }) => Promise<PluginJobResult>;
+}
+
 export interface PluginConfigValidationResult {
   config: Record<string, unknown>;
   errors: Record<string, string>;
@@ -80,6 +98,10 @@ export function createPluginRuntime(config: MindStoreConfig) {
       }
       aliasMap.set(alias, slug);
     }
+  }
+
+  for (const descriptor of plugins) {
+    validateRuntimeSurfaces(descriptor.plugin);
   }
 
   function resolveSlug(slug: string): string | null {
@@ -121,6 +143,14 @@ export function createPluginRuntime(config: MindStoreConfig) {
 
   function getSettingsSchema(slug: string): PluginSettingField[] {
     return resolvePlugin(slug)?.descriptor.plugin.manifest.ui?.settingsSchema ?? [];
+  }
+
+  function getDashboardWidgetDefinitions(slug: string) {
+    return resolvePlugin(slug)?.descriptor.plugin.manifest.ui?.dashboardWidgets ?? [];
+  }
+
+  function getJobDefinitions(slug: string): PluginJobDefinition[] {
+    return resolvePlugin(slug)?.descriptor.plugin.manifest.jobs ?? [];
   }
 
   function buildDefaultConfig(slug: string): Record<string, unknown> {
@@ -266,6 +296,87 @@ export function createPluginRuntime(config: MindStoreConfig) {
     });
   }
 
+  function getDashboardWidgets(
+    installedPlugins: Map<string, InstalledPluginState>,
+    options: { userId: string } 
+  ): PluginDashboardWidgetBinding[] {
+    return plugins.flatMap(({ plugin }) => {
+      const installed = resolveInstalledState(plugin.manifest.slug, installedPlugins);
+      if (!isPluginActive(installed)) {
+        return [];
+      }
+
+      const widgetHandlers = plugin.dashboard?.widgets ?? [];
+      const widgetDefinitions = new Map(
+        (plugin.manifest.ui?.dashboardWidgets ?? []).map((widget) => [widget.id, widget])
+      );
+
+      return widgetHandlers.flatMap((widget) => {
+        const definition = widgetDefinitions.get(widget.id);
+        if (!definition) {
+          return [];
+        }
+
+        return [
+          {
+            pluginSlug: plugin.manifest.slug,
+            definition,
+            pluginConfig: installed?.config ?? {},
+            load: async () =>
+              await widget.load({
+                userId: options.userId,
+                pluginSlug: plugin.manifest.slug,
+                pluginConfig: installed?.config ?? {},
+              }),
+          },
+        ];
+      });
+    });
+  }
+
+  function getJobs(
+    installedPlugins: Map<string, InstalledPluginState>,
+    options: { userId: string; slug?: string }
+  ): PluginJobBinding[] {
+    return plugins.flatMap(({ plugin }) => {
+      if (options.slug && plugin.manifest.slug !== options.slug) {
+        return [];
+      }
+
+      const installed = resolveInstalledState(plugin.manifest.slug, installedPlugins);
+      if (!isPluginActive(installed)) {
+        return [];
+      }
+
+      const jobHandlers = plugin.jobs ?? [];
+      const jobDefinitions = new Map(
+        (plugin.manifest.jobs ?? []).map((job) => [job.id, job])
+      );
+
+      return jobHandlers.flatMap((job) => {
+        const definition = jobDefinitions.get(job.id);
+        if (!definition) {
+          return [];
+        }
+
+        return [
+          {
+            pluginSlug: plugin.manifest.slug,
+            definition,
+            pluginConfig: installed?.config ?? {},
+            run: async (jobOptions = {}) =>
+              await job.run({
+                userId: jobOptions.userId ?? options.userId,
+                pluginSlug: plugin.manifest.slug,
+                pluginConfig: installed?.config ?? {},
+                reason: jobOptions.reason,
+              }),
+          },
+        ];
+      });
+    });
+  }
+
   async function runHookForPlugin(
     slug: string,
     hookName: PluginHookName,
@@ -332,6 +443,8 @@ export function createPluginRuntime(config: MindStoreConfig) {
     getAllManifests,
     getManifest,
     getSettingsSchema,
+    getDashboardWidgetDefinitions,
+    getJobDefinitions,
     buildDefaultConfig,
     validateAndNormalizeConfig,
     resolveSlug,
@@ -340,6 +453,8 @@ export function createPluginRuntime(config: MindStoreConfig) {
     getMcpTools,
     getMcpResources,
     getPrompts,
+    getDashboardWidgets,
+    getJobs,
     runHookForPlugin,
     runHookForActivePlugins,
   };
@@ -364,7 +479,29 @@ function buildTags(manifest: PluginManifest): string[] {
   if (manifest.capabilities?.includes("background:jobs")) tags.push("background");
   if (manifest.ui?.importTab) tags.push("file-upload");
   if (manifest.ui?.pages?.length) tags.push("has-pages");
+  if (manifest.ui?.dashboardWidgets?.length) tags.push("dashboard");
+  if (manifest.jobs?.length) tags.push("jobs");
   return tags;
+}
+
+function validateRuntimeSurfaces(plugin: MindStorePluginModule) {
+  const widgetIds = new Set((plugin.manifest.ui?.dashboardWidgets ?? []).map((widget) => widget.id));
+  for (const widget of plugin.dashboard?.widgets ?? []) {
+    if (!widgetIds.has(widget.id)) {
+      throw new Error(
+        `Plugin ${plugin.manifest.slug} defines dashboard widget handler "${widget.id}" without a manifest ui.dashboardWidgets entry.`
+      );
+    }
+  }
+
+  const jobIds = new Set((plugin.manifest.jobs ?? []).map((job) => job.id));
+  for (const job of plugin.jobs ?? []) {
+    if (!jobIds.has(job.id)) {
+      throw new Error(
+        `Plugin ${plugin.manifest.slug} defines job handler "${job.id}" without a manifest jobs entry.`
+      );
+    }
+  }
 }
 
 function preserveUnknownConfig(

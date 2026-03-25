@@ -172,4 +172,85 @@ describe("plugin runtime", () => {
       mode: "Mode must be one of the allowed options.",
     });
   });
+
+  it("binds dashboard widgets and jobs for active installed plugins", async () => {
+    const runtime = createPluginRuntime(
+      defineMindStoreConfig({
+        plugins: [
+          definePlugin({
+            manifest: {
+              slug: "runtime-surfaces",
+              name: "Runtime Surfaces",
+              description: "Plugin with widget and job handlers",
+              version: "0.1.0",
+              type: "extension",
+              category: "analysis",
+              icon: "sparkles",
+              author: "MindStore",
+              ui: {
+                dashboardWidgets: [
+                  {
+                    id: "summary",
+                    title: "Summary",
+                    size: "small",
+                    priority: 1,
+                  },
+                ],
+              },
+              jobs: [
+                {
+                  id: "refresh",
+                  name: "Refresh",
+                  description: "Refresh generated data",
+                  trigger: "manual",
+                },
+              ],
+            },
+            dashboard: {
+              widgets: [
+                {
+                  id: "summary",
+                  load(context) {
+                    return {
+                      summary: `Loaded for ${context.userId}`,
+                    };
+                  },
+                },
+              ],
+            },
+            jobs: [
+              {
+                id: "refresh",
+                run(context) {
+                  return {
+                    status: "success",
+                    summary: `Ran for ${context.userId}`,
+                  };
+                },
+              },
+            ],
+          }),
+        ],
+      })
+    );
+
+    const installedMap = new Map([
+      ["runtime-surfaces", { status: "active", config: { enabled: true } }],
+    ]);
+
+    const widgets = runtime.getDashboardWidgets(installedMap, { userId: "widget-user" });
+    expect(widgets).toHaveLength(1);
+    expect(widgets[0]?.definition.title).toBe("Summary");
+    await expect(widgets[0]?.load()).resolves.toEqual({
+      summary: "Loaded for widget-user",
+    });
+
+    const jobs = runtime.getJobs(installedMap, { userId: "job-user" });
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.definition.name).toBe("Refresh");
+    await expect(jobs[0]?.run()).resolves.toEqual({
+      status: "success",
+      summary: "Ran for job-user",
+    });
+  });
 });

@@ -26,4 +26,4 @@ Look at `packages/example-community-plugin` for the first sample external plugin
 
 - Add a step-by-step plugin tutorial.
 - Add manifest validation examples.
-- Add job and widget docs as those runtime surfaces land.
+- Keep [widget and job docs](./widgets-and-jobs.md) in sync as the runtime grows.
