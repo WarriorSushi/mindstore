@@ -92,6 +92,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Updated README, contributing guidance, and PR template to separate code license, trademark rights, and contribution-origin expectations.
 - Synced `IMPROVEMENTS.md` and restored `MIND_FILE_SPEC.md` from the active `frain` line so product context docs are preserved on codex as requested.
 - Added a branch convergence playbook and plugin porting guide so `frain` feature work can be adapted into the codex runtime/test/docs model instead of landing as an uncontrolled merge.
+- Added DCO enforcement, governance docs, and a legal notice so the repo's licensing/contribution policy is enforceable and visible while the branches converge.
 
 ### Decisions
 
@@ -116,6 +117,7 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - Many import plugins still need richer dedicated UIs or OAuth flows; runtime import tabs currently provide the shared discovery layer and fallback panel.
 - The repository remains MIT today; any future move to a stronger core license still requires deliberate contributor-rights and governance handling.
 - The branches still diverge heavily in implementation style; feature parity requires structured ports, not a single blind merge.
+- DCO enforcement may require current contributors to update their commit habits with `Signed-off-by:` lines.
 
 ### Verification
 

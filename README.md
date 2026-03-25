@@ -212,6 +212,8 @@ For the full project policy around licensing direction, contributions, plugins, 
 
 Brand usage is covered separately by [TRADEMARKS.md](./TRADEMARKS.md).
 
+Project governance is described in [GOVERNANCE.md](./GOVERNANCE.md), and contribution-origin policy is described in [DCO.md](./DCO.md).
+
 ---
 
 <div align="center">

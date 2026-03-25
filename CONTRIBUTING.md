@@ -15,6 +15,7 @@ MindStore is evolving into a personal knowledge layer for AI with a strong open 
 - Contributions are accepted under the repository's current outbound license unless a subdirectory says otherwise.
 - Contributors should add a `Signed-off-by:` line to commits in line with [DCO.md](./DCO.md).
 - Branding rights are separate from code rights; see [TRADEMARKS.md](./TRADEMARKS.md).
+- Project stewardship and major policy authority are described in [GOVERNANCE.md](./GOVERNANCE.md).
 
 ## Good First Contribution Areas
 

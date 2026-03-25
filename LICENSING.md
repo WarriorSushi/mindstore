@@ -62,6 +62,8 @@ Unless otherwise stated, contributions to this repository are accepted under the
 
 Contributors are also expected to certify origin using the Developer Certificate of Origin process described in [DCO.md](./DCO.md).
 
+The repository also enforces DCO checks in GitHub Actions so contribution-origin policy is operational rather than purely advisory.
+
 ## Trademarks
 
 Code licensing and trademark rights are different.
@@ -78,3 +80,9 @@ If you want:
 - a future commercial agreement for proprietary or hosted use
 
 contact the project maintainers rather than guessing from the open source license alone.
+
+## Governance
+
+Licensing direction, trademark policy, and future commercial structure are governance decisions, not drive-by changes.
+
+See [GOVERNANCE.md](./GOVERNANCE.md).
