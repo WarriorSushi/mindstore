@@ -186,7 +186,7 @@
 }
 
 .hero-gradient {
-  background: linear-gradient(135deg, #8b5cf6, #d946ef, #8b5cf6, #a78bfa);
+  background: linear-gradient(135deg, #14b8a6, #38bdf8, #14b8a6, #5eead4);
   background-size: 300% 300%;
   animation: gradient-shift 6s ease infinite;
   -webkit-background-clip: text;
@@ -203,7 +203,7 @@
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0), rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0));
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0), rgba(20, 184, 166, 0.15), rgba(20, 184, 166, 0));
   opacity: 0;
   transition: opacity 0.3s;
   z-index: -1;
@@ -257,90 +257,67 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(20, 184, 166, 0.3);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(20, 184, 166, 0.5);
 }
 
-.docs-prose {
-  color: rgb(212 212 216);
-  line-height: 1.75;
+/* Sidebar scroll — ultra-thin scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.docs-prose h1,
-.docs-prose h2,
-.docs-prose h3 {
+/* ─── Accessibility: Keyboard focus ring ─── */
+/* Only show focus outline when using keyboard (not mouse) */
+:focus-visible {
+  outline: 2px solid rgba(20, 184, 166, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Hide focus for mouse clicks */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip-to-content link (accessibility) */
+.skip-to-content {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: #14b8a6;
   color: white;
-  letter-spacing: -0.03em;
-}
-
-.docs-prose h2 {
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+  border-radius: 0 0 8px 8px;
+  font-size: 13px;
   font-weight: 600;
-}
-
-.docs-prose h3 {
-  margin-top: 1.75rem;
-  margin-bottom: 0.75rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.docs-prose p,
-.docs-prose ul,
-.docs-prose ol,
-.docs-prose pre,
-.docs-prose blockquote {
-  margin-top: 1rem;
-}
-
-.docs-prose ul,
-.docs-prose ol {
-  padding-left: 1.25rem;
-}
-
-.docs-prose li + li {
-  margin-top: 0.35rem;
-}
-
-.docs-prose a {
-  color: rgb(94 234 212);
+  transition: top 0.2s ease;
   text-decoration: none;
 }
-
-.docs-prose a:hover {
-  color: rgb(165 243 252);
+.skip-to-content:focus {
+  top: 0;
+  outline: none;
 }
 
-.docs-prose code {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.15rem 0.4rem;
-  color: rgb(244 244 245);
-  font-size: 0.9em;
-}
-
-.docs-prose pre {
-  overflow-x: auto;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1rem;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 1rem;
-}
-
-.docs-prose pre code {
-  border: 0;
-  background: transparent;
-  padding: 0;
-}
-
-.docs-prose blockquote {
-  border-left: 3px solid rgba(45, 212, 191, 0.35);
-  padding-left: 1rem;
-  color: rgb(161 161 170);
+/* ─── Reduced motion preferences ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
