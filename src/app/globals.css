@@ -8,6 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -140,6 +141,10 @@
   /* Ensure mono uses our JetBrains Mono */
   code, kbd, pre, samp {
     font-family: var(--font-mono), ui-monospace, monospace;
+  }
+  /* Serif utility for display headings */
+  .font-serif {
+    font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   }
 }
 

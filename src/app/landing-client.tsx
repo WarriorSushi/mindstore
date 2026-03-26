@@ -1,31 +1,84 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import {
-  Brain, Lock, Search, Upload, Zap, MessageSquare, ArrowRight,
-  Fingerprint, Shuffle, AlertTriangle, Timer, BarChart3, Swords,
-  Sparkles, Globe, FileText, Network, GraduationCap,
-  Loader2, BookOpen, Mic, Camera, Layers, Heart, PenTool,
-  Target, Route, FileUser, Mail, Download, Dna,
-  type LucideIcon,
+  ArrowRight, Upload, MessageSquare, Search,
+  Fingerprint, Network, Layers, Heart, Target,
+  PenTool, Route, Mail, Mic, Camera,
+  Lock, Globe, Zap, AlertTriangle,
+  BookOpen, FileText, Dna,
 } from "lucide-react";
 import { MindStoreLogo, MindStoreLogoMono } from "@/components/MindStoreLogo";
 
-// ─── Import source icons (for the import grid) ───────────────
-const importSources = [
-  { name: "ChatGPT", icon: MessageSquare, color: "text-emerald-400" },
-  { name: "Kindle", icon: BookOpen, color: "text-amber-400" },
-  { name: "YouTube", icon: Globe, color: "text-red-400" },
-  { name: "Notion", icon: FileText, color: "text-zinc-300" },
-  { name: "Obsidian", icon: Dna, color: "text-sky-400" },
-  { name: "PDF & EPUB", icon: FileText, color: "text-teal-400" },
-  { name: "Reddit", icon: MessageSquare, color: "text-orange-400" },
-  { name: "Twitter", icon: Globe, color: "text-sky-300" },
-  { name: "Spotify", icon: Mic, color: "text-emerald-300" },
-  { name: "Bookmarks", icon: Globe, color: "text-blue-400" },
-  { name: "Telegram", icon: MessageSquare, color: "text-sky-400" },
-  { name: "Voice Memos", icon: Mic, color: "text-teal-300" },
-];
+/* ═══════════════════════════════════════════
+   MindStore Landing Page
+   
+   Design direction: Editorial luxury. 
+   Inspired by: Stripe's annual letters, Linear's homepage,
+   Arc's visual identity, Apple product pages.
+   
+   NOT: Card grids. Not SaaS template. Not "AI slop."
+   
+   Typography: Instrument Serif (display) + Plus Jakarta Sans (body)
+   Palette: OLED black base, teal accent used SPARINGLY (10% rule)
+   Layout: Asymmetric, editorial, generous whitespace
+   Motion: Scroll-driven reveals, no bounce/elastic
+   ═══════════════════════════════════════════ */
+
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.unobserve(el); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, visible };
+}
+
+function Reveal({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const { ref, visible } = useInView();
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(20px)",
+        transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ─── Number counter for stats ─── */
+function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
+  const { ref, visible } = useInView();
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    let frame: number;
+    const duration = 1200;
+    const start = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4); // ease-out-quart
+      setCount(Math.round(eased * end));
+      if (progress < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [visible, end]);
+  return <span ref={ref}>{count}{suffix}</span>;
+}
 
 export function LandingClient() {
   const jsonLd = {
@@ -35,38 +88,26 @@ export function LandingClient() {
     applicationCategory: "ProductivityApplication",
     operatingSystem: "Web",
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    description:
-      "Your AI-powered second brain. Import knowledge from 12+ sources, chat with your own mind, and discover hidden connections. 35 plugins, MCP protocol, free and open source.",
+    description: "The personal knowledge operating system. Import from 12+ sources, chat with your knowledge, discover hidden connections. 35 plugins, MCP protocol, MIT licensed.",
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b]">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+    <div className="min-h-screen bg-[#08080a] text-zinc-100 selection:bg-teal-500/20 selection:text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* ═══════ NAV ═══════ */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/[0.04]">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+      <nav className="fixed top-0 inset-x-0 z-50 bg-[#08080a]/70 backdrop-blur-xl border-b border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <MindStoreLogo className="w-7 h-7" />
-            <span className="font-semibold text-[15px] tracking-[-0.01em]">
-              MindStore
-            </span>
+            <MindStoreLogo className="w-6 h-6" />
+            <span className="font-semibold text-[14px] tracking-[-0.02em] text-zinc-200">MindStore</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:inline-flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/></svg>
-              GitHub
-            </a>
-            <Link href="/docs" className="text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:block">
-              Docs
-            </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/docs" className="text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:block">Docs</Link>
+            <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:block">GitHub</a>
             <Link href="/app">
-              <button className="h-8 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.06] text-[13px] font-medium text-zinc-300 hover:text-white transition-all active:scale-[0.96] flex items-center gap-1.5">
+              <button className="h-8 px-4 rounded-lg bg-zinc-100 text-[#08080a] text-[13px] font-semibold hover:bg-white transition-colors active:scale-[0.97]">
                 Open App
-                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </Link>
           </div>
@@ -74,440 +115,348 @@ export function LandingClient() {
       </nav>
 
       {/* ═══════ HERO ═══════ */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
-        <div className="orb w-96 h-96 bg-teal-600 top-0 -left-48" style={{ animationDelay: "0s" }} />
-        <div className="orb w-72 h-72 bg-sky-600 top-20 -right-36" style={{ animationDelay: "-7s" }} />
+      <section className="relative pt-32 pb-24 md:pt-44 md:pb-40 overflow-hidden">
+        {/* Subtle teal glow — NOT neon, just a whisper */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-teal-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="relative max-w-[1200px] mx-auto px-6">
+          <Reveal>
+            <p className="text-[13px] text-teal-400 font-medium tracking-[0.08em] uppercase mb-6">
+              Open source · MIT licensed · 35 plugins
+            </p>
+          </Reveal>
+          
+          <Reveal delay={0.1}>
+            <h1 className="text-[clamp(2.5rem,6vw,5rem)] font-serif font-normal leading-[1.05] tracking-[-0.03em] max-w-3xl">
+              The operating system{" "}
+              <span className="italic text-zinc-400">for everything</span>{" "}
+              you know.
+            </h1>
+          </Reveal>
 
-        <div className="relative max-w-4xl mx-auto px-6 text-center landing-fade-in">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-[13px] text-zinc-400 mb-8 landing-fade-in"
-            style={{ animationDelay: "0.1s" }}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-            35 plugins · 12 import sources · Free & open source
-          </div>
+          <Reveal delay={0.2}>
+            <p className="text-[17px] md:text-[19px] text-zinc-500 mt-8 max-w-xl leading-[1.75]">
+              MindStore ingests your entire digital life — conversations, books, articles, 
+              notes, podcasts — and turns it into a queryable intelligence layer. 
+              Not a notebook. Not a chatbot. A <em className="text-zinc-300 not-italic font-medium">knowledge operating system</em>.
+            </p>
+          </Reveal>
 
-          <h1
-            className="text-[44px] sm:text-[64px] md:text-[72px] font-bold tracking-[-0.04em] leading-[1.05] mb-6 landing-fade-in"
-            style={{ animationDelay: "0.2s" }}
-          >
-            Your AI-powered{" "}
-            <span className="hero-gradient">second brain.</span>
-          </h1>
+          <Reveal delay={0.3}>
+            <div className="flex flex-wrap gap-3 mt-10">
+              <Link href="/app">
+                <button className="h-12 px-8 rounded-xl bg-zinc-100 text-[#08080a] text-[15px] font-semibold hover:bg-white transition-all active:scale-[0.97]">
+                  Get Started — Free
+                </button>
+              </Link>
+              <Link href="/app?demo=true">
+                <button className="h-12 px-8 rounded-xl border border-zinc-800 text-[15px] font-medium text-zinc-300 hover:border-zinc-600 hover:text-white transition-all active:scale-[0.97]">
+                  Try Demo
+                </button>
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
-          <p
-            className="text-[17px] md:text-[19px] text-zinc-400 mb-10 max-w-2xl mx-auto leading-[1.7] landing-fade-in"
-            style={{ animationDelay: "0.3s" }}
-          >
-            Import from ChatGPT, Kindle, YouTube, Notion &amp; 8 more sources.
-            Chat with your own knowledge. Discover connections you never knew existed.
-          </p>
-
-          <div
-            className="flex flex-wrap gap-3 justify-center mb-12 landing-fade-in"
-            style={{ animationDelay: "0.4s" }}
-          >
-            <Link href="/app">
-              <button className="h-12 px-8 rounded-2xl bg-teal-600 hover:bg-teal-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20">
-                Get Started — Free
-              </button>
-            </Link>
-            <Link href="/app?demo=true">
-              <button className="h-12 px-8 rounded-2xl border border-teal-500/30 bg-teal-500/[0.06] hover:bg-teal-500/[0.12] text-[15px] font-medium text-teal-300 transition-all active:scale-[0.97]">
-                🎯 Try Demo
-              </button>
-            </Link>
-            <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer">
-              <button className="h-12 px-8 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-[15px] font-medium text-zinc-300 transition-all active:scale-[0.97] flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/></svg>
-                Star on GitHub
-              </button>
-            </a>
-          </div>
-
-          {/* ─── Stats bar ─── */}
-          <div
-            className="flex flex-wrap justify-center gap-8 md:gap-12 text-center landing-fade-in"
-            style={{ animationDelay: "0.5s" }}
-          >
+      {/* ═══════ STATS BAR — editorial, not cards ═══════ */}
+      <section className="border-t border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 py-16 md:py-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             {[
-              { value: "35", label: "Plugins" },
-              { value: "12+", label: "Import Sources" },
-              { value: "336", label: "Tests Passing" },
-              { value: "MIT", label: "Licensed" },
-            ].map((s) => (
-              <div key={s.label}>
-                <p className="text-[24px] font-bold text-white tabular-nums">{s.value}</p>
-                <p className="text-[12px] text-zinc-500 mt-0.5">{s.label}</p>
-              </div>
+              { value: 33, suffix: "", label: "Plugins" },
+              { value: 12, suffix: "+", label: "Import sources" },
+              { value: 336, suffix: "", label: "Tests passing" },
+              { value: 103, suffix: "", label: "Pages of docs" },
+            ].map((s, i) => (
+              <Reveal key={s.label} delay={i * 0.1}>
+                <div>
+                  <p className="text-[clamp(2rem,4vw,3.5rem)] font-serif font-normal tracking-[-0.03em] text-zinc-100 tabular-nums">
+                    <Counter end={s.value} suffix={s.suffix} />
+                  </p>
+                  <p className="text-[13px] text-zinc-600 mt-1 tracking-[0.02em]">{s.label}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ═══════ IMPORT FROM ANYWHERE ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
-        <div className="text-center mb-12">
-          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-teal-500/10 text-teal-400 border border-teal-500/15 mb-4">
-            Universal Import
-          </span>
-          <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
-            Import from anywhere you think
-          </h2>
-          <p className="text-[15px] text-zinc-500 max-w-xl mx-auto leading-relaxed">
-            12 importers built-in. Drop a file, paste a URL, or connect a service. Your knowledge, unified.
-          </p>
-        </div>
-
-        {/* Import source grid */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-10">
-          {importSources.map((src) => (
-            <div
-              key={src.name}
-              className="flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-200 group"
-            >
-              <src.icon className={`w-5 h-5 ${src.color} group-hover:scale-110 transition-transform`} />
-              <span className="text-[12px] text-zinc-400 font-medium">{src.name}</span>
+      {/* ═══════ THE PITCH — asymmetric editorial ═══════ */}
+      <section className="border-t border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+          <div className="grid md:grid-cols-[1.2fr_1fr] gap-16 md:gap-24 items-start">
+            <div>
+              <Reveal>
+                <p className="text-[13px] text-teal-400 font-medium tracking-[0.08em] uppercase mb-4">Why MindStore</p>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-serif font-normal leading-[1.15] tracking-[-0.02em]">
+                  Your AI conversations disappear. Your highlights rot in Kindle. Your bookmarks collect dust.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.2}>
+                <p className="text-[15px] text-zinc-500 mt-6 leading-[1.8] max-w-lg">
+                  MindStore unifies every source of knowledge into a single semantic layer. 
+                  Import once. Search by meaning forever. Ask questions and get answers pulled from 
+                  <em> your own thinking</em> — not the internet.
+                </p>
+              </Reveal>
             </div>
-          ))}
-        </div>
-
-        {/* Quick import highlight */}
-        <div className="relative overflow-hidden rounded-3xl border border-teal-500/15 bg-gradient-to-br from-teal-500/[0.04] via-transparent to-sky-500/[0.03]">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-0">
-            <div className="p-8 md:p-10 flex flex-col justify-center">
-              <h3 className="text-[22px] md:text-[26px] font-bold tracking-[-0.02em] leading-[1.2] mb-4">
-                Import your ChatGPT<br />
-                <span className="text-teal-400">in 30 seconds.</span>
-              </h3>
-              <p className="text-[14px] text-zinc-400 leading-[1.7] mb-6 max-w-md">
-                Years of AI conversations — every insight, every question — instantly searchable.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { step: "1", label: "Export from ChatGPT", desc: "Settings → Data Controls → Export" },
-                  { step: "2", label: "Download the ZIP", desc: "Check your email, click the link" },
-                  { step: "3", label: "Drop it in MindStore", desc: "Drag & drop — we handle the rest" },
-                ].map((s) => (
-                  <div key={s.step} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0">
-                      <span className="text-[12px] font-bold text-teal-400">{s.step}</span>
+            <div className="space-y-6 md:pt-16">
+              {[
+                { icon: Search, title: "Semantic search", desc: "Find ideas by meaning, not keywords. Ask 'what did I learn about pricing strategy?' and get real answers." },
+                { icon: AlertTriangle, title: "Contradiction detection", desc: "Your 2024 self disagrees with your 2025 self. MindStore finds it." },
+                { icon: Fingerprint, title: "Knowledge fingerprint", desc: "A 3D topology of your mind. See where you're deep, where you're shallow, where you're blind." },
+              ].map((f, i) => (
+                <Reveal key={f.title} delay={i * 0.1}>
+                  <div className="flex items-start gap-4">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <f.icon className="w-4 h-4 text-zinc-400" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-medium text-white">{s.label}</p>
-                      <p className="text-[12px] text-zinc-500">{s.desc}</p>
+                      <p className="text-[14px] font-semibold text-zinc-200">{f.title}</p>
+                      <p className="text-[13px] text-zinc-500 mt-1 leading-[1.7]">{f.desc}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative p-6 md:p-8 flex items-center justify-center">
-              <div className="w-full max-w-xs">
-                <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d0e] overflow-hidden shadow-2xl shadow-black/40">
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.04]">
-                    <div className="w-2 h-2 rounded-full bg-red-500/60" />
-                    <div className="w-2 h-2 rounded-full bg-amber-500/60" />
-                    <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
-                    <span className="text-[9px] text-zinc-600 ml-2 font-mono">mindstore.org/app/import</span>
-                  </div>
-                  <div className="p-5 space-y-3">
-                    <div className="rounded-xl border-2 border-dashed border-teal-500/30 bg-teal-500/[0.04] p-6 text-center">
-                      <Upload className="w-6 h-6 text-teal-400 mx-auto mb-2" />
-                      <p className="text-[12px] text-zinc-300 font-medium">Drop your export</p>
-                      <p className="text-[10px] text-zinc-600 mt-0.5">.json · .zip · .csv · .pdf · .epub</p>
-                    </div>
-                    <div className="space-y-2">
-                      {[
-                        { label: "847 conversations parsed", done: true },
-                        { label: "12,340 memories created", done: true },
-                        { label: "Generating embeddings…", done: false },
-                      ].map((line) => (
-                        <div key={line.label} className="flex items-center gap-2 text-[10px]">
-                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${line.done ? "bg-teal-500/15" : "bg-sky-500/15"}`}>
-                            {line.done ? (
-                              <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                            ) : (
-                              <Loader2 className="w-2 h-2 text-sky-400 animate-spin" />
-                            )}
-                          </div>
-                          <span className={line.done ? "text-zinc-400" : "text-zinc-300"}>{line.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
-                      <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-teal-500 to-sky-500" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════ WHAT YOU CAN DO ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
-        <div className="text-center mb-14">
-          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-sky-500/10 text-sky-400 border border-sky-500/15 mb-4">
-            Full Feature Suite
-          </span>
-          <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
-            Not just storage. Intelligence.
-          </h2>
-          <p className="text-[15px] text-zinc-500 max-w-xl mx-auto leading-relaxed">
-            35 plugins across 5 categories. Every one free, built-in, production-grade.
-          </p>
-        </div>
-
-        {/* Feature categories */}
-        <div className="space-y-4">
-          {/* Chat */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8 hover:bg-white/[0.03] transition-all">
-            <div className="flex items-start gap-4 md:gap-6">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/15 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-5 h-5 text-teal-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-[17px] font-semibold mb-1">Chat With Your Mind</h3>
-                <p className="text-[14px] text-zinc-400 leading-[1.7] mb-3">
-                  Ask questions in natural language. Get synthesized answers from your own knowledge with source citations. 
-                  Supports OpenAI, Gemini, Ollama, OpenRouter, or any OpenAI-compatible API.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Semantic search", "Source citations", "Multi-provider", "Chat history"].map((tag) => (
-                    <span key={tag} className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px] text-zinc-500">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Analysis */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 hover:bg-white/[0.03] transition-all">
-              <Fingerprint className="w-5 h-5 text-teal-400 mb-3" />
-              <h3 className="text-[15px] font-semibold mb-1.5">Knowledge Fingerprint</h3>
-              <p className="text-[13px] text-zinc-400 leading-[1.65]">
-                Interactive 3D graph of your mind's topology. See clusters, connections, and blind spots emerge from your data.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 hover:bg-white/[0.03] transition-all">
-              <AlertTriangle className="w-5 h-5 text-amber-400 mb-3" />
-              <h3 className="text-[15px] font-semibold mb-1.5">Contradiction Detector</h3>
-              <p className="text-[13px] text-zinc-400 leading-[1.65]">
-                Surfaces where your own thinking conflicts across time. Not errors — evolution of thought.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 hover:bg-white/[0.03] transition-all">
-              <Heart className="w-5 h-5 text-red-400 mb-3" />
-              <h3 className="text-[15px] font-semibold mb-1.5">Sentiment Timeline</h3>
-              <p className="text-[13px] text-zinc-400 leading-[1.65]">
-                Track emotional patterns across your knowledge. See how your thinking about topics evolves.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 hover:bg-white/[0.03] transition-all">
-              <Target className="w-5 h-5 text-sky-400 mb-3" />
-              <h3 className="text-[15px] font-semibold mb-1.5">Knowledge Gaps</h3>
-              <p className="text-[13px] text-zinc-400 leading-[1.65]">
-                AI analyzes what you know and identifies what's missing. Get personalized learning suggestions.
-              </p>
-            </div>
-          </div>
-
-          {/* Create */}
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.03] transition-all">
-              <Layers className="w-5 h-5 text-amber-400 mb-3" />
-              <h3 className="text-[14px] font-semibold mb-1">Flashcard Maker</h3>
-              <p className="text-[12px] text-zinc-500 leading-[1.65]">Auto-generate flashcards from your knowledge. Spaced repetition built-in.</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.03] transition-all">
-              <PenTool className="w-5 h-5 text-emerald-400 mb-3" />
-              <h3 className="text-[14px] font-semibold mb-1">Blog Writer</h3>
-              <p className="text-[12px] text-zinc-500 leading-[1.65]">Turn your knowledge into blog posts. AI drafts from your own ideas and insights.</p>
-            </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.03] transition-all">
-              <Route className="w-5 h-5 text-sky-400 mb-3" />
-              <h3 className="text-[14px] font-semibold mb-1">Learning Paths</h3>
-              <p className="text-[12px] text-zinc-500 leading-[1.65]">AI creates structured learning paths from your gaps and interests.</p>
-            </div>
-          </div>
-
-          {/* More features row */}
-          <div className="flex flex-wrap gap-2 justify-center pt-2">
-            {[
-              "Mind Maps", "Writing Style Analysis", "Topic Evolution", "Newsletter Writer",
-              "Resume Builder", "Conversation Prep", "Voice Transcription", "Image Recognition",
-              "Duplicate Detector", "Smart Collections", "Custom RAG", "Multi-Language",
-              "Anki Export", "Obsidian Sync", "Notion Sync",
-            ].map((feature) => (
-              <span key={feature} className="px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-[11px] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12] transition-all cursor-default">
-                {feature}
-              </span>
-            ))}
-            <Link href="/app/plugins" className="px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/15 text-[11px] text-teal-400 hover:bg-teal-500/15 transition-all">
-              View all 35 plugins →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════ MCP PROTOCOL ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
-        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-          <div>
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 mb-4">
-              Open Protocol
-            </span>
-            <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
-              Connect your mind to any AI
-            </h2>
-            <p className="text-[15px] text-zinc-400 leading-[1.7] mb-6">
-              MindStore speaks <span className="text-white font-medium">MCP</span> (Model Context Protocol).
-              Connect Claude, ChatGPT, Cursor, or any MCP-compatible AI to your personal knowledge.
-            </p>
-            <div className="space-y-3">
-              {[
-                { label: "search_mind", desc: "Semantic search across all your knowledge" },
-                { label: "get_profile", desc: "Your AI-generated knowledge profile" },
-                { label: "get_context", desc: "Pull relevant context for any topic" },
-              ].map((tool) => (
-                <div key={tool.label} className="flex items-start gap-3 text-[13px]">
-                  <code className="shrink-0 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-mono text-[12px] border border-emerald-500/15">{tool.label}</code>
-                  <span className="text-zinc-500">{tool.desc}</span>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/[0.06] bg-[#0d0d0e] p-5 font-mono text-[12px] leading-relaxed">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-3 h-3 rounded-full bg-red-500/60" />
-              <div className="w-3 h-3 rounded-full bg-amber-500/60" />
-              <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
-              <span className="text-[10px] text-zinc-600 ml-2">claude_desktop_config.json</span>
-            </div>
-            <pre className="text-zinc-400 overflow-x-auto"><code>{`{
-  "mcpServers": {
-    "mindstore": {
-      "url": "https://mindstore.org/api/mcp"
-    }
-  }
-}`}</code></pre>
-            <p className="text-[11px] text-zinc-600 mt-3 font-sans">Add this to Claude Desktop. That&apos;s it.</p>
+        </div>
+      </section>
+
+      {/* ═══════ IMPORT UNIVERSE ═══════ */}
+      <section className="border-t border-white/[0.04] bg-[#0a0a0c]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+          <Reveal>
+            <p className="text-[13px] text-teal-400 font-medium tracking-[0.08em] uppercase mb-4">Universal import</p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-serif font-normal leading-[1.15] tracking-[-0.02em] max-w-2xl">
+              Twelve importers. Every corner of your digital life.
+            </h2>
+          </Reveal>
+          
+          <div className="mt-16 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-white/[0.04] rounded-2xl overflow-hidden">
+            {[
+              { name: "ChatGPT", desc: "ZIP export → searchable in 30s" },
+              { name: "Kindle", desc: "Highlights & notes" },
+              { name: "YouTube", desc: "Transcripts from any video" },
+              { name: "Notion", desc: "Full workspace export" },
+              { name: "Obsidian", desc: "Vault import with links" },
+              { name: "Reddit", desc: "Saved posts & comments" },
+              { name: "PDF & EPUB", desc: "Books, papers, documents" },
+              { name: "Twitter", desc: "Bookmarks & threads" },
+              { name: "Telegram", desc: "Saved messages" },
+              { name: "Pocket", desc: "Read-later archive" },
+              { name: "Spotify", desc: "Podcast transcripts" },
+              { name: "Readwise", desc: "All your highlights" },
+            ].map((src, i) => (
+              <Reveal key={src.name} delay={i * 0.03}>
+                <div className="bg-[#0a0a0c] p-5 md:p-6 h-full">
+                  <p className="text-[14px] font-semibold text-zinc-200">{src.name}</p>
+                  <p className="text-[12px] text-zinc-600 mt-1">{src.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={0.3}>
+            <p className="text-[13px] text-zinc-600 mt-6">
+              Plus voice memos, images, URLs, bookmarks, and plain text. Drag and drop anything.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════ THE ENGINE — what makes it different ═══════ */}
+      <section className="border-t border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+          <Reveal>
+            <p className="text-[13px] text-teal-400 font-medium tracking-[0.08em] uppercase mb-4">Intelligence layer</p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-serif font-normal leading-[1.15] tracking-[-0.02em] max-w-2xl mb-16">
+              Not storage. <span className="italic text-zinc-400">Understanding.</span>
+            </h2>
+          </Reveal>
+
+          <div className="grid md:grid-cols-3 gap-px bg-white/[0.04] rounded-2xl overflow-hidden">
+            {[
+              {
+                title: "Chat with your mind",
+                desc: "Ask questions in natural language. Get answers synthesized from your own knowledge, with source citations. Supports OpenAI, Gemini, Ollama, OpenRouter, or any OpenAI-compatible API.",
+                detail: "Multi-provider · Streaming · Citations",
+              },
+              {
+                title: "Create from knowledge",
+                desc: "Auto-generate flashcards from what you've learned. Write blog posts from your own ideas. Build newsletters, resumes, learning paths — all grounded in your actual knowledge.",
+                detail: "Flashcards · Blog · Newsletter · Resume",
+              },
+              {
+                title: "Analyze your thinking",
+                desc: "Track how your interests evolve. See sentiment patterns across years. Detect knowledge gaps. Find contradictions in your own reasoning. Map your mind's topology.",
+                detail: "Evolution · Sentiment · Gaps · Mind maps",
+              },
+            ].map((f, i) => (
+              <Reveal key={f.title} delay={i * 0.1}>
+                <div className="bg-[#08080a] p-8 md:p-10 h-full flex flex-col">
+                  <h3 className="text-[18px] font-semibold tracking-[-0.01em]">{f.title}</h3>
+                  <p className="text-[13px] text-zinc-500 mt-3 leading-[1.75] flex-1">{f.desc}</p>
+                  <p className="text-[11px] text-zinc-700 mt-6 tracking-[0.02em] font-medium">{f.detail}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ═══════ WHY MINDSTORE ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
-        <h2 className="text-[28px] md:text-[36px] font-bold text-center tracking-[-0.03em] mb-14">
-          Why MindStore?
-        </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {[
-            {
-              icon: Lock,
-              title: "100% Private",
-              desc: "Self-hosted. Your data never leaves your server. All AI processing happens server-side.",
-              color: "text-emerald-400",
-            },
-            {
-              icon: Search,
-              title: "Semantic Search",
-              desc: "Find ideas by meaning, not keywords. AI understands what you're actually looking for.",
-              color: "text-teal-400",
-            },
-            {
-              icon: Zap,
-              title: "Instant Setup",
-              desc: "Deploy in 2 minutes. Add an API key, import your first file, start asking.",
-              color: "text-amber-400",
-            },
-            {
-              icon: Globe,
-              title: "Any AI Provider",
-              desc: "OpenAI, Gemini, Ollama, OpenRouter, or any OpenAI-compatible endpoint. Your choice.",
-              color: "text-sky-400",
-            },
-            {
-              icon: Network,
-              title: "MCP Native",
-              desc: "Connect your knowledge to Claude, Cursor, or any MCP client. Your mind as a tool.",
-              color: "text-teal-400",
-            },
-            {
-              icon: Sparkles,
-              title: "Open Source",
-              desc: "MIT licensed. 336 tests. Full documentation. Built in public, for the community.",
-              color: "text-zinc-300",
-            },
-          ].map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 hover:bg-white/[0.04] transition-all duration-300"
-            >
-              <feature.icon className={`w-5 h-5 ${feature.color} mb-3`} />
-              <h3 className="text-[14px] font-semibold mb-1">
-                {feature.title}
-              </h3>
-              <p className="text-[13px] text-zinc-500 leading-[1.6]">
-                {feature.desc}
-              </p>
+      {/* ═══════ MCP — the protocol story ═══════ */}
+      <section className="border-t border-white/[0.04] bg-[#0a0a0c]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+          <div className="grid md:grid-cols-2 gap-16 items-start">
+            <div>
+              <Reveal>
+                <p className="text-[13px] text-teal-400 font-medium tracking-[0.08em] uppercase mb-4">MCP Protocol</p>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-serif font-normal leading-[1.15] tracking-[-0.02em]">
+                  Your mind as a tool for any AI.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.2}>
+                <p className="text-[15px] text-zinc-500 mt-6 leading-[1.8]">
+                  MindStore speaks MCP (Model Context Protocol). Connect Claude, ChatGPT, Cursor, 
+                  or any MCP-compatible AI and give it access to <em>your</em> knowledge.
+                </p>
+              </Reveal>
+              <Reveal delay={0.3}>
+                <div className="mt-8 space-y-3">
+                  {[
+                    { fn: "search_mind", desc: "Semantic search across all knowledge" },
+                    { fn: "get_profile", desc: "Your AI-generated knowledge profile" },
+                    { fn: "get_context", desc: "Relevant context for any topic" },
+                  ].map((t) => (
+                    <div key={t.fn} className="flex items-center gap-3">
+                      <code className="text-[12px] font-mono text-teal-400/80 bg-teal-500/[0.06] px-2 py-1 rounded-md border border-teal-500/10">{t.fn}</code>
+                      <span className="text-[13px] text-zinc-600">{t.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
             </div>
-          ))}
+            <Reveal delay={0.2}>
+              <div className="rounded-xl bg-[#0d0d0f] border border-zinc-800/60 p-6 font-mono text-[13px] leading-relaxed">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-zinc-800/40">
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
+                  <span className="text-[10px] text-zinc-700 ml-2">claude_desktop_config.json</span>
+                </div>
+                <pre className="text-zinc-500"><code>{`{
+  `}<span className="text-zinc-400">{`"mcpServers"`}</span>{`: {
+    `}<span className="text-zinc-400">{`"mindstore"`}</span>{`: {
+      `}<span className="text-zinc-400">{`"url"`}</span>{`: `}<span className="text-teal-400/70">{`"https://mindstore.org/api/mcp"`}</span>{`
+    }
+  }
+}`}</code></pre>
+                <p className="text-[11px] text-zinc-700 mt-4 font-sans">Three lines. That&apos;s it.</p>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ PRINCIPLES — editorial, not cards ═══════ */}
+      <section className="border-t border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+          <Reveal>
+            <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] font-serif font-normal leading-[1.15] tracking-[-0.02em] max-w-2xl mb-16">
+              Built on principles, not trends.
+            </h2>
+          </Reveal>
+
+          <div className="grid md:grid-cols-2 gap-x-16 gap-y-12">
+            {[
+              {
+                title: "Your data. Your server.",
+                desc: "Self-hosted. Nothing phones home. All AI calls are server-side between you and your chosen provider. No analytics, no tracking, no third-party access.",
+              },
+              {
+                title: "Bring your own AI.",
+                desc: "Gemini (free), OpenAI, Ollama (local), OpenRouter (200+ models), or any OpenAI-compatible endpoint. No vendor lock-in. Switch providers without losing anything.",
+              },
+              {
+                title: "Open source. MIT licensed.",
+                desc: "Full source code. 336 tests. 103 pages of documentation. DCO-signed commits. Governance, security policy, contribution guide. Built in public.",
+              },
+              {
+                title: "Plugins are first-class.",
+                desc: "33 built-in plugins across import, analysis, creation, export, and AI. Every one free. Plugin SDK for community extensions. MCP for protocol-level integration.",
+              },
+            ].map((p, i) => (
+              <Reveal key={p.title} delay={i * 0.08}>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-zinc-200 tracking-[-0.01em]">{p.title}</h3>
+                  <p className="text-[14px] text-zinc-500 mt-2 leading-[1.75]">{p.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ═══════ CTA ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-        <div className="relative overflow-hidden rounded-3xl border border-teal-500/15 bg-gradient-to-b from-teal-500/[0.06] to-transparent p-10 md:p-16 text-center">
-          <div className="orb w-64 h-64 bg-teal-600 -top-32 -right-32" style={{ animationDelay: "-5s" }} />
-          <div className="relative">
-            <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
-              Ready to search your mind?
+      <section className="border-t border-white/[0.04]">
+        <div className="max-w-[1200px] mx-auto px-6 py-24 md:py-32 text-center">
+          <Reveal>
+            {/* Large logo mark */}
+            <div className="flex justify-center mb-8">
+              <MindStoreLogo className="w-16 h-16 md:w-20 md:h-20 opacity-40" />
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 className="text-[clamp(1.75rem,4vw,3rem)] font-serif font-normal leading-[1.1] tracking-[-0.02em]">
+              Start searching your mind.
             </h2>
-            <p className="text-[15px] text-zinc-500 mb-8 max-w-md mx-auto">
-              Free. Private. Self-hosted. 35 plugins. Open source.
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p className="text-[15px] text-zinc-500 mt-4 max-w-md mx-auto">
+              Free. Private. Self-hosted. No credit card. No sign-up required.
             </p>
-            <div className="flex flex-wrap gap-3 justify-center">
+          </Reveal>
+          <Reveal delay={0.3}>
+            <div className="flex flex-wrap gap-3 justify-center mt-8">
               <Link href="/app">
-                <button className="h-12 px-10 rounded-2xl bg-teal-600 hover:bg-teal-500 text-[15px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20 flex items-center gap-2">
+                <button className="h-12 px-10 rounded-xl bg-zinc-100 text-[#08080a] text-[15px] font-semibold hover:bg-white transition-all active:scale-[0.97]">
                   Open MindStore
-                  <ArrowRight className="w-4 h-4" />
                 </button>
               </Link>
               <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer">
-                <button className="h-12 px-8 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-[15px] font-medium text-zinc-300 transition-all active:scale-[0.97]">
+                <button className="h-12 px-8 rounded-xl border border-zinc-800 text-[15px] font-medium text-zinc-400 hover:border-zinc-600 hover:text-white transition-all active:scale-[0.97]">
                   View Source
                 </button>
               </a>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
       <footer className="border-t border-white/[0.04] py-8">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px] text-zinc-600">
-            <div className="flex items-center gap-2">
+        <div className="max-w-[1200px] mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px] text-zinc-700">
+            <div className="flex items-center gap-3">
               <MindStoreLogoMono className="w-4 h-4" />
-              <span className="font-medium">MindStore</span>
-              <span className="text-zinc-700">·</span>
+              <span>MindStore</span>
+              <span>·</span>
               <span>MIT License</span>
-              <span className="text-zinc-700">·</span>
-              <span>Open Source</span>
             </div>
-            <div className="flex items-center gap-4">
-              <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300 transition-colors flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/></svg>
-                GitHub
-              </a>
-              <Link href="/docs" className="hover:text-zinc-300 transition-colors">Docs</Link>
-              <span>
-                Built by{" "}
-                <a href="https://github.com/WarriorSushi" className="text-zinc-500 hover:text-zinc-300 transition-colors">WarriorSushi</a>
-              </span>
+            <div className="flex items-center gap-5">
+              <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-400 transition-colors">GitHub</a>
+              <Link href="/docs" className="hover:text-zinc-400 transition-colors">Docs</Link>
+              <a href="https://github.com/WarriorSushi" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-400 transition-colors">Built by WarriorSushi</a>
             </div>
           </div>
         </div>

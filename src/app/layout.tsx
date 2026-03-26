@@ -1,28 +1,31 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
 /**
- * Typography System — Premium Silicon Valley aesthetic
+ * Typography System
  * 
- * Plus Jakarta Sans: Geometric sans with wide letterforms, excellent weight range.
- * Used by fintech/premium SaaS products. Reads as "designed" without trying too hard.
+ * Plus Jakarta Sans — Body & UI. Geometric, premium, wide letterforms.
+ * Instrument Serif — Display headings (landing page only). Editorial, distinctive.
+ * JetBrains Mono — Code. Best-in-class monospace with coding ligatures.
  * 
- * JetBrains Mono: Best-in-class monospace with coding ligatures.
- * Used for API keys, code snippets, data values.
- * 
- * Design rationale:
- * - Geist was serviceable but reads as "default Next.js project"
- * - Plus Jakarta Sans has the Stripe/Mercury/Linear premium feel
- * - Tight letter-spacing on headings (-0.03em), relaxed body (normal)
- * - font-display: swap for instant text rendering
+ * The serif/sans pairing creates real contrast — editorial headlines
+ * with clean product UI. Not two similar sans fighting each other.
  */
 const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
+});
+
+const serif = Instrument_Serif({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400"],
+  style: ["normal", "italic"],
 });
 
 const mono = JetBrains_Mono({
@@ -69,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
         <link rel="dns-prefetch" href="https://api.openai.com" />
       </head>
-      <body className={`${sans.variable} ${mono.variable} font-sans antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
+      <body className={`${sans.variable} ${serif.variable} ${mono.variable} font-sans antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
         {children}
         <Toaster
           theme="dark"
