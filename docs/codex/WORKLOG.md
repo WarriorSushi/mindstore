@@ -4,6 +4,31 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-26
 
+### 2026-03-26 02:00 UTC: Deep Route Slimming — image-to-memory, custom-rag, multi-language (Frain)
+
+#### Scope
+
+Post-completion polish. All plugin ports were done, but three routes still had substantial
+inline DB operations and orchestration logic. Extracted everything into port modules so
+routes are truly thin wrappers (validate → call port → return JSON).
+
+#### Changes
+
+- **image-to-memory** (205L → 156L route): Moved `listImages`, `getImageStats`,
+  `storeAnalysis`, `saveImageAsMemory`, `reanalyzeImage`, `deleteImage`,
+  `updateImageTitle` into port. Port grew 284L → 465L.
+- **custom-rag** (187L → 157L route): Moved `getRAGConfig`, `saveRAGConfig`,
+  `getRAGStats` into port. Port grew 453L → 507L.
+- **multi-language** (200L → 139L route): Moved `getLanguageStats`,
+  `tagMemoryLanguage`, `batchTagLanguages`, `crossLanguageSearch`,
+  `translateMemory`, `saveLanguageConfig` into port. Port grew 240L → 422L.
+
+#### Quality
+
+- TypeScript: zero errors
+- Tests: 42 files, 225 tests, all passing
+- Color violations: zero
+
 ### Branch
 
 - `codex/local-dev`
