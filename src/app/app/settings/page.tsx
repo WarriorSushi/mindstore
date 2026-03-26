@@ -75,6 +75,8 @@ export default function SettingsPage() {
     if (data.ok) {
       setOpenaiKey(""); setGeminiKey(""); setOllamaUrl(""); setOpenrouterKey(""); setCustomApiKey(""); setCustomApiUrl(""); setCustomApiModel("");
       fetchSettings().then(setSettings);
+      // Invalidate cached AI status so the global banner updates
+      try { const { invalidateAiStatus } = await import("@/lib/use-ai-status"); invalidateAiStatus(); } catch {}
     } else {
       throw new Error(data.error || 'Connection failed — check your key and try again');
     }
@@ -83,6 +85,8 @@ export default function SettingsPage() {
   const handleRemoveAll = async () => {
     await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove' }) });
     toast.success("Keys removed"); fetchSettings().then(setSettings);
+    // Invalidate cached AI status so the global banner updates
+    try { const { invalidateAiStatus } = await import("@/lib/use-ai-status"); invalidateAiStatus(); } catch {}
   };
 
   const handleExport = async () => {

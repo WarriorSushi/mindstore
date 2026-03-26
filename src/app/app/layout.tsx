@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MindStoreLogo } from "@/components/MindStoreLogo";
+import { useAiStatus } from "@/lib/use-ai-status";
 
 // ─── Lazy load overlays & drawers (triggered by user action, not immediately visible) ───
 const Onboarding = dynamic(() => import("@/components/Onboarding").then(m => ({ default: m.Onboarding })), { ssr: false });
@@ -133,14 +134,20 @@ const bottomNav = [
   { href: "/app/explore", icon: Compass, label: "Explore" },
 ];
 
+// Pages where the AI banner should NOT show
+const NO_AI_BANNER_PATHS = new Set(["/app/settings", "/app/connect", "/app/import"]);
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const aiStatus = useAiStatus();
   const [menuOpen, setMenuOpen] = useState(false);
   // Track which sidebar sections are collapsed (by section id)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     // Default: all sections expanded
     return {};
   });
+
+  const showAiBanner = aiStatus.loaded && !aiStatus.hasAi && !NO_AI_BANNER_PATHS.has(pathname);
 
   // Auto-expand section containing current page
   useEffect(() => {
@@ -366,6 +373,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           isChat ? "h-[calc(100dvh-3rem-52px)] md:h-[100dvh]" : "max-w-3xl px-4 py-5 md:px-8 md:py-8",
         )}>
           <ErrorBoundary>
+            {showAiBanner && (
+              <div className="mb-4">
+                <Link href="/app/settings">
+                  <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-amber-500/[0.02] border border-amber-500/15 px-4 py-3 hover:from-amber-500/[0.1] hover:to-amber-500/[0.04] transition-all group">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <Settings className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] text-amber-300 font-medium">Connect an AI provider to unlock all features</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">Search, chat, insights, and 35+ plugins need Gemini (free), OpenAI, or Ollama</p>
+                      </div>
+                    </div>
+                    <span className="text-[12px] text-amber-400 font-medium shrink-0 group-hover:translate-x-0.5 transition-transform">Set up →</span>
+                  </div>
+                </Link>
+              </div>
+            )}
             {children}
           </ErrorBoundary>
         </div>
