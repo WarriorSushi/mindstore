@@ -2,6 +2,41 @@
 
 This file is the durable engineering log for Codex work in `codex/*` branches.
 
+## Session: 2026-03-26
+
+### Branch
+
+- `codex/local-dev`
+
+### Route Slimming: image-to-memory
+
+#### Scope
+
+- Slim the fattest remaining route on codex/local-dev by extracting duplicated logic into the port module.
+
+#### Changes Completed
+
+- Moved `getVisionConfig()`, `analyzeImage()`, `ensureImageTable()`, and `VisionConfig` type into `src/server/plugins/ports/image-to-memory.ts`.
+- Rewrote `src/app/api/v1/plugins/image-to-memory/route.ts` as a thin wrapper importing from the port.
+- Route: 521 → 205 lines (61% reduction, -316 lines).
+- Port: 167 → 284 lines (absorbed the extracted logic).
+- Net: 173 insertions, 372 deletions across the two files.
+
+#### Quality Metrics
+
+- **TypeScript:** Clean `tsc --noEmit`
+- **Tests:** 42 files, 225 tests, all passing
+- **Build:** `next build` clean
+- **Color violations:** Zero
+
+#### Convergence Status
+
+All plugin ports remain complete. The remaining route fat spots (domain-embeddings 249, notion-sync 244, custom-rag 244) are moderate and within acceptable range — they delegate to ports but keep route-level DB wiring that's appropriate for thin wrappers. No further slimming is high-priority.
+
+The remaining branch divergence (282 files) is infrastructure and UI styling, not plugin architecture. The plugin convergence mission is effectively done.
+
+---
+
 ## Session: 2026-03-25
 
 ### Branch
