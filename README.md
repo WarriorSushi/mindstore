@@ -6,7 +6,7 @@
 
 Import your ChatGPT conversations, Obsidian vault, Notion pages — then search semantically, discover hidden connections in your own thinking, and plug your knowledge into *any* AI via MCP.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 
