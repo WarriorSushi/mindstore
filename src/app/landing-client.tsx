@@ -186,30 +186,217 @@ const CASES = [
   { icon: Newspaper, title: "Auto-generate a newsletter from what you actually learned this week", desc: "Newsletter plugin scans recent memories, groups by topic, generates a digest. You edit, they read. Thought leadership from real knowledge." },
 ];
 
-/* ─── Interactive Demo ─── */
-const QUERIES = [
-  { q: "that pricing article from last year", results: [
-    { title: "SaaS Pricing Strategies — 2024", src: "Kindle", score: 98, color: "#f59e0b" },
-    { title: "Conversation about pricing tiers", src: "ChatGPT", score: 94, color: "#10b981" },
-    { title: "Stripe pricing page analysis", src: "URL", score: 87, color: "#f97316" },
-  ]},
-  { q: "how do transformers actually work?", results: [
-    { title: "AI Architecture Deep Dive", src: "ChatGPT", score: 99, color: "#10b981" },
-    { title: "Attention Is All You Need — notes", src: "Notes", score: 96, color: "#3b82f6" },
-    { title: "Neural network lecture highlights", src: "YouTube", score: 89, color: "#ef4444" },
-  ]},
-  { q: "what did Kahneman say about biases?", results: [
-    { title: "Thinking, Fast and Slow — highlights", src: "Kindle", score: 97, color: "#f59e0b" },
-    { title: "Psychology Misconceptions thread", src: "ChatGPT", score: 92, color: "#10b981" },
-    { title: "Cognitive bias in product design", src: "Notes", score: 85, color: "#3b82f6" },
-  ]},
+/* ─── App Showcase — cycles through real screens ─── */
+const SCREENS = [
+  {
+    label: "Dashboard", path: "/app",
+    render: () => (
+      <div className="p-5 sm:p-6 space-y-4">
+        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind at a Glance</div>
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { v: "2,847", l: "Memories", c: "rgba(20,184,166,0.12)" },
+            { v: "1,423", l: "ChatGPT", c: "rgba(16,185,129,0.12)" },
+            { v: "892", l: "Books", c: "rgba(245,158,11,0.12)" },
+            { v: "532", l: "Notes", c: "rgba(59,130,246,0.12)" },
+          ].map(s => (
+            <div key={s.l} className="rounded-xl p-2.5" style={{ background: s.c, border: "1px solid rgba(255,255,255,0.04)" }}>
+              <div className="text-[14px] font-bold text-zinc-200 tabular-nums">{s.v}</div>
+              <div className="text-[9px] text-zinc-500 font-medium mt-0.5">{s.l}</div>
+            </div>
+          ))}
+        </div>
+        {/* Activity chart */}
+        <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="text-[10px] text-zinc-500 mb-2 font-medium">14-day activity</div>
+          <div className="flex items-end gap-[3px] h-12">
+            {[3,5,2,7,4,8,6,9,5,3,7,8,4,6].map((h, i) => (
+              <div key={i} className="flex-1 rounded-sm transition-all" style={{ height: `${h * 11}%`, background: `rgba(20,184,166,${0.2 + h * 0.08})` }} />
+            ))}
+          </div>
+        </div>
+        {/* Recent */}
+        <div className="space-y-1">
+          {[
+            { t: "Thinking, Fast and Slow", s: "Kindle", c: "#f59e0b" },
+            { t: "React Server Components deep dive", s: "ChatGPT", c: "#10b981" },
+            { t: "Stripe API architecture notes", s: "URL", c: "#3b82f6" },
+          ].map(m => (
+            <div key={m.t} className="flex items-center gap-2.5 px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.015)" }}>
+              <div className="w-1 h-6 rounded-full shrink-0" style={{ background: m.c }} />
+              <div className="min-w-0">
+                <div className="text-[11px] font-medium text-zinc-300 truncate">{m.t}</div>
+                <div className="text-[9px] text-zinc-600">{m.s}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "Knowledge Fingerprint", path: "/app/fingerprint",
+    render: () => (
+      <div className="p-5 sm:p-6">
+        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Knowledge Fingerprint</div>
+        {/* Fake 3D graph */}
+        <div className="relative h-[240px] sm:h-[280px] rounded-xl overflow-hidden" style={{ background: "rgba(0,0,0,0.3)" }}>
+          <svg viewBox="0 0 400 280" className="w-full h-full" style={{ animation: "graphRotate 20s linear infinite" }}>
+            {/* Connection lines */}
+            {[
+              [120,80,200,140],[200,140,300,100],[200,140,160,200],[160,200,80,180],
+              [300,100,340,180],[340,180,280,220],[280,220,200,140],[80,180,120,80],
+              [160,200,280,220],[120,80,60,140],[60,140,80,180],[300,100,360,60],
+              [340,180,360,60],[280,220,200,260],[200,260,120,240],[120,240,80,180],
+            ].map(([x1,y1,x2,y2], i) => (
+              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,184,166,0.15)" strokeWidth="1" />
+            ))}
+            {/* Cluster nodes */}
+            {[
+              { x: 120, y: 80, r: 14, c: "#14b8a6", l: "AI" },
+              { x: 200, y: 140, r: 18, c: "#14b8a6", l: "Core" },
+              { x: 300, y: 100, r: 12, c: "#38bdf8", l: "Code" },
+              { x: 160, y: 200, r: 11, c: "#f59e0b", l: "Books" },
+              { x: 80, y: 180, r: 9, c: "#a78bfa", l: "Philosophy" },
+              { x: 340, y: 180, r: 10, c: "#10b981", l: "Finance" },
+              { x: 280, y: 220, r: 8, c: "#ec4899", l: "Health" },
+              { x: 60, y: 140, r: 7, c: "#f97316", l: "Music" },
+              { x: 360, y: 60, r: 6, c: "#22d3ee", l: "Travel" },
+              { x: 200, y: 260, r: 9, c: "#ef4444", l: "Cooking" },
+              { x: 120, y: 240, r: 7, c: "#71717a", l: "Design" },
+            ].map((n, i) => (
+              <g key={i}>
+                <circle cx={n.x} cy={n.y} r={n.r} fill={n.c} opacity="0.3" />
+                <circle cx={n.x} cy={n.y} r={n.r * 0.6} fill={n.c} opacity="0.7" />
+                <text x={n.x} y={n.y + n.r + 10} textAnchor="middle" fontSize="8" fill="rgba(161,161,170,0.6)" fontFamily="sans-serif">{n.l}</text>
+              </g>
+            ))}
+          </svg>
+          {/* Ambient glow */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 50% 50%, rgba(20,184,166,0.06), transparent 70%)" }} />
+        </div>
+        <div className="flex gap-3 mt-3 text-[10px] text-zinc-600">
+          <span>11 clusters</span><span>·</span><span>2,847 nodes</span><span>·</span><span>4,230 connections</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "Topic Evolution", path: "/app/evolution",
+    render: () => (
+      <div className="p-5 sm:p-6">
+        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Topic Evolution</div>
+        <div className="text-[10px] text-zinc-600 mb-3">How your interests shifted over 12 months</div>
+        {/* Timeline bars */}
+        <div className="space-y-2">
+          {[
+            { topic: "Machine Learning", months: [2,3,5,7,8,9,8,7,6,5,4,3], c: "#14b8a6" },
+            { topic: "React & Frontend", months: [6,5,4,3,3,4,5,7,8,9,8,7], c: "#38bdf8" },
+            { topic: "Business Strategy", months: [1,2,3,4,6,7,8,7,6,5,4,3], c: "#f59e0b" },
+            { topic: "Philosophy", months: [4,5,6,5,3,2,1,2,3,4,5,6], c: "#a78bfa" },
+            { topic: "Health & Fitness", months: [3,3,4,5,6,7,8,8,7,6,5,4], c: "#10b981" },
+          ].map(row => (
+            <div key={row.topic} className="flex items-center gap-3">
+              <div className="w-[90px] shrink-0 text-[10px] text-zinc-400 font-medium truncate">{row.topic}</div>
+              <div className="flex-1 flex items-center gap-[2px] h-5">
+                {row.months.map((v, i) => (
+                  <div key={i} className="flex-1 rounded-sm" style={{ height: `${v * 10}%`, background: row.c, opacity: 0.15 + v * 0.085 }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between mt-2 text-[8px] text-zinc-700 px-[93px]">
+          <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span><span>Dec</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "Flashcards", path: "/app/flashcards",
+    render: () => (
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em]">Flashcards</div>
+          <div className="text-[10px] text-zinc-500 font-medium">42 due today</div>
+        </div>
+        {/* Card */}
+        <div className="rounded-xl p-6 text-center" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.1)" }}>
+          <div className="text-[10px] text-teal-500/60 font-medium mb-2">QUESTION</div>
+          <div className="text-[15px] text-zinc-200 font-medium leading-[1.5]">
+            What is the key innovation of the<br />Transformer architecture?
+          </div>
+          <div className="text-[10px] text-zinc-600 mt-3">from &quot;AI Architecture Deep Dive&quot; · ChatGPT</div>
+        </div>
+        {/* Controls */}
+        <div className="flex justify-center gap-2 mt-4">
+          {[
+            { l: "Again", c: "rgba(239,68,68,0.15)" },
+            { l: "Hard", c: "rgba(245,158,11,0.15)" },
+            { l: "Good", c: "rgba(20,184,166,0.15)" },
+            { l: "Easy", c: "rgba(59,130,246,0.15)" },
+          ].map(b => (
+            <div key={b.l} className="px-4 py-1.5 rounded-lg text-[11px] font-medium text-zinc-400" style={{ background: b.c, border: "1px solid rgba(255,255,255,0.04)" }}>
+              {b.l}
+            </div>
+          ))}
+        </div>
+        {/* Progress */}
+        <div className="mt-4 flex items-center gap-2">
+          <div className="flex-1 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div className="h-full rounded-full" style={{ width: "65%", background: "rgba(20,184,166,0.5)" }} />
+          </div>
+          <span className="text-[9px] text-zinc-600">27/42</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "Sentiment Timeline", path: "/app/sentiment",
+    render: () => (
+      <div className="p-5 sm:p-6">
+        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Sentiment Timeline</div>
+        <div className="text-[10px] text-zinc-600 mb-3">Emotional patterns in your knowledge</div>
+        {/* Sentiment wave */}
+        <div className="relative h-[120px] rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.015)" }}>
+          <svg viewBox="0 0 400 120" className="w-full h-full" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sentGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(20,184,166,0.3)" />
+                <stop offset="100%" stopColor="rgba(20,184,166,0)" />
+              </linearGradient>
+            </defs>
+            <path d="M0,80 C40,60 80,40 120,50 C160,60 200,30 240,45 C280,60 320,35 360,40 L400,50 L400,120 L0,120 Z" fill="url(#sentGrad)" />
+            <path d="M0,80 C40,60 80,40 120,50 C160,60 200,30 240,45 C280,60 320,35 360,40 L400,50" fill="none" stroke="#14b8a6" strokeWidth="2" />
+            {/* Data points */}
+            {[[0,80],[120,50],[200,30],[240,45],[320,35],[400,50]].map(([cx,cy], i) => (
+              <circle key={i} cx={cx} cy={cy} r="3" fill="#14b8a6" />
+            ))}
+          </svg>
+          {/* Labels */}
+          <div className="absolute top-2 right-3 text-[9px] text-teal-400/60 font-medium">Mostly positive</div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {[
+            { l: "Positive", v: "64%", c: "#14b8a6" },
+            { l: "Neutral", v: "28%", c: "#71717a" },
+            { l: "Reflective", v: "8%", c: "#a78bfa" },
+          ].map(s => (
+            <div key={s.l} className="flex items-center gap-2 text-[10px]">
+              <div className="w-2 h-2 rounded-full" style={{ background: s.c }} />
+              <span className="text-zinc-500">{s.l}</span>
+              <span className="text-zinc-400 font-medium ml-auto">{s.v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
 ];
 
 function Demo() {
-  const [qi, setQi] = useState(0);
-  const [ci, setCi] = useState(0);
-  const [phase, setPhase] = useState<"type"|"show"|"wait"|"clear">("type");
-  const [vr, setVr] = useState(0);
+  const [idx, setIdx] = useState(0);
   const [inView, setInView] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -219,34 +406,14 @@ function Demo() {
     o.observe(el); return () => o.disconnect();
   }, []);
 
+  // Auto-cycle through screens
   useEffect(() => {
     if (!inView) return;
-    const cur = QUERIES[qi]; if (!cur) return;
-    if (phase === "type") {
-      if (ci < cur.q.length) {
-        const t = setTimeout(() => setCi(c => c + 1), 40 + Math.random() * 25);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => setPhase("show"), 250);
-      return () => clearTimeout(t);
-    }
-    if (phase === "show") {
-      if (vr < cur.results.length) {
-        const t = setTimeout(() => setVr(v => v + 1), 160);
-        return () => clearTimeout(t);
-      }
-      const t = setTimeout(() => setPhase("wait"), 3000);
-      return () => clearTimeout(t);
-    }
-    if (phase === "wait") { setPhase("clear"); }
-    if (phase === "clear") {
-      const t = setTimeout(() => { setQi(i => (i + 1) % QUERIES.length); setCi(0); setVr(0); setPhase("type"); }, 350);
-      return () => clearTimeout(t);
-    }
-  }, [inView, phase, ci, vr, qi]);
+    const t = setInterval(() => setIdx(i => (i + 1) % SCREENS.length), 4000);
+    return () => clearInterval(t);
+  }, [inView]);
 
-  const cur = QUERIES[qi];
-  const typed = cur.q.slice(0, ci);
+  const screen = SCREENS[idx];
 
   return (
     <div ref={ref} className="relative mx-auto max-w-[840px]">
@@ -264,45 +431,42 @@ function Demo() {
           <div className="flex-1 flex justify-center">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] text-zinc-600" style={{ background: "rgba(255,255,255,0.03)" }}>
               <span className="w-2 h-2 rounded-sm" style={{ background: "rgba(20,184,166,0.5)" }} />
-              mindstore.org/app
+              mindstore.org{screen.path}
             </div>
           </div>
           <div className="w-16" />
         </div>
-        {/* Content */}
-        <div className="p-5 sm:p-7">
-          <div className="text-[11px] text-zinc-600 mb-2 font-medium">Explore · 2,847 memories</div>
-          {/* Search */}
-          <div className="flex items-center gap-2.5 px-4 h-10 rounded-xl mb-4 transition-all duration-300"
-            style={{ background: typed ? "rgba(20,184,166,0.04)" : "rgba(255,255,255,0.03)", border: typed ? "1px solid rgba(20,184,166,0.12)" : "1px solid rgba(255,255,255,0.05)" }}>
-            <Search className={`w-4 h-4 shrink-0 transition-colors ${typed ? "text-teal-400" : "text-zinc-600"}`} />
-            <div className="flex-1">
-              {typed ? (
-                <span className="text-[13px] text-zinc-200">{typed}{phase === "type" && <span className="inline-block w-[1.5px] h-[13px] bg-teal-400 ml-0.5 align-middle" style={{ animation: "blink .8s step-end infinite" }} />}</span>
-              ) : (
-                <span className="text-[13px] text-zinc-600">Search your memories…</span>
-              )}
+        {/* Sidebar + Content */}
+        <div className="flex">
+          {/* Sidebar — hidden on mobile */}
+          <div className="hidden sm:flex w-[160px] flex-col shrink-0 p-2.5 gap-0.5"
+            style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+            <div className="flex items-center gap-2 px-2 py-2 mb-1.5">
+              <MindStoreLogo className="w-4 h-4" />
+              <span className="text-[10px] font-bold text-zinc-300">MindStore</span>
             </div>
-            <span className="text-[9px] text-zinc-700 font-mono bg-white/[0.04] px-1.5 py-0.5 rounded shrink-0">⌘K</span>
-          </div>
-          {/* Results */}
-          <div className="space-y-2 transition-opacity duration-300" style={{ opacity: phase === "clear" ? 0 : 1 }}>
-            {(phase === "show" || phase === "wait") && cur.results.map((r, i) => (
-              <div key={`${qi}-${i}`} className="flex items-start gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-400"
-                style={{
-                  background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
-                  opacity: i < vr ? 1 : 0, transform: i < vr ? "translateY(0)" : "translateY(10px)",
-                  transitionDelay: `${i * 60}ms`,
-                }}>
-                <div className="w-1.5 h-8 rounded-full shrink-0 mt-0.5" style={{ background: r.color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[12px] font-semibold text-zinc-200 truncate">{r.title}</div>
-                  <div className="text-[10px] text-zinc-600 mt-0.5">from {r.src}</div>
-                </div>
-                <div className="text-[11px] font-mono text-teal-500/80 shrink-0">{r.score}%</div>
-              </div>
+            {SCREENS.map((s, i) => (
+              <button key={s.label} onClick={() => setIdx(i)}
+                className={`text-left px-2.5 py-1.5 rounded-lg text-[10px] transition-all ${
+                  i === idx ? "bg-white/[0.06] text-zinc-200 font-medium" : "text-zinc-600 hover:text-zinc-400"
+                }`}>
+                {s.label}
+              </button>
             ))}
           </div>
+          {/* Content — crossfade */}
+          <div className="flex-1 min-h-[320px] sm:min-h-[360px] relative overflow-hidden">
+            <div key={idx} style={{ animation: "screenFade .4s ease-out" }}>
+              {screen.render()}
+            </div>
+          </div>
+        </div>
+        {/* Mobile nav dots */}
+        <div className="sm:hidden flex justify-center gap-1.5 pb-3">
+          {SCREENS.map((_, i) => (
+            <button key={i} onClick={() => setIdx(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? "bg-teal-500 w-4" : "bg-zinc-700"}`} />
+          ))}
         </div>
       </div>
     </div>
@@ -318,6 +482,8 @@ export function LandingClient() {
         @keyframes tkL { from{transform:translateX(0)} to{transform:translateX(-33.333%)} }
         @keyframes tkR { from{transform:translateX(-33.333%)} to{transform:translateX(0)} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes screenFade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes graphRotate { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(3deg) scale(1.02)} 100%{transform:rotate(0deg) scale(1)} }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
       `}</style>
 
