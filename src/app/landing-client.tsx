@@ -222,12 +222,6 @@ export function LandingClient() {
               <span className="font-serif italic text-teal-400">Where did it all go?</span>
             </h1>
           </Reveal>
-          <Reveal delay={0.08}>
-            <p className="text-[15px] mt-4 max-w-[440px] mx-auto leading-[1.8] text-zinc-500">
-              MindStore imports everything — makes it searchable by <em className="text-zinc-300 not-italic">meaning</em> — and 
-              connects it to <strong className="text-zinc-200 font-semibold">any AI</strong> you use. Your knowledge, portable forever.
-            </p>
-          </Reveal>
           <Reveal delay={0.14}>
             <div className="flex gap-3 justify-center mt-6 flex-wrap">
               <Link href="/app">
@@ -246,6 +240,16 @@ export function LandingClient() {
       </section>
 
       {/* ═══════ DUAL TICKER ═══════ */}
+      <div className="pt-6 pb-1 relative z-10">
+        <div className="max-w-[920px] mx-auto px-5 md:px-8">
+          <Reveal>
+            <p className="text-[14px] sm:text-[15px] leading-[1.7] text-zinc-500 text-center max-w-[500px] mx-auto">
+              MindStore imports everything — makes it searchable by meaning — and connects it to{" "}
+              <strong className="text-zinc-200 font-semibold">any AI</strong> you use. Your knowledge, portable forever.
+            </p>
+          </Reveal>
+        </div>
+      </div>
       <DualTicker />
 
       {/* ═══════ "THROW IN ANYTHING" ═══════ */}
