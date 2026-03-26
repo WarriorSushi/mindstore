@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Brain, LayoutDashboard, Upload, MessageSquare, Compass, Settings,
-  GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, Sparkles,
+  GraduationCap, Fingerprint, Lightbulb, Network, Menu, X, MoreHorizontal,
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
   FileEdit, Users, Route, FileUser, Mail, Mic, Camera, SlidersHorizontal, Globe, Dna,
   Download, FolderDown, FileStack, Gem, ChevronDown, Zap, BarChart3, Copy, FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MindStoreLogo } from "@/components/MindStoreLogo";
@@ -147,10 +147,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const aiStatus = useAiStatus();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNewDot, setShowNewDot] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const [scrollState, setScrollState] = useState<"top" | "middle" | "bottom" | "none">("none");
   // Track which sidebar sections are collapsed (by section id)
+  // Default: secondary sections collapsed to reduce visual overload
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    // Default: all sections expanded
-    return {};
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("ms:nav-collapsed");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { analysis: true, create: true, ai: true, sync: true };
   });
 
   const showAiBanner = aiStatus.loaded && !aiStatus.hasAi && !NO_AI_BANNER_PATHS.has(pathname);
@@ -180,8 +188,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [menuOpen]);
 
   const toggleSection = useCallback((id: string) => {
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
+    setCollapsed((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem("ms:nav-collapsed", JSON.stringify(next)); } catch {}
+      return next;
+    });
   }, []);
+
+  // Track sidebar scroll position for fade indicators
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    function update() {
+      if (!el) return;
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const atTop = scrollTop < 4;
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 4;
+      if (scrollHeight <= clientHeight) setScrollState("none");
+      else if (atTop) setScrollState("top");
+      else if (atBottom) setScrollState("bottom");
+      else setScrollState("middle");
+    }
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", update); ro.disconnect(); };
+  }, [collapsed]);
 
   const isChat = pathname === "/app/chat";
 
@@ -298,15 +331,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <NotificationCenter />
         </div>
-        <nav className="flex-1 py-2 px-2.5 space-y-0.5 overflow-y-auto sidebar-scroll">
+        <div className="relative flex-1 min-h-0">
+          {/* Scroll fade — top */}
+          {(scrollState === "middle" || scrollState === "bottom") && (
+            <div className="absolute top-0 inset-x-0 h-6 bg-gradient-to-b from-[#0a0a0b] to-transparent z-10 pointer-events-none" />
+          )}
+          <nav ref={navRef} className="h-full py-2 px-2.5 space-y-0.5 overflow-y-auto sidebar-scroll">
           {navSections.map((section) => (
             <div key={section.id}>
               {section.label && (
                 <button
                   onClick={() => section.collapsible && toggleSection(section.id)}
                   className={cn(
-                    "w-full flex items-center gap-1.5 px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-widest",
-                    section.collapsible ? "text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors" : "text-zinc-700 cursor-default",
+                    "w-full flex items-center gap-1.5 px-2.5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-widest select-none",
+                    section.collapsible ? "text-zinc-500 hover:text-zinc-400 cursor-pointer transition-colors" : "text-zinc-600 cursor-default",
                   )}
                 >
                   <span>{section.label}</span>
@@ -329,12 +367,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition-all",
+                        "flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition-all relative",
                         active
                           ? "bg-white/[0.08] text-white"
                           : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]"
                       )}
                     >
+                      {active && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full bg-teal-400" />
+                      )}
                       <item.icon className={cn("w-4 h-4", active ? "text-teal-400" : "text-zinc-500")} />
                       {item.label}
                     </Link>
@@ -344,9 +385,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {!section.label && section.id === "core" && (
                 <div className="mx-2.5 my-2 border-b border-white/[0.04]" />
               )}
+              {section.id === "sync" && (
+                <div className="mx-2.5 my-2 border-b border-white/[0.04]" />
+              )}
             </div>
           ))}
         </nav>
+          {/* Scroll fade — bottom */}
+          {(scrollState === "middle" || scrollState === "top") && (
+            <div className="absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-[#0a0a0b] to-transparent z-10 pointer-events-none" />
+          )}
+        </div>
         <div className="px-4 py-3 border-t border-white/[0.04] space-y-2">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("mindstore:quick-capture"))}
@@ -470,7 +519,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMenuOpen(true)}
               className="flex flex-col items-center justify-center gap-[2px] active:opacity-70 transition-opacity"
             >
-              <Sparkles className="w-[20px] h-[20px] text-zinc-600" />
+              <MoreHorizontal className="w-[20px] h-[20px] text-zinc-600" />
               <span className="text-[10px] font-medium text-zinc-600">More</span>
             </button>
           </div>
