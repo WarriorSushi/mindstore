@@ -4,6 +4,54 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-26
 
+### 2026-03-26 05:30 UTC: Shared Utility Test Coverage + Gap Audit (Frain)
+
+#### Scope
+
+Audit full project for test and doc coverage gaps, then close them. All 35 plugin ports were already complete with tests and docs, but shared utility modules (`plugin-config.ts` and `shared-vectors.ts`) were untested and undocumented.
+
+#### Changes Completed
+
+- **plugin-config.ts** — Added `tests/unit/plugin-config.test.ts` (12 tests):
+  - `createPluginScopedId`: prefix, uniqueness, segment structure
+  - `stripMarkdownFence`: json fences, plain fences, passthrough, whitespace, empty blocks
+  - `parseJsonValue`: plain JSON, fenced JSON, nested objects, error cases
+
+- **shared-vectors.ts** — Added `tests/unit/shared-vectors.test.ts` (25 tests):
+  - `parseEmbedding`: falsy input, numeric arrays, mixed arrays, string parsing, malformed strings, non-array objects
+  - `cosineSimilarity`: identical, orthogonal, opposite, empty, mismatched, non-unit vectors
+  - `kMeansClustering`: empty input, k >= items, cluster assignment completeness
+  - `computeCoherence`: single member, similar items
+  - `extractKeywords`: frequency, stop word filtering, empty content
+  - `extractTopicLabel`: dominant source, keyword fallback, empty fallback
+  - `countSourceTypes`: frequency counting, empty input
+
+- Added docs: `docs/plugins/plugin-config.md` and `docs/plugins/shared-vectors.md`
+- Updated porting guide: 299 → 336 tests, 42 → 44 test files
+
+#### Quality
+
+- **Tests:** 44 files, 336 tests, all passing
+- **TypeScript:** Clean `tsc --noEmit`
+- **Color violations:** Zero (matches in test assertions/comments only — checking for absence)
+- **Lint:** New files clean (existing codebase has 216 pre-existing lint issues, not in scope)
+
+#### Gap Audit Results
+
+- ✅ Every port module has a matching test file
+- ✅ Every port module has a matching doc file
+- ✅ Shared utilities now covered
+- ✅ Zero TODO/FIXME/HACK markers in code (one `[TODO: ...]` in resume-builder is an AI prompt instruction, not a code TODO)
+- ✅ Routes range 20-157 lines, all thin wrappers
+
+#### What's Left (Not Porting)
+
+The porting mission is complete. Remaining codex/local-dev work is convergence, not porting:
+1. UI page reconciliation (38 pages differ in content/styling)
+2. Root-level doc merge (README, CONTRIBUTING, config files)
+3. Lint cleanup (216 pre-existing issues across codebase)
+4. frain/improve has 94 commits not on codex (mostly UI polish: animations, error states, PWA icons, page titles, route slimming)
+
 ### 2026-03-26 04:00 UTC: Test Coverage Expansion — obsidian-importer & mind-map-generator (Frain)
 
 #### Scope
