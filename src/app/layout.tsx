@@ -70,13 +70,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#14b8a6" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         {/* Preconnect to font origins for faster LCP */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* DNS-prefetch for common AI provider APIs */}
         <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
         <link rel="dns-prefetch" href="https://api.openai.com" />
+        <link rel="dns-prefetch" href="https://github.com" />
       </head>
       <body className={`${sans.variable} ${serif.variable} ${mono.variable} font-sans antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
         {children}
