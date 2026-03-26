@@ -8,6 +8,15 @@
 
 import { db } from "@/server/db";
 import { sql } from "drizzle-orm";
+import { ensurePluginInstalled } from "@/server/plugins/ports/plugin-config";
+
+const PLUGIN_SLUG = "image-to-memory";
+
+// ─── Plugin Bootstrap ────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(PLUGIN_SLUG);
+}
 
 // ─── Types ────────────────────────────────────────────────────
 

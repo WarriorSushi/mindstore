@@ -1,3 +1,8 @@
+import JSZip from "jszip";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+import { generateEmbeddings } from "@/server/embeddings";
+import { buildTreeIndex } from "@/server/retrieval";
 import { assertPluginEnabled } from "@/server/plugins/ports/plugin-config";
 
 const PLUGIN_SLUG = "obsidian-importer";
@@ -412,4 +417,155 @@ export function buildObsidianPreview(vault: ParsedVault) {
 
 export async function ensureObsidianImporterReady() {
   await assertPluginEnabled(PLUGIN_SLUG);
+}
+
+// ─── ZIP Extraction ──────────────────────────────────────────
+
+export async function extractNotesFromZip(file: File): Promise<ObsidianNote[]> {
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const notes: ObsidianNote[] = [];
+  const tasks: Promise<void>[] = [];
+
+  zip.forEach((relativePath, entry) => {
+    if (entry.dir) return;
+    if (relativePath.startsWith(".") || relativePath.includes("/.")) return;
+    if (relativePath.startsWith("__MACOSX/")) return;
+    if (!relativePath.toLowerCase().endsWith(".md")) return;
+    if (relativePath.includes(".obsidian/") || relativePath.includes(".trash/")) return;
+
+    tasks.push(entry.async("string").then((content) => {
+      const note = parseNote(relativePath, content);
+      if (note.content.trim().length > 0) {
+        notes.push(note);
+      }
+    }));
+  });
+
+  await Promise.all(tasks);
+  stripVaultRoot(notes);
+  notes.sort((left, right) => left.path.localeCompare(right.path));
+  return notes;
+}
+
+// ─── Import Orchestration ────────────────────────────────────
+
+export interface ImportVaultResult {
+  totalNotes: number;
+  totalChunks: number;
+  embedded: number;
+  connections: number;
+  tags: number;
+  stats: ParsedVault["stats"];
+}
+
+export async function importVault(
+  userId: string,
+  vault: ParsedVault,
+): Promise<ImportVaultResult> {
+  const allChunks = chunkAllNotes(vault.notes);
+  let embeddings: number[][] | null = null;
+
+  if (allChunks.length <= 300) {
+    try {
+      const allEmbeddings: number[][] = [];
+      for (let index = 0; index < allChunks.length; index += 50) {
+        const batch = allChunks.slice(index, index + 50);
+        const batchEmbeddings = await generateEmbeddings(batch.map((chunk) => chunk.content));
+        if (batchEmbeddings) allEmbeddings.push(...batchEmbeddings);
+      }
+      if (allEmbeddings.length === allChunks.length) {
+        embeddings = allEmbeddings;
+      }
+    } catch (error) {
+      console.error("Obsidian embeddings failed (non-fatal):", error);
+    }
+  }
+
+  const noteMemoryIds = new Map<string, string[]>();
+
+  for (let start = 0; start < allChunks.length; start += 20) {
+    const batch = allChunks.slice(start, start + 20);
+    await Promise.all(batch.map(async (chunk, batchIndex) => {
+      const globalIndex = start + batchIndex;
+      const embedding = embeddings?.[globalIndex];
+      const memoryId = crypto.randomUUID();
+      const metadata = JSON.stringify({
+        folder: chunk.folder || undefined,
+        tags: chunk.tags.length > 0 ? chunk.tags : undefined,
+        plugin: "obsidian-importer",
+      });
+
+      if (embedding) {
+        const embeddingVector = `[${embedding.join(",")}]`;
+        await db.execute(sql`
+          INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, metadata, tree_path, created_at, imported_at)
+          VALUES (${memoryId}, ${userId}::uuid, ${chunk.content}, ${embeddingVector}::vector, 'obsidian', ${chunk.title}, ${metadata}::jsonb, ${chunk.folder || null}, NOW(), NOW())
+        `);
+      } else {
+        await db.execute(sql`
+          INSERT INTO memories (id, user_id, content, source_type, source_title, metadata, tree_path, created_at, imported_at)
+          VALUES (${memoryId}, ${userId}::uuid, ${chunk.content}, 'obsidian', ${chunk.title}, ${metadata}::jsonb, ${chunk.folder || null}, NOW(), NOW())
+        `);
+      }
+
+      const existing = noteMemoryIds.get(chunk.noteName.toLowerCase()) || [];
+      existing.push(memoryId);
+      noteMemoryIds.set(chunk.noteName.toLowerCase(), existing);
+    }));
+  }
+
+  const connectionsCreated = await createWikilinkConnections(userId, vault.notes, noteMemoryIds);
+
+  try {
+    await buildTreeIndex(userId);
+  } catch (error) {
+    console.error("Tree index build failed (non-fatal):", error);
+  }
+
+  return {
+    totalNotes: vault.notes.length,
+    totalChunks: allChunks.length,
+    embedded: embeddings?.length || 0,
+    connections: connectionsCreated,
+    tags: vault.stats.totalTags,
+    stats: vault.stats,
+  };
+}
+
+// ─── Connection Creation ─────────────────────────────────────
+
+async function createWikilinkConnections(
+  userId: string,
+  notes: ObsidianNote[],
+  noteMemoryIds: Map<string, string[]>,
+): Promise<number> {
+  let connectionsCreated = 0;
+  const connectionPairs = new Set<string>();
+
+  for (const note of notes) {
+    const sourceIds = noteMemoryIds.get(note.name.toLowerCase());
+    if (!sourceIds?.length) continue;
+
+    for (const link of note.wikilinks) {
+      const targetIds = noteMemoryIds.get(link.toLowerCase());
+      if (!targetIds?.length) continue;
+
+      const pairKey = [sourceIds[0], targetIds[0]].sort().join(":");
+      if (connectionPairs.has(pairKey)) continue;
+      connectionPairs.add(pairKey);
+
+      try {
+        await db.execute(sql`
+          INSERT INTO connections (id, user_id, memory_a_id, memory_b_id, similarity, bridge_concept, discovered_at)
+          VALUES (${crypto.randomUUID()}, ${userId}::uuid, ${sourceIds[0]}::uuid, ${targetIds[0]}::uuid, 0.8, ${"wikilink"}, NOW())
+          ON CONFLICT DO NOTHING
+        `);
+        connectionsCreated += 1;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return connectionsCreated;
 }

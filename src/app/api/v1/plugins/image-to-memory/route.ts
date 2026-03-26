@@ -10,9 +10,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/server/user";
 import { generateEmbeddings } from "@/server/embeddings";
-import { db } from "@/server/db";
-import { sql } from "drizzle-orm";
-import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_IMAGE_SIZE,
@@ -20,6 +17,7 @@ import {
   generateTitleFromDescription,
   getVisionConfig,
   analyzeImage,
+  ensureInstalled,
   ensureImageTable,
   listImages,
   getImageStats,
@@ -30,23 +28,6 @@ import {
   updateImageTitle,
   type ContextType,
 } from "@/server/plugins/ports/image-to-memory";
-
-const PLUGIN_SLUG = "image-to-memory";
-
-async function ensureInstalled() {
-  const manifest = PLUGIN_MANIFESTS[PLUGIN_SLUG];
-  if (!manifest) return;
-  try {
-    const existing = await db.execute(sql`SELECT id FROM plugins WHERE slug = ${PLUGIN_SLUG}`);
-    if ((existing as unknown[]).length === 0) {
-      await db.execute(sql`
-        INSERT INTO plugins (slug, name, description, type, status, icon, category)
-        VALUES (${manifest.slug}, ${manifest.name}, ${manifest.description},
-          ${"extension"}, ${"active"}, ${manifest.icon}, ${manifest.category})
-      `);
-    }
-  } catch { /* ignore */ }
-}
 
 // ─── GET Handler ─────────────────────────────────────────────
 
