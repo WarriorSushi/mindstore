@@ -4,6 +4,36 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-26
 
+### 2026-03-26 03:00 UTC: Final Route Slimming — 35/35 Routes DB-Free (Frain)
+
+#### Scope
+
+Deep-slim the last 2 routes that still had inline DB access: image-to-memory and obsidian-importer.
+
+#### Changes Completed
+
+**image-to-memory route (156L → 137L):**
+- Replaced inline `ensureInstalled()` (raw SQL + registry import) with shared `ensurePluginInstalled()` via new `ensureInstalled()` export in port module
+- Removed `db`, `sql`, and `PLUGIN_MANIFESTS` imports from route
+- Route now imports only from its port module + Next.js + user utils
+
+**obsidian-importer route (185L → 66L, 64% reduction):**
+- Extracted `extractNotesFromZip()` — ZIP parsing, note filtering, vault root stripping
+- Extracted `importVault()` — full orchestration: chunking, batch embeddings, memory insertion, connection creation, tree index rebuild
+- Extracted `createWikilinkConnections()` — wikilink-based connection graph builder
+- Route is now a pure thin wrapper: validate file → extract → analyze → preview or import
+
+#### Quality
+
+- **TypeScript:** Clean (zero errors)
+- **Tests:** 42 files, 225 tests, all passing
+- **Route audit:** **35/35 routes are now DB-free thin wrappers** — zero routes import `db`, `drizzle-orm`, or `registry` directly
+- **Color violations:** Zero
+
+#### Milestone
+
+This completes the route slimming campaign. Every plugin route in the codebase follows the gold-standard pattern: import only from port module, handle HTTP marshalling only, delegate all business logic/DB/config to `src/server/plugins/ports/`.
+
 ### 2026-03-26 02:00 UTC: Deep Route Slimming — image-to-memory, custom-rag, multi-language (Frain)
 
 #### Scope
