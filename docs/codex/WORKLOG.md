@@ -675,3 +675,41 @@ The plugin porting mission is done. Remaining divergence (343 files) is:
 5. **Packages** (plugin-sdk, plugin-runtime, example-community-plugin)
 
 None of these are plugin ports. The next convergence phase is UI page reconciliation and root-level doc merge.
+
+### 2026-03-26: Deep Route Slimming — Batches C + D (Frain Convergence Mode)
+
+#### Scope
+
+Deep-slim all Batch C (Imports) and Batch D (Export/Sync) routes to match the gold standard set by kindle-importer and flashcard-maker: routes must be pure thin wrappers with zero inline DB calls, zero inline ensureInstalled, zero inline config management.
+
+#### Changes Completed
+
+**Batch C Imports (6 routes):**
+- twitter-importer: 174L → 59L (66% reduction) — extracted ensureInstalled, getTwitterConfig, getTwitterStats, importArchive, importManual
+- telegram-importer: 157L → 56L (64% reduction) — extracted ensureInstalled, getTelegramConfig, getTelegramStats, runImport
+- pocket-importer: 167L → 52L (69% reduction) — extracted ensureInstalled, getPocketConfig, getPocketStats, runImport
+- readwise-importer: 217L → 58L (73% reduction) — extracted ensureInstalled, getReadwiseConfig, getReadwiseStats, saveToken, runImport; migrated to shared getPluginConfig/savePluginConfig
+- spotify-importer: 153L → 50L (67% reduction) — extracted ensureInstalled, getSpotifyConfig, getSpotifyStats, runImport
+- anki-export: 180L → 131L (27% reduction) — extracted ensureInstalled, getDecks, getMemoryCount
+
+**Batch D Exports/Syncs (3 routes):**
+- markdown-blog-export: 198L → 122L (38% reduction) — extracted ensureInstalled, fetchMemories, getSourceStats
+- notion-sync: 202L → 155L (23% reduction) — extracted ensureInstalled, getNotionConfig, saveNotionConfig, loadUserMemories
+- obsidian-sync: 199L → 129L (35% reduction) — extracted ensureInstalled, getObsidianConfig, saveObsidianConfig, loadMemories, loadConnections
+
+#### Key Pattern
+
+All routes now follow the same thin-wrapper pattern:
+1. Import only from their port module (zero db/drizzle/registry imports)
+2. Call ensureInstalled() which delegates to shared ensurePluginInstalled()
+3. Call port functions for all business logic, config management, stats
+4. Only handle HTTP request/response marshalling
+
+All 9 routes now use the shared `plugin-config.ts` utilities (ensurePluginInstalled, getPluginConfig, savePluginConfig) instead of inline DB boilerplate.
+
+#### Quality
+
+- TypeScript: Clean (zero errors)
+- Tests: 76 tests across 9 files, all passing
+- Route audit: 33/35 routes are now DB-free thin wrappers
+- Only 2 routes remain with inline DB: image-to-memory, obsidian-importer (both from earlier batches, low priority)
