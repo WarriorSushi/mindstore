@@ -11,15 +11,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/server/db';
-import { eq, sql } from 'drizzle-orm';
 import { getUserId } from '@/server/user';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings, getEmbeddingConfig } from '@/server/embeddings';
 import { getTextGenerationConfig, callTextPrompt } from '@/server/ai-client';
 import {
-  DEFAULT_CONFIG,
   STRATEGY_INFO,
+  getRAGConfig,
+  saveRAGConfig,
+  getRAGStats,
   hydeRetrieve,
   multiQueryRetrieve,
   rerankRetrieve,
@@ -47,25 +47,6 @@ const deps = {
   retrieve: retrieve as unknown as RetrieveFn,
 };
 
-// ─── Config Helpers ─────────────────────────────────────────────
-
-async function getRAGConfig(): Promise<RAGConfig> {
-  try {
-    const [row] = await db.select().from(schema.plugins).where(eq(schema.plugins.slug, 'custom-rag')).limit(1);
-    if (row?.config && typeof row.config === 'object') return { ...DEFAULT_CONFIG, ...(row.config as any) };
-  } catch {}
-  return DEFAULT_CONFIG;
-}
-
-async function saveRAGConfig(config: Partial<RAGConfig>) {
-  const current = await getRAGConfig();
-  const merged = { ...current, ...config };
-  try {
-    await db.update(schema.plugins).set({ config: merged as any, updatedAt: new Date() }).where(eq(schema.plugins.slug, 'custom-rag'));
-  } catch {}
-  return merged;
-}
-
 // ─── Route Handlers ─────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -88,18 +69,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (action === 'stats') {
-      const memoryCount = await db.execute(sql`SELECT COUNT(*) as count FROM memories WHERE user_id = ${userId}::uuid`);
-      const embeddedCount = await db.execute(sql`SELECT COUNT(*) as count FROM memories WHERE user_id = ${userId}::uuid AND embedding IS NOT NULL`);
-      const treeNodeCount = await db.execute(sql`SELECT COUNT(*) as count FROM tree_index WHERE user_id = ${userId}::uuid`);
-      const config = await getRAGConfig();
-      const total = Number((memoryCount as any[])[0]?.count || 0);
-      const embedded = Number((embeddedCount as any[])[0]?.count || 0);
-      return NextResponse.json({
-        totalMemories: total, embeddedMemories: embedded,
-        treeNodes: Number((treeNodeCount as any[])[0]?.count || 0),
-        activeStrategy: config.activeStrategy,
-        embeddingCoverage: total > 0 ? Math.round((embedded / total) * 100) : 0,
-      });
+      return NextResponse.json(await getRAGStats(userId));
     }
 
     if (action === 'benchmark') {
