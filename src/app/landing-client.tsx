@@ -247,7 +247,7 @@ export function LandingClient() {
       </section>
 
       {/* ═══════ WHAT YOU CAN DO ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
         <div className="text-center mb-14">
           <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-sky-500/10 text-sky-400 border border-sky-500/15 mb-4">
             Full Feature Suite
@@ -354,7 +354,7 @@ export function LandingClient() {
       </section>
 
       {/* ═══════ MCP PROTOCOL ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
         <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div>
             <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 mb-4">
@@ -400,7 +400,7 @@ export function LandingClient() {
       </section>
 
       {/* ═══════ WHY MINDSTORE ═══════ */}
-      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04] landing-section-lazy">
         <h2 className="text-[28px] md:text-[36px] font-bold text-center tracking-[-0.03em] mb-14">
           Why MindStore?
         </h2>

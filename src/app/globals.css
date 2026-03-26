@@ -321,3 +321,20 @@
     scroll-behavior: auto !important;
   }
 }
+/* ─── Performance: CSS Containment ─── */
+/* Isolate sidebar and main content for better rendering performance */
+#main-content {
+  contain: layout style;
+}
+
+/* content-visibility for landing page sections below the fold */
+.landing-section-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* Optimize sidebar scroll performance */
+.sidebar-scroll {
+  contain: strict;
+  overflow-y: auto;
+}
