@@ -186,242 +186,359 @@ const CASES = [
   { icon: Newspaper, title: "Auto-generate a newsletter from what you actually learned this week", desc: "Newsletter plugin scans recent memories, groups by topic, generates a digest. You edit, they read. Thought leadership from real knowledge." },
 ];
 
-/* ─── App Showcase — cycles through real screens ─── */
-const SCREENS = [
-  {
-    label: "Dashboard", path: "/app",
-    render: () => (
-      <div className="p-5 sm:p-6 space-y-4">
-        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind at a Glance</div>
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { v: "2,847", l: "Memories", c: "rgba(20,184,166,0.12)" },
-            { v: "1,423", l: "ChatGPT", c: "rgba(16,185,129,0.12)" },
-            { v: "892", l: "Books", c: "rgba(245,158,11,0.12)" },
-            { v: "532", l: "Notes", c: "rgba(59,130,246,0.12)" },
-          ].map(s => (
-            <div key={s.l} className="rounded-xl p-2.5" style={{ background: s.c, border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div className="text-[14px] font-bold text-zinc-200 tabular-nums">{s.v}</div>
-              <div className="text-[9px] text-zinc-500 font-medium mt-0.5">{s.l}</div>
-            </div>
+/* ─── App Showcase with animated cursor ─── */
+
+/* Sidebar items — label, path, icon indicator */
+const NAV_ITEMS = [
+  { label: "Dashboard", path: "/app", group: "main" },
+  { label: "Explore", path: "/app/explore", group: "main" },
+  { label: "Chat", path: "/app/chat", group: "main" },
+  { label: "Fingerprint", path: "/app/fingerprint", group: "plugins" },
+  { label: "Flashcards", path: "/app/flashcards", group: "plugins" },
+  { label: "Evolution", path: "/app/evolution", group: "plugins" },
+  { label: "Plugins", path: "/app/plugins", group: "main" },
+];
+
+/* Screen renderers keyed by index */
+const SCREEN_CONTENT: Record<number, () => ReactNode> = {
+  /* Dashboard */
+  0: () => (
+    <div className="p-4 sm:p-5 space-y-3">
+      <div className="text-[13px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind</div>
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { v: "2,847", l: "Memories", c: "rgba(20,184,166,0.12)" },
+          { v: "1,423", l: "ChatGPT", c: "rgba(16,185,129,0.12)" },
+          { v: "892", l: "Books", c: "rgba(245,158,11,0.12)" },
+          { v: "532", l: "Notes", c: "rgba(59,130,246,0.12)" },
+        ].map(s => (
+          <div key={s.l} className="rounded-lg p-2" style={{ background: s.c, border: "1px solid rgba(255,255,255,0.03)" }}>
+            <div className="text-[13px] font-bold text-zinc-200 tabular-nums">{s.v}</div>
+            <div className="text-[8px] text-zinc-500 mt-0.5">{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)" }}>
+        <div className="text-[9px] text-zinc-600 mb-1.5">14-day activity</div>
+        <div className="flex items-end gap-[2px] h-10">
+          {[3,5,2,7,4,8,6,9,5,3,7,8,4,6].map((h, i) => (
+            <div key={i} className="flex-1 rounded-sm" style={{ height: `${h * 11}%`, background: `rgba(20,184,166,${0.2 + h * 0.08})` }} />
           ))}
         </div>
-        {/* Activity chart */}
-        <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-          <div className="text-[10px] text-zinc-500 mb-2 font-medium">14-day activity</div>
-          <div className="flex items-end gap-[3px] h-12">
-            {[3,5,2,7,4,8,6,9,5,3,7,8,4,6].map((h, i) => (
-              <div key={i} className="flex-1 rounded-sm transition-all" style={{ height: `${h * 11}%`, background: `rgba(20,184,166,${0.2 + h * 0.08})` }} />
-            ))}
+      </div>
+      <div className="space-y-1">
+        {[
+          { t: "Thinking, Fast and Slow", s: "Kindle", c: "#f59e0b" },
+          { t: "React Server Components deep dive", s: "ChatGPT", c: "#10b981" },
+          { t: "Stripe API architecture notes", s: "URL", c: "#3b82f6" },
+        ].map(m => (
+          <div key={m.t} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.015)" }}>
+            <div className="w-1 h-5 rounded-full shrink-0" style={{ background: m.c }} />
+            <div className="min-w-0">
+              <div className="text-[10px] font-medium text-zinc-300 truncate">{m.t}</div>
+              <div className="text-[8px] text-zinc-600">{m.s}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ),
+  /* Explore */
+  1: () => (
+    <div className="p-4 sm:p-5 space-y-3">
+      <div className="flex items-center gap-2 px-3 h-8 rounded-lg" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.1)" }}>
+        <Search className="w-3.5 h-3.5 text-teal-400" />
+        <span className="text-[11px] text-zinc-300">transformers attention mechanism</span>
+      </div>
+      <div className="flex gap-1.5 text-[9px]">
+        {["Semantic", "Hybrid", "Keyword"].map(m => (
+          <span key={m} className={`px-2 py-0.5 rounded ${m === "Semantic" ? "bg-teal-500/10 text-teal-400" : "bg-white/[0.03] text-zinc-600"}`}>{m}</span>
+        ))}
+      </div>
+      {[
+        { t: "AI Architecture Deep Dive", s: "ChatGPT", sc: 98, c: "#10b981" },
+        { t: "Attention Is All You Need — notes", s: "Kindle", sc: 94, c: "#f59e0b" },
+        { t: "Neural network lecture highlights", s: "YouTube", sc: 89, c: "#ef4444" },
+        { t: "Transformer implementation walkthrough", s: "Notes", sc: 85, c: "#3b82f6" },
+      ].map(r => (
+        <div key={r.t} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.03)" }}>
+          <div className="w-1 h-7 rounded-full shrink-0" style={{ background: r.c }} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] font-semibold text-zinc-200 truncate">{r.t}</div>
+            <div className="text-[8px] text-zinc-600">{r.s}</div>
+          </div>
+          <span className="text-[10px] font-mono text-teal-500/70 shrink-0">{r.sc}%</span>
+        </div>
+      ))}
+    </div>
+  ),
+  /* Chat */
+  2: () => (
+    <div className="p-4 sm:p-5 flex flex-col h-[320px] sm:h-[360px]">
+      <div className="flex-1 space-y-3 overflow-hidden">
+        <div className="flex gap-2">
+          <div className="w-5 h-5 rounded-full bg-teal-500/20 flex items-center justify-center shrink-0"><span className="text-[8px] text-teal-400">Y</span></div>
+          <div className="px-3 py-2 rounded-xl rounded-tl-sm text-[11px] text-zinc-300 max-w-[80%]" style={{ background: "rgba(255,255,255,0.04)" }}>
+            What do my notes say about attention mechanisms?
           </div>
         </div>
-        {/* Recent */}
-        <div className="space-y-1">
-          {[
-            { t: "Thinking, Fast and Slow", s: "Kindle", c: "#f59e0b" },
-            { t: "React Server Components deep dive", s: "ChatGPT", c: "#10b981" },
-            { t: "Stripe API architecture notes", s: "URL", c: "#3b82f6" },
-          ].map(m => (
-            <div key={m.t} className="flex items-center gap-2.5 px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.015)" }}>
-              <div className="w-1 h-6 rounded-full shrink-0" style={{ background: m.c }} />
-              <div className="min-w-0">
-                <div className="text-[11px] font-medium text-zinc-300 truncate">{m.t}</div>
-                <div className="text-[9px] text-zinc-600">{m.s}</div>
-              </div>
+        <div className="flex gap-2">
+          <div className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center shrink-0"><Sparkles className="w-2.5 h-2.5 text-sky-400" /></div>
+          <div className="px-3 py-2 rounded-xl rounded-tl-sm text-[11px] text-zinc-400 max-w-[85%] leading-[1.6]" style={{ background: "rgba(56,189,248,0.04)" }}>
+            Based on your knowledge base, attention mechanisms allow models to weigh different parts of the input dynamically. Your notes from <span className="text-sky-400/80">&quot;AI Architecture Deep Dive&quot;</span> describe self-attention as computing relevance scores between all token pairs...
+            <div className="flex gap-1 mt-2">
+              <span className="text-[8px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400/60">3 sources cited</span>
+              <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.03] text-zinc-600">GPT-4o</span>
             </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    label: "Knowledge Fingerprint", path: "/app/fingerprint",
-    render: () => (
-      <div className="p-5 sm:p-6">
-        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Knowledge Fingerprint</div>
-        {/* Fake 3D graph */}
-        <div className="relative h-[240px] sm:h-[280px] rounded-xl overflow-hidden" style={{ background: "rgba(0,0,0,0.3)" }}>
-          <svg viewBox="0 0 400 280" className="w-full h-full" style={{ animation: "graphRotate 20s linear infinite" }}>
-            {/* Connection lines */}
-            {[
-              [120,80,200,140],[200,140,300,100],[200,140,160,200],[160,200,80,180],
-              [300,100,340,180],[340,180,280,220],[280,220,200,140],[80,180,120,80],
-              [160,200,280,220],[120,80,60,140],[60,140,80,180],[300,100,360,60],
-              [340,180,360,60],[280,220,200,260],[200,260,120,240],[120,240,80,180],
-            ].map(([x1,y1,x2,y2], i) => (
-              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,184,166,0.15)" strokeWidth="1" />
-            ))}
-            {/* Cluster nodes */}
-            {[
-              { x: 120, y: 80, r: 14, c: "#14b8a6", l: "AI" },
-              { x: 200, y: 140, r: 18, c: "#14b8a6", l: "Core" },
-              { x: 300, y: 100, r: 12, c: "#38bdf8", l: "Code" },
-              { x: 160, y: 200, r: 11, c: "#f59e0b", l: "Books" },
-              { x: 80, y: 180, r: 9, c: "#a78bfa", l: "Philosophy" },
-              { x: 340, y: 180, r: 10, c: "#10b981", l: "Finance" },
-              { x: 280, y: 220, r: 8, c: "#ec4899", l: "Health" },
-              { x: 60, y: 140, r: 7, c: "#f97316", l: "Music" },
-              { x: 360, y: 60, r: 6, c: "#22d3ee", l: "Travel" },
-              { x: 200, y: 260, r: 9, c: "#ef4444", l: "Cooking" },
-              { x: 120, y: 240, r: 7, c: "#71717a", l: "Design" },
-            ].map((n, i) => (
-              <g key={i}>
-                <circle cx={n.x} cy={n.y} r={n.r} fill={n.c} opacity="0.3" />
-                <circle cx={n.x} cy={n.y} r={n.r * 0.6} fill={n.c} opacity="0.7" />
-                <text x={n.x} y={n.y + n.r + 10} textAnchor="middle" fontSize="8" fill="rgba(161,161,170,0.6)" fontFamily="sans-serif">{n.l}</text>
-              </g>
-            ))}
-          </svg>
-          {/* Ambient glow */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 50% 50%, rgba(20,184,166,0.06), transparent 70%)" }} />
-        </div>
-        <div className="flex gap-3 mt-3 text-[10px] text-zinc-600">
-          <span>11 clusters</span><span>·</span><span>2,847 nodes</span><span>·</span><span>4,230 connections</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    label: "Topic Evolution", path: "/app/evolution",
-    render: () => (
-      <div className="p-5 sm:p-6">
-        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Topic Evolution</div>
-        <div className="text-[10px] text-zinc-600 mb-3">How your interests shifted over 12 months</div>
-        {/* Timeline bars */}
-        <div className="space-y-2">
-          {[
-            { topic: "Machine Learning", months: [2,3,5,7,8,9,8,7,6,5,4,3], c: "#14b8a6" },
-            { topic: "React & Frontend", months: [6,5,4,3,3,4,5,7,8,9,8,7], c: "#38bdf8" },
-            { topic: "Business Strategy", months: [1,2,3,4,6,7,8,7,6,5,4,3], c: "#f59e0b" },
-            { topic: "Philosophy", months: [4,5,6,5,3,2,1,2,3,4,5,6], c: "#a78bfa" },
-            { topic: "Health & Fitness", months: [3,3,4,5,6,7,8,8,7,6,5,4], c: "#10b981" },
-          ].map(row => (
-            <div key={row.topic} className="flex items-center gap-3">
-              <div className="w-[90px] shrink-0 text-[10px] text-zinc-400 font-medium truncate">{row.topic}</div>
-              <div className="flex-1 flex items-center gap-[2px] h-5">
-                {row.months.map((v, i) => (
-                  <div key={i} className="flex-1 rounded-sm" style={{ height: `${v * 10}%`, background: row.c, opacity: 0.15 + v * 0.085 }} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-2 text-[8px] text-zinc-700 px-[93px]">
-          <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span><span>Dec</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    label: "Flashcards", path: "/app/flashcards",
-    render: () => (
-      <div className="p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em]">Flashcards</div>
-          <div className="text-[10px] text-zinc-500 font-medium">42 due today</div>
-        </div>
-        {/* Card */}
-        <div className="rounded-xl p-6 text-center" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.1)" }}>
-          <div className="text-[10px] text-teal-500/60 font-medium mb-2">QUESTION</div>
-          <div className="text-[15px] text-zinc-200 font-medium leading-[1.5]">
-            What is the key innovation of the<br />Transformer architecture?
           </div>
-          <div className="text-[10px] text-zinc-600 mt-3">from &quot;AI Architecture Deep Dive&quot; · ChatGPT</div>
         </div>
-        {/* Controls */}
-        <div className="flex justify-center gap-2 mt-4">
+      </div>
+      <div className="flex items-center gap-2 px-3 h-8 rounded-lg mt-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+        <span className="text-[10px] text-zinc-600 flex-1">Ask your knowledge…</span>
+        <ArrowRight className="w-3 h-3 text-zinc-700" />
+      </div>
+    </div>
+  ),
+  /* Knowledge Fingerprint — 3D-ish graph */
+  3: () => (
+    <div className="p-4 sm:p-5">
+      <div className="text-[13px] font-semibold text-zinc-200 tracking-[-0.02em] mb-2">Knowledge Fingerprint</div>
+      <div className="relative h-[260px] sm:h-[300px] rounded-xl overflow-hidden" style={{ background: "rgba(0,0,0,0.4)" }}>
+        <svg viewBox="0 0 400 300" className="w-full h-full">
+          {/* Grid lines for depth */}
+          {[60,120,180,240].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+          {[80,160,240,320].map(x => <line key={x} x1={x} y1="0" x2={x} y2="300" stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+          {/* Connections */}
           {[
-            { l: "Again", c: "rgba(239,68,68,0.15)" },
-            { l: "Hard", c: "rgba(245,158,11,0.15)" },
-            { l: "Good", c: "rgba(20,184,166,0.15)" },
-            { l: "Easy", c: "rgba(59,130,246,0.15)" },
-          ].map(b => (
-            <div key={b.l} className="px-4 py-1.5 rounded-lg text-[11px] font-medium text-zinc-400" style={{ background: b.c, border: "1px solid rgba(255,255,255,0.04)" }}>
-              {b.l}
-            </div>
+            [120,70,200,140],[200,140,310,90],[200,140,155,210],[155,210,75,185],
+            [310,90,345,185],[345,185,275,230],[275,230,200,140],[75,185,120,70],
+            [155,210,275,230],[120,70,55,140],[55,140,75,185],[310,90,365,55],
+            [345,185,365,55],[275,230,200,270],[200,270,120,250],[120,250,75,185],
+            [200,140,200,270],[55,140,120,250],[310,90,275,230],
+          ].map(([x1,y1,x2,y2], i) => (
+            <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,184,166,0.12)" strokeWidth="0.8">
+              <animate attributeName="opacity" values="0.08;0.18;0.08" dur={`${3 + i * 0.3}s`} repeatCount="indefinite" />
+            </line>
           ))}
+          {/* Nodes with pulsing */}
+          {[
+            { x: 120, y: 70, r: 16, c: "#14b8a6", l: "AI/ML" },
+            { x: 200, y: 140, r: 22, c: "#14b8a6", l: "Core" },
+            { x: 310, y: 90, r: 14, c: "#38bdf8", l: "Code" },
+            { x: 155, y: 210, r: 12, c: "#f59e0b", l: "Books" },
+            { x: 75, y: 185, r: 10, c: "#a78bfa", l: "Philosophy" },
+            { x: 345, y: 185, r: 11, c: "#10b981", l: "Finance" },
+            { x: 275, y: 230, r: 9, c: "#ec4899", l: "Health" },
+            { x: 55, y: 140, r: 8, c: "#f97316", l: "Music" },
+            { x: 365, y: 55, r: 7, c: "#22d3ee", l: "Travel" },
+            { x: 200, y: 270, r: 10, c: "#ef4444", l: "Cooking" },
+            { x: 120, y: 250, r: 8, c: "#71717a", l: "Design" },
+          ].map((n, i) => (
+            <g key={i}>
+              <circle cx={n.x} cy={n.y} r={n.r * 1.5} fill={n.c} opacity="0.06">
+                <animate attributeName="r" values={`${n.r * 1.2};${n.r * 1.8};${n.r * 1.2}`} dur={`${2.5 + i * 0.4}s`} repeatCount="indefinite" />
+              </circle>
+              <circle cx={n.x} cy={n.y} r={n.r * 0.7} fill={n.c} opacity="0.6" />
+              <circle cx={n.x} cy={n.y} r={n.r * 0.3} fill="white" opacity="0.3" />
+              <text x={n.x} y={n.y + n.r + 11} textAnchor="middle" fontSize="7.5" fill="rgba(161,161,170,0.5)" fontFamily="system-ui">{n.l}</text>
+            </g>
+          ))}
+        </svg>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(circle at 50% 47%, rgba(20,184,166,0.06), transparent 65%)" }} />
+      </div>
+      <div className="flex gap-3 mt-2 text-[9px] text-zinc-600">
+        <span>11 clusters</span><span>·</span><span>2,847 nodes</span><span>·</span><span>4,230 edges</span>
+      </div>
+    </div>
+  ),
+  /* Flashcards */
+  4: () => (
+    <div className="p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[13px] font-semibold text-zinc-200">Flashcards</div>
+        <span className="text-[9px] text-zinc-500">42 due today</span>
+      </div>
+      <div className="rounded-xl p-5 text-center" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.08)" }}>
+        <div className="text-[9px] text-teal-500/50 font-medium mb-1.5">QUESTION</div>
+        <div className="text-[14px] text-zinc-200 font-medium leading-[1.5]">
+          What is the key innovation<br />of the Transformer architecture?
         </div>
-        {/* Progress */}
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex-1 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <div className="h-full rounded-full" style={{ width: "65%", background: "rgba(20,184,166,0.5)" }} />
+        <div className="text-[9px] text-zinc-600 mt-2.5">from &quot;AI Architecture Deep Dive&quot;</div>
+      </div>
+      <div className="flex justify-center gap-2 mt-3">
+        {[
+          { l: "Again", c: "rgba(239,68,68,0.12)" },
+          { l: "Hard", c: "rgba(245,158,11,0.12)" },
+          { l: "Good", c: "rgba(20,184,166,0.12)" },
+          { l: "Easy", c: "rgba(59,130,246,0.12)" },
+        ].map(b => (
+          <div key={b.l} className="px-3.5 py-1 rounded-lg text-[10px] font-medium text-zinc-400" style={{ background: b.c }}>{b.l}</div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex-1 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }}>
+          <div className="h-full rounded-full" style={{ width: "65%", background: "rgba(20,184,166,0.5)" }} />
+        </div>
+        <span className="text-[8px] text-zinc-600">27/42</span>
+      </div>
+    </div>
+  ),
+  /* Topic Evolution */
+  5: () => (
+    <div className="p-4 sm:p-5">
+      <div className="text-[13px] font-semibold text-zinc-200 mb-1">Topic Evolution</div>
+      <div className="text-[9px] text-zinc-600 mb-3">12-month interest shifts</div>
+      <div className="space-y-2">
+        {[
+          { topic: "Machine Learning", months: [2,3,5,7,8,9,8,7,6,5,4,3], c: "#14b8a6" },
+          { topic: "React & Frontend", months: [6,5,4,3,3,4,5,7,8,9,8,7], c: "#38bdf8" },
+          { topic: "Business Strategy", months: [1,2,3,4,6,7,8,7,6,5,4,3], c: "#f59e0b" },
+          { topic: "Philosophy", months: [4,5,6,5,3,2,1,2,3,4,5,6], c: "#a78bfa" },
+          { topic: "Health & Fitness", months: [3,3,4,5,6,7,8,8,7,6,5,4], c: "#10b981" },
+        ].map(row => (
+          <div key={row.topic} className="flex items-center gap-2.5">
+            <div className="w-[80px] shrink-0 text-[9px] text-zinc-400 truncate">{row.topic}</div>
+            <div className="flex-1 flex items-center gap-[2px] h-4">
+              {row.months.map((v, i) => (
+                <div key={i} className="flex-1 rounded-sm" style={{ height: `${v * 10}%`, background: row.c, opacity: 0.15 + v * 0.085 }} />
+              ))}
+            </div>
           </div>
-          <span className="text-[9px] text-zinc-600">27/42</span>
-        </div>
+        ))}
       </div>
-    ),
-  },
-  {
-    label: "Sentiment Timeline", path: "/app/sentiment",
-    render: () => (
-      <div className="p-5 sm:p-6">
-        <div className="text-[14px] font-semibold text-zinc-200 tracking-[-0.02em] mb-3">Sentiment Timeline</div>
-        <div className="text-[10px] text-zinc-600 mb-3">Emotional patterns in your knowledge</div>
-        {/* Sentiment wave */}
-        <div className="relative h-[120px] rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.015)" }}>
-          <svg viewBox="0 0 400 120" className="w-full h-full" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="sentGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(20,184,166,0.3)" />
-                <stop offset="100%" stopColor="rgba(20,184,166,0)" />
-              </linearGradient>
-            </defs>
-            <path d="M0,80 C40,60 80,40 120,50 C160,60 200,30 240,45 C280,60 320,35 360,40 L400,50 L400,120 L0,120 Z" fill="url(#sentGrad)" />
-            <path d="M0,80 C40,60 80,40 120,50 C160,60 200,30 240,45 C280,60 320,35 360,40 L400,50" fill="none" stroke="#14b8a6" strokeWidth="2" />
-            {/* Data points */}
-            {[[0,80],[120,50],[200,30],[240,45],[320,35],[400,50]].map(([cx,cy], i) => (
-              <circle key={i} cx={cx} cy={cy} r="3" fill="#14b8a6" />
-            ))}
-          </svg>
-          {/* Labels */}
-          <div className="absolute top-2 right-3 text-[9px] text-teal-400/60 font-medium">Mostly positive</div>
-        </div>
-        <div className="grid grid-cols-3 gap-2 mt-3">
-          {[
-            { l: "Positive", v: "64%", c: "#14b8a6" },
-            { l: "Neutral", v: "28%", c: "#71717a" },
-            { l: "Reflective", v: "8%", c: "#a78bfa" },
-          ].map(s => (
-            <div key={s.l} className="flex items-center gap-2 text-[10px]">
-              <div className="w-2 h-2 rounded-full" style={{ background: s.c }} />
-              <span className="text-zinc-500">{s.l}</span>
-              <span className="text-zinc-400 font-medium ml-auto">{s.v}</span>
+      <div className="flex justify-between mt-1.5 text-[7px] text-zinc-700 pl-[85px]">
+        <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span>
+      </div>
+    </div>
+  ),
+  /* Plugin Store */
+  6: () => (
+    <div className="p-4 sm:p-5">
+      <div className="text-[13px] font-semibold text-zinc-200 mb-3">Plugin Store</div>
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { name: "Knowledge Fingerprint", desc: "3D mind visualization", icon: Network, installed: true, c: "#14b8a6" },
+          { name: "Flashcard Engine", desc: "SM-2 spaced repetition", icon: GraduationCap, installed: true, c: "#38bdf8" },
+          { name: "Contradiction Finder", desc: "Spot conflicting beliefs", icon: AlertTriangle, installed: false, c: "#ef4444" },
+          { name: "Mind Map", desc: "Visual knowledge graph", icon: GitBranch, installed: true, c: "#10b981" },
+          { name: "Blog Draft", desc: "Write from knowledge", icon: PenTool, installed: false, c: "#f59e0b" },
+          { name: "Voice to Memory", desc: "Whisper transcription", icon: Mic, installed: false, c: "#ec4899" },
+        ].map(p => (
+          <div key={p.name} className="p-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <p.icon className="w-3.5 h-3.5" style={{ color: p.c }} />
+              <span className="text-[10px] font-semibold text-zinc-200">{p.name}</span>
             </div>
-          ))}
-        </div>
+            <div className="text-[8px] text-zinc-600 mb-2">{p.desc}</div>
+            <div className={`text-[8px] font-medium px-2 py-0.5 rounded-md inline-block ${
+              p.installed ? "bg-teal-500/10 text-teal-400" : "bg-white/[0.04] text-zinc-500"
+            }`}>
+              {p.installed ? "Installed" : "Install"}
+            </div>
+          </div>
+        ))}
       </div>
-    ),
-  },
+      <div className="text-center mt-3 text-[9px] text-zinc-600">35 plugins available · All free</div>
+    </div>
+  ),
+};
+
+/* Cursor choreography: [navIndex, pauseMs] */
+const CHOREOGRAPHY: [number, number][] = [
+  [0, 3200],  // Dashboard
+  [1, 3200],  // Explore
+  [2, 3200],  // Chat
+  [3, 4000],  // Fingerprint (longer — it's impressive)
+  [4, 3200],  // Flashcards
+  [5, 3200],  // Evolution
+  [6, 3200],  // Plugins
 ];
 
 function Demo() {
-  const [idx, setIdx] = useState(0);
+  const [step, setStep] = useState(0);
+  const [cursorTarget, setCursorTarget] = useState(0);
+  const [clicking, setClicking] = useState(false);
+  const [activeScreen, setActiveScreen] = useState(0);
   const [inView, setInView] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const sidebarRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const o = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.3 });
+    const o = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.15 });
     o.observe(el); return () => o.disconnect();
   }, []);
 
-  // Auto-cycle through screens
+  /* Choreography loop */
   useEffect(() => {
     if (!inView) return;
-    const t = setInterval(() => setIdx(i => (i + 1) % SCREENS.length), 4000);
-    return () => clearInterval(t);
-  }, [inView]);
 
-  const screen = SCREENS[idx];
+    const [navIdx, pause] = CHOREOGRAPHY[step];
+
+    // Phase 1: Move cursor to target (takes ~600ms via CSS transition)
+    setCursorTarget(navIdx);
+    
+    // Phase 2: Click after cursor arrives
+    const clickT = setTimeout(() => {
+      setClicking(true);
+      setTimeout(() => {
+        setClicking(false);
+        // Transition content
+        setTransitioning(true);
+        setTimeout(() => {
+          setActiveScreen(navIdx);
+          setTransitioning(false);
+        }, 150);
+      }, 150);
+    }, 650);
+
+    // Phase 3: Wait, then advance
+    const nextT = setTimeout(() => {
+      setStep(s => (s + 1) % CHOREOGRAPHY.length);
+    }, 650 + pause);
+
+    return () => { clearTimeout(clickT); clearTimeout(nextT); };
+  }, [inView, step]);
+
+  /* Get cursor position relative to container */
+  const getCursorPos = useCallback(() => {
+    const target = sidebarRefs.current[cursorTarget];
+    const container = containerRef.current;
+    if (!target || !container) return { x: 80, y: 100 };
+    const tRect = target.getBoundingClientRect();
+    const cRect = container.getBoundingClientRect();
+    return {
+      x: tRect.left - cRect.left + tRect.width * 0.6,
+      y: tRect.top - cRect.top + tRect.height * 0.5,
+    };
+  }, [cursorTarget]);
+
+  const [cursorPos, setCursorPos] = useState({ x: 80, y: 100 });
+  
+  useEffect(() => {
+    // Recalculate on target change
+    const raf = requestAnimationFrame(() => setCursorPos(getCursorPos()));
+    return () => cancelAnimationFrame(raf);
+  }, [cursorTarget, getCursorPos]);
+
+  // Also recalculate on resize
+  useEffect(() => {
+    const h = () => setCursorPos(getCursorPos());
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, [getCursorPos]);
+
+  const currentNav = NAV_ITEMS[activeScreen];
 
   return (
     <div ref={ref} className="relative mx-auto max-w-[840px]">
       <div className="absolute -inset-12 rounded-[48px] pointer-events-none"
         style={{ background: "radial-gradient(ellipse at 50% 30%, rgba(20,184,166,0.08), rgba(56,189,248,0.04), transparent 70%)", filter: "blur(40px)" }} />
-      <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/60"
+      <div ref={containerRef} className="relative rounded-2xl overflow-hidden shadow-2xl shadow-black/60"
         style={{ background: "#0c0c0e", border: "1px solid rgba(255,255,255,0.06)" }}>
-        {/* Chrome */}
+        {/* Chrome bar */}
         <div className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
           <div className="flex gap-[6px]">
             <div className="w-[10px] h-[10px] rounded-full" style={{ background: "rgba(239,68,68,0.5)" }} />
@@ -429,43 +546,79 @@ function Demo() {
             <div className="w-[10px] h-[10px] rounded-full" style={{ background: "rgba(34,197,94,0.5)" }} />
           </div>
           <div className="flex-1 flex justify-center">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] text-zinc-600" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] text-zinc-600 transition-all duration-300" style={{ background: "rgba(255,255,255,0.03)" }}>
               <span className="w-2 h-2 rounded-sm" style={{ background: "rgba(20,184,166,0.5)" }} />
-              mindstore.org{screen.path}
+              mindstore.org{currentNav?.path || "/app"}
             </div>
           </div>
           <div className="w-16" />
         </div>
+        
         {/* Sidebar + Content */}
         <div className="flex">
-          {/* Sidebar — hidden on mobile */}
-          <div className="hidden sm:flex w-[160px] flex-col shrink-0 p-2.5 gap-0.5"
+          {/* Sidebar */}
+          <div className="hidden sm:flex w-[150px] flex-col shrink-0 p-2 gap-px"
             style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
-            <div className="flex items-center gap-2 px-2 py-2 mb-1.5">
+            <div className="flex items-center gap-2 px-2 py-2 mb-1">
               <MindStoreLogo className="w-4 h-4" />
-              <span className="text-[10px] font-bold text-zinc-300">MindStore</span>
+              <span className="text-[9px] font-bold text-zinc-300">MindStore</span>
             </div>
-            {SCREENS.map((s, i) => (
-              <button key={s.label} onClick={() => setIdx(i)}
-                className={`text-left px-2.5 py-1.5 rounded-lg text-[10px] transition-all ${
-                  i === idx ? "bg-white/[0.06] text-zinc-200 font-medium" : "text-zinc-600 hover:text-zinc-400"
-                }`}>
-                {s.label}
-              </button>
-            ))}
+            {/* Main section */}
+            <div className="text-[7px] text-zinc-700 uppercase tracking-wider px-2 pt-1 pb-0.5">Main</div>
+            {NAV_ITEMS.filter(n => n.group === "main").map((nav, _) => {
+              const globalIdx = NAV_ITEMS.indexOf(nav);
+              return (
+                <div key={nav.label} ref={el => { sidebarRefs.current[globalIdx] = el; }}
+                  className={`px-2 py-1.5 rounded-md text-[9px] transition-all duration-300 ${
+                    activeScreen === globalIdx ? "bg-white/[0.06] text-zinc-200 font-medium" : "text-zinc-600"
+                  }`}>
+                  {nav.label}
+                </div>
+              );
+            })}
+            <div className="text-[7px] text-zinc-700 uppercase tracking-wider px-2 pt-2 pb-0.5">Plugins</div>
+            {NAV_ITEMS.filter(n => n.group === "plugins").map((nav) => {
+              const globalIdx = NAV_ITEMS.indexOf(nav);
+              return (
+                <div key={nav.label} ref={el => { sidebarRefs.current[globalIdx] = el; }}
+                  className={`px-2 py-1.5 rounded-md text-[9px] transition-all duration-300 ${
+                    activeScreen === globalIdx ? "bg-white/[0.06] text-zinc-200 font-medium" : "text-zinc-600"
+                  }`}>
+                  {nav.label}
+                </div>
+              );
+            })}
           </div>
-          {/* Content — crossfade */}
-          <div className="flex-1 min-h-[320px] sm:min-h-[360px] relative overflow-hidden">
-            <div key={idx} style={{ animation: "screenFade .4s ease-out" }}>
-              {screen.render()}
+
+          {/* Content area */}
+          <div className="flex-1 min-h-[320px] sm:min-h-[380px] relative overflow-hidden">
+            <div style={{ opacity: transitioning ? 0 : 1, transform: transitioning ? "translateY(6px)" : "none", transition: "opacity .2s, transform .2s" }}>
+              {SCREEN_CONTENT[activeScreen]?.() ?? null}
             </div>
           </div>
         </div>
+
+        {/* Animated Cursor — desktop only */}
+        <div className="hidden sm:block absolute z-30 pointer-events-none"
+          style={{
+            left: cursorPos.x, top: cursorPos.y,
+            transition: "left .6s cubic-bezier(.16,1,.3,1), top .6s cubic-bezier(.16,1,.3,1)",
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+          }}>
+          {/* Cursor SVG */}
+          <svg width="16" height="20" viewBox="0 0 16 20" fill="none" style={{ transform: clicking ? "scale(0.85)" : "scale(1)", transition: "transform .15s ease" }}>
+            <path d="M1 1L1 14.5L4.5 11L8 18L10.5 17L7 10L12 10L1 1Z" fill="white" stroke="black" strokeWidth="1" />
+          </svg>
+          {/* Click ripple */}
+          {clicking && (
+            <div className="absolute -left-3 -top-3 w-8 h-8 rounded-full" style={{ background: "rgba(20,184,166,0.3)", animation: "clickRipple .4s ease-out forwards" }} />
+          )}
+        </div>
+
         {/* Mobile nav dots */}
         <div className="sm:hidden flex justify-center gap-1.5 pb-3">
-          {SCREENS.map((_, i) => (
-            <button key={i} onClick={() => setIdx(i)}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? "bg-teal-500 w-4" : "bg-zinc-700"}`} />
+          {NAV_ITEMS.map((_, i) => (
+            <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeScreen ? "bg-teal-500 w-4" : "bg-zinc-700"}`} />
           ))}
         </div>
       </div>
@@ -484,6 +637,7 @@ export function LandingClient() {
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
         @keyframes screenFade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes graphRotate { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(3deg) scale(1.02)} 100%{transform:rotate(0deg) scale(1)} }
+        @keyframes clickRipple { 0%{transform:scale(0);opacity:1} 100%{transform:scale(2.5);opacity:0} }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
       `}</style>
 
