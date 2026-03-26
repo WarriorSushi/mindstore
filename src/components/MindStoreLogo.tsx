@@ -1,12 +1,14 @@
 /**
- * MindStore Logo — "Mind Mark"
+ * MindStore Logo — "Neural M" v2
  * 
- * Two brain-lobe arches forming the letter M with a center synapse node.
- * The arches represent knowledge hemispheres; the dot represents the connection point —
- * the moment of insight when disparate knowledge connects.
+ * Two brain hemispheres (teal left / sky right) forming the letter M,
+ * connected by a white synapse node. Set in a dark rounded container.
+ * 
+ * The two-tone lobes represent dual processing — storage & retrieval,
+ * analysis & creativity. The white synapse is the connection point.
  * 
  * Usage:
- *   <MindStoreLogo className="w-6 h-6" />          — inline icon
+ *   <MindStoreLogo className="w-6 h-6" />          — app icon
  *   <MindStoreLogo className="w-8 h-8" withText />  — logo + wordmark
  */
 
@@ -27,19 +29,38 @@ export function MindStoreLogo({ className = "w-7 h-7", withText = false, textCla
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id="ms-g" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#14b8a6" />
+          <linearGradient id="ms-bg" x1="0" y1="0" x2="32" y2="32">
+            <stop offset="0%" stopColor="#0f1419" />
+            <stop offset="100%" stopColor="#0a1015" />
+          </linearGradient>
+          <linearGradient id="ms-l" x1="5" y1="6" x2="16" y2="26">
+            <stop offset="0%" stopColor="#2dd4bf" />
+            <stop offset="100%" stopColor="#14b8a6" />
+          </linearGradient>
+          <linearGradient id="ms-r" x1="16" y1="6" x2="27" y2="26">
+            <stop offset="0%" stopColor="#38bdf8" />
             <stop offset="100%" stopColor="#0ea5e9" />
           </linearGradient>
         </defs>
+        {/* Container */}
+        <rect width="32" height="32" rx="7" fill="url(#ms-bg)" />
+        <rect width="32" height="32" rx="7" fill="none" stroke="white" strokeOpacity="0.08" strokeWidth="0.5" />
+        {/* Left lobe — teal */}
         <path
-          d="M7 26 V12 Q7 6 12 6 Q16 6 16 13 Q16 6 20 6 Q25 6 25 12 V26"
-          stroke="url(#ms-g)"
-          strokeWidth="3.5"
+          d="M9 25 V13.5 Q9 7.5 13 7.5 Q15.8 7.5 16 12.5"
+          stroke="url(#ms-l)"
+          strokeWidth="3"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
-        <circle cx="16" cy="13.5" r="2" fill="url(#ms-g)" />
+        {/* Right lobe — sky */}
+        <path
+          d="M23 25 V13.5 Q23 7.5 19 7.5 Q16.2 7.5 16 12.5"
+          stroke="url(#ms-r)"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        {/* Synapse */}
+        <circle cx="16" cy="12.5" r="2" fill="white" />
       </svg>
       {withText && (
         <span className={textClassName || "font-semibold text-[15px] tracking-[-0.01em]"}>
@@ -60,14 +81,22 @@ export function MindStoreLogoMono({ className = "w-5 h-5", color = "currentColor
       className={className}
       aria-hidden="true"
     >
+      <rect width="32" height="32" rx="7" fill="none" stroke={color} strokeOpacity="0.3" strokeWidth="0.8" />
       <path
-        d="M7 26 V12 Q7 6 12 6 Q16 6 16 13 Q16 6 20 6 Q25 6 25 12 V26"
+        d="M9 25 V13.5 Q9 7.5 13 7.5 Q15.8 7.5 16 12.5"
         stroke={color}
-        strokeWidth="3.5"
+        strokeWidth="3"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeOpacity="0.5"
       />
-      <circle cx="16" cy="13.5" r="2" fill={color} />
+      <path
+        d="M23 25 V13.5 Q23 7.5 19 7.5 Q16.2 7.5 16 12.5"
+        stroke={color}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeOpacity="0.5"
+      />
+      <circle cx="16" cy="12.5" r="2" fill={color} fillOpacity="0.5" />
     </svg>
   );
 }

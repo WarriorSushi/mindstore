@@ -1,12 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <defs>
-    <linearGradient id="g" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#14b8a6"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="32" y2="32">
+      <stop offset="0%" stop-color="#0f1419"/>
+      <stop offset="100%" stop-color="#0a1015"/>
+    </linearGradient>
+    <linearGradient id="l" x1="5" y1="6" x2="16" y2="26">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    <linearGradient id="r" x1="16" y1="6" x2="27" y2="26">
+      <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="100%" stop-color="#0ea5e9"/>
     </linearGradient>
   </defs>
-  <!-- MindStore Favicon: M mark optimized for 32×32 / 16×16 -->
-  <path d="M7 26 V12 Q7 6 12 6 Q16 6 16 13 Q16 6 20 6 Q25 6 25 12 V26"
-        stroke="url(#g)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="16" cy="13.5" r="2" fill="url(#g)"/>
+  <!-- Container -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <rect width="32" height="32" rx="7" fill="none" stroke="white" stroke-opacity="0.08" stroke-width="0.5"/>
+  <!-- Left lobe -->
+  <path d="M9 25 V13.5 Q9 7.5 13 7.5 Q15.8 7.5 16 12.5" stroke="url(#l)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Right lobe -->
+  <path d="M23 25 V13.5 Q23 7.5 19 7.5 Q16.2 7.5 16 12.5" stroke="url(#r)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Synapse -->
+  <circle cx="16" cy="12.5" r="2" fill="white"/>
 </svg>

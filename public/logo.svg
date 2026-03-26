@@ -1,12 +1,85 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="ms" x1="56" y1="56" x2="456" y2="456" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#14b8a6"/>
+    <!-- Background gradient: dark with subtle teal tint -->
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f1419"/>
+      <stop offset="100%" stop-color="#0a1015"/>
+    </linearGradient>
+    
+    <!-- Left lobe: teal, slightly warmer -->
+    <linearGradient id="left" x1="80" y1="100" x2="256" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+    
+    <!-- Right lobe: sky, cooler -->
+    <linearGradient id="right" x1="256" y1="100" x2="432" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="100%" stop-color="#0ea5e9"/>
     </linearGradient>
+    
+    <!-- Synapse glow -->
+    <radialGradient id="glow" cx="256" cy="210" r="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="45%" stop-color="#99f6e4" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    
+    <!-- Subtle top shine on background -->
+    <linearGradient id="shine" x1="256" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    
+    <!-- Drop shadow for depth -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    
+    <!-- Soft glow behind synapse -->
+    <filter id="synapse-glow">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <!-- MindStore Mark: Two brain-lobe arches forming M, center synapse dot -->
-  <path d="M104 408 V184 Q104 104 184 104 Q256 104 256 208 Q256 104 328 104 Q408 104 408 184 V408"
-        stroke="url(#ms)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="256" cy="216" r="24" fill="url(#ms)"/>
+  
+  <!-- 
+    MindStore Logo v2 — "Neural M"
+    
+    Concept: Two brain hemispheres (teal/sky) forming the letter M,
+    connected by a glowing synapse node at the center.
+    Set in a dark rounded square container.
+    
+    The two-tone lobes suggest dual processing — left brain/right brain,
+    analysis/creativity, storage/retrieval. The synapse is the connection.
+  -->
+  
+  <!-- Container: dark rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)" filter="url(#shadow)"/>
+  
+  <!-- Subtle top shine for depth -->
+  <rect x="16" y="16" width="480" height="240" rx="96" fill="url(#shine)"/>
+  
+  <!-- Subtle border -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="white" stroke-opacity="0.08" stroke-width="1.5"/>
+  
+  <!-- Left lobe of the M -->
+  <path d="M136 388 V204 Q136 128 200 128 Q248 128 256 200"
+        stroke="url(#left)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Right lobe of the M -->
+  <path d="M376 388 V204 Q376 128 312 128 Q264 128 256 200"
+        stroke="url(#right)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Synapse glow (behind the dot) -->
+  <circle cx="256" cy="208" r="36" fill="url(#glow)" filter="url(#synapse-glow)" opacity="0.5"/>
+  
+  <!-- Synapse node -->
+  <circle cx="256" cy="208" r="18" fill="white"/>
+  
+  <!-- Tiny highlight on synapse for glass effect -->
+  <circle cx="252" cy="204" r="6" fill="white" opacity="0.4"/>
 </svg>
