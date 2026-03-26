@@ -225,7 +225,7 @@ export function NotificationCenter() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-[380px] max-h-[520px] bg-[#0e0e10] border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/50 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-[340px] sm:w-[380px] max-h-[520px] bg-[#0e0e10] border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/50 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
           role="dialog"
           aria-label="Notifications"
         >
