@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { toast } from 'sonner';
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface MemoryLike {
   id: string;
@@ -50,6 +51,7 @@ const sourceConfig: Record<string, { icon: any; color: string }> = {
 };
 
 export default function InsightsPage() {
+  usePageTitle("Insights");
   const [connections, setConnections] = useState<Connection[]>([]);
   const [contradictions, setContradictions] = useState<Contradiction[]>([]);
   const [forgetting, setForgetting] = useState<(MemoryLike & { urgency: number })[]>([]);

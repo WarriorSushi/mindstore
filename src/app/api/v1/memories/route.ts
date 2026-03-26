@@ -2,7 +2,6 @@ import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { generateEmbeddings } from '@/server/embeddings';
-import { createMemory } from '@/server/memory-ingest';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -30,6 +29,12 @@ export async function GET(req: NextRequest) {
       conditions.push(sql`(metadata->>'pinned')::boolean = true`);
     }
 
+    // Support tag filtering
+    const tagId = searchParams.get('tagId');
+    if (tagId) {
+      conditions.push(sql`id IN (SELECT memory_id FROM memory_tags WHERE tag_id = ${tagId}::uuid)`);
+    }
+
     const where = sql.join(conditions, sql` AND `);
 
     // Dynamic sort order — pinned items always float to top (unless filtering pinned-only)
@@ -53,6 +58,27 @@ export async function GET(req: NextRequest) {
     const countResult = await db.execute(sql`SELECT COUNT(*)::int as count FROM memories WHERE ${where}`);
     const total = (countResult as any)[0]?.count || 0;
 
+    // Batch-fetch tags for all returned memories
+    const memoryIds = (results as any[]).map(r => r.id);
+    let tagsByMemory: Record<string, Array<{ id: string; name: string; color: string }>> = {};
+    if (memoryIds.length > 0) {
+      try {
+        const tagRows = await db.execute(sql`
+          SELECT mt.memory_id, t.id, t.name, t.color
+          FROM memory_tags mt
+          JOIN tags t ON t.id = mt.tag_id
+          WHERE mt.memory_id = ANY(${memoryIds}::uuid[])
+          ORDER BY t.name ASC
+        `);
+        for (const row of tagRows as any[]) {
+          if (!tagsByMemory[row.memory_id]) tagsByMemory[row.memory_id] = [];
+          tagsByMemory[row.memory_id].push({ id: row.id, name: row.name, color: row.color });
+        }
+      } catch {
+        // Tags tables may not exist yet — skip gracefully
+      }
+    }
+
     return NextResponse.json({
       memories: (results as any[]).map(r => {
         const meta = r.metadata || {};
@@ -66,6 +92,7 @@ export async function GET(req: NextRequest) {
           importedAt: r.imported_at,
           metadata: meta,
           pinned: meta.pinned === true,
+          tags: tagsByMemory[r.id] || [],
         };
       }),
       total,
@@ -87,16 +114,31 @@ export async function POST(req: NextRequest) {
 
     if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 });
 
-    const memory = await createMemory({
-      userId,
-      content,
-      sourceType,
-      sourceId,
-      sourceTitle,
-      metadata,
-    });
+    // Generate embedding using available provider
+    let embStr: string | null = null;
+    try {
+      const embeddings = await generateEmbeddings([content]);
+      if (embeddings && embeddings.length > 0) {
+        embStr = `[${embeddings[0].join(',')}]`;
+      }
+    } catch { /* skip */ }
 
-    return NextResponse.json(memory);
+    const id = crypto.randomUUID();
+    const meta = JSON.stringify(metadata || {});
+
+    if (embStr) {
+      await db.execute(sql`
+        INSERT INTO memories (id, user_id, content, embedding, source_type, source_id, source_title, metadata, created_at, imported_at)
+        VALUES (${id}, ${userId}::uuid, ${content}, ${embStr}::vector, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
+      `);
+    } else {
+      await db.execute(sql`
+        INSERT INTO memories (id, user_id, content, source_type, source_id, source_title, metadata, created_at, imported_at)
+        VALUES (${id}, ${userId}::uuid, ${content}, ${sourceType || 'text'}, ${sourceId || null}, ${sourceTitle || null}, ${meta}::jsonb, NOW(), NOW())
+      `);
+    }
+
+    return NextResponse.json({ id });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });

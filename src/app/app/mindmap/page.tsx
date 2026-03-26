@@ -8,6 +8,7 @@ import {
   MessageSquare, FileText, Globe, Type, BookOpenCheck, FileBox, Gem,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -62,17 +63,17 @@ interface MindMapData {
 // ─── Layout Constants ────────────────────────────────────────────
 
 const TOPIC_COLORS = [
-  '#0d9488', // teal
+  '#14b8a6', // teal
   '#3b82f6', // blue
   '#10b981', // emerald
   '#f59e0b', // amber
   '#ef4444', // red
-  '#ec4899', // pink
+  '#ef4444', // red
   '#06b6d4', // cyan
   '#f97316', // orange
   '#84cc16', // lime
-  '#0ea5e9', // sky
-  '#14b8a6', // teal-light
+  '#38bdf8', // sky
+  '#14b8a6', // teal
   '#e11d48', // rose
 ];
 
@@ -80,10 +81,10 @@ const SOURCE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
   chatgpt: { icon: MessageSquare, color: '#10b981' },
   file: { icon: FileText, color: '#3b82f6' },
   url: { icon: Globe, color: '#f59e0b' },
-  text: { icon: Type, color: '#8b5cf6' },
+  text: { icon: Type, color: '#38bdf8' },
   kindle: { icon: BookOpenCheck, color: '#f59e0b' },
   document: { icon: FileBox, color: '#3b82f6' },
-  obsidian: { icon: Gem, color: '#8b5cf6' },
+  obsidian: { icon: Gem, color: '#14b8a6' },
   reddit: { icon: MessageSquare, color: '#f97316' },
 };
 
@@ -128,7 +129,7 @@ function computeRadialLayout(
     x: centerX,
     y: centerY,
     radius: 32,
-    color: '#8b5cf6',
+    color: '#14b8a6',
     depth: 0,
     memoryCount: tree.memoryCount,
     parentId: null,
@@ -812,6 +813,7 @@ function TopicPanel({
 // ─── Main Page ──────────────────────────────────────────────────
 
 export default function MindMapPage() {
+  usePageTitle("Mind Map");
   const [data, setData] = useState<MindMapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState<TopicNode | null>(null);

@@ -4,9 +4,9 @@ import { createPluginRuntime } from "@mindstore/plugin-runtime";
 import { pluginRuntime } from "@/server/plugins/runtime";
 
 describe("plugin runtime", () => {
-  it("resolves legacy aliases to canonical plugin slugs", () => {
-    expect(pluginRuntime.resolveSlug("youtube-importer")).toBe("youtube-transcript");
-    expect(pluginRuntime.resolveSlug("reddit-importer")).toBe("reddit-saved");
+  it("resolves canonical plugin slugs", () => {
+    expect(pluginRuntime.resolveSlug("youtube-importer")).toBe("youtube-importer");
+    expect(pluginRuntime.resolveSlug("reddit-importer")).toBe("reddit-importer");
   });
 
   it("loads the sample external plugin from mindstore.config.ts", () => {

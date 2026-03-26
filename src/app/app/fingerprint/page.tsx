@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Brain, RefreshCw, Loader2 } from 'lucide-react';
+import { usePageTitle } from "@/lib/use-page-title";
+import { PageTransition } from "@/components/PageTransition";
 
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
@@ -16,6 +18,7 @@ const GraphCanvas = dynamic(
 );
 
 export default function FingerprintPage() {
+  usePageTitle("Knowledge Fingerprint");
   const [data, setData] = useState<{ nodes: any[]; edges: any[]; clusters: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'3d' | 'stats'>('3d');
@@ -54,6 +57,7 @@ export default function FingerprintPage() {
   [data]);
 
   return (
+    <PageTransition>
     <div className="space-y-5 md:space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -225,13 +229,14 @@ export default function FingerprintPage() {
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
 
 function clusterColor(group: string): string {
   const colors: Record<string, string> = {
     chatgpt: '#10b981',
-    text: '#8b5cf6',
+    text: '#38bdf8',
     file: '#f59e0b',
     url: '#3b82f6',
   };

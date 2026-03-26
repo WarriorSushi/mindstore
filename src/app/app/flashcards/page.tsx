@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Layers, Plus, Play, Loader2, Sparkles, Trash2,
-  ChevronRight, RotateCcw, X, Eye, EyeOff,
-  Clock, Award, ArrowLeft,
-  BookOpen, Flame,
+  Layers, Plus, Play, Brain, Loader2, Sparkles, Trash2,
+  ChevronRight, RotateCcw, Check, X, Eye, EyeOff,
+  Zap, Clock, Award, BarChart3, ArrowLeft,
+  BookOpen, Flame, AlertCircle, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ const GRADE_CONFIG = [
 // ─── Page Component ───────────────────────────────────────────
 
 export default function FlashcardsPage() {
+  usePageTitle("Flashcards");
   const [view, setView] = useState<"decks" | "deck-detail" | "review" | "generate">("decks");
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -127,12 +129,44 @@ export default function FlashcardsPage() {
     setLoading(false);
   }, []);
 
+  useEffect(() => { fetchDecks(); }, [fetchDecks]);
+
+  // ─── Keyboard shortcuts ──────────────────────────────────
+
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void fetchDecks();
-    }, 0);
-    return () => window.clearTimeout(timeout);
-  }, [fetchDecks]);
+    function handleKeyDown(e: KeyboardEvent) {
+      if (view !== "review" || !review) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        if (!review.showAnswer) {
+          setReview(r => r ? { ...r, showAnswer: true } : null);
+        }
+        return;
+      }
+
+      if (review.showAnswer && e.key >= "1" && e.key <= "6") {
+        e.preventDefault();
+        handleGrade(parseInt(e.key) - 1);
+        return;
+      }
+
+      if (e.key === "h") {
+        e.preventDefault();
+        setShowHint(s => !s);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        finishReview();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [view, review]);
 
   // ─── Create deck ─────────────────────────────────────────
 
@@ -219,7 +253,7 @@ export default function FlashcardsPage() {
 
   // ─── Handle grade ────────────────────────────────────────
 
-  const handleGrade = useCallback(async (grade: number) => {
+  async function handleGrade(grade: number) {
     if (!review || reviewGrading) return;
     setReviewGrading(true);
 
@@ -245,52 +279,15 @@ export default function FlashcardsPage() {
     setReview(r => r ? { ...r, currentIndex: nextIndex, showAnswer: false, results: newResults } : null);
     setShowHint(false);
     setReviewGrading(false);
-  }, [review, reviewGrading]);
+  }
 
   // ─── Finish review ───────────────────────────────────────
 
-  const finishReview = useCallback(() => {
+  function finishReview() {
     setReview(null);
     setView("decks");
-    void fetchDecks();
-  }, [fetchDecks]);
-
-  // ─── Keyboard shortcuts ──────────────────────────────────
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (view !== "review" || !review) return;
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        if (!review.showAnswer) {
-          setReview((current) => current ? { ...current, showAnswer: true } : null);
-        }
-        return;
-      }
-
-      if (review.showAnswer && e.key >= "1" && e.key <= "6") {
-        e.preventDefault();
-        void handleGrade(Number.parseInt(e.key, 10) - 1);
-        return;
-      }
-
-      if (e.key === "h") {
-        e.preventDefault();
-        setShowHint((current) => !current);
-        return;
-      }
-
-      if (e.key === "Escape") {
-        e.preventDefault();
-        finishReview();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [finishReview, handleGrade, review, view]);
+    fetchDecks();
+  }
 
   // ─── Generate flashcards ─────────────────────────────────
 
@@ -423,13 +420,13 @@ export default function FlashcardsPage() {
 
             <Stagger>
               {/* Stats grid */}
-              <div className="grid grid-cols-3 gap-3 mb-8">
-                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                  <div className="text-[20px] font-semibold tabular-nums text-emerald-400">{correct}</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3 sm:p-4 text-center">
+                  <div className="text-[18px] sm:text-[20px] font-semibold tabular-nums text-emerald-400">{correct}</div>
                   <div className="text-[11px] text-zinc-500 mt-0.5">Correct</div>
                 </div>
-                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
-                  <div className="text-[20px] font-semibold tabular-nums text-rose-400">{total - correct}</div>
+                <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3 sm:p-4 text-center">
+                  <div className="text-[18px] sm:text-[20px] font-semibold tabular-nums text-rose-400">{total - correct}</div>
                   <div className="text-[11px] text-zinc-500 mt-0.5">Missed</div>
                 </div>
                 <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 text-center">
@@ -551,7 +548,7 @@ export default function FlashcardsPage() {
         {review.showAnswer && (
           <div className="mt-6" style={{ animation: "fc-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both" }}>
             <div className="text-[11px] text-zinc-600 text-center mb-3">How well did you know this?</div>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {GRADE_CONFIG.map(g => (
                 <button
                   key={g.grade}
@@ -657,14 +654,14 @@ export default function FlashcardsPage() {
               </div>
 
               <div className="space-y-3 mb-6">
-                {generatedCards.map((card, index) => (
+                {generatedCards.map((card, i) => (
                   <div
                     key={card.id}
                     className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-5 hover:bg-white/[0.03] transition-colors"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <span className="text-[11px] text-zinc-600 font-mono tabular-nums shrink-0 mt-0.5">
-                        Q{index + 1}
+                        Q{i + 1}
                       </span>
                       <button
                         onClick={() => setGeneratedCards(cs => cs.filter(c => c.id !== card.id))}
@@ -743,6 +740,7 @@ export default function FlashcardsPage() {
   // ─── Deck Detail View ────────────────────────────────────
 
   if (view === "deck-detail" && selectedDeck) {
+    const colors = DECK_COLOR_MAP[selectedDeck.color] || DECK_COLOR_MAP.teal;
     const now = new Date();
     const dueCards = selectedDeck.cards.filter(c => new Date(c.sm2.nextReview) <= now);
     const newCards = selectedDeck.cards.filter(c => c.sm2.repetitions === 0);
@@ -781,7 +779,7 @@ export default function FlashcardsPage() {
 
           {/* Stats bar */}
           <Stagger>
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
                 { label: "Due", count: dueCards.length, color: "text-amber-400", icon: Clock },
                 { label: "New", count: newCards.length, color: "text-sky-400", icon: Sparkles },
@@ -812,7 +810,7 @@ export default function FlashcardsPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {selectedDeck.cards.map((card) => {
+                {selectedDeck.cards.map((card, i) => {
                   const isNew = card.sm2.repetitions === 0;
                   const isDue = new Date(card.sm2.nextReview) <= now;
                   const isMastered = card.sm2.repetitions >= 5;
@@ -897,7 +895,7 @@ export default function FlashcardsPage() {
         {/* Stats */}
         {stats && stats.totalCards > 0 && (
           <Stagger>
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3.5">
                 <div className="flex items-center gap-2 mb-1">
                   <Layers className="w-4 h-4 text-teal-400" />

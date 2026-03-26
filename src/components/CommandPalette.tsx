@@ -6,32 +6,27 @@ import {
   Search, LayoutDashboard, MessageSquare, Upload, Compass,
   GraduationCap, Fingerprint, Lightbulb, Network, Settings,
   FileText, Globe, MessageCircle, Type, ArrowRight,
-  Plus, Download, RefreshCw, Zap, Clock, Bookmark, Layers, Mic, PenLine, SearchX, TrendingUp, Heart,
-  PenSquare, Mail, FileUser, Route, UserCheck,
+  Plus, Download, Trash2, RefreshCw, Zap, Clock,
+  Brain, BookOpen, StickyNote, Link2, Sparkles, Bookmark, TrendingUp,
+  Heart, Target, PenTool, Layers, FileEdit, Users, Route, FileUser, Mail, Camera, Mic,
+  Languages, Dna, SlidersHorizontal, FolderDown, Puzzle, Gem, BarChart3, Copy, FolderOpen,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getSourceType } from "@/lib/source-types";
+import { openMemoryDrawer } from "@/components/MemoryDrawer";
+import { getSavedSearches, describeSavedSearch } from "@/lib/saved-searches";
 
 interface SearchResult {
   id: string;
   content: string;
   sourceType: string;
   sourceTitle: string;
+  sourceId?: string;
   score: number;
-}
-
-interface ChatHistoryConversation {
-  id: string;
-  title: string;
-  messages: unknown[];
-  updatedAt: string;
-}
-
-interface SearchApiResult {
-  memoryId: string;
-  content: string;
-  sourceType: string;
-  sourceTitle?: string | null;
-  score: number;
+  createdAt?: string;
+  importedAt?: string;
+  metadata?: Record<string, any>;
 }
 
 type SectionType = "search" | "recent" | "actions" | "navigation";
@@ -53,48 +48,48 @@ const NAV_ITEMS = [
   { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all memories" },
   { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you" },
   { href: "/app/mindmap", icon: Network, label: "Mind Map", desc: "Topic clusters & knowledge topology" },
-  { href: "/app/gaps", icon: SearchX, label: "Knowledge Gaps", desc: "Find sparse topics and missing bridges" },
+  { href: "/app/stats", icon: BarChart3, label: "Knowledge Stats", desc: "Analytics, growth charts, and word statistics" },
+  { href: "/app/evolution", icon: TrendingUp, label: "Evolution", desc: "How your interests changed over time" },
+  { href: "/app/sentiment", icon: Heart, label: "Sentiment", desc: "Emotional arc of your knowledge" },
+  { href: "/app/gaps", icon: Target, label: "Knowledge Gaps", desc: "Blind spots and missing connections" },
+  { href: "/app/duplicates", icon: Copy, label: "Duplicate Detector", desc: "Find and merge near-duplicate memories" },
+  { href: "/app/collections", icon: FolderOpen, label: "Collections", desc: "Auto-organized knowledge groups" },
+  { href: "/app/writing", icon: PenTool, label: "Writing Style", desc: "Vocabulary, readability & tone analysis" },
+  { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition study from your knowledge" },
+  { href: "/app/blog", icon: FileEdit, label: "Blog Writer", desc: "Turn memories into polished blog posts" },
+  { href: "/app/prep", icon: Users, label: "Conversation Prep", desc: "Brief me before any meeting" },
+  { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Structured learning plans from your knowledge" },
+  { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build professional resumes from your memories" },
+  { href: "/app/newsletter", icon: Mail, label: "Newsletter", desc: "Curate a digest from your recent knowledge" },
+  { href: "/app/voice", icon: Mic, label: "Voice Capture", desc: "Record thoughts and transcribe to memory" },
+  { href: "/app/vision", icon: Camera, label: "Image Analysis", desc: "Upload images and describe with AI" },
+  { href: "/app/retrieval", icon: SlidersHorizontal, label: "RAG Strategies", desc: "Configure retrieval and reranking settings" },
+  { href: "/app/languages", icon: Languages, label: "Languages", desc: "Multi-language detection and cross-language search" },
+  { href: "/app/domains", icon: Dna, label: "Domain Embeddings", desc: "Specialized embeddings for different knowledge domains" },
+  { href: "/app/anki", icon: Download, label: "Anki Export", desc: "Export flashcards as Anki-compatible decks" },
+  { href: "/app/export", icon: FolderDown, label: "Blog Export", desc: "Export memories as Hugo, Jekyll, Astro, or Next.js" },
+  { href: "/app/notion-sync", icon: BookOpen, label: "Notion Sync", desc: "Push memories to a Notion database" },
+  { href: "/app/obsidian-sync", icon: Gem, label: "Obsidian Sync", desc: "Export as an Obsidian vault with wikilinks" },
+  { href: "/app/plugins", icon: Puzzle, label: "Plugin Store", desc: "Browse and manage 33 plugins" },
   { href: "/app/fingerprint", icon: Fingerprint, label: "3D Graph", desc: "Raw knowledge graph visualization" },
-  { href: "/app/evolution", icon: TrendingUp, label: "Topic Evolution", desc: "See how your interests changed over time" },
   { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & contradictions" },
-  { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "Spaced repetition from your knowledge" },
-  { href: "/app/voice", icon: Mic, label: "Voice", desc: "Record and transcribe thoughts" },
-  { href: "/app/blog", icon: PenSquare, label: "Blog Writer", desc: "Turn memories into blog drafts" },
-  { href: "/app/newsletter", icon: Mail, label: "Newsletter Writer", desc: "Curate digest issues from your knowledge" },
-  { href: "/app/resume", icon: FileUser, label: "Resume Builder", desc: "Build a resume from your professional memories" },
-  { href: "/app/paths", icon: Route, label: "Learning Paths", desc: "Design structured plans for what to learn next" },
-  { href: "/app/conversation", icon: UserCheck, label: "Conversation Prep", desc: "Generate meeting and topic briefings" },
-  { href: "/app/writing", icon: PenLine, label: "Writing Style", desc: "Vocabulary, tone, and readability analysis" },
-  { href: "/app/sentiment", icon: Heart, label: "Sentiment Timeline", desc: "Track the emotional arc of your knowledge" },
   { href: "/app/connect", icon: Network, label: "Connect AI", desc: "MCP for Claude, Cursor" },
   { href: "/app/settings", icon: Settings, label: "Settings", desc: "Providers & data" },
 ];
 
-const typeIcons: Record<string, typeof FileText> = {
-  chatgpt: MessageCircle,
-  text: Type,
-  file: FileText,
-  url: Globe,
-  bookmark: Bookmark,
-};
-
-const typeColors: Record<string, string> = {
-  chatgpt: "text-green-400",
-  text: "text-teal-400",
-  file: "text-blue-400",
-  url: "text-orange-400",
-  kindle: "text-amber-400",
-  document: "text-blue-400",
-  youtube: "text-red-400",
-  bookmark: "text-sky-400",
-};
+// Source type icons/colors delegated to shared module: getSourceType()
 
 /** Load recent conversations from localStorage for the palette */
 function getRecentConversations(): Array<{ id: string; title: string; updatedAt: string; messageCount: number }> {
   try {
     const raw = localStorage.getItem("mindstore-chat-history");
     if (!raw) return [];
-    const convos = JSON.parse(raw) as ChatHistoryConversation[];
+    const convos = JSON.parse(raw) as Array<{
+      id: string;
+      title: string;
+      messages: any[];
+      updatedAt: string;
+    }>;
     return convos
       .filter((c) => c.messages.length > 0)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -176,12 +171,16 @@ export function CommandPalette() {
         if (res.ok) {
           const data = await res.json();
           setResults(
-            ((data.results as SearchApiResult[] | undefined) || []).map((r) => ({
+            (data.results || []).map((r: any) => ({
               id: r.memoryId,
               content: r.content,
               sourceType: r.sourceType,
               sourceTitle: r.sourceTitle || "Untitled",
+              sourceId: r.sourceId,
               score: r.score,
+              createdAt: r.createdAt,
+              importedAt: r.importedAt,
+              metadata: r.metadata,
             }))
           );
         }
@@ -220,6 +219,19 @@ export function CommandPalette() {
           setOpen(false);
         },
         shortcut: "N",
+      },
+      {
+        id: "quick-capture",
+        icon: Zap,
+        iconColor: "text-teal-400",
+        label: "Quick Capture",
+        desc: "Capture a note or URL instantly",
+        keywords: ["quick", "capture", "note", "jot", "thought", "memo", "save", "remember"],
+        action: () => {
+          setOpen(false);
+          setTimeout(() => window.dispatchEvent(new CustomEvent("mindstore:quick-capture")), 100);
+        },
+        shortcut: "⇧N",
       },
       {
         id: "import-text",
@@ -277,8 +289,8 @@ export function CommandPalette() {
             a.click();
             URL.revokeObjectURL(a.href);
             toast.success("Backup downloaded");
-          } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : "Export failed");
+          } catch (err: any) {
+            toast.error(err.message || "Export failed");
           }
         },
       },
@@ -319,6 +331,210 @@ export function CommandPalette() {
           setOpen(false);
         },
       },
+      {
+        id: "knowledge-stats",
+        icon: BarChart3,
+        iconColor: "text-teal-400",
+        label: "View Knowledge Stats",
+        desc: "Analytics, word counts, growth charts, source distribution",
+        keywords: ["stats", "statistics", "analytics", "growth", "words", "count", "chart", "graph", "distribution", "diversity"],
+        action: () => {
+          router.push("/app/stats");
+          setOpen(false);
+        },
+      },
+      {
+        id: "evolution",
+        icon: TrendingUp,
+        iconColor: "text-teal-400",
+        label: "View Topic Evolution",
+        desc: "How your interests changed over time",
+        keywords: ["evolution", "timeline", "trends", "interests", "history", "change", "growth"],
+        action: () => {
+          router.push("/app/evolution");
+          setOpen(false);
+        },
+      },
+      {
+        id: "sentiment",
+        icon: Heart,
+        iconColor: "text-emerald-400",
+        label: "View Sentiment Timeline",
+        desc: "Emotional arc and mood analysis of your knowledge",
+        keywords: ["sentiment", "mood", "emotion", "feeling", "happiness", "tone", "emotional", "positive", "negative"],
+        action: () => {
+          router.push("/app/sentiment");
+          setOpen(false);
+        },
+      },
+      {
+        id: "knowledge-gaps",
+        icon: Target,
+        iconColor: "text-teal-400",
+        label: "View Knowledge Gaps",
+        desc: "Blind spots, thin coverage, and missing connections",
+        keywords: ["gaps", "blind", "spots", "missing", "coverage", "sparse", "bridge", "knowledge", "learn", "stale"],
+        action: () => {
+          router.push("/app/gaps");
+          setOpen(false);
+        },
+      },
+      {
+        id: "duplicate-detector",
+        icon: Copy,
+        iconColor: "text-amber-400",
+        label: "Duplicate Detector",
+        desc: "Find and merge near-duplicate memories",
+        keywords: ["duplicate", "duplicates", "merge", "similar", "copy", "copies", "dedup", "clean", "cleanup", "redundant"],
+        action: () => {
+          router.push("/app/duplicates");
+          setOpen(false);
+        },
+      },
+      {
+        id: "collections",
+        icon: FolderOpen,
+        iconColor: "text-teal-400",
+        label: "Browse Collections",
+        desc: "Auto-organized knowledge groups based on topic similarity",
+        keywords: ["collections", "groups", "organize", "topics", "clusters", "categories", "folders", "auto", "topology"],
+        action: () => {
+          router.push("/app/collections");
+          setOpen(false);
+        },
+      },
+      {
+        id: "writing-style",
+        icon: PenTool,
+        iconColor: "text-sky-400",
+        label: "View Writing Style",
+        desc: "Vocabulary, readability, tone, and writing patterns",
+        keywords: ["writing", "style", "vocabulary", "readability", "tone", "words", "sentences", "grade", "flesch", "complexity", "phrases"],
+        action: () => {
+          router.push("/app/writing");
+          setOpen(false);
+        },
+      },
+      {
+        id: "flashcards",
+        icon: Layers,
+        iconColor: "text-teal-400",
+        label: "Study Flashcards",
+        desc: "Spaced repetition flashcards from your knowledge",
+        keywords: ["flashcard", "flashcards", "study", "learn", "review", "spaced", "repetition", "anki", "cards", "quiz", "deck", "memorize"],
+        action: () => {
+          router.push("/app/flashcards");
+          setOpen(false);
+        },
+      },
+      {
+        id: "blog-writer",
+        icon: FileEdit,
+        iconColor: "text-teal-400",
+        label: "Write Blog Post",
+        desc: "Generate a blog post from your stored knowledge",
+        keywords: ["blog", "write", "post", "article", "draft", "publish", "content", "writing", "generate", "essay"],
+        action: () => {
+          router.push("/app/blog");
+          setOpen(false);
+        },
+      },
+      {
+        id: "conversation-prep",
+        icon: Users,
+        iconColor: "text-sky-400",
+        label: "Conversation Prep",
+        desc: "Brief me before a meeting about a person, company, or topic",
+        keywords: ["prep", "prepare", "meeting", "briefing", "conversation", "person", "company", "brief", "talking", "points"],
+        action: () => {
+          router.push("/app/prep");
+          setOpen(false);
+        },
+      },
+      {
+        id: "learning-paths",
+        icon: Route,
+        iconColor: "text-teal-400",
+        label: "Learning Paths",
+        desc: "Structured learning plans based on your knowledge gaps",
+        keywords: ["learn", "learning", "path", "curriculum", "study", "course", "plan", "skill", "education", "roadmap", "gap"],
+        action: () => {
+          router.push("/app/paths");
+          setOpen(false);
+        },
+      },
+      {
+        id: "resume-builder",
+        icon: FileUser,
+        iconColor: "text-teal-400",
+        label: "Resume Builder",
+        desc: "Build a professional resume from your stored memories",
+        keywords: ["resume", "cv", "career", "job", "professional", "experience", "skills", "hire", "work", "apply", "application"],
+        action: () => {
+          router.push("/app/resume");
+          setOpen(false);
+        },
+      },
+      {
+        id: "newsletter-writer",
+        icon: Mail,
+        iconColor: "text-teal-400",
+        label: "Newsletter Writer",
+        desc: "Curate a weekly digest from your recent knowledge",
+        keywords: ["newsletter", "digest", "weekly", "email", "curate", "summary", "roundup", "send", "mail", "report", "recap"],
+        action: () => {
+          router.push("/app/newsletter");
+          setOpen(false);
+        },
+      },
+      {
+        id: "voice-capture",
+        icon: Mic,
+        iconColor: "text-teal-400",
+        label: "Voice Capture",
+        desc: "Record voice thoughts and transcribe to memory",
+        keywords: ["voice", "record", "audio", "whisper", "transcribe", "microphone", "speak", "dictate", "capture"],
+        action: () => {
+          router.push("/app/voice");
+          setOpen(false);
+        },
+      },
+      {
+        id: "image-analysis",
+        icon: Camera,
+        iconColor: "text-teal-400",
+        label: "Image to Memory",
+        desc: "Upload an image and let AI describe it as searchable knowledge",
+        keywords: ["image", "photo", "screenshot", "vision", "picture", "camera", "upload", "scan", "whiteboard", "diagram", "ocr"],
+        action: () => {
+          router.push("/app/vision");
+          setOpen(false);
+        },
+      },
+      {
+        id: "notion-sync",
+        icon: BookOpen,
+        iconColor: "text-stone-400",
+        label: "Notion Sync",
+        desc: "Push memories to a Notion database",
+        keywords: ["notion", "sync", "push", "database", "export", "workspace"],
+        action: () => {
+          router.push("/app/notion-sync");
+          setOpen(false);
+        },
+      },
+      {
+        id: "obsidian-sync",
+        icon: Layers,
+        iconColor: "text-teal-400",
+        label: "Obsidian Vault Sync",
+        desc: "Export knowledge as an Obsidian vault with frontmatter and wikilinks",
+        keywords: ["obsidian", "vault", "sync", "export", "markdown", "wikilink", "backlink"],
+        action: () => {
+          router.push("/app/obsidian-sync");
+          setOpen(false);
+        },
+      },
     ];
 
     // Filter by query
@@ -339,6 +555,41 @@ export function CommandPalette() {
         section: "actions" as const,
         shortcut: a.shortcut,
       }));
+  }, [query, router]);
+
+  // ─── Saved Searches ───
+  const savedSearchItems: PaletteItem[] = useMemo(() => {
+    const saved = getSavedSearches();
+    if (saved.length === 0) return [];
+    const colorMap: Record<string, string> = {
+      teal: 'text-teal-400', sky: 'text-sky-400', emerald: 'text-emerald-400',
+      amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400',
+    };
+    // In no-query state, show pinned saved searches. With query, filter.
+    const filtered = query
+      ? saved.filter(s =>
+          s.name.toLowerCase().includes(query.toLowerCase()) ||
+          s.query.toLowerCase().includes(query.toLowerCase()) ||
+          describeSavedSearch(s).toLowerCase().includes(query.toLowerCase())
+        )
+      : saved.filter(s => s.pinned).slice(0, 5);
+
+    return filtered.map(s => ({
+      id: `saved-${s.id}`,
+      icon: <Star className={`w-4 h-4 ${s.pinned ? 'fill-current' : ''} ${colorMap[s.color] || colorMap.teal}`} />,
+      label: s.name,
+      description: describeSavedSearch(s),
+      action: () => {
+        const params = new URLSearchParams();
+        if (s.query) params.set('q', s.query);
+        if (s.sourceFilter) params.set('source', s.sourceFilter);
+        if (s.tagFilter) params.set('tag', s.tagFilter);
+        if (s.sortBy && s.sortBy !== 'newest') params.set('sort', s.sortBy);
+        router.push(`/app/explore?${params.toString()}`);
+        setOpen(false);
+      },
+      section: "actions" as const,
+    }));
   }, [query, router]);
 
   // ─── Recent Conversations (no-query state only) ───
@@ -362,50 +613,76 @@ export function CommandPalette() {
   }, [query, recentConvos, router]);
 
   // Build items list
-  const navItems: PaletteItem[] = useMemo(() => (
-    NAV_ITEMS
-      .filter((item) => {
-        if (!query) return true;
-        const q = query.toLowerCase();
-        return item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
-      })
-      .map((item) => ({
-        id: `nav-${item.href}`,
-        icon: <item.icon className="w-4 h-4" />,
-        label: item.label,
-        description: item.desc,
-        action: () => {
-          router.push(item.href);
-          setOpen(false);
-        },
-        section: "navigation" as const,
-      }))
-  ), [query, router]);
-
-  const searchItems: PaletteItem[] = useMemo(() => (
-    results.map((result) => {
-      const Icon = typeIcons[result.sourceType] || FileText;
-      const color = typeColors[result.sourceType] || "text-zinc-400";
-      return {
-        id: `search-${result.id}`,
-        icon: <Icon className={`w-4 h-4 ${color}`} />,
-        label: result.sourceTitle,
-        description: result.content.slice(0, 80) + (result.content.length > 80 ? "…" : ""),
-        action: () => {
-          router.push(`/app/explore?q=${encodeURIComponent(result.sourceTitle)}`);
-          setOpen(false);
-        },
-        section: "search" as const,
-      };
+  const navItems: PaletteItem[] = NAV_ITEMS
+    .filter((item) => {
+      if (!query) return true;
+      const q = query.toLowerCase();
+      return (
+        item.label.toLowerCase().includes(q) ||
+        item.desc.toLowerCase().includes(q)
+      );
     })
-  ), [results, router]);
+    .map((item) => ({
+      id: `nav-${item.href}`,
+      icon: <item.icon className="w-4 h-4" />,
+      label: item.label,
+      description: item.desc,
+      action: () => {
+        router.push(item.href);
+        setOpen(false);
+      },
+      section: "navigation" as const,
+    }));
 
-  const allItems = useMemo(() => ([
+  const searchItems: PaletteItem[] = results.map((r) => {
+    const st = getSourceType(r.sourceType);
+    const Icon = st.icon;
+    return {
+      id: `search-${r.id}`,
+      icon: <Icon className={`w-4 h-4 ${st.textColor}`} />,
+      label: r.sourceTitle,
+      description: r.content.slice(0, 80) + (r.content.length > 80 ? "…" : ""),
+      action: () => {
+        setOpen(false);
+        // Open memory drawer with full context
+        setTimeout(() => openMemoryDrawer({
+          id: r.id,
+          content: r.content,
+          source: r.sourceType,
+          sourceId: r.sourceId || "",
+          sourceTitle: r.sourceTitle,
+          timestamp: r.createdAt || "",
+          importedAt: r.importedAt || "",
+          metadata: r.metadata || {},
+          pinned: r.metadata?.pinned === true,
+        }), 50);
+      },
+      section: "search" as const,
+    };
+  });
+
+  // "View all in Explore" link when there are search results
+  const viewAllItem: PaletteItem[] = query && results.length > 0 ? [{
+    id: "search-view-all",
+    icon: <Compass className="w-4 h-4 text-teal-400" />,
+    label: `View all results for "${query}"`,
+    description: "Open in Explore with full search",
+    action: () => {
+      router.push(`/app/explore?q=${encodeURIComponent(query)}`);
+      setOpen(false);
+    },
+    section: "search" as const,
+  }] : [];
+
+  // Order: search results → view all → saved searches → actions → recent conversations → navigation
+  const allItems = [
     ...(query ? searchItems : []),
+    ...viewAllItem,
+    ...savedSearchItems,
     ...(query ? actionItems : []),
     ...(!query ? recentItems : []),
     ...navItems,
-  ]), [actionItems, navItems, query, recentItems, searchItems]);
+  ];
 
   // Reset index when items change
   useEffect(() => {

@@ -3,10 +3,36 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import {
+  type SavedSearch,
+  getSavedSearches,
+  createSavedSearch,
+  useSavedSearch as applySavedSearch,
+  deleteSavedSearch,
+  togglePinSavedSearch,
+  findMatchingSavedSearch,
+  describeSavedSearch,
+} from "@/lib/saved-searches";
+import { usePageTitle } from "@/lib/use-page-title";
+import {
+  addSearchToHistory,
+  getSearchHistory,
+  clearSearchHistory,
+  removeSearchFromHistory,
+  type SearchHistoryItem,
+} from "@/lib/search-history";
+
+interface TagData {
+  id: string;
+  name: string;
+  color: string;
+  memory_count?: number;
+}
 
 interface Memory {
   id: string;
@@ -20,6 +46,7 @@ interface Memory {
   layers?: Record<string, any>;
   score?: number;
   pinned?: boolean;
+  tags?: TagData[];
 }
 
 interface Source {
@@ -29,18 +56,31 @@ interface Source {
   itemCount: number;
 }
 
-const typeConfig: Record<string, { icon: any; color: string }> = {
-  chatgpt: { icon: MessageCircle, color: "text-green-400 bg-green-500/10" },
-  text: { icon: Type, color: "text-teal-400 bg-teal-500/10" },
-  file: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
-  url: { icon: Globe, color: "text-orange-400 bg-orange-500/10" },
-  kindle: { icon: BookOpen, color: "text-amber-400 bg-amber-500/10" },
-  document: { icon: FileText, color: "text-blue-400 bg-blue-500/10" },
-  youtube: { icon: PlayCircle, color: "text-red-400 bg-red-500/10" },
-  bookmark: { icon: Bookmark, color: "text-sky-400 bg-sky-500/10" },
-  obsidian: { icon: Gem, color: "text-teal-400 bg-teal-500/10" },
-  reddit: { icon: MessageSquare, color: "text-orange-400 bg-orange-500/10" },
+// Source type config — delegated to shared module
+// Usage: const st = getSourceType(type); st.icon, st.textColor, st.bgColor, st.badgeClasses
+
+// Tag color utility
+const TAG_COLOR_MAP: Record<string, string> = {
+  teal:    'text-teal-400 bg-teal-500/10 border-teal-500/15',
+  sky:     'text-sky-400 bg-sky-500/10 border-sky-500/15',
+  emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/15',
+  amber:   'text-amber-400 bg-amber-500/10 border-amber-500/15',
+  red:     'text-red-400 bg-red-500/10 border-red-500/15',
+  blue:    'text-blue-400 bg-blue-500/10 border-blue-500/15',
+  orange:  'text-orange-400 bg-orange-500/10 border-orange-500/15',
+  zinc:    'text-zinc-400 bg-zinc-500/10 border-zinc-500/15',
 };
+function tagColorClasses(color: string): string {
+  return TAG_COLOR_MAP[color] || TAG_COLOR_MAP.teal;
+}
+function tagDotColor(color: string): string {
+  const m: Record<string, string> = {
+    teal: 'bg-teal-400', sky: 'bg-sky-400', emerald: 'bg-emerald-400',
+    amber: 'bg-amber-400', red: 'bg-red-400', blue: 'bg-blue-400',
+    orange: 'bg-orange-400', zinc: 'bg-zinc-400',
+  };
+  return m[color] || m.teal;
+}
 
 const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
   { id: "newest", label: "Newest first", icon: ArrowDownNarrowWide },
@@ -52,6 +92,7 @@ const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
 ];
 
 export default function ExplorePage() {
+  usePageTitle("Explore");
   const searchParams = useSearchParams();
   const router = useRouter();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -84,10 +125,94 @@ export default function ExplorePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleting, setBatchDeleting] = useState(false);
 
+  // View mode state
+  const [viewMode, setViewMode] = useState<"list" | "compact">("list");
+
   // Infinite scroll state
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // ── Tags state ──────────────────
+  const [allTags, setAllTags] = useState<TagData[]>([]);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [tagMenuOpen, setTagMenuOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [tagAssignOpen, setTagAssignOpen] = useState(false); // in detail view
+  const [batchTagMenuOpen, setBatchTagMenuOpen] = useState(false); // in select mode toolbar
+
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [savedSearchMenuOpen, setSavedSearchMenuOpen] = useState(false);
+  const [saveSearchDialogOpen, setSaveSearchDialogOpen] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState('');
+  const [saveSearchColor, setSaveSearchColor] = useState<SavedSearch['color']>('teal');
+  const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
+
+  // Search history
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Load saved searches and search history on mount
+  useEffect(() => {
+    setSavedSearches(getSavedSearches());
+    setSearchHistory(getSearchHistory());
+  }, []);
+
+  const handleSaveSearch = useCallback(() => {
+    if (!saveSearchName.trim()) return;
+    const ss = createSavedSearch({
+      name: saveSearchName.trim(),
+      query: search,
+      sourceFilter: filter,
+      tagFilter: tagFilter,
+      sortBy,
+      color: saveSearchColor,
+    });
+    setSavedSearches(getSavedSearches());
+    setSaveSearchDialogOpen(false);
+    setSaveSearchName('');
+    setActiveSavedSearchId(ss.id);
+    toast.success(`Saved "${ss.name}"`);
+  }, [saveSearchName, search, filter, tagFilter, sortBy, saveSearchColor]);
+
+  const handleApplySavedSearch = useCallback((ss: SavedSearch) => {
+    applySavedSearch(ss.id);
+    setSearch(ss.query);
+    setFilter(ss.sourceFilter);
+    setTagFilter(ss.tagFilter);
+    setSortBy(ss.sortBy);
+    setActiveSavedSearchId(ss.id);
+    setSavedSearchMenuOpen(false);
+    setSavedSearches(getSavedSearches());
+    toast.success(`Applied "${ss.name}"`);
+  }, []);
+
+  const handleDeleteSavedSearch = useCallback((id: string, name: string) => {
+    deleteSavedSearch(id);
+    if (activeSavedSearchId === id) setActiveSavedSearchId(null);
+    setSavedSearches(getSavedSearches());
+    toast.success(`Deleted "${name}"`);
+  }, [activeSavedSearchId]);
+
+  const handleTogglePinSavedSearch = useCallback((id: string) => {
+    togglePinSavedSearch(id);
+    setSavedSearches(getSavedSearches());
+  }, []);
+
+  // Check if current search matches a saved search
+  const currentMatchesSaved = findMatchingSavedSearch({ query: search, sourceFilter: filter, tagFilter, sortBy });
+  const hasActiveFilters = search || filter || tagFilter || sortBy !== 'newest';
+
+  // Derive unique source types from actual data
+  const sourceTypeCounts = sources.reduce((acc, s) => {
+    acc[s.type] = (acc[s.type] || 0) + s.itemCount;
+    return acc;
+  }, {} as Record<string, number>);
+  const activeSourceTypes = Object.entries(sourceTypeCounts)
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]); // Sort by count descending
 
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
@@ -185,6 +310,32 @@ export default function ExplorePage() {
       toast.success(`Copied ${selectedIds.size} memor${selectedIds.size === 1 ? 'y' : 'ies'} to clipboard`);
     });
   }, [selectedIds, memories]);
+
+  // ── Batch Pin/Unpin ──────────────────
+  const [batchPinning, setBatchPinning] = useState(false);
+
+  const handleBatchPin = useCallback(async (pinState: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBatchPinning(true);
+    let updated = 0;
+    const ids = Array.from(selectedIds);
+    for (let i = 0; i < ids.length; i += 10) {
+      const batch = ids.slice(i, i + 10);
+      const results = await Promise.allSettled(
+        batch.map(id =>
+          fetch('/api/v1/memories', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, pinned: pinState }),
+          })
+        )
+      );
+      updated += results.filter(r => r.status === 'fulfilled').length;
+    }
+    setMemories(prev => prev.map(m => selectedIds.has(m.id) ? { ...m, pinned: pinState } : m));
+    setBatchPinning(false);
+    toast.success(`${pinState ? 'Pinned' : 'Unpinned'} ${updated} memor${updated === 1 ? 'y' : 'ies'}`);
+  }, [selectedIds]);
 
   // ── Edit memory ──────────────────
   const startEditing = useCallback(() => {
@@ -322,6 +473,11 @@ export default function ExplorePage() {
       });
 
     return () => controller.abort();
+  }, [selected?.id]);
+
+  // Close tag dropdowns when selected memory changes
+  useEffect(() => {
+    setTagAssignOpen(false);
   }, [selected?.id]);
 
   // Navigate to a related memory
@@ -486,7 +642,7 @@ export default function ExplorePage() {
   // Reset focused index when memories change
   useEffect(() => {
     setFocusedIndex(-1);
-  }, [search, filter, sortBy]);
+  }, [search, filter, sortBy, tagFilter]);
 
   // Sync search query to URL (shallow, no navigation)
   useEffect(() => {
@@ -535,10 +691,12 @@ export default function ExplorePage() {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
       fetch(`/api/v1/memories?limit=100&sort=${sortBy}`).then(r => r.json()),
-    ]).then(([srcData, memData]) => {
+      fetch('/api/v1/tags').then(r => r.json()).catch(() => ({ tags: [] })),
+    ]).then(([srcData, memData, tagData]) => {
       setSources(srcData.sources || []);
       setMemories(memData.memories || []);
       setTotalMemories(memData.total || 0);
+      setAllTags(tagData.tags || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -562,10 +720,13 @@ export default function ExplorePage() {
             layers: r.layers || {},
             score: r.score || 0,
             pinned: r.metadata?.pinned === true,
+            tags: r.tags || [],
           }));
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
           setSearchLayers(d.layers || null);
+          // Track search in history
+          addSearchToHistory(search, results.length);
         }).catch(() => {});
       } else {
         // No search query — list all memories
@@ -573,6 +734,7 @@ export default function ExplorePage() {
         const p = new URLSearchParams({ limit: '100', sort: sortBy });
         if (filter && filter !== 'pinned') p.set('source', filter);
         if (filter === 'pinned') p.set('pinned', 'true');
+        if (tagFilter) p.set('tagId', tagFilter);
         fetch(`/api/v1/memories?${p}`).then(r => r.json()).then(d => {
           setMemories(d.memories || []);
           setTotalMemories(d.total || 0);
@@ -580,7 +742,7 @@ export default function ExplorePage() {
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [search, filter, sortBy]);
+  }, [search, filter, sortBy, tagFilter]);
 
   // ── Infinite scroll with Intersection Observer ──────────────────
   const loadMore = useCallback(async () => {
@@ -590,12 +752,13 @@ export default function ExplorePage() {
       const p = new URLSearchParams({ limit: '100', offset: String(memories.length), sort: sortBy });
       if (filter && filter !== 'pinned') p.set('source', filter);
       if (filter === 'pinned') p.set('pinned', 'true');
+      if (tagFilter) p.set('tagId', tagFilter);
       const res = await fetch(`/api/v1/memories?${p}`);
       const d = await res.json();
       setMemories(prev => [...prev, ...(d.memories || [])]);
     } catch { /* ignore */ }
     setLoadingMore(false);
-  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy]);
+  }, [loadingMore, memories.length, totalMemories, search, filter, sortBy, tagFilter]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -614,6 +777,121 @@ export default function ExplorePage() {
     return () => observer.disconnect();
   }, [loadMore, loadingMore, memories.length, totalMemories, search]);
 
+  // ── Tag helpers ──────────────────
+  const refreshTags = useCallback(async () => {
+    try {
+      const r = await fetch('/api/v1/tags');
+      const d = await r.json();
+      setAllTags(d.tags || []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const createTag = useCallback(async (name: string, color?: string) => {
+    if (!name.trim()) return null;
+    setCreatingTag(true);
+    try {
+      const res = await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), color: color || 'teal' }),
+      });
+      const data = await res.json();
+      if (data.tag) {
+        if (!data.existed) {
+          toast.success(`Tag "${data.tag.name}" created`);
+        }
+        await refreshTags();
+        setNewTagName('');
+        return data.tag;
+      }
+      if (data.error) toast.error(data.error);
+      return null;
+    } catch { toast.error('Failed to create tag'); return null; }
+    finally { setCreatingTag(false); }
+  }, [refreshTags]);
+
+  const assignTag = useCallback(async (tagId: string, memoryIds: string[]) => {
+    try {
+      const res = await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'assign', tagId, memoryIds }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Update local state — add tag to affected memories
+        const tag = allTags.find(t => t.id === tagId);
+        if (tag) {
+          setMemories(prev => prev.map(m =>
+            memoryIds.includes(m.id) && !m.tags?.some(t => t.id === tagId)
+              ? { ...m, tags: [...(m.tags || []), tag] }
+              : m
+          ));
+          if (selected && memoryIds.includes(selected.id)) {
+            setSelected(prev => prev ? {
+              ...prev,
+              tags: [...(prev.tags || []), tag].filter((t, i, arr) => arr.findIndex(a => a.id === t.id) === i),
+            } : null);
+          }
+        }
+        await refreshTags();
+        toast.success(`Tagged ${memoryIds.length} memor${memoryIds.length === 1 ? 'y' : 'ies'}`);
+      }
+    } catch { toast.error('Failed to tag'); }
+  }, [allTags, selected, refreshTags]);
+
+  const unassignTag = useCallback(async (tagId: string, memoryIds: string[]) => {
+    try {
+      await fetch('/api/v1/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unassign', tagId, memoryIds }),
+      });
+      // Update local state
+      setMemories(prev => prev.map(m =>
+        memoryIds.includes(m.id)
+          ? { ...m, tags: (m.tags || []).filter(t => t.id !== tagId) }
+          : m
+      ));
+      if (selected && memoryIds.includes(selected.id)) {
+        setSelected(prev => prev ? {
+          ...prev,
+          tags: (prev.tags || []).filter(t => t.id !== tagId),
+        } : null);
+      }
+      await refreshTags();
+      toast.success('Tag removed');
+    } catch { toast.error('Failed to remove tag'); }
+  }, [selected, refreshTags]);
+
+  const deleteTag = useCallback(async (tagId: string) => {
+    const tag = allTags.find(t => t.id === tagId);
+    if (!confirm(`Delete tag "${tag?.name}"? It will be removed from all memories.`)) return;
+    try {
+      await fetch(`/api/v1/tags?id=${tagId}`, { method: 'DELETE' });
+      // Remove from local state
+      setMemories(prev => prev.map(m => ({
+        ...m,
+        tags: (m.tags || []).filter(t => t.id !== tagId),
+      })));
+      if (selected) {
+        setSelected(prev => prev ? {
+          ...prev,
+          tags: (prev.tags || []).filter(t => t.id !== tagId),
+        } : null);
+      }
+      if (tagFilter === tagId) setTagFilter(null);
+      await refreshTags();
+      toast.success(`Tag "${tag?.name}" deleted`);
+    } catch { toast.error('Failed to delete tag'); }
+  }, [allTags, selected, tagFilter, refreshTags]);
+
+  const handleBatchTag = useCallback(async (tagId: string) => {
+    if (selectedIds.size === 0) return;
+    await assignTag(tagId, Array.from(selectedIds));
+    setBatchTagMenuOpen(false);
+  }, [selectedIds, assignTag]);
+
   return (
     <PageTransition className="space-y-4 md:space-y-6">
       {/* Header */}
@@ -622,6 +900,34 @@ export default function ExplorePage() {
           <div>
             <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Explore</h1>
             <p className="text-[13px] text-zinc-500 mt-0.5">{totalMemories.toLocaleString()} memories · {sources.length} sources</p>
+            {/* Source distribution mini-bar */}
+            {totalMemories > 0 && activeSourceTypes.length > 1 && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="flex h-[4px] rounded-full overflow-hidden bg-white/[0.04] w-32 sm:w-48">
+                  {activeSourceTypes.map(([type, count]) => {
+                    const pct = (count / totalMemories) * 100;
+                    const colorMap: Record<string, string> = {
+                      chatgpt: "bg-green-500/70", text: "bg-teal-500/70", file: "bg-blue-500/70",
+                      url: "bg-orange-500/70", kindle: "bg-amber-500/70", document: "bg-blue-500/70",
+                      youtube: "bg-red-500/70", bookmark: "bg-sky-500/70", obsidian: "bg-teal-500/70",
+                      reddit: "bg-orange-500/70", audio: "bg-teal-500/70", image: "bg-sky-500/70",
+                      notion: "bg-zinc-400/70", twitter: "bg-sky-500/70", telegram: "bg-teal-500/70",
+                      pocket: "bg-emerald-500/70", instapaper: "bg-emerald-500/70",
+                      spotify: "bg-emerald-500/70", readwise: "bg-amber-500/70",
+                    };
+                    return (
+                      <div
+                        key={type}
+                        className={`h-full ${colorMap[type] || "bg-zinc-500/70"}`}
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                        title={`${type}: ${count} (${Math.round(pct)}%)`}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="text-[9px] text-zinc-700">{activeSourceTypes.length} types</span>
+              </div>
+            )}
           </div>
           {memories.length > 0 && (
             <button
@@ -648,20 +954,236 @@ export default function ExplorePage() {
             ref={searchInputRef}
             placeholder="Search your knowledge…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-16 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
+            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => { /* delay so click events on history items fire first */ setTimeout(() => setSearchFocused(false), 200); }}
+            className="w-full h-10 pl-10 pr-24 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
           />
-          {search ? (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5">
-              <X className="w-3.5 h-3.5 text-zinc-500" />
-            </button>
-          ) : (
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
-          )}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {/* Saved searches toggle */}
+            {savedSearches.length > 0 && (
+              <button
+                onClick={() => setSavedSearchMenuOpen(!savedSearchMenuOpen)}
+                className={`p-1.5 rounded-lg transition-all ${
+                  savedSearchMenuOpen || activeSavedSearchId
+                    ? 'text-teal-400 bg-teal-500/10'
+                    : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.06]'
+                }`}
+                title="Saved searches"
+              >
+                <Star className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Save current search */}
+            {hasActiveFilters && !currentMatchesSaved && (
+              <button
+                onClick={() => { setSaveSearchDialogOpen(true); setSaveSearchName(search || 'My search'); }}
+                className="p-1.5 rounded-lg text-zinc-600 hover:text-teal-400 hover:bg-teal-500/10 transition-all"
+                title="Save this search"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {search ? (
+              <button onClick={() => { setSearch(""); setActiveSavedSearchId(null); }} className="p-0.5">
+                <X className="w-3.5 h-3.5 text-zinc-500" />
+              </button>
+            ) : (
+              <kbd className="text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
+            )}
+          </div>
         </div>
+
+        {/* Saved Searches Dropdown */}
+        {savedSearchMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setSavedSearchMenuOpen(false)} />
+            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Saved Searches</span>
+                <span className="text-[10px] text-zinc-600">{savedSearches.length} saved</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                {savedSearches.map((ss) => {
+                  const colors: Record<string, string> = {
+                    teal: 'text-teal-400', sky: 'text-sky-400', emerald: 'text-emerald-400',
+                    amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400',
+                  };
+                  return (
+                    <div
+                      key={ss.id}
+                      className={`group flex items-center gap-2 px-3 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer ${
+                        activeSavedSearchId === ss.id ? 'bg-teal-500/[0.06]' : ''
+                      }`}
+                      onClick={() => handleApplySavedSearch(ss)}
+                    >
+                      <Star className={`w-3 h-3 shrink-0 ${ss.pinned ? 'fill-current' : ''} ${colors[ss.color] || colors.teal}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] text-zinc-200 truncate">{ss.name}</p>
+                        <p className="text-[10px] text-zinc-600 truncate">{describeSavedSearch(ss)}</p>
+                      </div>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleTogglePinSavedSearch(ss.id); }}
+                          className="p-1 rounded-md hover:bg-white/[0.08] transition-colors"
+                          title={ss.pinned ? 'Unpin' : 'Pin'}
+                        >
+                          <Pin className={`w-2.5 h-2.5 ${ss.pinned ? 'text-amber-400 fill-amber-400/30' : 'text-zinc-600'}`} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSavedSearch(ss.id, ss.name); }}
+                          className="p-1 rounded-md hover:bg-red-500/10 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-2.5 h-2.5 text-zinc-600 hover:text-red-400" />
+                        </button>
+                      </div>
+                      {ss.useCount > 0 && (
+                        <span className="text-[9px] text-zinc-700 tabular-nums shrink-0">{ss.useCount}×</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Save Search Dialog */}
+        {saveSearchDialogOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setSaveSearchDialogOpen(false)} />
+            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 p-4">
+              <h3 className="text-[13px] font-medium text-zinc-200 mb-3">Save this search</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={saveSearchName}
+                  onChange={(e) => setSaveSearchName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSearch(); if (e.key === 'Escape') setSaveSearchDialogOpen(false); }}
+                  placeholder="Search name..."
+                  className="w-full h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[12px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                  autoFocus
+                />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-zinc-600 mr-1">Color:</span>
+                  {(['teal', 'sky', 'emerald', 'amber', 'red', 'blue'] as const).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setSaveSearchColor(c)}
+                      className={`w-5 h-5 rounded-full transition-all ${
+                        saveSearchColor === c ? 'ring-2 ring-offset-1 ring-offset-[#131315]' : ''
+                      } ${
+                        c === 'teal' ? 'bg-teal-500 ring-teal-400' :
+                        c === 'sky' ? 'bg-sky-500 ring-sky-400' :
+                        c === 'emerald' ? 'bg-emerald-500 ring-emerald-400' :
+                        c === 'amber' ? 'bg-amber-500 ring-amber-400' :
+                        c === 'red' ? 'bg-red-500 ring-red-400' :
+                        'bg-blue-500 ring-blue-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="text-[10px] text-zinc-600 space-y-0.5">
+                  {search && <p>Query: "{search}"</p>}
+                  {filter && <p>Source: {filter}</p>}
+                  {tagFilter && <p>Tag: {tagFilter}</p>}
+                  {sortBy !== 'newest' && <p>Sort: {sortBy}</p>}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setSaveSearchDialogOpen(false)}
+                    className="h-7 px-3 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveSearch}
+                    disabled={!saveSearchName.trim()}
+                    className="h-7 px-3 rounded-lg text-[11px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all disabled:opacity-50 active:scale-[0.97]"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Active saved search indicator */}
+        {activeSavedSearchId && (() => {
+          const active = savedSearches.find(s => s.id === activeSavedSearchId);
+          if (!active) return null;
+          const colors: Record<string, string> = {
+            teal: 'border-teal-500/20 bg-teal-500/[0.06] text-teal-400',
+            sky: 'border-sky-500/20 bg-sky-500/[0.06] text-sky-400',
+            emerald: 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400',
+            amber: 'border-amber-500/20 bg-amber-500/[0.06] text-amber-400',
+            red: 'border-red-500/20 bg-red-500/[0.06] text-red-400',
+            blue: 'border-blue-500/20 bg-blue-500/[0.06] text-blue-400',
+          };
+          return (
+            <div className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colors[active.color] || colors.teal}`}>
+              <Star className="w-3 h-3 fill-current" />
+              <span className="text-[11px] font-medium">{active.name}</span>
+              <button
+                onClick={() => { setActiveSavedSearchId(null); setSearch(''); setFilter(null); setTagFilter(null); setSortBy('newest'); }}
+                className="ml-auto p-0.5 hover:bg-white/[0.08] rounded transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Search History — shown when search is focused and empty */}
+        {searchFocused && !search && searchHistory.length > 0 && !savedSearchMenuOpen && !saveSearchDialogOpen && (
+          <>
+            <div className="fixed inset-0 z-15" onClick={() => setSearchFocused(false)} />
+            <div className="relative z-20 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+                <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3 h-3" />
+                  Recent Searches
+                </span>
+                <button
+                  onClick={() => { clearSearchHistory(); setSearchHistory([]); }}
+                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="py-1 max-h-48 overflow-y-auto">
+                {searchHistory.slice(0, 8).map((item) => (
+                  <div
+                    key={item.query}
+                    className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    onClick={() => { setSearch(item.query); setSearchFocused(false); }}
+                  >
+                    <Search className="w-3 h-3 text-zinc-700 shrink-0" />
+                    <span className="text-[12px] text-zinc-300 truncate flex-1">{item.query}</span>
+                    {item.resultCount !== undefined && (
+                      <span className="text-[10px] text-zinc-600 tabular-nums shrink-0">{item.resultCount} results</span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSearchFromHistory(item.query);
+                        setSearchHistory(getSearchHistory());
+                      }}
+                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
+                    >
+                      <X className="w-2.5 h-2.5 text-zinc-600" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </Stagger>
 
-      {/* Filters + Sort */}
+      {/* Filters + View + Sort */}
       <Stagger>
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
@@ -672,16 +1194,61 @@ export default function ExplorePage() {
               label="Pinned"
               icon={<Pin className="w-3 h-3" />}
             />
-            {(["chatgpt", "text", "file", "url"] as const).map((type) => {
-              const count = sources.filter(s => s.type === type).reduce((sum, s) => sum + s.itemCount, 0);
-              if (count === 0) return null;
-              const Icon = typeConfig[type]?.icon || FileText;
+            {activeSourceTypes.map(([type, count]) => {
+              const cfg = getSourceType(type);
+              const Icon = cfg.icon;
               return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
             })}
+            {/* Tag filter pills */}
+            {allTags.length > 0 && (
+              <>
+                <div className="w-px h-4 bg-white/[0.08] shrink-0 mx-0.5" />
+                {allTags.map(tag => (
+                  <FilterPill
+                    key={`tag-${tag.id}`}
+                    active={tagFilter === tag.id}
+                    onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
+                    label={tag.name}
+                    count={tag.memory_count}
+                    icon={<Tag className="w-3 h-3" />}
+                    tagColor={tag.color}
+                  />
+                ))}
+              </>
+            )}
           </div>
 
-          {/* Sort Dropdown */}
-          {!search.trim() && memories.length > 0 && (
+          <div className="flex items-center gap-1 shrink-0">
+            {/* View Mode Toggle */}
+            {memories.length > 0 && (
+              <div className="hidden sm:flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 transition-all ${
+                    viewMode === "list"
+                      ? "bg-teal-500/15 text-teal-300"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                  title="List view"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode("compact")}
+                  className={`p-1.5 transition-all ${
+                    viewMode === "compact"
+                      ? "bg-teal-500/15 text-teal-300"
+                      : "text-zinc-600 hover:text-zinc-400"
+                  }`}
+                  title="Compact view"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Sort Dropdown */}
+            {!search.trim() && memories.length > 0 && (
             <div className="relative shrink-0">
               <button
                 onClick={() => setSortMenuOpen(!sortMenuOpen)}
@@ -723,35 +1290,44 @@ export default function ExplorePage() {
               )}
             </div>
           )}
+          </div>
         </div>
       </Stagger>
 
       {/* Search Intelligence Indicators */}
-      {search.trim() && searchLayers && !loading && (
+      {search.trim() && !loading && (
         <Stagger>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-zinc-600 font-medium">Search layers</span>
-            <div className="flex items-center gap-1.5">
-              {searchLayers.bm25 > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                  🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
-                </span>
-              )}
-              {searchLayers.vector > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
-                  🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
-                </span>
-              )}
-              {searchLayers.tree > 0 && (
-                <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                  🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
-                </span>
-              )}
-            </div>
-            {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
-              <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
-                Connect AI for semantic search →
-              </Link>
+            <span className="text-[10px] text-teal-400/80 font-semibold tabular-nums">
+              {memories.length} result{memories.length !== 1 ? "s" : ""}
+            </span>
+            {searchLayers && (
+              <>
+                <span className="w-[3px] h-[3px] rounded-full bg-zinc-700" />
+                <span className="text-[10px] text-zinc-600 font-medium">via</span>
+                <div className="flex items-center gap-1.5">
+                  {searchLayers.bm25 > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
+                      🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                    </span>
+                  )}
+                  {searchLayers.vector > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
+                      🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                    </span>
+                  )}
+                  {searchLayers.tree > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                      🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                    </span>
+                  )}
+                </div>
+                {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
+                  <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
+                    Connect AI for semantic search →
+                  </Link>
+                )}
+              </>
             )}
           </div>
         </Stagger>
@@ -781,6 +1357,81 @@ export default function ExplorePage() {
             </div>
             {selectedIds.size > 0 && (
               <div className="flex items-center gap-1">
+                {/* Batch tag */}
+                <div className="relative">
+                  <button
+                    onClick={() => setBatchTagMenuOpen(!batchTagMenuOpen)}
+                    className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 transition-all active:scale-[0.96]"
+                    title="Tag selected memories"
+                  >
+                    <Tag className="w-3 h-3" />
+                    <span className="hidden sm:inline">Tag</span>
+                  </button>
+                  {batchTagMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setBatchTagMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1.5 z-40 w-48 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="p-2 border-b border-white/[0.06]">
+                          <div className="flex gap-1.5">
+                            <input
+                              placeholder="New tag…"
+                              value={newTagName}
+                              onChange={(e) => setNewTagName(e.target.value)}
+                              onKeyDown={async (e) => {
+                                if (e.key === 'Enter' && newTagName.trim()) {
+                                  const tag = await createTag(newTagName);
+                                  if (tag) {
+                                    await handleBatchTag(tag.id);
+                                  }
+                                }
+                              }}
+                              className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        {allTags.length > 0 ? (
+                          <div className="py-1 max-h-40 overflow-y-auto">
+                            {allTags.map(tag => (
+                              <button
+                                key={tag.id}
+                                onClick={() => handleBatchTag(tag.id)}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                              >
+                                <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
+                                <span className="text-[12px] text-zinc-300">{tag.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="px-3 py-2 text-[11px] text-zinc-600 italic">Type to create a tag</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Batch Pin/Unpin */}
+                {(() => {
+                  const selectedMems = memories.filter(m => selectedIds.has(m.id));
+                  const allPinned = selectedMems.length > 0 && selectedMems.every(m => m.pinned);
+                  return (
+                    <button
+                      onClick={() => handleBatchPin(!allPinned)}
+                      disabled={batchPinning}
+                      className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
+                      title={allPinned ? "Unpin selected" : "Pin selected"}
+                    >
+                      {batchPinning ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : allPinned ? (
+                        <PinOff className="w-3 h-3" />
+                      ) : (
+                        <Pin className="w-3 h-3" />
+                      )}
+                      <span className="hidden sm:inline">{allPinned ? "Unpin" : "Pin"}</span>
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={handleBatchCopy}
                   className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
@@ -817,12 +1468,77 @@ export default function ExplorePage() {
       )}
 
       {/* Memory Cards */}
-      <div ref={listRef} className="space-y-1.5">
+      <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-1.5"}>
         {memories.map((m, idx) => {
-          const cfg = typeConfig[m.source] || { icon: FileText, color: "text-zinc-400 bg-zinc-500/10" };
+          const cfg = getSourceType(m.source);
           const Icon = cfg.icon;
           const isFocused = focusedIndex === idx;
           const isSelected = selectedIds.has(m.id);
+          const scorePercent = m.score ? Math.round(m.score * 100) : 0;
+
+          if (viewMode === "compact") {
+            // ═══ Compact View — dense rows for power users ═══
+            return (
+              <button
+                key={m.id}
+                onClick={() => {
+                  if (selectMode) { toggleSelect(m.id); }
+                  else { setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false); }
+                }}
+                className={`w-full text-left flex items-center gap-2.5 px-3 py-2 transition-all ${
+                  isSelected
+                    ? "bg-teal-500/[0.08] ring-1 ring-teal-500/20"
+                    : isFocused
+                    ? "bg-teal-500/[0.06]"
+                    : "hover:bg-white/[0.04]"
+                } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === memories.length - 1 ? "rounded-b-xl" : ""}`}
+              >
+                {selectMode && (
+                  <div className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                    isSelected ? "bg-teal-500 border-teal-500" : "border-white/[0.15] bg-white/[0.02]"
+                  }`}>
+                    {isSelected && <Check className="w-2 h-2 text-white" />}
+                  </div>
+                )}
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
+                  <Icon className={`w-2.5 h-2.5 ${cfg.textColor}`} />
+                </div>
+                <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0">{m.sourceTitle || "Untitled"}</span>
+                <span className="text-[12px] text-zinc-500 truncate flex-1">{m.content.replace(/\n/g, " ").slice(0, 120)}</span>
+                {search.trim() && scorePercent > 0 && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="w-10 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="h-full rounded-full bg-teal-500/60" style={{ width: `${Math.max(scorePercent, 8)}%` }} />
+                    </div>
+                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-6 text-right">{scorePercent}%</span>
+                  </div>
+                )}
+                <span className="text-[10px] text-zinc-700 tabular-nums shrink-0 w-10 text-right">
+                  {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </span>
+                {m.tags && m.tags.length > 0 && (
+                  <span className="flex items-center gap-[2px] shrink-0">
+                    {m.tags.slice(0, 3).map(tag => (
+                      <span key={tag.id} className={`w-[5px] h-[5px] rounded-full ${tagDotColor(tag.color)}`} title={tag.name} />
+                    ))}
+                    {m.tags.length > 3 && <span className="text-[8px] text-zinc-600">+{m.tags.length - 3}</span>}
+                  </span>
+                )}
+                {m.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 shrink-0 fill-amber-400/30" />}
+                {search.trim() && m.layers && (
+                  <span className="flex items-center gap-[2px] shrink-0" title={
+                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
+                  }>
+                    {m.layers.bm25 && <span className="w-[4px] h-[4px] rounded-full bg-blue-400/70" />}
+                    {m.layers.vector && <span className="w-[4px] h-[4px] rounded-full bg-teal-400/70" />}
+                    {m.layers.tree && <span className="w-[4px] h-[4px] rounded-full bg-emerald-400/70" />}
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          // ═══ List View — rich cards (default) ═══
           return (
             <button
               key={m.id}
@@ -851,11 +1567,27 @@ export default function ExplorePage() {
                     {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                 )}
-                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.badgeClasses}`}>
                   <Icon className="w-2.5 h-2.5" />
                   {m.source}
                 </span>
                 <span className="text-[11px] text-zinc-600 truncate flex-1">{m.sourceTitle}</span>
+                {/* Search relevance score */}
+                {search.trim() && scorePercent > 0 && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="w-12 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          scorePercent > 70 ? "bg-emerald-500/60" :
+                          scorePercent > 40 ? "bg-teal-500/60" :
+                          "bg-sky-500/60"
+                        }`}
+                        style={{ width: `${Math.max(scorePercent, 8)}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono">{scorePercent}%</span>
+                  </div>
+                )}
                 <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
                   {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
@@ -874,6 +1606,20 @@ export default function ExplorePage() {
                 )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
+              {/* Tags + Word count hint in list view */}
+              <div className={`flex items-center gap-2 mt-1.5 flex-wrap ${selectMode ? 'pl-6' : ''}`}>
+                {m.tags && m.tags.length > 0 && m.tags.map(tag => (
+                  <span key={tag.id} className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold ${tagColorClasses(tag.color)}`}>
+                    <Tag className="w-2 h-2" />
+                    {tag.name}
+                  </span>
+                ))}
+                {!search.trim() && (
+                  <span className="text-[10px] text-zinc-700">
+                    {m.content.trim().split(/\s+/).length} words
+                  </span>
+                )}
+              </div>
             </button>
           );
         })}
@@ -896,8 +1642,42 @@ export default function ExplorePage() {
         )}
 
         {memories.length === 0 && !loading && (
-          <div className="text-center py-20 text-zinc-600 text-[13px]">
-            {totalMemories === 0 ? "No memories yet" : "No results"}
+          <div className="text-center py-16">
+            {totalMemories === 0 ? (
+              <div className="space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+                  <Search className="w-6 h-6 text-zinc-700" />
+                </div>
+                <div>
+                  <p className="text-[14px] text-zinc-400 font-medium">Your knowledge base is empty</p>
+                  <p className="text-[12px] text-zinc-600 mt-1">Import conversations, notes, or files to get started</p>
+                </div>
+                <Link
+                  href="/app/import"
+                  className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97] mt-2"
+                >
+                  Import your first memory
+                </Link>
+              </div>
+            ) : search.trim() ? (
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
+                  <Search className="w-5 h-5 text-zinc-700" />
+                </div>
+                <p className="text-[13px] text-zinc-500">No results for &ldquo;{search}&rdquo;</p>
+                <p className="text-[11px] text-zinc-700">Try a different query or remove filters</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[13px] text-zinc-500">No memories match this filter</p>
+                <button
+                  onClick={() => setFilter(null)}
+                  className="text-[12px] text-teal-400 hover:text-teal-300 transition-colors"
+                >
+                  Clear filter →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -958,7 +1738,7 @@ export default function ExplorePage() {
 
       {/* Detail Bottom Sheet */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); } }}>
+        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); } }}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
           <div
             className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
@@ -985,7 +1765,7 @@ export default function ExplorePage() {
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${typeConfig[selected.source]?.color || ""}`}>
+                  <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${getSourceType(selected.source).badgeClasses}`}>
                     {selected.source}
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
@@ -1019,7 +1799,7 @@ export default function ExplorePage() {
                     </button>
                   </>
                 )}
-                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
+                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
@@ -1106,8 +1886,8 @@ export default function ExplorePage() {
                 {relatedMemories.length > 0 ? (
                   <div className="space-y-1">
                     {relatedMemories.map((rel) => {
-                      const Icon = typeConfig[rel.type]?.icon || FileText;
-                      const colors = typeConfig[rel.type]?.color || "text-zinc-400 bg-zinc-500/10";
+                      const relSt = getSourceType(rel.type);
+                      const Icon = relSt.icon;
                       const scorePercent = Math.round(rel.score * 100);
                       return (
                         <button
@@ -1115,8 +1895,8 @@ export default function ExplorePage() {
                           onClick={() => openRelatedMemory(rel.id)}
                           className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
                         >
-                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${colors.split(" ").filter(c => !c.startsWith("text-")).join(" ")}`}>
-                            <Icon className={`w-3 h-3 ${colors.split(" ")[0]}`} />
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${relSt.bgColor}`}>
+                            <Icon className={`w-3 h-3 ${relSt.textColor}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] text-zinc-300 font-medium truncate group-hover/rel:text-white transition-colors">
@@ -1151,6 +1931,110 @@ export default function ExplorePage() {
                     </div>
                   </div>
                 ) : null}
+              </div>
+            )}
+
+            {/* Tags — view & manage tags on this memory */}
+            {!editing && (
+              <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Tag className="w-3 h-3 text-teal-400/70" />
+                  <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
+                    Tags
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Existing tags on this memory */}
+                  {(selected.tags || []).map(tag => (
+                    <span key={tag.id} className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-semibold border ${tagColorClasses(tag.color)} group/tag`}>
+                      <Tag className="w-2.5 h-2.5" />
+                      {tag.name}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); unassignTag(tag.id, [selected.id]); }}
+                        className="ml-0.5 opacity-0 group-hover/tag:opacity-100 hover:text-white transition-all"
+                        title="Remove tag"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {/* Add tag button */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setTagAssignOpen(!tagAssignOpen)}
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-medium text-zinc-600 border border-dashed border-white/[0.1] hover:border-teal-500/30 hover:text-teal-400 transition-all"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      Add tag
+                    </button>
+                    {/* Tag assign dropdown */}
+                    {tagAssignOpen && (
+                      <>
+                        <div className="fixed inset-0 z-[70]" onClick={() => setTagAssignOpen(false)} />
+                        <div className="absolute bottom-full mb-1.5 left-0 z-[80] w-52 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                          <div className="p-2 border-b border-white/[0.06]">
+                            <div className="flex gap-1.5">
+                              <input
+                                placeholder="New tag…"
+                                value={newTagName}
+                                onChange={(e) => setNewTagName(e.target.value)}
+                                onKeyDown={async (e) => {
+                                  if (e.key === 'Enter' && newTagName.trim()) {
+                                    const tag = await createTag(newTagName);
+                                    if (tag) {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }
+                                  }
+                                }}
+                                className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                                autoFocus
+                              />
+                              {newTagName.trim() && (
+                                <button
+                                  onClick={async () => {
+                                    const tag = await createTag(newTagName);
+                                    if (tag) {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }
+                                  }}
+                                  disabled={creatingTag}
+                                  className="h-7 px-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-[11px] font-medium text-white shrink-0 transition-all disabled:opacity-50"
+                                >
+                                  {creatingTag ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {allTags.length > 0 && (
+                            <div className="py-1 max-h-40 overflow-y-auto">
+                              {allTags
+                                .filter(tag => !selected.tags?.some(t => t.id === tag.id))
+                                .map(tag => (
+                                  <button
+                                    key={tag.id}
+                                    onClick={async () => {
+                                      await assignTag(tag.id, [selected.id]);
+                                      setTagAssignOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
+                                    <span className="text-[12px] text-zinc-300">{tag.name}</span>
+                                    <span className="text-[10px] text-zinc-600 ml-auto">{tag.memory_count}</span>
+                                  </button>
+                                ))}
+                              {allTags.filter(tag => !selected.tags?.some(t => t.id === tag.id)).length === 0 && (
+                                <p className="px-3 py-2 text-[11px] text-zinc-600 italic">All tags assigned</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1288,21 +2172,23 @@ export default function ExplorePage() {
   );
 }
 
-function FilterPill({ active, onClick, label, count, icon }: {
-  active: boolean; onClick: () => void; label: string; count?: number; icon?: React.ReactNode;
+function FilterPill({ active, onClick, label, count, icon, tagColor }: {
+  active: boolean; onClick: () => void; label: string; count?: number; icon?: React.ReactNode; tagColor?: string;
 }) {
+  // For tag pills, use their color when active
+  const activeStyle = tagColor
+    ? `${tagColorClasses(tagColor).replace('border-', 'border border-')} shadow-sm`
+    : "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10";
   return (
     <button
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
-        active
-          ? "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10"
-          : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
+        active ? activeStyle : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
       }`}
     >
       {icon}
       {label}
-      {count !== undefined && <span className="text-[10px] opacity-60">{count}</span>}
+      {count !== undefined && count > 0 && <span className="text-[10px] opacity-60">{count}</span>}
     </button>
   );
 }

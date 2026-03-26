@@ -1,25 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  ArrowLeft,
-  Check,
-  Copy,
-  Download,
-  FileEdit,
-  Lightbulb,
-  Loader2,
-  PenSquare,
-  Plus,
-  Save,
-  Sparkles,
-  Wand2,
+  FileEdit, Plus, Loader2, Sparkles, Trash2,
+  ChevronRight, ArrowLeft, Copy, Check, Download,
+  BookOpen, Clock, AlignLeft, RotateCcw,
+  Wand2, Eye, EyeOff, FileText, Code2,
+  Lightbulb, PenTool, Megaphone, GraduationCap, MessageSquare,
+  ChevronDown, Save, ExternalLink,
 } from "lucide-react";
-import { toast } from "sonner";
-import { PageTransition, Stagger } from "@/components/PageTransition";
 import { cn } from "@/lib/utils";
+import { PageTransition, Stagger } from "@/components/PageTransition";
+import { toast } from "sonner";
+import { usePageTitle } from "@/lib/use-page-title";
 
-type DraftStatus = "draft" | "refining" | "ready";
+// ─── Types ────────────────────────────────────────────────────
 
 interface DraftSummary {
   id: string;
@@ -29,16 +24,26 @@ interface DraftSummary {
   tone: string;
   wordCount: number;
   sourceCount: number;
-  status: DraftStatus;
+  status: "draft" | "refining" | "ready";
   createdAt: string;
   updatedAt: string;
   preview: string;
 }
 
-interface Draft extends DraftSummary {
+interface BlogDraft {
+  id: string;
+  title: string;
+  topic: string;
+  style: string;
+  tone: string;
   content: string;
   outline: string[];
+  wordCount: number;
   sourceMemoryIds: string[];
+  sourceCount: number;
+  status: "draft" | "refining" | "ready";
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface TopicSuggestion {
@@ -48,37 +53,67 @@ interface TopicSuggestion {
   style: string;
 }
 
-const STYLES = ["technical", "casual", "storytelling", "tutorial", "opinion"];
-const TONES = ["professional", "conversational", "academic", "witty"];
+// ─── Style/Tone Config ───────────────────────────────────────
+
+const STYLES = [
+  { id: "technical", label: "Technical", icon: Code2, desc: "Deep-dive with precision" },
+  { id: "casual", label: "Casual", icon: MessageSquare, desc: "Like talking to a friend" },
+  { id: "storytelling", label: "Storytelling", icon: BookOpen, desc: "Narrative with a hook" },
+  { id: "tutorial", label: "Tutorial", icon: GraduationCap, desc: "Step-by-step guide" },
+  { id: "opinion", label: "Opinion", icon: Megaphone, desc: "Thought leadership" },
+];
+
+const TONES = [
+  { id: "professional", label: "Professional" },
+  { id: "conversational", label: "Conversational" },
+  { id: "academic", label: "Academic" },
+  { id: "witty", label: "Witty" },
+];
+
+const STATUS_CONFIG = {
+  draft: { label: "Draft", color: "text-zinc-400", bg: "bg-zinc-500/10" },
+  refining: { label: "Refining", color: "text-amber-400", bg: "bg-amber-500/10" },
+  ready: { label: "Ready", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+};
+
+// ─── Component ───────────────────────────────────────────────
 
 export default function BlogPage() {
+  usePageTitle("Blog Writer");
+  // State
   const [view, setView] = useState<"list" | "create" | "edit" | "preview">("list");
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
-  const [activeDraft, setActiveDraft] = useState<Draft | null>(null);
+  const [activeDraft, setActiveDraft] = useState<BlogDraft | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [refining, setRefining] = useState(false);
-  const [loadingTopics, setLoadingTopics] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [refining, setRefining] = useState(false);
+  const [suggestedTopics, setSuggestedTopics] = useState<TopicSuggestion[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+  const [exportFormat, setExportFormat] = useState<string | null>(null);
 
+  // Create form
   const [topic, setTopic] = useState("");
   const [style, setStyle] = useState("casual");
   const [tone, setTone] = useState("conversational");
   const [targetLength, setTargetLength] = useState(1200);
-  const [refineInstruction, setRefineInstruction] = useState("");
-  const [suggestions, setSuggestions] = useState<TopicSuggestion[]>([]);
+
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const hasUnsaved = useRef(false);
+
+  // ─── Fetch Drafts ──────────────────────────────────────────
 
   const fetchDrafts = useCallback(async () => {
     try {
-      const response = await fetch("/api/v1/plugins/blog-draft?action=drafts");
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load drafts");
-      }
+      const res = await fetch("/api/v1/plugins/blog-draft?action=drafts");
+      if (!res.ok) throw new Error("Failed to fetch drafts");
+      const data = await res.json();
       setDrafts(data.drafts || []);
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to load drafts");
+    } catch (err: any) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -88,63 +123,57 @@ export default function BlogPage() {
     fetchDrafts();
   }, [fetchDrafts]);
 
-  const activeWordCount = useMemo(
-    () => activeDraft?.content.split(/\s+/).filter(Boolean).length || 0,
-    [activeDraft?.content],
-  );
+  // ─── Generate Draft ────────────────────────────────────────
 
-  async function loadDraft(id: string) {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/v1/plugins/blog-draft?action=draft&id=${id}`);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load draft");
-      }
-      setActiveDraft(data.draft);
-      setView("edit");
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to load draft");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function createDraft() {
+  const generateDraft = async () => {
     if (!topic.trim()) {
       toast.error("Enter a topic first");
       return;
     }
-
+    setGenerating(true);
     try {
-      setGenerating(true);
-      const response = await fetch("/api/v1/plugins/blog-draft", {
+      const res = await fetch("/api/v1/plugins/blog-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "generate", topic, style, tone, targetLength }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate draft");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
       setActiveDraft(data.draft);
       setView("edit");
-      toast.success("Draft generated");
+      toast.success("Blog draft generated!");
       fetchDrafts();
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to generate draft");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate draft");
     } finally {
       setGenerating(false);
     }
-  }
+  };
 
-  async function saveDraft() {
-    if (!activeDraft) {
-      return;
-    }
+  // ─── Load Draft ────────────────────────────────────────────
+
+  const loadDraft = async (id: string) => {
+    setLoading(true);
     try {
-      setSaving(true);
-      const response = await fetch("/api/v1/plugins/blog-draft", {
+      const res = await fetch(`/api/v1/plugins/blog-draft?action=draft&id=${id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setActiveDraft(data.draft);
+      setView("edit");
+    } catch (err: any) {
+      toast.error("Failed to load draft");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Save Draft ────────────────────────────────────────────
+
+  const saveDraft = async () => {
+    if (!activeDraft) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/v1/plugins/blog-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -155,348 +184,841 @@ export default function BlogPage() {
           status: activeDraft.status,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save draft");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       setActiveDraft(data.draft);
+      hasUnsaved.current = false;
       toast.success("Draft saved");
       fetchDrafts();
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to save draft");
+    } catch (err: any) {
+      toast.error("Failed to save");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
-  async function deleteDraft(id: string) {
+  // ─── Delete Draft ──────────────────────────────────────────
+
+  const deleteDraft = async (id: string) => {
     try {
-      const response = await fetch("/api/v1/plugins/blog-draft", {
+      const res = await fetch("/api/v1/plugins/blog-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", id }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to delete draft");
-      }
-      toast.success("Draft deleted");
+      if (!res.ok) throw new Error("Delete failed");
+      setDrafts(prev => prev.filter(d => d.id !== id));
       if (activeDraft?.id === id) {
         setActiveDraft(null);
         setView("list");
       }
-      fetchDrafts();
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete draft");
+      toast.success("Draft deleted");
+    } catch {
+      toast.error("Failed to delete");
     }
-  }
+  };
 
-  async function refineDraft() {
-    if (!activeDraft || !refineInstruction.trim()) {
-      return;
-    }
+  // ─── Refine with AI ───────────────────────────────────────
 
+  const refineDraft = async () => {
+    if (!activeDraft || !refineInstruction.trim()) return;
+    setRefining(true);
     try {
-      setRefining(true);
-      const response = await fetch("/api/v1/plugins/blog-draft", {
+      const selection = editorRef.current
+        ? activeDraft.content.substring(
+            editorRef.current.selectionStart,
+            editorRef.current.selectionEnd
+          )
+        : "";
+
+      const res = await fetch("/api/v1/plugins/blog-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "refine",
           id: activeDraft.id,
           instruction: refineInstruction,
+          selection: selection.length > 10 ? selection : undefined,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to refine draft");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (selection.length > 10 && editorRef.current) {
+        // Replace selection
+        const before = activeDraft.content.substring(0, editorRef.current.selectionStart);
+        const after = activeDraft.content.substring(editorRef.current.selectionEnd);
+        setActiveDraft(prev => prev ? { ...prev, content: before + data.refined + after } : prev);
+      } else {
+        setActiveDraft(prev => prev ? { ...prev, content: data.refined } : prev);
       }
-      setActiveDraft((current) => current ? { ...current, content: data.refined, status: "refining" } : current);
+      hasUnsaved.current = true;
       setRefineInstruction("");
-      toast.success("Draft refined");
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to refine draft");
+      setShowRefine(false);
+      toast.success("Draft refined!");
+    } catch (err: any) {
+      toast.error(err.message || "Refinement failed");
     } finally {
       setRefining(false);
     }
-  }
+  };
 
-  async function fetchSuggestions() {
-    try {
-      setLoadingTopics(true);
-      const response = await fetch("/api/v1/plugins/blog-draft?action=topics");
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load suggestions");
-      }
-      setSuggestions(data.topics || []);
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to load suggestions");
-    } finally {
-      setLoadingTopics(false);
-    }
-  }
+  // ─── Export ────────────────────────────────────────────────
 
-  async function exportDraft(format: "markdown" | "html") {
-    if (!activeDraft) {
-      return;
-    }
+  const exportDraft = async (format: "markdown" | "html") => {
+    if (!activeDraft) return;
     try {
-      const response = await fetch("/api/v1/plugins/blog-draft", {
+      const res = await fetch("/api/v1/plugins/blog-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "export", id: activeDraft.id, format }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to export draft");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Download file
       const blob = new Blob([data.content], { type: format === "html" ? "text/html" : "text/markdown" });
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = data.filename;
-      anchor.click();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      setExportFormat(null);
       toast.success(`Exported as ${format.toUpperCase()}`);
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to export draft");
+    } catch (err: any) {
+      toast.error("Export failed");
     }
-  }
+  };
 
-  function copyDraft() {
-    if (!activeDraft) {
-      return;
-    }
+  // ─── Copy to clipboard ────────────────────────────────────
+
+  const copyContent = () => {
+    if (!activeDraft) return;
     navigator.clipboard.writeText(activeDraft.content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Copied to clipboard");
+  };
 
-  function renderMarkdown(markdown: string) {
-    return markdown
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
-      .replace(/^- (.+)$/gm, "<li>$1</li>")
-      .replace(/\n\n/g, "</p><p>")
-      .replace(/\n/g, "<br/>");
-  }
+  // ─── Suggest Topics ───────────────────────────────────────
 
-  return (
-    <PageTransition>
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        {(view === "list" || view === "create") && (
-          <>
-            <div className="mb-8 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-teal-500/20 bg-teal-500/10">
-                  <PenSquare className="h-5 w-5 text-teal-400" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-zinc-100">Blog Writer</h1>
-                  <p className="text-sm text-zinc-500">Turn your memories into long-form drafts</p>
-                </div>
+  const suggestTopics = async () => {
+    setLoadingTopics(true);
+    try {
+      const res = await fetch("/api/v1/plugins/blog-draft?action=topics");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuggestedTopics(data.topics || []);
+    } catch (err: any) {
+      toast.error("Failed to get suggestions");
+    } finally {
+      setLoadingTopics(false);
+    }
+  };
+
+  // ─── Format Time ──────────────────────────────────────────
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // ─── Markdown Preview ─────────────────────────────────────
+
+  const renderMarkdown = (md: string) => {
+    let html = md;
+    // Code blocks
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>');
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    // Bold & italic
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Blockquotes
+    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+    // Unordered lists
+    html = html.replace(/^- (.+)$/gm, '<li class="ul-item">$1</li>');
+    // Ordered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li class="ol-item">$1</li>');
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr />');
+    // Paragraphs (double newline)
+    html = html.replace(/\n\n/g, '</p><p>');
+    // Single newlines within paragraphs
+    html = html.replace(/\n/g, '<br />');
+    return `<p>${html}</p>`;
+  };
+
+  // ─── Keyboard shortcuts ───────────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s" && view === "edit") {
+        e.preventDefault();
+        saveDraft();
+      }
+      if (e.key === "Escape") {
+        if (showRefine) setShowRefine(false);
+        else if (exportFormat) setExportFormat(null);
+        else if (view === "preview") setView("edit");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [view, showRefine, exportFormat, activeDraft]);
+
+  // ═══════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════
+
+  // ─── Create View ───────────────────────────────────────────
+
+  if (view === "create") {
+    return (
+      <PageTransition>
+        <div className="min-h-[100dvh] bg-[#0a0a0b] px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+          {/* Header */}
+          <button
+            onClick={() => setView("list")}
+            className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm mb-6 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to drafts
+          </button>
+
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <FileEdit className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-white">New Blog Post</h1>
+              <p className="text-sm text-zinc-500">Generate from your knowledge</p>
+            </div>
+          </div>
+
+          {/* Topic Input */}
+          <div className="space-y-6">
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">Topic</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="What do you want to write about?"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20 transition-all text-[15px]"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && topic.trim()) {
+                      e.preventDefault();
+                      generateDraft();
+                    }
+                  }}
+                />
               </div>
-              <button
-                onClick={() => {
-                  setView(view === "create" ? "list" : "create");
-                  setSuggestions([]);
-                }}
-                className="flex items-center gap-2 rounded-xl border border-teal-500/20 bg-teal-500/10 px-4 py-2.5 text-sm font-medium text-teal-400 transition-all hover:bg-teal-500/20"
-              >
-                {view === "create" ? <ArrowLeft className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                {view === "create" ? "Back" : "New Draft"}
-              </button>
             </div>
 
-            {view === "create" && (
-              <div className="mb-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">Topic</label>
-                    <input
-                      value={topic}
-                      onChange={(event) => setTopic(event.target.value)}
-                      placeholder="What do you want to write about?"
-                      className="w-full rounded-xl border border-white/[0.08] bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-teal-500/30 focus:outline-none"
-                    />
-                  </div>
+            {/* AI Topic Suggestions */}
+            <div>
+              <button
+                onClick={suggestTopics}
+                disabled={loadingTopics}
+                className="flex items-center gap-2 text-sm text-teal-400 hover:text-teal-300 transition-colors disabled:opacity-50"
+              >
+                {loadingTopics ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Lightbulb className="w-3.5 h-3.5" />
+                )}
+                Suggest topics from my knowledge
+              </button>
 
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div>
-                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">Style</label>
-                      <select value={style} onChange={(event) => setStyle(event.target.value)} className="w-full rounded-xl border border-white/[0.08] bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-teal-500/30 focus:outline-none">
-                        {STYLES.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">Tone</label>
-                      <select value={tone} onChange={(event) => setTone(event.target.value)} className="w-full rounded-xl border border-white/[0.08] bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-teal-500/30 focus:outline-none">
-                        {TONES.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-500">Target Length</label>
-                      <input value={targetLength} onChange={(event) => setTargetLength(Number(event.target.value) || 1200)} type="number" min={400} max={3200} className="w-full rounded-xl border border-white/[0.08] bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 focus:border-teal-500/30 focus:outline-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={createDraft} disabled={generating} className="flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-sm font-semibold text-black transition-all hover:bg-teal-400 disabled:opacity-50">
-                      {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      Generate Draft
-                    </button>
-                    <button onClick={fetchSuggestions} disabled={loadingTopics} className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-zinc-900/70 px-4 py-2.5 text-sm text-zinc-300 transition-all hover:border-teal-500/20 hover:text-white">
-                      {loadingTopics ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lightbulb className="h-4 w-4" />}
-                      Suggest Topics
-                    </button>
-                  </div>
-
-                  {suggestions.length > 0 && (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.title}
-                          onClick={() => {
-                            setTopic(suggestion.title);
-                            setStyle(suggestion.style || "casual");
-                          }}
-                          className="rounded-xl border border-white/[0.06] bg-zinc-900/60 p-3 text-left transition-all hover:border-teal-500/20 hover:bg-zinc-900"
-                        >
-                          <div className="text-sm font-medium text-zinc-200">{suggestion.title}</div>
-                          <div className="mt-1 text-xs text-zinc-500">{suggestion.description}</div>
-                          <div className="mt-2 text-[11px] text-zinc-600">{suggestion.readingTime} min read · {suggestion.style}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-6 w-6 animate-spin text-teal-400" />
-              </div>
-            ) : drafts.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-12 text-center">
-                <FileEdit className="mx-auto mb-4 h-8 w-8 text-zinc-600" />
-                <h2 className="text-base font-medium text-zinc-200">No drafts yet</h2>
-                <p className="mt-2 text-sm text-zinc-500">Generate a first post from your stored knowledge.</p>
-              </div>
-            ) : (
-              <Stagger>
-                <div className="space-y-3">
-                  {drafts.map((draft) => (
-                    <button key={draft.id} onClick={() => loadDraft(draft.id)} className="group w-full rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-5 text-left transition-all hover:border-white/[0.12] hover:bg-zinc-900/80">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="truncate text-sm font-medium text-zinc-200 group-hover:text-white">{draft.title}</h3>
-                            <span className={cn("rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide", draft.status === "ready" ? "bg-emerald-500/10 text-emerald-400" : draft.status === "refining" ? "bg-amber-500/10 text-amber-400" : "bg-zinc-500/10 text-zinc-400")}>
-                              {draft.status}
-                            </span>
-                          </div>
-                          <p className="mt-2 line-clamp-2 text-sm text-zinc-500">{draft.preview}</p>
-                          <p className="mt-3 text-[11px] text-zinc-600">{draft.style} · {draft.wordCount.toLocaleString()} words · {draft.sourceCount} sources</p>
-                        </div>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteDraft(draft.id);
-                          }}
-                          className="rounded-lg px-3 py-2 text-xs text-zinc-500 opacity-0 transition-all hover:bg-rose-500/10 hover:text-rose-400 group-hover:opacity-100"
-                        >
-                          Delete
-                        </button>
+              {suggestedTopics.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {suggestedTopics.map((t, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setTopic(t.title);
+                        setStyle(t.style);
+                      }}
+                      className="text-left p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-teal-500/30 hover:bg-teal-500/[0.03] transition-all group"
+                    >
+                      <p className="text-sm font-medium text-zinc-200 group-hover:text-white line-clamp-1">{t.title}</p>
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{t.description}</p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-zinc-600">
+                        <Clock className="w-3 h-3" />
+                        <span>{t.readingTime} min read</span>
+                        <span className="text-zinc-700">·</span>
+                        <span className="capitalize">{t.style}</span>
                       </div>
                     </button>
                   ))}
                 </div>
-              </Stagger>
-            )}
-          </>
-        )}
+              )}
+            </div>
 
-        {(view === "edit" || view === "preview") && activeDraft && (
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <button onClick={() => setView("list")} className="flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300">
-                <ArrowLeft className="h-4 w-4" />
-                All Drafts
-              </button>
-              <div className="flex flex-wrap items-center gap-2">
-                <button onClick={() => setView(view === "edit" ? "preview" : "edit")} className="rounded-lg border border-white/[0.08] bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300 transition-all hover:border-white/[0.12]">
-                  {view === "edit" ? "Preview" : "Edit"}
-                </button>
-                <button onClick={copyDraft} className="rounded-lg border border-white/[0.08] bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300 transition-all hover:border-white/[0.12]">
-                  {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                </button>
-                <button onClick={() => exportDraft("markdown")} className="rounded-lg border border-white/[0.08] bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300 transition-all hover:border-white/[0.12]">
-                  <Download className="h-4 w-4" />
-                </button>
-                <button onClick={saveDraft} disabled={saving} className="flex items-center gap-2 rounded-lg bg-teal-500/10 px-3 py-2 text-xs font-medium text-teal-400 transition-all hover:bg-teal-500/20 disabled:opacity-50">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Save
-                </button>
+            {/* Style Picker */}
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-3 block">Writing Style</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {STYLES.map((s) => {
+                  const Icon = s.icon;
+                  const active = style === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setStyle(s.id)}
+                      className={cn(
+                        "p-3 rounded-xl border text-left transition-all",
+                        active
+                          ? "bg-teal-500/[0.08] border-teal-500/30 ring-1 ring-teal-500/20"
+                          : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12]"
+                      )}
+                    >
+                      <Icon className={cn("w-4 h-4 mb-1.5", active ? "text-teal-400" : "text-zinc-500")} />
+                      <p className={cn("text-sm font-medium", active ? "text-teal-300" : "text-zinc-300")}>{s.label}</p>
+                      <p className="text-xs text-zinc-600 mt-0.5">{s.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-5">
+            {/* Tone Picker */}
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-3 block">Tone</label>
+              <div className="flex flex-wrap gap-2">
+                {TONES.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTone(t.id)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm border transition-all",
+                      tone === t.id
+                        ? "bg-teal-500/[0.08] border-teal-500/30 text-teal-300"
+                        : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:border-white/[0.12] hover:text-zinc-300"
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Target Length */}
+            <div>
+              <label className="text-sm font-medium text-zinc-300 mb-2 block">
+                Target length: ~{targetLength.toLocaleString()} words
+              </label>
               <input
-                value={activeDraft.title}
-                onChange={(event) => setActiveDraft((current) => current ? { ...current, title: event.target.value } : current)}
-                className="w-full bg-transparent text-3xl font-semibold tracking-tight text-zinc-100 outline-none"
+                type="range"
+                min={400}
+                max={3000}
+                step={100}
+                value={targetLength}
+                onChange={(e) => setTargetLength(parseInt(e.target.value))}
+                className="w-full accent-teal-500"
               />
-              <div className="mt-3 flex flex-wrap gap-3 text-xs text-zinc-500">
-                <span>{activeDraft.style}</span>
-                <span>{activeDraft.tone}</span>
-                <span>{activeWordCount.toLocaleString()} words</span>
-                <span>{activeDraft.sourceCount} sources</span>
+              <div className="flex justify-between text-xs text-zinc-600 mt-1">
+                <span>Short (400)</span>
+                <span>Medium (1200)</span>
+                <span>Long (3000)</span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="text-sm font-medium text-zinc-200">AI Refine</div>
-                <button onClick={() => exportDraft("html")} className="text-xs text-zinc-500 transition-colors hover:text-teal-400">Export HTML</button>
+            {/* Generate Button */}
+            <button
+              onClick={generateDraft}
+              disabled={!topic.trim() || generating}
+              className="w-full py-3.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-black font-semibold text-[15px] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating from your knowledge…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Blog Post
+                </>
+              )}
+            </button>
+
+            {generating && (
+              <div className="text-center">
+                <p className="text-sm text-zinc-500">
+                  Searching your memories, building an outline, and writing the draft…
+                </p>
+                <p className="text-xs text-zinc-600 mt-1">This may take 15-30 seconds</p>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <input
-                  value={refineInstruction}
-                  onChange={(event) => setRefineInstruction(event.target.value)}
-                  placeholder="Make it sharper, more concise, more technical..."
-                  className="flex-1 rounded-xl border border-white/[0.08] bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-teal-500/30 focus:outline-none"
-                />
-                <button onClick={refineDraft} disabled={refining || !refineInstruction.trim()} className="flex items-center justify-center gap-2 rounded-xl bg-zinc-950/80 px-4 py-3 text-sm text-teal-400 transition-all hover:bg-zinc-950 disabled:opacity-40">
-                  {refining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                  Refine
+            )}
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  // ─── Edit View ─────────────────────────────────────────────
+
+  if ((view === "edit" || view === "preview") && activeDraft) {
+    const wordCount = activeDraft.content.split(/\s+/).filter(Boolean).length;
+    const readTime = Math.max(1, Math.round(wordCount / 200));
+
+    return (
+      <PageTransition>
+        <div className="min-h-[100dvh] bg-[#0a0a0b] flex flex-col">
+          {/* Editor Toolbar */}
+          <div className="sticky top-0 z-20 bg-[#0a0a0b]/90 backdrop-blur-xl border-b border-white/[0.04]">
+            <div className="px-4 sm:px-6 py-3 flex items-center justify-between max-w-5xl mx-auto">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (hasUnsaved.current) {
+                      saveDraft().then(() => {
+                        setView("list");
+                        setActiveDraft(null);
+                      });
+                    } else {
+                      setView("list");
+                      setActiveDraft(null);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Drafts</span>
+                </button>
+
+                <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-600">
+                  <span>{wordCount.toLocaleString()} words</span>
+                  <span>·</span>
+                  <span>{readTime} min read</span>
+                  <span>·</span>
+                  <span>{activeDraft.sourceCount} sources</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* View Toggle */}
+                <div className="flex bg-white/[0.03] rounded-lg border border-white/[0.06] p-0.5">
+                  <button
+                    onClick={() => setView("edit")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      view === "edit"
+                        ? "bg-white/[0.08] text-white"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    <PenTool className="w-3 h-3 sm:hidden" />
+                    <span className="hidden sm:inline">Edit</span>
+                  </button>
+                  <button
+                    onClick={() => setView("preview")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      view === "preview"
+                        ? "bg-white/[0.08] text-white"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    <Eye className="w-3 h-3 sm:hidden" />
+                    <span className="hidden sm:inline">Preview</span>
+                  </button>
+                </div>
+
+                {/* Refine */}
+                <button
+                  onClick={() => setShowRefine(!showRefine)}
+                  className={cn(
+                    "p-2 rounded-lg border transition-all",
+                    showRefine
+                      ? "bg-teal-500/[0.08] border-teal-500/30 text-teal-400"
+                      : "border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12]"
+                  )}
+                  title="Refine with AI"
+                >
+                  <Wand2 className="w-4 h-4" />
+                </button>
+
+                {/* Copy */}
+                <button
+                  onClick={copyContent}
+                  className="p-2 rounded-lg border border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12] transition-all"
+                  title="Copy markdown"
+                >
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+
+                {/* Export */}
+                <div className="relative">
+                  <button
+                    onClick={() => setExportFormat(exportFormat ? null : "open")}
+                    className="p-2 rounded-lg border border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12] transition-all"
+                    title="Export"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  {exportFormat && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setExportFormat(null)} />
+                      <div className="absolute right-0 top-full mt-1 z-40 bg-[#131315] border border-white/[0.08] rounded-xl p-1 min-w-[160px] shadow-2xl shadow-black/60">
+                        <button
+                          onClick={() => exportDraft("markdown")}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:bg-white/[0.05] transition-colors"
+                        >
+                          <FileText className="w-4 h-4 text-zinc-500" />
+                          Markdown (.md)
+                        </button>
+                        <button
+                          onClick={() => exportDraft("html")}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-300 hover:bg-white/[0.05] transition-colors"
+                        >
+                          <Code2 className="w-4 h-4 text-zinc-500" />
+                          HTML (.html)
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Save */}
+                <button
+                  onClick={saveDraft}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 hover:bg-teal-500/20 text-sm font-medium transition-all disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">Save</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Refine Panel */}
+            {showRefine && (
+              <div className="px-4 sm:px-6 pb-3 max-w-5xl mx-auto">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={refineInstruction}
+                    onChange={(e) => setRefineInstruction(e.target.value)}
+                    placeholder={
+                      editorRef.current && editorRef.current.selectionStart !== editorRef.current.selectionEnd
+                        ? "How should I refine the selected text?"
+                        : "How should I refine the entire post? (e.g., make it more concise, add examples…)"
+                    }
+                    className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && refineInstruction.trim()) refineDraft();
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={refineDraft}
+                    disabled={refining || !refineInstruction.trim()}
+                    className="px-4 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 text-black text-sm font-medium transition-all disabled:opacity-40 flex items-center gap-1.5"
+                  >
+                    {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                    Refine
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-600 mt-1.5">
+                  💡 Select text in the editor to refine just that section, or leave empty to refine the whole post.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Editor / Preview Area */}
+          <div className="flex-1 px-4 sm:px-6 py-6 max-w-4xl mx-auto w-full">
+            {/* Editable title */}
+            <input
+              type="text"
+              value={activeDraft.title}
+              onChange={(e) => {
+                setActiveDraft(prev => prev ? { ...prev, title: e.target.value } : prev);
+                hasUnsaved.current = true;
+              }}
+              className="w-full bg-transparent text-[28px] sm:text-[32px] font-bold tracking-[-0.04em] text-white placeholder:text-zinc-700 focus:outline-none mb-4 border-none"
+              placeholder="Post title…"
+            />
+
+            {/* Meta bar */}
+            <div className="flex flex-wrap items-center gap-3 mb-6 text-xs text-zinc-600">
+              <span className="capitalize px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                {activeDraft.style}
+              </span>
+              <span className="capitalize px-2 py-0.5 rounded-full bg-white/[0.03] border border-white/[0.06]">
+                {activeDraft.tone}
+              </span>
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {readTime} min read
+              </div>
+              <div className="flex items-center gap-1">
+                <AlignLeft className="w-3 h-3" />
+                {wordCount.toLocaleString()} words
+              </div>
+
+              {/* Status toggle */}
+              <div className="relative ml-auto">
+                <button
+                  onClick={() => {
+                    const statuses: Array<"draft" | "refining" | "ready"> = ["draft", "refining", "ready"];
+                    const idx = statuses.indexOf(activeDraft.status);
+                    const next = statuses[(idx + 1) % statuses.length];
+                    setActiveDraft(prev => prev ? { ...prev, status: next } : prev);
+                    hasUnsaved.current = true;
+                  }}
+                  className={cn(
+                    "px-2.5 py-0.5 rounded-full text-xs font-medium transition-all",
+                    STATUS_CONFIG[activeDraft.status].bg,
+                    STATUS_CONFIG[activeDraft.status].color
+                  )}
+                >
+                  {STATUS_CONFIG[activeDraft.status].label}
                 </button>
               </div>
             </div>
 
             {view === "edit" ? (
               <textarea
+                ref={editorRef}
                 value={activeDraft.content}
-                onChange={(event) => setActiveDraft((current) => current ? { ...current, content: event.target.value } : current)}
-                className="min-h-[60vh] w-full rounded-2xl border border-white/[0.06] bg-zinc-950/80 px-5 py-4 font-mono text-sm leading-7 text-zinc-200 outline-none"
+                onChange={(e) => {
+                  setActiveDraft(prev => prev ? { ...prev, content: e.target.value } : prev);
+                  hasUnsaved.current = true;
+                }}
+                className="w-full min-h-[calc(100dvh-280px)] bg-transparent text-[15px] leading-[1.8] text-zinc-300 placeholder:text-zinc-700 focus:outline-none resize-none font-mono"
+                placeholder="Start writing…"
+                spellCheck
               />
             ) : (
-              <div className="prose prose-invert max-w-none rounded-2xl border border-white/[0.06] bg-zinc-900/50 p-6">
-                <div dangerouslySetInnerHTML={{ __html: `<p>${renderMarkdown(activeDraft.content)}</p>` }} />
-              </div>
+              <div
+                className="prose-mindstore min-h-[calc(100dvh-280px)]"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(activeDraft.content) }}
+              />
             )}
           </div>
+        </div>
+
+        {/* Preview styles */}
+        <style jsx global>{`
+          .prose-mindstore {
+            color: #d4d4d8;
+            font-size: 16px;
+            line-height: 1.8;
+          }
+          .prose-mindstore h1 {
+            color: #fff;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin: 2rem 0 0.75rem;
+          }
+          .prose-mindstore h2 {
+            color: #f4f4f5;
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin: 2.5rem 0 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+          }
+          .prose-mindstore h3 {
+            color: #e4e4e7;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.5rem;
+          }
+          .prose-mindstore strong {
+            color: #fff;
+            font-weight: 600;
+          }
+          .prose-mindstore em {
+            color: #a1a1aa;
+            font-style: italic;
+          }
+          .prose-mindstore blockquote {
+            border-left: 3px solid #14b8a6;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: #a1a1aa;
+            font-style: italic;
+          }
+          .prose-mindstore .code-block {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin: 1.5rem 0;
+          }
+          .prose-mindstore .inline-code {
+            background: rgba(255,255,255,0.06);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #5eead4;
+          }
+          .prose-mindstore .ul-item,
+          .prose-mindstore .ol-item {
+            margin: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+          }
+          .prose-mindstore .ul-item::before {
+            content: "•";
+            position: absolute;
+            left: 0.25rem;
+            color: #14b8a6;
+          }
+          .prose-mindstore hr {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            margin: 2rem 0;
+          }
+          .prose-mindstore a {
+            color: #14b8a6;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+          }
+          .prose-mindstore p {
+            margin: 0.75rem 0;
+          }
+        `}</style>
+      </PageTransition>
+    );
+  }
+
+  // ─── List View (Default) ──────────────────────────────────
+
+  return (
+    <PageTransition>
+      <div className="min-h-[100dvh] bg-[#0a0a0b] px-4 sm:px-6 py-6 max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <FileEdit className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-white">Blog Writer</h1>
+              <p className="text-sm text-zinc-500">Turn your knowledge into posts</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setTopic("");
+              setSuggestedTopics([]);
+              setView("create");
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-black font-semibold text-sm transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Post</span>
+          </button>
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && drafts.length === 0 && (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
+              <FileEdit className="w-7 h-7 text-zinc-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-zinc-300 mb-2">No drafts yet</h2>
+            <p className="text-sm text-zinc-500 max-w-sm mx-auto mb-6">
+              Generate blog posts from your stored knowledge. The AI writes from what you know — not generic content.
+            </p>
+            <button
+              onClick={() => setView("create")}
+              className="px-5 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-black font-semibold text-sm transition-all"
+            >
+              Create your first post
+            </button>
+          </div>
+        )}
+
+        {/* Draft List */}
+        {!loading && drafts.length > 0 && (
+          <Stagger>
+            <div className="space-y-2">
+              {drafts.map((draft) => (
+                <button
+                  key={draft.id}
+                  onClick={() => loadDraft(draft.id)}
+                  className="w-full text-left p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03] transition-all group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-[15px] font-medium text-zinc-200 group-hover:text-white truncate transition-colors">
+                          {draft.title}
+                        </h3>
+                        <span className={cn(
+                          "shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium",
+                          STATUS_CONFIG[draft.status].bg,
+                          STATUS_CONFIG[draft.status].color
+                        )}>
+                          {STATUS_CONFIG[draft.status].label}
+                        </span>
+                      </div>
+                      <p className="text-sm text-zinc-500 line-clamp-2">{draft.preview}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-zinc-600">
+                        <span className="capitalize">{draft.style}</span>
+                        <span>·</span>
+                        <span>{draft.wordCount.toLocaleString()} words</span>
+                        <span>·</span>
+                        <span>{draft.sourceCount} sources</span>
+                        <span>·</span>
+                        <span>{formatTime(draft.updatedAt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this draft?")) deleteDraft(draft.id);
+                        }}
+                        className="p-1.5 rounded-lg text-zinc-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Stagger>
         )}
       </div>
     </PageTransition>
   );
 }
-

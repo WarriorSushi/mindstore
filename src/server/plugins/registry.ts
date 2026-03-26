@@ -5,7 +5,7 @@
  * Each entry has its manifest + metadata for the plugin store.
  */
 
-import { PluginManifest, PluginStatus, PluginStoreEntry } from './types';
+import { PluginManifest, PluginStoreEntry } from './types';
 
 // ─── PLUGIN MANIFESTS ────────────────────────────────────────────
 
@@ -61,9 +61,8 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'youtube-transcript': {
-    slug: 'youtube-transcript',
-    aliases: ['youtube-importer'],
+  'youtube-importer': {
+    slug: 'youtube-importer',
     name: 'YouTube Transcripts',
     description: 'Import transcripts from YouTube videos. Paste a URL and get the full transcript.',
     version: '1.0.0',
@@ -122,9 +121,8 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'reddit-saved': {
-    slug: 'reddit-saved',
-    aliases: ['reddit-importer'],
+  'reddit-importer': {
+    slug: 'reddit-importer',
     name: 'Reddit Saved Posts',
     description: 'Import your saved posts and comments from Reddit\'s data export.',
     version: '1.0.0',
@@ -211,7 +209,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'notion-importer': {
     slug: 'notion-importer',
     name: 'Notion Import (Enhanced)',
-    description: 'Full Notion workspace import with database support — not just pages.',
+    description: 'Full Notion workspace import with database support, not just pages. Upload your Notion export ZIP with CSV databases.',
     version: '1.0.0',
     type: 'extension',
     category: 'import',
@@ -242,7 +240,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     capabilities: ['read:memories', 'read:embeddings', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall', 'onDashboard'],
     ui: {
-      pages: [{ path: 'mindmap', title: 'Mind Map', icon: 'Network', showInSidebar: false }],
+      pages: [{ path: 'map', title: 'Mind Map', icon: 'Network', showInSidebar: false }],
     },
   },
 
@@ -255,11 +253,8 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'analysis',
     icon: 'SearchX',
     author: 'MindStore',
-    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:widgets', 'ui:pages'],
+    capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:widgets'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'gaps', title: 'Knowledge Gaps', icon: 'SearchX', showInSidebar: false }],
-    },
   },
 
   'contradiction-finder': {
@@ -291,35 +286,17 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     },
   },
 
-  'writing-style': {
-    slug: 'writing-style',
-    aliases: ['writing-analyzer'],
+  'writing-analyzer': {
+    slug: 'writing-analyzer',
     name: 'Writing Style Analyzer',
     description: 'Analyze your writing style — vocabulary, tone, complexity, and patterns.',
     version: '1.0.0',
-    type: 'extension',
+    type: 'mcp',
     category: 'analysis',
     icon: 'PenLine',
     author: 'MindStore',
-    capabilities: ['read:memories', 'ui:widgets', 'ui:pages'],
-    hooks: ['onInstall', 'onUninstall', 'onDashboard'],
-    ui: {
-      pages: [{ path: 'writing', title: 'Writing Style', icon: 'PenLine', showInSidebar: false }],
-      dashboardWidgets: [
-        {
-          id: 'writing-style-overview',
-          title: 'Writing Style',
-          description: 'A quick snapshot of how much you have written and where it comes from.',
-          size: 'medium',
-          priority: 20,
-          emptyState: 'Install and activate the plugin to see your writing profile.',
-          cta: {
-            label: 'Open Analyzer',
-            href: '/app/writing',
-          },
-        },
-      ],
-    },
+    capabilities: ['read:memories', 'ui:widgets'],
+    hooks: ['onInstall', 'onUninstall'],
   },
 
   'sentiment-timeline': {
@@ -331,11 +308,8 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'analysis',
     icon: 'Heart',
     author: 'MindStore',
-    capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:widgets', 'ui:pages'],
+    capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:widgets'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'sentiment', title: 'Sentiment', icon: 'Heart', showInSidebar: false }],
-    },
   },
 
   // ─── Action Plugins ───────────────────────────────────────────
@@ -352,7 +326,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
     ui: {
-      pages: [{ path: 'blog', title: 'Blog Writer', icon: 'PenSquare', showInSidebar: true }],
+      pages: [{ path: 'write', title: 'Write', icon: 'PenSquare', showInSidebar: true }],
     },
   },
 
@@ -367,9 +341,6 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'flashcards', title: 'Flashcards', icon: 'Layers', showInSidebar: true }],
-    },
   },
 
   'newsletter-writer': {
@@ -383,9 +354,6 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'background:jobs', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'newsletter', title: 'Newsletter Writer', icon: 'Mail', showInSidebar: true }],
-    },
   },
 
   'resume-builder': {
@@ -399,24 +367,21 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'chat:generate', 'files:write', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'resume', title: 'Resume Builder', icon: 'FileUser', showInSidebar: true }],
-    },
   },
 
   'conversation-prep': {
     slug: 'conversation-prep',
     name: 'Conversation Prep',
-    description: 'Get briefed before a meeting. "What do I know about this person/topic?"',
+    description: 'Get briefed before a meeting. "What do I know about this person/topic?" — structured briefing with talking points.',
     version: '1.0.0',
-    type: 'mcp',
+    type: 'extension',
     category: 'action',
-    icon: 'UserCheck',
+    icon: 'Users',
     author: 'MindStore',
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
     ui: {
-      pages: [{ path: 'conversation', title: 'Conversation Prep', icon: 'UserCheck', showInSidebar: true }],
+      pages: [{ path: 'prep', title: 'Prep', icon: 'Users', showInSidebar: true }],
     },
     mcpTools: [{
       name: 'prepare_briefing',
@@ -442,9 +407,6 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
-    ui: {
-      pages: [{ path: 'paths', title: 'Learning Paths', icon: 'Route', showInSidebar: true }],
-    },
   },
 
   // ─── Export/Sync Plugins ──────────────────────────────────────
@@ -452,7 +414,7 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
   'obsidian-sync': {
     slug: 'obsidian-sync',
     name: 'Obsidian Vault Sync',
-    description: 'Two-way sync between MindStore and your Obsidian vault.',
+    description: 'Two-way sync between MindStore and your Obsidian vault. Export as .md with frontmatter, wikilinks, and backlinks.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -460,12 +422,15 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'write:memories', 'files:read', 'files:write', 'background:jobs'],
     hooks: ['onInstall', 'onUninstall', 'onMemoryCreate', 'onMemoryUpdate'],
+    ui: {
+      pages: [{ path: 'obsidian-sync', title: 'Obsidian Sync', icon: 'Gem', showInSidebar: true }],
+    },
   },
 
   'notion-sync': {
     slug: 'notion-sync',
     name: 'Notion Sync',
-    description: 'Sync MindStore memories to a Notion workspace as a searchable database.',
+    description: 'Push MindStore memories to a Notion database. Structured properties, source types, tags, and full content.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -473,12 +438,15 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'network:fetch', 'background:jobs'],
     hooks: ['onInstall', 'onUninstall', 'onMemoryCreate'],
+    ui: {
+      pages: [{ path: 'notion-sync', title: 'Notion Sync', icon: 'FileStack', showInSidebar: true }],
+    },
   },
 
   'anki-export': {
     slug: 'anki-export',
     name: 'Anki Deck Export',
-    description: 'Export flashcards as Anki-compatible .apkg decks.',
+    description: 'Export flashcards as Anki-compatible .apkg decks. Supports TSV (Anki native) and CSV (universal) formats with full SM-2 metadata.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -486,12 +454,15 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'files:write'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'anki', title: 'Anki Export', icon: 'Download', showInSidebar: true }],
+    },
   },
 
   'markdown-blog-export': {
     slug: 'markdown-blog-export',
     name: 'Markdown Blog Export',
-    description: 'Export memories as a blog-ready markdown folder with frontmatter. Hugo, Jekyll, Astro.',
+    description: 'Export memories as blog-ready markdown with frontmatter. Supports Hugo, Jekyll, Astro, Next.js, and plain markdown.',
     version: '1.0.0',
     type: 'extension',
     category: 'export',
@@ -499,6 +470,9 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'files:write'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'export', title: 'Blog Export', icon: 'FolderDown', showInSidebar: true }],
+    },
   },
 
   // ─── AI Enhancement Plugins ───────────────────────────────────
@@ -541,14 +515,17 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     category: 'ai',
     icon: 'Languages',
     author: 'MindStore',
-    capabilities: ['read:memories', 'write:embeddings'],
+    capabilities: ['read:memories', 'write:embeddings', 'chat:generate', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall', 'onImport', 'onSearch'],
+    ui: {
+      pages: [{ path: 'languages', title: 'Languages', icon: 'Languages', showInSidebar: true }],
+    },
   },
 
   'custom-rag': {
     slug: 'custom-rag',
     name: 'Custom RAG Strategies',
-    description: 'Swap retrieval strategies: HyDE, reranking, parent-child chunking, and more.',
+    description: 'Swap retrieval strategies: HyDE, reranking, parent-child chunking, contextual compression, and more.',
     version: '1.0.0',
     type: 'extension',
     category: 'ai',
@@ -556,19 +533,25 @@ export const PLUGIN_MANIFESTS: Record<string, PluginManifest> = {
     author: 'MindStore',
     capabilities: ['read:memories', 'read:embeddings', 'chat:generate'],
     hooks: ['onInstall', 'onUninstall', 'onSearch'],
+    ui: {
+      pages: [{ path: 'retrieval', title: 'Retrieval', icon: 'Cog', showInSidebar: true }],
+    },
   },
 
   'domain-embeddings': {
     slug: 'domain-embeddings',
     name: 'Domain-Specific Embeddings',
-    description: 'Use specialized embedding models for medical, legal, or code domains.',
+    description: 'Use specialized embedding models for medical, legal, code, and financial domains. Better search for specialized content.',
     version: '1.0.0',
-    type: 'prompt',
+    type: 'extension',
     category: 'ai',
     icon: 'Dna',
     author: 'MindStore',
-    capabilities: ['write:embeddings'],
+    capabilities: ['write:embeddings', 'read:memories', 'ui:pages'],
     hooks: ['onInstall', 'onUninstall'],
+    ui: {
+      pages: [{ path: 'domains', title: 'Domains', icon: 'Dna', showInSidebar: true }],
+    },
   },
 };
 
@@ -594,7 +577,7 @@ export function buildStoreCatalog(
       author: manifest.author,
       capabilities: manifest.capabilities,
       installed: !!installed,
-      status: installed?.status as PluginStatus | undefined,
+      status: installed?.status as any,
       featured: FEATURED_PLUGINS.includes(manifest.slug),
       tags: buildTags(manifest),
     };
@@ -604,7 +587,7 @@ export function buildStoreCatalog(
 // Plugins featured in the store (shown prominently)
 const FEATURED_PLUGINS = [
   'kindle-importer',
-  'youtube-transcript',
+  'youtube-importer',
   'mind-map-generator',
   'flashcard-maker',
   'voice-to-memory',

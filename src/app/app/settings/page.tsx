@@ -1,153 +1,35 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, Zap, Globe, Plug, Copy, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { usePageTitle } from "@/lib/use-page-title";
 
-type ProviderId = "openai" | "gemini" | "ollama" | "openrouter" | "custom";
-
-interface ProviderStatus {
-  configured?: boolean;
-  preview?: string;
-  url?: string;
-  model?: string;
+async function fetchSettings() {
+  try { const r = await fetch('/api/v1/settings'); return r.ok ? r.json() : null; } catch { return null; }
+}
+async function fetchStats() {
+  try { const r = await fetch('/api/v1/stats'); return r.ok ? r.json() : null; } catch { return null; }
+}
+async function fetchHealth() {
+  try { const r = await fetch('/api/v1/health'); return r.ok ? r.json() : null; } catch { return null; }
 }
 
-interface SettingsResponse {
-  chatProvider?: string;
-  embeddingProvider?: string;
-  hasApiKey?: boolean;
-  providers?: Partial<Record<ProviderId, ProviderStatus>>;
-  runtimeRequirements?: RuntimeRequirement[];
-  providerCatalog?: ProviderCatalogEntry[];
-  providerAuthRoadmap?: RoadmapItem[];
-}
-
-interface StatsResponse {
-  totalMemories: number;
-  totalSources: number;
-  byType?: Record<string, number>;
-}
-
-interface RuntimeRequirement {
-  id: string;
-  label: string;
-  value: string;
-  required: boolean;
-  description: string;
-}
-
-interface ProviderAuthMode {
-  id: string;
-  label: string;
-  status: "available" | "planned" | "risky";
-  description: string;
-}
-
-interface ProviderCatalogEntry {
-  id: string;
-  name: string;
-  tagline: string;
-  supports: {
-    chat: boolean;
-    embeddings: boolean;
-  };
-  authModes: ProviderAuthMode[];
-}
-
-interface RoadmapItem {
-  id: string;
-  label: string;
-  description: string;
-}
-
-interface ReindexStatusResponse {
-  total?: number;
-  withEmbeddings?: number;
-  withoutEmbeddings: number;
-  needsReindex: boolean;
-}
-
-interface ReindexBatchResponse {
-  processed: number;
-  remaining: number;
-  provider?: string;
-  message?: string;
-  error?: string;
-}
-
-interface ApiKeySummary {
-  id: string;
-  name: string;
-  createdAt: string | null;
-  lastUsedAt: string | null;
-}
-
-interface ApiKeysResponse {
-  keys: ApiKeySummary[];
-}
-
-interface MutationResponse {
-  ok?: boolean;
-  error?: string;
-}
-
-interface CreateApiKeyResponse extends MutationResponse {
-  rawKey?: string | null;
-  apiKey?: ApiKeySummary;
-}
-
-async function fetchSettings(): Promise<SettingsResponse | null> {
-  try {
-    const response = await fetch("/api/v1/settings");
-    return response.ok ? ((await response.json()) as SettingsResponse) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchStats(): Promise<StatsResponse | null> {
-  try {
-    const response = await fetch("/api/v1/stats");
-    return response.ok ? ((await response.json()) as StatsResponse) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchApiKeys(): Promise<ApiKeysResponse> {
-  try {
-    const response = await fetch("/api/v1/api-keys");
-    return response.ok ? ((await response.json()) as ApiKeysResponse) : { keys: [] };
-  } catch {
-    return { keys: [] };
-  }
-}
-
-async function fetchReindexStatus(): Promise<ReindexStatusResponse | null> {
-  try {
-    const response = await fetch("/api/v1/reindex");
-    return response.ok ? ((await response.json()) as ReindexStatusResponse) : null;
-  } catch {
-    return null;
-  }
-}
-
-function subscribeToWindowLocation() {
-  return () => {};
-}
-
-function getWindowOriginSnapshot() {
-  if (typeof window === "undefined") {
-    return "http://localhost:3000";
-  }
-
-  return window.location.origin;
+interface HealthData {
+  status: string;
+  memories: { total: number; withEmbeddings: number; withoutEmbeddings: number; embeddingPercent: number; pinned: number; oldest: string; newest: string };
+  embeddings: { dimensions: { dims: number; count: number }[]; coverage: string };
+  sources: { type: string; count: number; totalChars: number; avgChars: number; size: string }[];
+  storage: { contentSize: string; tableSize: string; indexSize: string; totalSize: string; raw: { contentBytes: number; tableBytes: number; indexBytes: number; totalBytes: number } };
+  activity: { day: string; count: number }[];
+  plugins: { total: number; enabled: number };
+  connections: number;
+  database: { version: string; serverTime: string; healthy: boolean };
 }
 
 export default function SettingsPage() {
+  usePageTitle("Settings");
   const [openaiKey, setOpenaiKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [ollamaUrl, setOllamaUrl] = useState("");
@@ -155,21 +37,15 @@ export default function SettingsPage() {
   const [customApiKey, setCustomApiKey] = useState("");
   const [customApiUrl, setCustomApiUrl] = useState("");
   const [customApiModel, setCustomApiModel] = useState("");
-  const [settings, setSettings] = useState<SettingsResponse | null>(null);
+  const [settings, setSettings] = useState<any>(null);
   const [saving, setSaving] = useState<string | null>(null);
-  const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [reindexing, setReindexing] = useState(false);
-  const [reindexStatus, setReindexStatus] = useState<ReindexStatusResponse | null>(null);
+  const [reindexStatus, setReindexStatus] = useState<any>(null);
   const [chatProvider, setChatProvider] = useState<string>("auto");
   const [savingChat, setSavingChat] = useState(false);
-  const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
-  const [creatingApiKey, setCreatingApiKey] = useState(false);
-  const [newApiKey, setNewApiKey] = useState<string | null>(null);
-  const publicBaseUrl = useSyncExternalStore(
-    subscribeToWindowLocation,
-    getWindowOriginSnapshot,
-    () => "http://localhost:3000"
-  );
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [activeTab, setActiveTab] = useState<'providers' | 'health' | 'data'>('providers');
 
   useEffect(() => {
     fetchSettings().then((s) => {
@@ -177,13 +53,13 @@ export default function SettingsPage() {
       if (s?.chatProvider) setChatProvider(s.chatProvider);
     });
     fetchStats().then(setStats);
-    fetchApiKeys().then((data) => setApiKeys(data?.keys || []));
-    fetchReindexStatus().then(setReindexStatus);
+    fetchHealth().then(setHealth);
+    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
   }, []);
 
   const handleSave = async (provider: string) => {
     setSaving(provider);
-    const body: Record<string, string> = {};
+    const body: any = {};
     if (provider === 'openai') body.apiKey = openaiKey.trim();
     if (provider === 'gemini') body.geminiKey = geminiKey.trim();
     if (provider === 'ollama') body.ollamaUrl = ollamaUrl.trim();
@@ -194,7 +70,7 @@ export default function SettingsPage() {
       body.customApiModel = customApiModel.trim();
     }
     const res = await fetch('/api/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = (await res.json()) as MutationResponse;
+    const data = await res.json();
     setSaving(null);
     if (data.ok) {
       toast.success(`${provider} connected`);
@@ -219,9 +95,7 @@ export default function SettingsPage() {
       a.download = `mindstore-backup-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       toast.success("Backup downloaded");
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleClear = async () => {
@@ -236,8 +110,9 @@ export default function SettingsPage() {
     setReindexing(true);
     try {
       // Check status first
-      const status = await fetchReindexStatus();
-      if (!status?.needsReindex) {
+      const statusRes = await fetch('/api/v1/reindex');
+      const status = await statusRes.json();
+      if (!status.needsReindex) {
         toast.success("All memories already have embeddings!");
         setReindexing(false);
         return;
@@ -247,20 +122,17 @@ export default function SettingsPage() {
       let remaining = status.withoutEmbeddings;
       while (remaining > 0) {
         const res = await fetch('/api/v1/reindex', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ batchSize: 50 }) });
-        if (!res.ok) {
-          const error = (await res.json()) as MutationResponse;
-          throw new Error(error.error || "Reindex failed");
-        }
-        const data = (await res.json()) as ReindexBatchResponse;
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+        const data = await res.json();
         remaining = data.remaining;
         if (remaining > 0) toast(`${data.processed} done, ${remaining} remaining…`);
       }
       toast.success("All memories now have embeddings! Semantic search enabled.");
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Reindex failed"));
+    } catch (err: any) {
+      toast.error(err.message || "Reindex failed");
     }
     setReindexing(false);
-    fetchReindexStatus().then(setReindexStatus);
+    fetch('/api/v1/reindex').then(r => r.json()).then(setReindexStatus).catch(() => {});
   };
 
   const handleSetChatProvider = async (provider: string) => {
@@ -272,7 +144,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatProvider: provider }),
       });
-      const data = (await res.json()) as MutationResponse;
+      const data = await res.json();
       if (data.ok) {
         toast.success(provider === 'auto' ? 'Chat provider set to auto-detect' : `Chat will use ${provider}`);
       } else {
@@ -284,65 +156,6 @@ export default function SettingsPage() {
     setSavingChat(false);
   };
 
-  const handleCreateApiKey = async () => {
-    setCreatingApiKey(true);
-    try {
-      const res = await fetch('/api/v1/api-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'MindStore Everywhere' }),
-      });
-      const data = (await res.json()) as CreateApiKeyResponse;
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create API key');
-      }
-      setNewApiKey(data.rawKey || null);
-      if (data.apiKey) {
-        setApiKeys((current) => [data.apiKey!, ...current.filter((key) => key.id !== data.apiKey?.id)]);
-      }
-      toast.success('MindStore Everywhere API key created');
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to create API key'));
-    } finally {
-      setCreatingApiKey(false);
-    }
-  };
-
-  const handleCopyApiKey = async () => {
-    if (!newApiKey) return;
-    try {
-      await navigator.clipboard.writeText(newApiKey);
-      toast.success('API key copied');
-    } catch {
-      toast.error('Failed to copy API key');
-    }
-  };
-
-  const handleCopyBaseUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(publicBaseUrl);
-      toast.success("Base URL copied");
-    } catch {
-      toast.error("Failed to copy base URL");
-    }
-  };
-
-  const handleRevokeApiKey = async (id: string) => {
-    try {
-      const res = await fetch(`/api/v1/api-keys?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      const data = (await res.json()) as MutationResponse;
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to revoke API key');
-      }
-      setApiKeys((current) => current.filter((key) => key.id !== id));
-      toast.success('API key revoked');
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, 'Failed to revoke API key'));
-    }
-  };
-
   const providers = settings?.providers || {};
 
   return (
@@ -350,12 +163,36 @@ export default function SettingsPage() {
       <Stagger>
         <div>
           <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Settings</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, data management</p>
+          <p className="text-[13px] text-zinc-500 mt-0.5">AI providers, system health, data management</p>
+        </div>
+      </Stagger>
+
+      {/* Tab navigation */}
+      <Stagger>
+        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          {([
+            { id: 'providers' as const, label: 'Providers', icon: <Key className="w-3.5 h-3.5" /> },
+            { id: 'health' as const, label: 'System Health', icon: <Activity className="w-3.5 h-3.5" /> },
+            { id: 'data' as const, label: 'Data', icon: <Database className="w-3.5 h-3.5" /> },
+          ]).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
       </Stagger>
 
       {/* Active Provider Badge */}
-      {settings?.embeddingProvider && (
+      {activeTab === 'providers' && settings?.embeddingProvider && (
         <Stagger>
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-teal-500/5 border border-teal-500/15">
             <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
@@ -364,86 +201,8 @@ export default function SettingsPage() {
         </Stagger>
       )}
 
-      <Stagger>
-      <div className="space-y-3">
-        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">What You Need</p>
-        <div className="grid gap-2 md:grid-cols-2">
-          {(settings?.runtimeRequirements || []).map((item) => (
-            <div key={item.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[13px] font-medium text-zinc-200">{item.label}</p>
-                <span className={`text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border shrink-0 ${
-                  item.required
-                    ? "bg-amber-500/10 text-amber-300 border-amber-500/15"
-                    : "bg-zinc-500/10 text-zinc-400 border-zinc-500/15"
-                }`}>
-                  {item.required ? "Required" : "Optional"}
-                </span>
-              </div>
-              <p className="text-[12px] text-zinc-300 mt-2">{item.value}</p>
-              <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{item.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      </Stagger>
-
-      <Stagger>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3 px-1">
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Provider Access Modes</p>
-          <Link href="/docs/build/provider-access" className="text-[11px] text-teal-300 hover:text-teal-200">
-            Why this matters
-          </Link>
-        </div>
-        <div className="grid gap-2">
-          {(settings?.providerCatalog || []).map((provider) => (
-            <div key={provider.id} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-[13px] font-medium text-zinc-200">{provider.name}</p>
-                  <span className="text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border bg-white/[0.04] text-zinc-400 border-white/[0.08]">
-                    {provider.supports.chat ? "Chat" : "No chat"} · {provider.supports.embeddings ? "Embeddings" : "No embeddings"}
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-500 mt-1">{provider.tagline}</p>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                {provider.authModes.map((mode) => (
-                  <div key={`${provider.id}-${mode.id}`} className="rounded-xl border border-white/[0.05] bg-black/20 px-3 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[12px] font-medium text-zinc-200">{mode.label}</p>
-                      <span className={`text-[9px] font-bold uppercase tracking-[0.08em] px-2 py-[3px] rounded-md border ${
-                        mode.status === "available"
-                          ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/15"
-                          : mode.status === "planned"
-                            ? "bg-sky-500/10 text-sky-300 border-sky-500/15"
-                            : "bg-amber-500/10 text-amber-300 border-amber-500/15"
-                      }`}>
-                        {mode.status}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">{mode.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
-          <p className="text-[12px] font-medium text-zinc-200">Auth roadmap</p>
-          {(settings?.providerAuthRoadmap || []).map((item) => (
-            <div key={item.id} className="rounded-xl border border-white/[0.05] bg-black/20 px-3 py-3">
-              <p className="text-[12px] font-medium text-zinc-200">{item.label}</p>
-              <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{item.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      </Stagger>
-
       {/* Reindex nudge */}
-      {settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
+      {activeTab === 'providers' && settings?.hasApiKey && reindexStatus?.needsReindex && !reindexing && (
         <Stagger>
           <button
             onClick={handleReindex}
@@ -459,6 +218,7 @@ export default function SettingsPage() {
       )}
 
       {/* ─── Providers ─── */}
+      {activeTab === 'providers' && (
       <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">AI Providers</p>
@@ -472,8 +232,8 @@ export default function SettingsPage() {
           badgeColor="text-emerald-400 bg-emerald-500/10 border-emerald-500/15"
           connected={providers.gemini?.configured}
           preview={providers.gemini?.preview}
-          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-blue-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setGeminiKey(event.target.value) }}
+          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (e: any) => setGeminiKey(e.target.value) }}
           onSave={() => handleSave('gemini')}
           saving={saving === 'gemini'}
           disabled={!geminiKey.trim()}
@@ -489,8 +249,8 @@ export default function SettingsPage() {
           badgeColor="text-zinc-400 bg-zinc-500/10 border-zinc-500/15"
           connected={providers.openai?.configured}
           preview={providers.openai?.preview}
-          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-emerald-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setOpenaiKey(event.target.value) }}
+          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" className="text-emerald-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (e: any) => setOpenaiKey(e.target.value) }}
           onSave={() => handleSave('openai')}
           saving={saving === 'openai'}
           disabled={!openaiKey.trim()}
@@ -506,8 +266,8 @@ export default function SettingsPage() {
           badgeColor="text-orange-400 bg-orange-500/10 border-orange-500/15"
           connected={providers.ollama?.configured}
           preview={providers.ollama?.url}
-          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" rel="noreferrer" className="text-orange-400 font-medium">Ollama ↗</a></>}
-          inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (event: ChangeEvent<HTMLInputElement>) => setOllamaUrl(event.target.value) }}
+          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" className="text-orange-400 font-medium">Ollama ↗</a></>}
+          inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (e: any) => setOllamaUrl(e.target.value) }}
           onSave={() => handleSave('ollama')}
           saving={saving === 'ollama'}
           disabled={!ollamaUrl.trim()}
@@ -523,8 +283,8 @@ export default function SettingsPage() {
           badgeColor="text-teal-400 bg-teal-500/10 border-teal-500/15"
           connected={providers.openrouter?.configured}
           preview={providers.openrouter?.preview}
-          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-teal-400 font-medium">Get key ↗</a></>}
-          inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (event: ChangeEvent<HTMLInputElement>) => setOpenrouterKey(event.target.value) }}
+          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" className="text-teal-400 font-medium">Get key ↗</a></>}
+          inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (e: any) => setOpenrouterKey(e.target.value) }}
           onSave={() => handleSave('openrouter')}
           saving={saving === 'openrouter'}
           disabled={!openrouterKey.trim()}
@@ -568,9 +328,10 @@ export default function SettingsPage() {
         </div>
       </div>
       </Stagger>
+      )}
 
       {/* ─── Chat Provider Preference ─── */}
-      {settings?.hasApiKey && (
+      {activeTab === 'providers' && settings?.hasApiKey && (
         <Stagger>
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
@@ -640,143 +401,212 @@ export default function SettingsPage() {
         </Stagger>
       )}
 
-      <Stagger>
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">MindStore Everywhere</p>
-        </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-300">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[14px] font-medium">Browser capture and extension keys</p>
-                  <p className="text-[12px] text-zinc-500">Create API keys for MindStore Everywhere and future external clients.</p>
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/docs/import-guides/browser-extension"
-              className="text-[11px] text-teal-300 hover:text-teal-200"
-            >
-              Setup docs
-            </Link>
-          </div>
-
-          {newApiKey && (
-            <div className="rounded-2xl border border-teal-500/20 bg-teal-500/[0.06] p-3 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-teal-300">Copy This Now</p>
-              <p className="text-[12px] text-zinc-300">MindStore only shows the raw key once after creation.</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 overflow-x-auto rounded-xl bg-black/30 px-3 py-2 text-[11px] text-zinc-200">
-                  {newApiKey}
-                </code>
-                <button
-                  onClick={handleCopyApiKey}
-                  className="h-10 px-3 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.04] transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleCreateApiKey}
-              disabled={creatingApiKey}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-[12px] font-medium transition-all"
-            >
-              {creatingApiKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
-              Generate API key
-            </button>
-            <Link
-              href="/docs/api-reference/capture"
-              className="inline-flex items-center h-10 px-4 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
-            >
-              Capture API docs
-            </Link>
-            <a
-              href="/api/v1/extension/package"
-              className="inline-flex items-center h-10 px-4 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
-            >
-              Download extension ZIP
-            </a>
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-medium text-zinc-200">Quick setup</p>
-                <p className="text-[11px] text-zinc-500 mt-1">Use this base URL in the browser extension popup, then test the connection before your first capture.</p>
-              </div>
-              <button
-                onClick={handleCopyBaseUrl}
-                className="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-white/[0.08] text-[12px] font-medium text-zinc-300 hover:bg-white/[0.04]"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                Copy URL
-              </button>
-            </div>
-            <code className="block overflow-x-auto rounded-xl bg-black/30 px-3 py-2 text-[11px] text-zinc-200">
-              {publicBaseUrl}
-            </code>
-            <div className="grid gap-2 text-[12px] text-zinc-400 md:grid-cols-3">
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
-                1. Download the ZIP or load the unpacked extension folder in a Chromium browser.
-              </div>
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
-                2. Paste this MindStore URL into the popup. Add an API key for hosted or shared setups.
-              </div>
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
-                3. Use the popup&apos;s <span className="text-zinc-200">Test connection</span> button, then start capturing.
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {apiKeys.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/[0.08] px-4 py-3 text-[12px] text-zinc-500">
-                No API keys created yet.
+      {/* ─── SYSTEM HEALTH TAB ─── */}
+      {activeTab === 'health' && (
+        <Stagger>
+          <div className="space-y-4">
+            {!health ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
               </div>
             ) : (
-              apiKeys.map((apiKey) => (
-                <div
-                  key={apiKey.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-black/20 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-zinc-200">{apiKey.name}</p>
+              <>
+                {/* Status Banner */}
+                <div className={`rounded-2xl border p-4 flex items-center gap-3 ${
+                  health.status === 'healthy'
+                    ? 'bg-emerald-500/[0.04] border-emerald-500/15'
+                    : 'bg-red-500/[0.04] border-red-500/15'
+                }`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    health.status === 'healthy' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                  }`}>
+                    <Shield className={`w-5 h-5 ${health.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`} />
+                  </div>
+                  <div>
+                    <p className={`text-[14px] font-semibold ${health.status === 'healthy' ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {health.status === 'healthy' ? 'System Healthy' : 'Issues Detected'}
+                    </p>
                     <p className="text-[11px] text-zinc-500">
-                      Created {formatTimestamp(apiKey.createdAt)}
-                      {apiKey.lastUsedAt ? ` · Last used ${formatTimestamp(apiKey.lastUsedAt)}` : " · Unused yet"}
+                      {health.database?.version || 'Unknown DB'} · Last checked {new Date().toLocaleTimeString()}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleRevokeApiKey(apiKey.id)}
-                    className="h-9 px-3 rounded-xl border border-red-500/20 text-[12px] font-medium text-red-400 hover:bg-red-500/5"
-                  >
-                    Revoke
-                  </button>
                 </div>
-              ))
+
+                {/* Key Metrics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                  <MetricCard
+                    label="Total Memories"
+                    value={health.memories.total.toLocaleString()}
+                    icon={<Layers className="w-3.5 h-3.5" />}
+                    color="text-teal-400"
+                    bg="bg-teal-500/10"
+                  />
+                  <MetricCard
+                    label="Embedded"
+                    value={`${health.memories.embeddingPercent}%`}
+                    icon={<Cpu className="w-3.5 h-3.5" />}
+                    color={health.memories.embeddingPercent >= 90 ? "text-emerald-400" : health.memories.embeddingPercent >= 50 ? "text-amber-400" : "text-red-400"}
+                    bg={health.memories.embeddingPercent >= 90 ? "bg-emerald-500/10" : health.memories.embeddingPercent >= 50 ? "bg-amber-500/10" : "bg-red-500/10"}
+                    sub={`${health.memories.withEmbeddings} / ${health.memories.total}`}
+                  />
+                  <MetricCard
+                    label="Storage"
+                    value={health.storage.totalSize}
+                    icon={<HardDrive className="w-3.5 h-3.5" />}
+                    color="text-sky-400"
+                    bg="bg-sky-500/10"
+                    sub={`Content: ${health.storage.contentSize}`}
+                  />
+                  <MetricCard
+                    label="Connections"
+                    value={health.connections.toLocaleString()}
+                    icon={<TrendingUp className="w-3.5 h-3.5" />}
+                    color="text-amber-400"
+                    bg="bg-amber-500/10"
+                  />
+                </div>
+
+                {/* Embedding Coverage Bar */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12px] font-medium text-zinc-300">Embedding Coverage</p>
+                    <span className="text-[11px] text-zinc-500">{health.memories.withEmbeddings} / {health.memories.total} memories</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        health.memories.embeddingPercent >= 90 ? 'bg-emerald-500' :
+                        health.memories.embeddingPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${health.memories.embeddingPercent}%` }}
+                    />
+                  </div>
+                  {health.memories.withoutEmbeddings > 0 && (
+                    <p className="text-[11px] text-amber-400/80">
+                      {health.memories.withoutEmbeddings} memories without embeddings — semantic search won't find them
+                    </p>
+                  )}
+                  {health.embeddings.dimensions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {health.embeddings.dimensions.map(d => (
+                        <span key={d.dims} className="text-[10px] font-mono text-zinc-500 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.06]">
+                          {d.dims}d × {d.count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Source Breakdown */}
+                {health.sources.length > 0 && (
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                    <p className="text-[12px] font-medium text-zinc-300">Source Breakdown</p>
+                    <div className="space-y-2">
+                      {health.sources.map((s) => {
+                        const pct = health.memories.total > 0 ? (s.count / health.memories.total) * 100 : 0;
+                        return (
+                          <div key={s.type} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-medium text-zinc-300 capitalize">{s.type}</span>
+                                <span className="text-[10px] text-zinc-600">{s.count.toLocaleString()}</span>
+                              </div>
+                              <span className="text-[10px] text-zinc-500">{s.size} · {Math.round(pct)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-teal-500/60"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Activity Sparkline */}
+                {health.activity.length > 0 && (
+                  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                    <p className="text-[12px] font-medium text-zinc-300">Activity (Last 7 Days)</p>
+                    <div className="flex items-end gap-1 h-16">
+                      {(() => {
+                        // Fill missing days
+                        const days: { day: string; count: number }[] = [];
+                        for (let i = 6; i >= 0; i--) {
+                          const d = new Date();
+                          d.setDate(d.getDate() - i);
+                          const dayStr = d.toISOString().split('T')[0];
+                          const found = health.activity.find(a => a.day?.split('T')[0] === dayStr);
+                          days.push({ day: dayStr, count: found?.count || 0 });
+                        }
+                        const max = Math.max(...days.map(d => d.count), 1);
+                        return days.map((day, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div
+                              className="w-full rounded-t-md bg-teal-500/40 hover:bg-teal-500/60 transition-colors min-h-[2px]"
+                              style={{ height: `${Math.max((day.count / max) * 100, 3)}%` }}
+                              title={`${day.day}: ${day.count} memories`}
+                            />
+                            <span className="text-[8px] text-zinc-600">
+                              {new Date(day.day).toLocaleDateString(undefined, { weekday: 'narrow' })}
+                            </span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Storage Breakdown */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                  <p className="text-[12px] font-medium text-zinc-300">Storage Breakdown</p>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.contentSize}</p>
+                      <p className="text-[10px] text-zinc-600">Content</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.indexSize}</p>
+                      <p className="text-[10px] text-zinc-600">Indexes</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.totalSize}</p>
+                      <p className="text-[10px] text-zinc-600">Total</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Plugin & System Info */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+                  <p className="text-[12px] font-medium text-zinc-300">System Info</p>
+                  <div className="space-y-1.5">
+                    <InfoRow label="Database" value={health.database?.version || 'Unknown'} />
+                    <InfoRow label="Plugins Installed" value={`${health.plugins.total} (${health.plugins.enabled} active)`} />
+                    <InfoRow label="Knowledge Span" value={
+                      health.memories.oldest && health.memories.newest
+                        ? `${new Date(health.memories.oldest).toLocaleDateString()} — ${new Date(health.memories.newest).toLocaleDateString()}`
+                        : 'N/A'
+                    } />
+                    <InfoRow label="Pinned Memories" value={String(health.memories.pinned)} />
+                  </div>
+                </div>
+              </>
             )}
           </div>
-        </div>
-      </div>
-      </Stagger>
+        </Stagger>
+      )}
 
       {/* ─── Data ─── */}
+      {activeTab === 'data' && (
       <Stagger>
       <div className="space-y-3">
         <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Data</p>
 
         {/* Stats */}
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Memories", value: stats?.totalMemories || 0 },
               { label: "Sources", value: stats?.totalSources || 0 },
@@ -797,21 +627,19 @@ export default function SettingsPage() {
           <ActionButton icon={<Upload className="w-4 h-4" />} label="Restore" onClick={() => {
             const input = document.createElement("input");
             input.type = "file"; input.accept = ".json";
-              input.onchange = async (event) => {
-                const file = (event.target as HTMLInputElement).files?.[0];
-                if (!file) return;
-                try {
-                  const data = JSON.parse(await file.text());
-                  if (!data.memories) throw new Error("Invalid format");
-                  const res = await fetch('/api/v1/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-                  if (!res.ok) throw new Error('Failed');
-                  const r = await res.json();
-                  fetchStats().then(setStats);
-                  toast.success(`Restored ${r.imported} memories`);
-                } catch (error: unknown) {
-                  toast.error(getErrorMessage(error));
-                }
-              };
+            input.onchange = async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              try {
+                const data = JSON.parse(await file.text());
+                if (!data.memories) throw new Error("Invalid format");
+                const res = await fetch('/api/v1/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (!res.ok) throw new Error('Failed');
+                const r = await res.json();
+                fetchStats().then(setStats);
+                toast.success(`Restored ${r.imported} memories`);
+              } catch (err: any) { toast.error(err.message); }
+            };
             input.click();
           }} />
           <ActionButton icon={<Key className="w-4 h-4" />} label="Remove Keys" onClick={handleRemoveAll} />
@@ -820,6 +648,7 @@ export default function SettingsPage() {
         </div>
       </div>
       </Stagger>
+      )}
 
       {/* About */}
       <Stagger>
@@ -828,7 +657,7 @@ export default function SettingsPage() {
           <span className="text-zinc-300 font-medium">MindStore</span> — personal knowledge base. Import conversations, notes, and articles. Search semantically. Connect to any AI via MCP.
         </p>
         <p className="text-[11px] text-zinc-600 mt-2">
-          Built by <a href="https://github.com/WarriorSushi" target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">WarriorSushi</a> · v0.3
+          Built by <a href="https://github.com/WarriorSushi" target="_blank" className="text-teal-400 hover:underline">WarriorSushi</a> · v0.3
         </p>
       </div>
       </Stagger>
@@ -836,23 +665,7 @@ export default function SettingsPage() {
   );
 }
 
-interface ProviderCardProps {
-  name: string;
-  icon: ReactNode;
-  iconColor: string;
-  badge: string;
-  badgeColor: string;
-  connected?: boolean;
-  preview?: string;
-  description: ReactNode;
-  inputProps: InputHTMLAttributes<HTMLInputElement>;
-  onSave: () => void;
-  saving: boolean;
-  disabled: boolean;
-  buttonColor: string;
-}
-
-function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: ProviderCardProps) {
+function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: any) {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
       <div className="p-4 space-y-3">
@@ -894,7 +707,7 @@ function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, pre
   );
 }
 
-function ActionButton({ icon, label, onClick, danger }: { icon: ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+function ActionButton({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -911,7 +724,7 @@ function ActionButton({ icon, label, onClick, danger }: { icon: ReactNode; label
 }
 
 function ChatProviderOption({ name, description, icon, iconColor, active, onClick, available }: {
-  name: string; description: string; icon: ReactNode; iconColor: string;
+  name: string; description: string; icon: React.ReactNode; iconColor: string;
   active: boolean; onClick: () => void; available: boolean;
 }) {
   return (
@@ -948,15 +761,28 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
   );
 }
 
-function formatTimestamp(value?: string | null) {
-  if (!value) return "just now";
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
+function MetricCard({ label, value, icon, color, bg, sub }: {
+  label: string; value: string; icon: React.ReactNode; color: string; bg: string; sub?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
+      <div className="flex items-center gap-1.5">
+        <div className={`w-6 h-6 rounded-lg ${bg} flex items-center justify-center ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <p className={`text-[18px] font-bold tabular-nums ${color}`}>{value}</p>
+      <p className="text-[10px] text-zinc-600 font-medium">{label}</p>
+      {sub && <p className="text-[9px] text-zinc-700">{sub}</p>}
+    </div>
+  );
 }
 
-function getErrorMessage(error: unknown, fallback = "Something went wrong") {
-  return error instanceof Error ? error.message : fallback;
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[11px] text-zinc-500">{label}</span>
+      <span className="text-[11px] text-zinc-400 text-right truncate max-w-[200px]">{value}</span>
+    </div>
+  );
 }

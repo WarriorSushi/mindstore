@@ -24,6 +24,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     path: null,
     shortcuts: [
       { keys: ["⌘", "K"], label: "Open command palette" },
+      { keys: ["⌘", "⇧", "N"], label: "Quick capture (note or URL)" },
       { keys: ["?"], label: "Keyboard shortcuts (this modal)" },
     ],
   },
@@ -53,7 +54,8 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { keys: ["↵"], label: "Send message" },
       { keys: ["⇧", "↵"], label: "New line in message" },
-      { keys: ["Esc"], label: "Close history panel" },
+      { keys: ["Esc"], label: "Close history / Stop generating" },
+      { keys: ["Space"], label: "Reveal flashcard answer (review)" },
     ],
   },
   {
@@ -76,13 +78,8 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 ];
 
 export function KeyboardShortcuts() {
-  const pathname = usePathname();
-
-  return <KeyboardShortcutsModal key={pathname} pathname={pathname} />;
-}
-
-function KeyboardShortcutsModal({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   // Listen for "?" key to toggle
   useEffect(() => {
@@ -124,6 +121,11 @@ function KeyboardShortcutsModal({ pathname }: { pathname: string }) {
     window.addEventListener("keydown", handleKey, true);
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [open]);
+
+  // Close on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   const close = useCallback(() => setOpen(false), []);
 

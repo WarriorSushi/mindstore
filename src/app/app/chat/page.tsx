@@ -6,14 +6,18 @@ import { useSearchParams } from "next/navigation";
 import {
   Send, Loader2, Brain, User, Sparkles, ArrowUp,
   Plus, History, Trash2, X, MessageSquare, Clock,
-  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle, Type,
+  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus, BookOpen, PlayCircle, Bookmark, Gem,
+  BookmarkPlus,
+  Pin, PinOff, Download, Hash,
 } from "lucide-react";
+import { getSourceType } from "@/lib/source-types";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
+import { openMemoryDrawer } from "@/components/MemoryDrawer";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 import {
   type ChatMessage,
   type Conversation,
@@ -23,6 +27,10 @@ import {
   saveConversation,
   deleteConversation,
   renameConversation,
+  togglePinConversation,
+  searchConversations,
+  exportConversationMarkdown,
+  getConversationStats,
   clearAllConversations,
 } from "@/lib/chat-history";
 
@@ -126,6 +134,7 @@ async function generateFollowUps(
 }
 
 export default function ChatPage() {
+  usePageTitle("Chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -150,8 +159,11 @@ export default function ChatPage() {
   const [thinking, setThinking] = useState(false); // true while waiting for first token
   const [thinkingStep, setThinkingStep] = useState<"searching" | "found" | "generating" | null>(null);
   const [searchResultCount, setSearchResultCount] = useState(0);
+  const [highlightedCitation, setHighlightedCitation] = useState<{ msgIndex: number; sourceIndex: number } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [historySearch, setHistorySearch] = useState("");
+  const historySearchRef = useRef<HTMLInputElement>(null);
 
   // Load stats & conversations on mount
   useEffect(() => {
@@ -376,6 +388,7 @@ export default function ChatPage() {
               score: r.score,
               id: r.memoryId || r.id || "",
               preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
+              content: r.content || "",
             })),
           },
         ];
@@ -416,6 +429,7 @@ export default function ChatPage() {
             score: r.score,
             id: r.memoryId || r.id || "",
             preview: (r.content || "").slice(0, 120).replace(/\n/g, " ").trim(),
+            content: r.content || "",
           })),
         },
       ];
@@ -485,6 +499,17 @@ export default function ChatPage() {
     }
   };
 
+  /** Regenerate a specific assistant response — re-sends the preceding user question */
+  const handleRegenerateAt = useCallback((messageIndex: number) => {
+    // Find the user message that triggered this assistant response
+    const userMsg = messages.slice(0, messageIndex).reverse().find((m) => m.role === "user");
+    if (!userMsg) return;
+    // Remove messages from this assistant message onward and re-send
+    setMessages((prev) => prev.slice(0, messageIndex));
+    // Small delay so state updates first
+    setTimeout(() => handleSend(userMsg.content), 50);
+  }, [messages]);
+
   /** Stop the current streaming response */
   const handleStop = useCallback(() => {
     if (abortRef.current) {
@@ -528,6 +553,39 @@ export default function ChatPage() {
   const activeConversations = conversations.filter(
     (c) => c.messages.length > 0
   );
+
+  // Filtered conversations for history panel search
+  const filteredConversations = historySearch.trim()
+    ? activeConversations.filter(c => {
+        const q = historySearch.toLowerCase().trim();
+        if (c.title.toLowerCase().includes(q)) return true;
+        return c.messages.some(m => m.content.toLowerCase().includes(q));
+      })
+    : activeConversations;
+
+  // Handle pin toggle
+  const handlePinConversation = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    togglePinConversation(id);
+    refreshHistory();
+    toast.success("Conversation " + (conversations.find(c => c.id === id)?.pinned ? "unpinned" : "pinned"));
+  }, [conversations]);
+
+  // Handle export conversation
+  const handleExportConversation = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const convo = getConversation(id);
+    if (!convo) return;
+    const md = exportConversationMarkdown(convo);
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${convo.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-").toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Conversation exported");
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -576,15 +634,21 @@ export default function ChatPage() {
       {historyOpen && (
         <div
           className="absolute inset-0 z-[55]"
-          onClick={() => setHistoryOpen(false)}
+          onClick={() => { setHistoryOpen(false); setHistorySearch(""); }}
         >
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
-            className="absolute top-0 right-0 h-full w-[280px] sm:w-[320px] bg-[#111113] border-l border-white/[0.06] shadow-2xl shadow-black/60 animate-in slide-in-from-right"
+            className="absolute top-0 right-0 h-full w-[280px] sm:w-[320px] bg-[#111113] border-l border-white/[0.06] shadow-2xl shadow-black/60 animate-in slide-in-from-right flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-              <h3 className="text-[14px] font-semibold">Chat History</h3>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
+              <div className="flex items-center gap-2">
+                <h3 className="text-[14px] font-semibold">History</h3>
+                <span className="text-[10px] tabular-nums text-zinc-600 bg-white/[0.04] px-1.5 py-0.5 rounded-md">
+                  {activeConversations.length}
+                </span>
+              </div>
               <div className="flex items-center gap-1">
                 {activeConversations.length > 0 && (
                   <button
@@ -595,130 +659,139 @@ export default function ChatPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => setHistoryOpen(false)}
+                  onClick={() => { setHistoryOpen(false); setHistorySearch(""); }}
                   className="p-1.5 hover:bg-white/[0.06] rounded-lg"
                 >
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
             </div>
-            <div className="overflow-y-auto h-[calc(100%-52px)] py-2 px-2">
+
+            {/* Search bar */}
+            {activeConversations.length > 2 && (
+              <div className="px-3 py-2 border-b border-white/[0.04] shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
+                  <input
+                    ref={historySearchRef}
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    placeholder="Search conversations…"
+                    className="w-full h-8 pl-7 pr-7 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[12px] placeholder:text-zinc-700 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 transition-all"
+                  />
+                  {historySearch && (
+                    <button
+                      onClick={() => setHistorySearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/[0.08]"
+                    >
+                      <X className="w-3 h-3 text-zinc-600" />
+                    </button>
+                  )}
+                </div>
+                {historySearch && (
+                  <p className="text-[10px] text-zinc-600 mt-1 px-0.5">
+                    {filteredConversations.length} result{filteredConversations.length !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Conversation list */}
+            <div className="overflow-y-auto flex-1 py-2 px-2">
               {activeConversations.length === 0 ? (
-                <p className="text-center text-[12px] text-zinc-600 py-8">
-                  No conversations yet
-                </p>
+                <div className="text-center py-12">
+                  <MessageSquare className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-[12px] text-zinc-600">No conversations yet</p>
+                  <p className="text-[11px] text-zinc-700 mt-0.5">Start chatting to build history</p>
+                </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="text-center py-12">
+                  <Search className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-[12px] text-zinc-600">No matches for &ldquo;{historySearch}&rdquo;</p>
+                  <button
+                    onClick={() => setHistorySearch("")}
+                    className="text-[11px] text-teal-400 hover:text-teal-300 mt-1 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-0.5">
-                  {activeConversations.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        if (renamingId !== c.id) handleLoadConversation(c.id);
-                      }}
-                      className={cn(
-                        "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5 cursor-pointer",
-                        conversationId === c.id
-                          ? "bg-teal-500/10 border border-teal-500/20"
-                          : "hover:bg-white/[0.04] border border-transparent"
-                      )}
-                    >
-                      <MessageSquare
-                        className={cn(
-                          "w-3.5 h-3.5 shrink-0 mt-0.5",
-                          conversationId === c.id
-                            ? "text-teal-400"
-                            : "text-zinc-600"
-                        )}
-                      />
-                      <div className="flex-1 min-w-0">
-                        {renamingId === c.id ? (
-                          <form
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              const trimmed = renameValue.trim();
-                              if (trimmed) {
-                                renameConversation(c.id, trimmed);
-                                refreshHistory();
-                              }
-                              setRenamingId(null);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              autoFocus
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onBlur={() => {
-                                const trimmed = renameValue.trim();
-                                if (trimmed) {
-                                  renameConversation(c.id, trimmed);
-                                  refreshHistory();
-                                }
-                                setRenamingId(null);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") {
-                                  e.stopPropagation();
-                                  setRenamingId(null);
-                                }
-                              }}
-                              className="w-full text-[13px] bg-white/[0.06] border border-teal-500/30 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-500/40 text-white"
-                            />
-                          </form>
-                        ) : (
-                          <p
-                            className={cn(
-                              "text-[13px] truncate",
-                              conversationId === c.id
-                                ? "text-white font-medium"
-                                : "text-zinc-400"
-                            )}
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              setRenamingId(c.id);
-                              setRenameValue(c.title);
-                            }}
-                          >
-                            {c.title}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Clock className="w-2.5 h-2.5 text-zinc-700" />
-                          <span className="text-[10px] text-zinc-600">
-                            {formatRelativeTime(c.updatedAt)}
-                          </span>
-                          <span className="text-[10px] text-zinc-700">
-                            · {c.messages.length} msg
-                          </span>
-                        </div>
-                      </div>
-                      {renamingId !== c.id && (
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRenamingId(c.id);
-                              setRenameValue(c.title);
-                            }}
-                            className="p-1 rounded-lg hover:bg-white/[0.08] transition-all"
-                            title="Rename"
-                          >
-                            <Pencil className="w-2.5 h-2.5 text-zinc-600 hover:text-zinc-400" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteConversation(c.id, e)}
-                            className="p-1 rounded-lg hover:bg-red-500/10 transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
-                          </button>
-                        </div>
-                      )}
+                  {/* Pinned section label */}
+                  {filteredConversations.some(c => c.pinned) && (
+                    <div className="flex items-center gap-1.5 px-2 py-1">
+                      <Pin className="w-2.5 h-2.5 text-amber-500/60" />
+                      <span className="text-[9px] text-zinc-600 uppercase tracking-[0.08em] font-semibold">Pinned</span>
                     </div>
-                  ))}
+                  )}
+                  {filteredConversations.filter(c => c.pinned).map((c) => {
+                    const stats = getConversationStats(c);
+                    return (
+                      <HistoryCard
+                        key={c.id}
+                        convo={c}
+                        stats={stats}
+                        active={conversationId === c.id}
+                        renaming={renamingId === c.id}
+                        renameValue={renameValue}
+                        onLoad={() => handleLoadConversation(c.id)}
+                        onRename={(id) => { setRenamingId(id); setRenameValue(c.title); }}
+                        onRenameSubmit={(trimmed) => { renameConversation(c.id, trimmed); refreshHistory(); setRenamingId(null); }}
+                        onRenameCancel={() => setRenamingId(null)}
+                        onRenameChange={setRenameValue}
+                        onPin={(e) => handlePinConversation(c.id, e)}
+                        onExport={(e) => handleExportConversation(c.id, e)}
+                        onDelete={(e) => handleDeleteConversation(c.id, e)}
+                      />
+                    );
+                  })}
+                  {/* Unpinned section label (only show if there are also pinned ones) */}
+                  {filteredConversations.some(c => c.pinned) && filteredConversations.some(c => !c.pinned) && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 mt-1">
+                      <Clock className="w-2.5 h-2.5 text-zinc-600" />
+                      <span className="text-[9px] text-zinc-600 uppercase tracking-[0.08em] font-semibold">Recent</span>
+                    </div>
+                  )}
+                  {filteredConversations.filter(c => !c.pinned).map((c) => {
+                    const stats = getConversationStats(c);
+                    return (
+                      <HistoryCard
+                        key={c.id}
+                        convo={c}
+                        stats={stats}
+                        active={conversationId === c.id}
+                        renaming={renamingId === c.id}
+                        renameValue={renameValue}
+                        onLoad={() => handleLoadConversation(c.id)}
+                        onRename={(id) => { setRenamingId(id); setRenameValue(c.title); }}
+                        onRenameSubmit={(trimmed) => { renameConversation(c.id, trimmed); refreshHistory(); setRenamingId(null); }}
+                        onRenameCancel={() => setRenamingId(null)}
+                        onRenameChange={setRenameValue}
+                        onPin={(e) => handlePinConversation(c.id, e)}
+                        onExport={(e) => handleExportConversation(c.id, e)}
+                        onDelete={(e) => handleDeleteConversation(c.id, e)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
+
+            {/* Footer stats */}
+            {activeConversations.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-white/[0.04] shrink-0">
+                <div className="flex items-center justify-between text-[10px] text-zinc-700">
+                  <span className="flex items-center gap-1">
+                    <Hash className="w-2.5 h-2.5" />
+                    {activeConversations.reduce((sum, c) => sum + c.messages.length, 0)} total messages
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="w-2.5 h-2.5" />
+                    {activeConversations.length} chats
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -775,7 +848,7 @@ export default function ChatPage() {
             {activeConversations.length > 0 && (
               <div className="mt-8 w-full max-w-xs">
                 <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em] mb-2 px-1">
-                  Recent conversations
+                  {activeConversations.some(c => c.pinned) ? "Pinned & recent" : "Recent conversations"}
                 </p>
                 <div className="space-y-1">
                   {activeConversations.slice(0, 3).map((c) => (
@@ -784,7 +857,11 @@ export default function ChatPage() {
                       onClick={() => handleLoadConversation(c.id)}
                       className="w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] transition-all active:scale-[0.98]"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                      {c.pinned ? (
+                        <Pin className="w-3.5 h-3.5 text-amber-500/60 shrink-0" />
+                      ) : (
+                        <MessageSquare className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                      )}
                       <span className="text-[12px] text-zinc-400 truncate flex-1">
                         {c.title}
                       </span>
@@ -820,7 +897,34 @@ export default function ChatPage() {
                   >
                     <div className="text-[13px] leading-[1.6] break-words [overflow-wrap:anywhere]">
                       {msg.content ? (
-                        <ChatMarkdown content={msg.content} />
+                        <ChatMarkdown
+                          content={msg.content}
+                          {...(msg.role === "assistant" && msg.sources?.length ? {
+                            onCitationHover: (sourceIndex) => {
+                              if (sourceIndex !== null) {
+                                setHighlightedCitation({ msgIndex: i, sourceIndex });
+                              } else {
+                                setHighlightedCitation(null);
+                              }
+                            },
+                            onCitationClick: (sourceIndex) => {
+                              const source = msg.sources?.[sourceIndex];
+                              if (source?.id) {
+                                openMemoryDrawer({
+                                  id: source.id,
+                                  content: source.content || source.preview || "",
+                                  source: source.type,
+                                  sourceId: "",
+                                  sourceTitle: source.title || "Untitled",
+                                  timestamp: "",
+                                  importedAt: "",
+                                  metadata: {},
+                                  pinned: false,
+                                });
+                              }
+                            },
+                          } : {})}
+                        />
                       ) : loading && i === messages.length - 1 ? (
                         <span className="flex items-center gap-2 text-zinc-500">
                           <span className="flex gap-[3px] items-center">
@@ -846,7 +950,10 @@ export default function ChatPage() {
                     {msg.sources &&
                       msg.sources.length > 0 &&
                       msg.content && (
-                        <SourceCards sources={msg.sources} />
+                        <SourceCards
+                          sources={msg.sources}
+                          highlightedIndex={highlightedCitation?.msgIndex === i ? highlightedCitation.sourceIndex : null}
+                        />
                       )}
                   </div>
                   {/* Hover action buttons */}
@@ -858,6 +965,7 @@ export default function ChatPage() {
                           // Find the preceding user message as context for the title
                           messages.slice(0, i).reverse().find((m) => m.role === "user")?.content || ""
                         }
+                        onRegenerate={!loading ? () => handleRegenerateAt(i) : undefined}
                       />
                     ) : (
                       <MessageCopyButton content={msg.content} side="left" />
@@ -1121,7 +1229,7 @@ function ModelSelector({ provider, selectedModel, onModelChange }: {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-zinc-900/95 backdrop-blur-lg border border-white/[0.08] shadow-2xl overflow-hidden z-50">
+        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-[#131315]/95 backdrop-blur-lg border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden z-50">
           {Object.entries(sections).filter(([, s]) => s).map(([key, section]) => (
             <div key={key}>
               <div className="px-3 pt-2 pb-1">
@@ -1197,8 +1305,8 @@ function MessageCopyButton({ content, side }: { content: string; side: "left" | 
   );
 }
 
-/** Action buttons (Copy + Save to Memory) for assistant messages */
-function MessageActions({ content, question }: { content: string; question: string }) {
+/** Action buttons (Copy + Save to Memory + Regenerate) for assistant messages */
+function MessageActions({ content, question, onRegenerate }: { content: string; question: string; onRegenerate?: () => void }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1288,31 +1396,53 @@ function MessageActions({ content, question }: { content: string; question: stri
           {saved ? "Saved" : saving ? "Saving…" : "Save"}
         </span>
       </button>
+
+      {/* Regenerate button */}
+      {onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          className={cn(
+            "w-6 h-6 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
+            "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30 transition-all",
+          )}
+          title="Regenerate response"
+        >
+          <RotateCcw className="w-3 h-3 text-zinc-500" />
+        </button>
+      )}
     </div>
   );
 }
 
-/** Expandable source citations — Perplexity-style with previews & clickable links */
-function SourceCards({ sources }: { sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string }> }) {
+/** Expandable source citations — Perplexity-style with previews & clickable memory drawer */
+function SourceCards({
+  sources,
+  highlightedIndex,
+}: {
+  sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string; content?: string }>;
+  highlightedIndex?: number | null;
+}) {
   const [expanded, setExpanded] = useState(false);
 
-  const typeIcons: Record<string, any> = {
-    chatgpt: MessageCircle, file: FileText, url: Globe, text: Type, kindle: BookOpen, youtube: PlayCircle, bookmark: Bookmark, obsidian: Gem, reddit: MessageSquare,
-  };
-  const typeColors: Record<string, string> = {
-    chatgpt: "text-green-400 bg-green-500/10 border-green-500/15",
-    file: "text-blue-400 bg-blue-500/10 border-blue-500/15",
-    url: "text-orange-400 bg-orange-500/10 border-orange-500/15",
-    text: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    kindle: "text-amber-400 bg-amber-500/10 border-amber-500/15",
-    document: "text-blue-400 bg-blue-500/10 border-blue-500/15",
-    youtube: "text-red-400 bg-red-500/10 border-red-500/15",
-    bookmark: "text-sky-400 bg-sky-500/10 border-sky-500/15",
-    obsidian: "text-teal-400 bg-teal-500/10 border-teal-500/15",
-    reddit: "text-orange-400 bg-orange-500/10 border-orange-500/15",
-  };
-
   const displayed = expanded ? sources : sources.slice(0, 3);
+
+  const handleOpenMemory = (s: typeof sources[0], e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (s.id) {
+      openMemoryDrawer({
+        id: s.id,
+        content: s.content || s.preview || "",
+        source: s.type,
+        sourceId: "",
+        sourceTitle: s.title || "Untitled",
+        timestamp: "",
+        importedAt: "",
+        metadata: {},
+        pinned: false,
+      });
+    }
+  };
 
   return (
     <div className="mt-2 pt-2 border-t border-white/[0.06]">
@@ -1332,30 +1462,44 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
       </div>
       <div className="space-y-1">
         {displayed.map((s, j) => {
-          const Icon = typeIcons[s.type] || FileText;
-          const colors = typeColors[s.type] || "text-zinc-400 bg-zinc-500/10 border-zinc-500/15";
+          const st = getSourceType(s.type);
+          const Icon = st.icon;
           const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
           const isClickable = !!s.id;
+          const isHighlighted = highlightedIndex != null && j === highlightedIndex;
 
-          const cardContent = (
+          return (
             <div
+              key={j}
+              data-source-index={j}
+              onClick={isClickable ? (e) => handleOpenMemory(s, e) : undefined}
               className={cn(
-                "flex flex-col gap-1 px-2.5 py-2 rounded-lg border transition-colors",
-                isClickable
-                  ? "bg-white/[0.03] border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] cursor-pointer"
-                  : "bg-white/[0.03] border-white/[0.04]",
+                "flex flex-col gap-1 px-2.5 py-2 rounded-lg border transition-all duration-200",
+                isHighlighted
+                  ? "bg-teal-500/[0.08] border-teal-500/20 ring-1 ring-teal-500/15"
+                  : isClickable
+                    ? "bg-white/[0.03] border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] cursor-pointer"
+                    : "bg-white/[0.03] border-white/[0.04]",
               )}
             >
               {/* Header row: citation badge + icon + title + score */}
               <div className="flex items-center gap-2">
                 {/* Citation number badge */}
-                <span className="text-[9px] font-bold text-zinc-500 bg-white/[0.06] rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums">
+                <span className={cn(
+                  "text-[9px] font-bold rounded w-4 h-4 flex items-center justify-center shrink-0 tabular-nums transition-colors",
+                  isHighlighted
+                    ? "bg-teal-500/20 text-teal-300"
+                    : "bg-white/[0.06] text-zinc-500"
+                )}>
                   {j + 1}
                 </span>
-                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${colors.split(' ').slice(1).join(' ')}`}>
-                  <Icon className={`w-2.5 h-2.5 ${colors.split(' ')[0]}`} />
+                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                  <Icon className={`w-2.5 h-2.5 ${st.textColor}`} />
                 </div>
-                <span className="text-[11px] text-zinc-400 truncate flex-1 min-w-0 font-medium">
+                <span className={cn(
+                  "text-[11px] truncate flex-1 min-w-0 font-medium transition-colors",
+                  isHighlighted ? "text-zinc-200" : "text-zinc-400"
+                )}>
                   {s.title || "Untitled"}
                 </span>
                 {scorePercent != null && (
@@ -1380,26 +1524,134 @@ function SourceCards({ sources }: { sources: Array<{ title: string; type: string
               )}
             </div>
           );
-
-          if (isClickable) {
-            return (
-              <a
-                key={j}
-                href={`/app/explore?q=${encodeURIComponent((s.title || s.preview || "").slice(0, 40))}`}
-                onClick={(e) => {
-                  // Prevent the click from bubbling to parent elements
-                  e.stopPropagation();
-                }}
-                className="block no-underline text-inherit"
-              >
-                {cardContent}
-              </a>
-            );
-          }
-
-          return <div key={j}>{cardContent}</div>;
         })}
       </div>
+    </div>
+  );
+}
+
+/** History card — a single conversation in the history panel */
+function HistoryCard({
+  convo, stats, active, renaming, renameValue,
+  onLoad, onRename, onRenameSubmit, onRenameCancel, onRenameChange,
+  onPin, onExport, onDelete,
+}: {
+  convo: Conversation;
+  stats: { messageCount: number; wordCount: number; userMessages: number; aiMessages: number };
+  active: boolean;
+  renaming: boolean;
+  renameValue: string;
+  onLoad: () => void;
+  onRename: (id: string) => void;
+  onRenameSubmit: (trimmed: string) => void;
+  onRenameCancel: () => void;
+  onRenameChange: (v: string) => void;
+  onPin: (e: React.MouseEvent) => void;
+  onExport: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      onClick={() => { if (!renaming) onLoad(); }}
+      className={cn(
+        "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5 cursor-pointer relative",
+        active
+          ? "bg-teal-500/10 border border-teal-500/20"
+          : "hover:bg-white/[0.04] border border-transparent"
+      )}
+    >
+      {/* Icon */}
+      <div className="relative shrink-0 mt-0.5">
+        {convo.pinned ? (
+          <Pin className={cn("w-3.5 h-3.5", active ? "text-amber-400" : "text-amber-500/60")} />
+        ) : (
+          <MessageSquare className={cn("w-3.5 h-3.5", active ? "text-teal-400" : "text-zinc-600")} />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {renaming ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = renameValue.trim();
+              if (trimmed) onRenameSubmit(trimmed);
+              else onRenameCancel();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => onRenameChange(e.target.value)}
+              onBlur={() => {
+                const trimmed = renameValue.trim();
+                if (trimmed) onRenameSubmit(trimmed);
+                else onRenameCancel();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { e.stopPropagation(); onRenameCancel(); }
+              }}
+              className="w-full text-[13px] bg-white/[0.06] border border-teal-500/30 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-500/40 text-white"
+            />
+          </form>
+        ) : (
+          <p
+            className={cn(
+              "text-[13px] truncate",
+              active ? "text-white font-medium" : "text-zinc-400"
+            )}
+            onDoubleClick={(e) => { e.stopPropagation(); onRename(convo.id); }}
+          >
+            {convo.title}
+          </p>
+        )}
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Clock className="w-2.5 h-2.5 text-zinc-700" />
+          <span className="text-[10px] text-zinc-600">{formatRelativeTime(convo.updatedAt)}</span>
+          <span className="text-[10px] text-zinc-700">· {stats.messageCount} msg</span>
+          <span className="text-[10px] text-zinc-700">· {stats.wordCount >= 1000 ? `${(stats.wordCount / 1000).toFixed(1)}k` : stats.wordCount} words</span>
+        </div>
+      </div>
+
+      {/* Action buttons (hover-reveal) */}
+      {!renaming && (
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+          <button
+            onClick={onPin}
+            className="p-1 rounded-lg hover:bg-amber-500/10 transition-all"
+            title={convo.pinned ? "Unpin" : "Pin"}
+          >
+            {convo.pinned ? (
+              <PinOff className="w-2.5 h-2.5 text-amber-400 hover:text-amber-300" />
+            ) : (
+              <Pin className="w-2.5 h-2.5 text-zinc-600 hover:text-amber-400" />
+            )}
+          </button>
+          <button
+            onClick={onExport}
+            className="p-1 rounded-lg hover:bg-white/[0.08] transition-all"
+            title="Export as markdown"
+          >
+            <Download className="w-2.5 h-2.5 text-zinc-600 hover:text-zinc-400" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRename(convo.id); }}
+            className="p-1 rounded-lg hover:bg-white/[0.08] transition-all"
+            title="Rename"
+          >
+            <Pencil className="w-2.5 h-2.5 text-zinc-600 hover:text-zinc-400" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1 rounded-lg hover:bg-red-500/10 transition-all"
+            title="Delete"
+          >
+            <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
