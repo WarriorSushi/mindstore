@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, Trash2, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare, Mic, Camera, AtSign, Send, BookmarkCheck, Music, Highlighter, Key } from "lucide-react";
+import { FileText, Globe, Type, Loader2, CheckCircle, MessageCircle, BookOpen, StickyNote, Clock, Compass, Package, AlertCircle, Puzzle, FileBox, Hash, BookOpenCheck, PlayCircle, ExternalLink, Bookmark, FolderOpen, Gem, GitFork, Link2, Tags, ArrowUpRight, MessageSquare, AtSign, Send, BookmarkCheck, Music, Highlighter, Key, Lightbulb, Sparkles, Upload } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -35,6 +35,14 @@ const BASE_TABS: { id: Tab; label: string; icon: any; desc: string }[] = [
   { id: "pocket", label: "Pocket", icon: BookmarkCheck, desc: "Articles" },
   { id: "spotify", label: "Spotify", icon: Music, desc: "Listening" },
   { id: "readwise", label: "Readwise", icon: Highlighter, desc: "Highlights" },
+];
+
+const SOURCE_CATEGORIES: { label: string; ids: Tab[] }[] = [
+  { label: "Quick Import", ids: ["chatgpt", "text", "files", "url"] },
+  { label: "Note Apps", ids: ["obsidian", "notion"] },
+  { label: "Documents", ids: ["kindle", "pdf-epub", "youtube"] },
+  { label: "Web & Social", ids: ["bookmarks", "reddit", "twitter", "telegram"] },
+  { label: "Reading", ids: ["pocket", "spotify", "readwise"] },
 ];
 
 // Plugin icon mapping — maps manifest icon names to actual components
@@ -810,9 +818,17 @@ export default function ImportPage() {
     <PageTransition className="space-y-5 md:space-y-6">
       {/* Header */}
       <Stagger>
-        <div>
-          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
+            <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
+          </div>
+          {totalMemories > 0 && (
+            <div className="text-right">
+              <p className="text-[18px] font-semibold text-zinc-300 tabular-nums tracking-tight">{totalMemories.toLocaleString()}</p>
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider">memories</p>
+            </div>
+          )}
         </div>
       </Stagger>
 
@@ -822,7 +838,7 @@ export default function ImportPage() {
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
           <div className="flex items-center gap-2.5">
             {state === "done" ? <CheckCircle className="w-4 h-4 text-green-400" /> :
-             state === "error" ? <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center"><span className="text-[10px] text-red-400">!</span></div> :
+             state === "error" ? <AlertCircle className="w-4 h-4 text-red-400" /> :
              <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
             <span className="text-[13px]">{progressText}</span>
           </div>
@@ -838,45 +854,65 @@ export default function ImportPage() {
         </Stagger>
       )}
 
-      {/* Source Selector */}
+      {/* Source Selector — Categorized */}
       <Stagger>
-      <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 lg:grid-cols-8 gap-2">
-        {BASE_TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
-            className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
-              tab === t.id
-                ? "bg-teal-500/10 border-teal-500/25 shadow-sm shadow-teal-500/10"
-                : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-            }`}
-          >
-            <t.icon className={`w-5 h-5 ${tab === t.id ? "text-teal-400" : "text-zinc-500"}`} />
-            <span className={`text-[11px] font-medium ${tab === t.id ? "text-teal-300" : "text-zinc-400"}`}>{t.label}</span>
-          </button>
-        ))}
-        {/* Plugin tabs — dynamically rendered when OTHER plugins are installed */}
-        {pluginTabs
-          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved', 'twitter-importer', 'telegram-importer', 'pocket-importer', 'spotify-importer', 'readwise-importer'].includes(pt.slug))
-          .map((pt) => {
-          const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
-          const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
+      <div className="space-y-3">
+        {SOURCE_CATEGORIES.map((cat) => {
+          const tabs = cat.ids.map(id => BASE_TABS.find(t => t.id === id)!).filter(Boolean);
           return (
-            <button
-              key={pt.slug}
-              onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
-              className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all active:scale-[0.96] ${
-                tab === tabId
-                  ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
-                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
-              }`}
-            >
-              <PluginTabIcon className={`w-5 h-5 ${tab === tabId ? "text-amber-400" : "text-zinc-500"}`} />
-              <span className={`text-[11px] font-medium ${tab === tabId ? "text-amber-300" : "text-zinc-400"}`}>{pt.label}</span>
-              <span className="text-[8px] text-zinc-600 font-mono uppercase tracking-wider">plugin</span>
-            </button>
+            <div key={cat.label}>
+              <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-1.5 px-0.5">{cat.label}</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:flex-wrap md:overflow-visible">
+                {tabs.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all active:scale-[0.97] whitespace-nowrap shrink-0 ${
+                      tab === t.id
+                        ? "bg-teal-500/10 border-teal-500/25 shadow-sm shadow-teal-500/10"
+                        : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <t.icon className={`w-4 h-4 shrink-0 ${tab === t.id ? "text-teal-400" : "text-zinc-500"}`} />
+                    <span className={`text-[12px] font-medium ${tab === t.id ? "text-teal-300" : "text-zinc-400"}`}>{t.label}</span>
+                    <span className={`text-[10px] hidden sm:inline ${tab === t.id ? "text-teal-500/60" : "text-zinc-600"}`}>{t.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           );
         })}
+        {/* Plugin tabs */}
+        {pluginTabs
+          .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved', 'twitter-importer', 'telegram-importer', 'pocket-importer', 'spotify-importer', 'readwise-importer'].includes(pt.slug))
+          .length > 0 && (
+          <div>
+            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-1.5 px-0.5">Plugins</p>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:flex-wrap md:overflow-visible">
+              {pluginTabs
+                .filter((pt) => !['kindle-importer', 'pdf-epub-parser', 'youtube-transcript', 'browser-bookmarks', 'obsidian-importer', 'reddit-saved', 'twitter-importer', 'telegram-importer', 'pocket-importer', 'spotify-importer', 'readwise-importer'].includes(pt.slug))
+                .map((pt) => {
+                const tabId = pt.slug.replace('-importer', '').replace('-import', '').replace('-parser', '') as Tab;
+                const PluginTabIcon = PLUGIN_ICON_MAP[pt.icon] || Puzzle;
+                return (
+                  <button
+                    key={pt.slug}
+                    onClick={() => { setTab(tabId); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all active:scale-[0.97] whitespace-nowrap shrink-0 ${
+                      tab === tabId
+                        ? "bg-amber-500/10 border-amber-500/25 shadow-sm shadow-amber-500/10"
+                        : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <PluginTabIcon className={`w-4 h-4 shrink-0 ${tab === tabId ? "text-amber-400" : "text-zinc-500"}`} />
+                    <span className={`text-[12px] font-medium ${tab === tabId ? "text-amber-300" : "text-zinc-400"}`}>{pt.label}</span>
+                    <span className="text-[9px] text-zinc-600 font-mono uppercase tracking-wider">plugin</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       </Stagger>
 
@@ -2023,9 +2059,10 @@ export default function ImportPage() {
               </div>
 
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                <p className="text-[11px] text-zinc-500 leading-relaxed">
-                  💡 This builds a <strong className="text-zinc-400">music taste profile</strong> from your listening data. 
-                  After import, ask MindStore: <em className="text-teal-400/70">"What kind of music do I like?"</em> or <em className="text-teal-400/70">"Who are my top artists?"</em>
+                <p className="text-[11px] text-zinc-500 leading-relaxed flex items-start gap-2">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-400/70 shrink-0 mt-0.5" />
+                  <span>This builds a <strong className="text-zinc-400">music taste profile</strong> from your listening data. 
+                  After import, ask MindStore: <em className="text-teal-400/70">"What kind of music do I like?"</em> or <em className="text-teal-400/70">"Who are my top artists?"</em></span>
                 </p>
               </div>
 
@@ -2106,10 +2143,11 @@ export default function ImportPage() {
                 {rwTokenSaved && (
                   <div className="space-y-3">
                     <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                      <p className="text-[11px] text-zinc-500 leading-relaxed">
-                        ✨ Token verified! Click Import to fetch all your highlights. Readwise will sync: 
+                      <p className="text-[11px] text-zinc-500 leading-relaxed flex items-start gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400/70 shrink-0 mt-0.5" />
+                        <span>Token verified! Click Import to fetch all your highlights. Readwise will sync: 
                         <strong className="text-zinc-400"> books, articles, tweets, podcasts</strong>. 
-                        Re-importing only fetches new highlights since the last sync.
+                        Re-importing only fetches new highlights since the last sync.</span>
                       </p>
                     </div>
 
@@ -2243,15 +2281,25 @@ function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subt
           if (onFile) onFile(e.dataTransfer.files[0]);
           if (onFiles) onFiles(e.dataTransfer.files);
         }}
-        className={`flex flex-col items-center justify-center py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.99] ${
+        className={`group relative flex flex-col items-center justify-center py-10 md:py-14 rounded-2xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.99] ${
           over
-            ? "border-teal-500/40 bg-teal-500/5"
-            : "border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02]"
+            ? "border-teal-500/40 bg-teal-500/[0.06] scale-[1.01]"
+            : disabled
+            ? "border-white/[0.06] bg-white/[0.01] opacity-60 cursor-not-allowed"
+            : "border-white/[0.08] hover:border-teal-500/20 hover:bg-white/[0.02]"
         }`}
       >
-        <div className="mb-2.5">{icon}</div>
-        <p className="text-[13px] text-zinc-400 font-medium">{title}</p>
+        {over && (
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-teal-500/[0.04] to-transparent pointer-events-none" />
+        )}
+        <div className={`mb-3 transition-transform ${over ? "scale-110 -translate-y-1" : "group-hover:scale-105"}`}>
+          {over ? <Upload className="w-6 h-6 text-teal-400" /> : icon}
+        </div>
+        <p className={`text-[13px] font-medium transition-colors ${over ? "text-teal-300" : "text-zinc-400"}`}>{title}</p>
         <p className="text-[11px] text-zinc-600 mt-0.5">{subtitle}</p>
+        <p className="text-[10px] text-zinc-700 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click to browse or drag & drop
+        </p>
       </div>
       <input
         id={id} type="file" accept={accept} multiple={multiple}
