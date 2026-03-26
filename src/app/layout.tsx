@@ -1,27 +1,53 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
-const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+/**
+ * Typography System — Premium Silicon Valley aesthetic
+ * 
+ * Plus Jakarta Sans: Geometric sans with wide letterforms, excellent weight range.
+ * Used by fintech/premium SaaS products. Reads as "designed" without trying too hard.
+ * 
+ * JetBrains Mono: Best-in-class monospace with coding ligatures.
+ * Used for API keys, code snippets, data values.
+ * 
+ * Design rationale:
+ * - Geist was serviceable but reads as "default Next.js project"
+ * - Plus Jakarta Sans has the Stripe/Mercury/Linear premium feel
+ * - Tight letter-spacing on headings (-0.03em), relaxed body (normal)
+ * - font-display: swap for instant text rendering
+ */
+const sans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500"],
+});
 
 export const metadata: Metadata = {
-  title: "MindStore — Your mind, searchable.",
-  description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get synthesized answers from your own brain. Self-hosted, private, and AI-powered.",
-  keywords: ["mind storage", "knowledge base", "ChatGPT export", "personal AI", "MCP", "semantic search", "second brain"],
-  authors: [{ name: "AltCorp" }],
+  title: "MindStore — Your AI-Powered Second Brain",
+  description: "Import knowledge from 12+ sources. Chat with your own mind. Discover hidden connections. 35 plugins, MCP protocol, free and open source.",
+  keywords: ["second brain", "knowledge base", "personal AI", "ChatGPT export", "MCP", "semantic search", "knowledge management", "AI tools", "open source"],
+  authors: [{ name: "MindStore" }],
   openGraph: {
-    title: "MindStore — Your mind, searchable.",
-    description: "Import your ChatGPT conversations in 30 seconds. Ask anything. Get synthesized answers from YOUR brain. 100% private, self-hosted.",
+    title: "MindStore — Your AI-Powered Second Brain",
+    description: "Import from ChatGPT, Kindle, YouTube, Notion & more. Chat with your own knowledge. 35 plugins, MCP protocol, free & open source.",
     url: "https://mindstore.org",
     siteName: "MindStore",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MindStore — Your mind, searchable.",
-    description: "Import your ChatGPT conversations in 30 seconds. Self-hosted, private, AI-powered second brain.",
+    title: "MindStore — Your AI-Powered Second Brain",
+    description: "Import from 12+ sources. Chat with your own mind. 35 plugins. Free & open source.",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore.org"),
 };
@@ -43,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
         <link rel="dns-prefetch" href="https://api.openai.com" />
       </head>
-      <body className={`${geist.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
+      <body className={`${sans.variable} ${mono.variable} font-sans antialiased bg-zinc-950 text-zinc-100 overscroll-none`}>
         {children}
         <Toaster
           theme="dark"
