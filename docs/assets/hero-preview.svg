@@ -1,0 +1,154 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" rx="16" fill="#09090b"/>
+  <rect x="1" y="1" width="1438" height="898" rx="15" stroke="white" stroke-opacity="0.06" stroke-width="2"/>
+  
+  <!-- Window chrome -->
+  <rect x="0" y="0" width="1440" height="44" rx="16" fill="#0c0c0e"/>
+  <rect x="0" y="30" width="1440" height="14" fill="#0c0c0e"/>
+  <line x1="0" y1="44" x2="1440" y2="44" stroke="white" stroke-opacity="0.04"/>
+  <circle cx="24" cy="22" r="5" fill="#ef4444" fill-opacity="0.5"/>
+  <circle cx="42" cy="22" r="5" fill="#eab308" fill-opacity="0.5"/>
+  <circle cx="60" cy="22" r="5" fill="#22c55e" fill-opacity="0.5"/>
+  
+  <!-- URL bar -->
+  <rect x="600" y="12" width="240" height="20" rx="4" fill="white" fill-opacity="0.03"/>
+  <text x="720" y="26" text-anchor="middle" fill="white" fill-opacity="0.3" font-family="system-ui" font-size="10">mindstore.org/app</text>
+  
+  <!-- Sidebar -->
+  <rect x="0" y="44" width="220" height="856" fill="#0a0a0b"/>
+  <line x1="220" y1="44" x2="220" y2="900" stroke="white" stroke-opacity="0.04"/>
+  
+  <!-- Sidebar items -->
+  <text x="20" y="80" fill="#14b8a6" font-family="system-ui" font-size="14" font-weight="700">MindStore</text>
+  
+  <text x="20" y="120" fill="white" fill-opacity="0.15" font-family="system-ui" font-size="9" letter-spacing="1.5">MAIN</text>
+  <rect x="12" y="130" width="196" height="30" rx="6" fill="white" fill-opacity="0.04"/>
+  <text x="20" y="150" fill="white" fill-opacity="0.8" font-family="system-ui" font-size="12">Dashboard</text>
+  <text x="20" y="178" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Explore</text>
+  <text x="20" y="206" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Chat</text>
+  <text x="20" y="234" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Import</text>
+  
+  <text x="20" y="274" fill="white" fill-opacity="0.15" font-family="system-ui" font-size="9" letter-spacing="1.5">PLUGINS</text>
+  <text x="20" y="300" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Fingerprint</text>
+  <text x="20" y="328" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Flashcards</text>
+  <text x="20" y="356" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Evolution</text>
+  <text x="20" y="384" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Sentiment</text>
+  <text x="20" y="412" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Mind Map</text>
+  <text x="20" y="440" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Collections</text>
+  
+  <!-- Main content area -->
+  <text x="260" y="90" fill="white" fill-opacity="0.9" font-family="system-ui" font-size="20" font-weight="600">Your Mind</text>
+  
+  <!-- Stat cards -->
+  <rect x="260" y="110" width="270" height="80" rx="12" fill="#14b8a6" fill-opacity="0.08"/>
+  <rect x="260" y="110" width="270" height="80" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="280" y="145" fill="white" fill-opacity="0.9" font-family="system-ui" font-size="28" font-weight="700">2,847</text>
+  <text x="280" y="170" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Total Memories</text>
+  
+  <rect x="548" y="110" width="180" height="80" rx="12" fill="#10b981" fill-opacity="0.08"/>
+  <rect x="548" y="110" width="180" height="80" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="568" y="145" fill="white" fill-opacity="0.9" font-family="system-ui" font-size="28" font-weight="700">1,423</text>
+  <text x="568" y="170" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">ChatGPT</text>
+  
+  <rect x="746" y="110" width="180" height="80" rx="12" fill="#f59e0b" fill-opacity="0.08"/>
+  <rect x="746" y="110" width="180" height="80" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="766" y="145" fill="white" fill-opacity="0.9" font-family="system-ui" font-size="28" font-weight="700">892</text>
+  <text x="766" y="170" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Books</text>
+  
+  <rect x="944" y="110" width="180" height="80" rx="12" fill="#3b82f6" fill-opacity="0.08"/>
+  <rect x="944" y="110" width="180" height="80" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="964" y="145" fill="white" fill-opacity="0.9" font-family="system-ui" font-size="28" font-weight="700">532</text>
+  <text x="964" y="170" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="12">Notes</text>
+  
+  <!-- Activity chart -->
+  <rect x="260" y="210" width="540" height="200" rx="12" fill="white" fill-opacity="0.01"/>
+  <rect x="260" y="210" width="540" height="200" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="280" y="240" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="11">14-day activity</text>
+  
+  <!-- Chart bars -->
+  <rect x="290" y="340" width="28" height="40" rx="3" fill="#14b8a6" fill-opacity="0.3"/>
+  <rect x="326" y="310" width="28" height="70" rx="3" fill="#14b8a6" fill-opacity="0.4"/>
+  <rect x="362" y="350" width="28" height="30" rx="3" fill="#14b8a6" fill-opacity="0.25"/>
+  <rect x="398" y="290" width="28" height="90" rx="3" fill="#14b8a6" fill-opacity="0.5"/>
+  <rect x="434" y="320" width="28" height="60" rx="3" fill="#14b8a6" fill-opacity="0.35"/>
+  <rect x="470" y="270" width="28" height="110" rx="3" fill="#14b8a6" fill-opacity="0.6"/>
+  <rect x="506" y="300" width="28" height="80" rx="3" fill="#14b8a6" fill-opacity="0.45"/>
+  <rect x="542" y="260" width="28" height="120" rx="3" fill="#14b8a6" fill-opacity="0.7"/>
+  <rect x="578" y="310" width="28" height="70" rx="3" fill="#14b8a6" fill-opacity="0.4"/>
+  <rect x="614" y="340" width="28" height="40" rx="3" fill="#14b8a6" fill-opacity="0.3"/>
+  <rect x="650" y="285" width="28" height="95" rx="3" fill="#14b8a6" fill-opacity="0.55"/>
+  <rect x="686" y="270" width="28" height="110" rx="3" fill="#14b8a6" fill-opacity="0.6"/>
+  <rect x="722" y="320" width="28" height="60" rx="3" fill="#14b8a6" fill-opacity="0.35"/>
+  <rect x="758" y="300" width="28" height="80" rx="3" fill="#14b8a6" fill-opacity="0.45"/>
+  
+  <!-- Recent memories -->
+  <rect x="260" y="430" width="540" height="180" rx="12" fill="white" fill-opacity="0.01"/>
+  <rect x="260" y="430" width="540" height="180" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="280" y="460" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="11">Recent</text>
+  
+  <rect x="276" y="475" width="3" height="35" rx="2" fill="#f59e0b"/>
+  <text x="290" y="492" fill="white" fill-opacity="0.7" font-family="system-ui" font-size="12">Thinking, Fast and Slow — Chapter highlights</text>
+  <text x="290" y="506" fill="white" fill-opacity="0.3" font-family="system-ui" font-size="10">Kindle · 2 hours ago</text>
+  
+  <rect x="276" y="520" width="3" height="35" rx="2" fill="#10b981"/>
+  <text x="290" y="537" fill="white" fill-opacity="0.7" font-family="system-ui" font-size="12">React Server Components deep dive</text>
+  <text x="290" y="551" fill="white" fill-opacity="0.3" font-family="system-ui" font-size="10">ChatGPT · 5 hours ago</text>
+  
+  <rect x="276" y="565" width="3" height="35" rx="2" fill="#3b82f6"/>
+  <text x="290" y="582" fill="white" fill-opacity="0.7" font-family="system-ui" font-size="12">Stripe API architecture notes</text>
+  <text x="290" y="596" fill="white" fill-opacity="0.3" font-family="system-ui" font-size="10">URL · yesterday</text>
+  
+  <!-- Knowledge graph (right panel) -->
+  <rect x="820" y="210" width="580" height="400" rx="12" fill="black" fill-opacity="0.3"/>
+  <rect x="820" y="210" width="580" height="400" rx="12" stroke="white" stroke-opacity="0.04"/>
+  <text x="840" y="240" fill="white" fill-opacity="0.4" font-family="system-ui" font-size="11">Knowledge Fingerprint</text>
+  
+  <!-- Graph nodes -->
+  <line x1="950" y1="350" x2="1100" y2="400" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1100" y1="400" x2="1250" y2="340" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1100" y1="400" x2="1050" y2="500" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="950" y1="350" x2="900" y2="450" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1250" y1="340" x2="1300" y2="450" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1300" y1="450" x2="1200" y2="520" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1050" y1="500" x2="1200" y2="520" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="900" y1="450" x2="950" y2="350" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1100" y1="400" x2="1200" y2="520" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="950" y1="350" x2="1050" y2="500" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="1250" y1="340" x2="1100" y2="400" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  <line x1="900" y1="450" x2="1050" y2="500" stroke="#14b8a6" stroke-opacity="0.12" stroke-width="1"/>
+  
+  <circle cx="1100" cy="400" r="20" fill="#14b8a6" fill-opacity="0.06"/>
+  <circle cx="1100" cy="400" r="12" fill="#14b8a6" fill-opacity="0.5"/>
+  <text x="1100" y="430" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Core</text>
+  
+  <circle cx="950" cy="350" r="14" fill="#14b8a6" fill-opacity="0.06"/>
+  <circle cx="950" cy="350" r="9" fill="#14b8a6" fill-opacity="0.5"/>
+  <text x="950" y="375" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">AI/ML</text>
+  
+  <circle cx="1250" cy="340" r="12" fill="#38bdf8" fill-opacity="0.06"/>
+  <circle cx="1250" cy="340" r="8" fill="#38bdf8" fill-opacity="0.5"/>
+  <text x="1250" y="362" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Code</text>
+  
+  <circle cx="1050" cy="500" r="10" fill="#f59e0b" fill-opacity="0.06"/>
+  <circle cx="1050" cy="500" r="7" fill="#f59e0b" fill-opacity="0.5"/>
+  <text x="1050" y="520" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Books</text>
+  
+  <circle cx="900" cy="450" r="8" fill="#a78bfa" fill-opacity="0.06"/>
+  <circle cx="900" cy="450" r="6" fill="#a78bfa" fill-opacity="0.5"/>
+  <text x="900" y="468" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Philosophy</text>
+  
+  <circle cx="1300" cy="450" r="9" fill="#10b981" fill-opacity="0.06"/>
+  <circle cx="1300" cy="450" r="6" fill="#10b981" fill-opacity="0.5"/>
+  <text x="1300" y="468" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Finance</text>
+  
+  <circle cx="1200" cy="520" r="7" fill="#ec4899" fill-opacity="0.06"/>
+  <circle cx="1200" cy="520" r="5" fill="#ec4899" fill-opacity="0.5"/>
+  <text x="1200" y="538" text-anchor="middle" fill="white" fill-opacity="0.35" font-family="system-ui" font-size="9">Health</text>
+  
+  <!-- Ambient glow on graph -->
+  <radialGradient id="glow" cx="1100" cy="400" r="200" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.06"/>
+    <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+  </radialGradient>
+  <rect x="820" y="210" width="580" height="400" rx="12" fill="url(#glow)"/>
+</svg>

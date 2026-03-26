@@ -1,225 +1,226 @@
 <div align="center">
+  <a href="https://mindstore.org">
+    <img src="public/logo.svg" height="80" alt="MindStore" />
+  </a>
+  <h3>Your knowledge, portable to any AI.</h3>
+  <p>Import everything you've ever read, written, or saved. Search by meaning. Connect to any AI via MCP.</p>
 
-# 🧠 MindStore
+  <br />
 
-**Your Mind, Connected to Every AI.**
+  <a href="https://mindstore.org"><strong>Website</strong></a> · <a href="https://mindstore.org/docs"><strong>Docs</strong></a> · <a href="https://github.com/WarriorSushi/mindstore/issues"><strong>Issues</strong></a> · <a href="#roadmap"><strong>Roadmap</strong></a> · <a href="https://discord.gg/altcorp"><strong>Discord</strong></a>
 
-Import your ChatGPT conversations, Obsidian vault, Notion pages — then search semantically, discover hidden connections in your own thinking, and plug your knowledge into *any* AI via MCP.
+  <br />
+  <br />
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
+  [![License](https://img.shields.io/badge/license-FSL--1.1--MIT-14b8a6?style=flat)](LICENSE)
+  [![Tests](https://img.shields.io/badge/tests-336%20passing-14b8a6?style=flat)](#)
+  [![Plugins](https://img.shields.io/badge/plugins-35-38bdf8?style=flat)](#plugins)
+  [![MCP](https://img.shields.io/badge/MCP-compatible-38bdf8?style=flat)](https://modelcontextprotocol.io)
+  [![Deploy](https://img.shields.io/badge/deploy-Vercel-black?style=flat)](https://vercel.com/new/clone?repository-url=https://github.com/WarriorSushi/mindstore)
 
-[**Try It →**](https://mindstore-sandy.vercel.app) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai) · [**Docs**](./docs/index.md)
+  <br />
+  <br />
 
+  <img src="docs/assets/hero-preview.svg" alt="MindStore Preview" width="720" />
 </div>
 
----
+<br />
 
-## The Problem
+## Why MindStore
 
-Every AI you talk to starts from zero. Your ChatGPT doesn't know what you told Claude. Your Copilot doesn't know your Obsidian notes. Your knowledge is scattered across 15 apps and none of them talk to each other.
+Every AI starts from zero. Your ChatGPT doesn't know what you told Claude. Your Copilot doesn't know your Kindle highlights. Your knowledge is scattered across 15 apps and none of them talk to each other.
 
-**MindStore fixes this.** One place for all your knowledge. One protocol (MCP) to connect it to every AI.
+MindStore imports everything into one searchable knowledge base — then connects it to **any AI** through [MCP](https://modelcontextprotocol.io), the open protocol.
 
-## What Makes MindStore Different
+**No AI costs.** You bring your own keys. MindStore is the infrastructure.
 
-This isn't another note-taking app with a chatbot bolted on:
+<br />
+
+## Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔍 Semantic Search
+BM25 + vector hybrid search with HyDE query expansion, reranking, and contextual compression. Find anything by meaning, not just keywords.
+
+### 💬 Chat With Your Knowledge
+Ask questions, get cited answers from YOUR data. Switch AI models per-message. Works with OpenAI, Gemini, OpenRouter, Ollama, or any OpenAI-compatible endpoint.
 
 ### 🧬 Knowledge Fingerprint
-A 3D WebGL visualization of your mind's topology. See your knowledge clusters, connections between ideas, and blind spots — rendered as an interactive graph.
+3D WebGL visualization of your mind's topology. See clusters, connections, blind spots — rendered as an interactive graph.
 
-### ⚡ Cross-Pollination Engine
-Discovers unexpected bridges between distant pieces of your knowledge. Works without API keys using PostgreSQL trigram similarity, or with embeddings for deeper semantic connections.
+</td>
+<td width="50%">
 
-### 🔴 Contradiction Detector
-Surfaces places where your own thinking conflicts. Not errors — evolution of thought.
+### ⚡ 35 Plugins
+Flashcard engine (SM-2), contradiction finder, topic evolution timeline, sentiment analysis, mind maps, blog/newsletter generation, voice-to-memory, and more.
 
-### ⏰ Forgetting Curve
-Ebbinghaus spaced repetition across your **entire knowledge base**. Alerts you when knowledge is fading.
+### 🌐 MCP Protocol
+Three functions. Any AI gets your brain. Works with Claude, Cursor, Windsurf, Copilot — anything that speaks MCP.
 
-### 📊 Mind Diff & Metabolism Score
-Track your intellectual growth. A 0-10 fitness tracker for your brain — measures intake rate, connection density, source diversity, and growth velocity.
+### 📦 12+ Importers
+ChatGPT exports, Kindle highlights, YouTube transcripts, Obsidian vaults, Notion, Reddit, PDFs, voice memos, images, URLs, and more.
 
-### 🔌 MCP Server
-Connect your MindStore to **any AI** — Claude Desktop, Cursor, VS Code, OpenClaw. Your AI gets full context about you automatically.
+</td>
+</tr>
+</table>
 
-### 🌐 MindStore Everywhere
-A browser companion for capturing selections, pages, and supported AI conversations straight into MindStore, with lightweight on-page recall.
-
-## How It Works
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  Your Data   │────▶│   MindStore   │────▶│   Any AI Client  │
-│              │     │              │     │                 │
-│ • ChatGPT    │     │ • Chunk      │     │ • Claude Desktop│
-│ • Obsidian   │     │ • Embed      │     │ • VS Code       │
-│ • Notion     │     │ • Index      │     │ • Cursor        │
-│ • Text/URLs  │     │ • Connect    │     │ • OpenClaw      │
-└─────────────┘     └──────────────┘     └─────────────────┘
-```
-
-1. **Import** — Drop your ChatGPT export (ZIP or JSON), Obsidian vault, Notion pages, or text files
-2. **Index** — MindStore chunks, embeds, and indexes everything with triple-layer fusion search
-3. **Search & Discover** — Query by meaning, find connections, track your thinking over time
-4. **Connect** — Any MCP-compatible AI gets full context about you automatically
+<br />
 
 ## Quick Start
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 16+ with [pgvector](https://github.com/pgvector/pgvector) and pg_trgm extensions
+### One-click deploy
 
-That is the real hard requirement. You do **not** need Supabase specifically, and you do **not** need Vercel specifically. Any compatible PostgreSQL host and any Node-capable deployment target work.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/WarriorSushi/mindstore)
 
-### Setup
+### Self-host
 
 ```bash
 git clone https://github.com/WarriorSushi/mindstore.git
 cd mindstore
+cp .env.example .env.local    # Add your database URL
 npm install
-
-# Configure
-cp .env.example .env
-# Edit .env: set DATABASE_URL (required)
-# Optionally add GEMINI_API_KEY (free) for embeddings + chat
-
-# Run migrations
-npm run migrate
-
-# Start dev server
-npm run dev
-# Open http://localhost:3000
+npm run db:migrate
+npm run build
+npm start
 ```
 
-### AI Provider Options (pick one)
+### Requirements
 
-| Provider | Cost | Setup |
-|----------|------|-------|
-| **Google Gemini** | Free | Get key at [aistudio.google.com](https://aistudio.google.com/apikey) |
-| **OpenAI** | ~$0.01/10 queries | Get key at [platform.openai.com](https://platform.openai.com/api-keys) |
-| **Ollama** | Free (local) | Install from [ollama.ai](https://ollama.ai), run `ollama pull nomic-embed-text` |
+- **Node.js** 20+
+- **PostgreSQL** with [pgvector](https://github.com/pgvector/pgvector) extension
+- **AI Provider Key** — at least one of: OpenAI, Gemini (free), Ollama (free/local), OpenRouter, or any OpenAI-compatible API
 
-Configure via the Settings page or environment variables. **MindStore works for browsing and importing without any AI key** — you only need one for semantic search, chat, and AI-heavy plugin flows.
-
-## What You Actually Need
-
-- Required:
-  PostgreSQL with `pgvector` and `pg_trgm`
-- Optional:
-  Vercel, Supabase, Google OAuth, provider API keys
-- AI access today:
-  API key or local Ollama
-- Subscription-style provider login:
-  Planned, not the mainline path yet
+<br />
 
 ## Connect Your AI
 
-MindStore exposes an MCP server at `/api/mcp` that any AI client can connect to.
+Add MindStore as a tool in any MCP-compatible AI:
 
-### Claude Desktop / Cursor / VS Code
 ```json
 {
   "mcpServers": {
     "mindstore": {
-      "url": "https://your-mindstore-url.vercel.app/api/mcp"
+      "url": "https://your-instance.com/api/mcp"
     }
   }
 }
 ```
 
-### MCP Tools
+Three functions are exposed:
 
-| Tool | Description |
-|------|-------------|
-| `search_mind` | Semantic + keyword search across all knowledge |
-| `get_context` | Assembled context for a topic |
-| `get_profile` | Knowledge base summary and statistics |
-
-### MCP Resources
-
-| Resource | Description |
+| Function | Description |
 |----------|-------------|
-| `mindstore://profile` | Knowledge base summary |
-| `mindstore://recent` | Recently added memories |
+| `search_mind` | Semantic search across all your knowledge |
+| `get_profile` | Your expertise areas, writing style, stats |
+| `get_context` | Deep context on any topic from your knowledge |
 
-## Deploy to Vercel
+Works with **Claude Desktop**, **Cursor**, **Windsurf**, **GitHub Copilot**, and any MCP client.
 
-```bash
-# Push to GitHub, connect repo in Vercel, set env vars:
-DATABASE_URL=postgres://...
-AUTH_SECRET=your-random-secret
-# Optional:
-GEMINI_API_KEY=AIza...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-```
+<br />
 
-See [PRODUCTION.md](PRODUCTION.md) for full deployment guide.
+## Plugins
+
+All 35 plugins are free. Install from the built-in plugin store.
+
+| Category | Plugins |
+|----------|---------|
+| **Import** | ChatGPT, Kindle, YouTube Transcript, Notion, Obsidian, Reddit, PDF/EPUB, Twitter, Telegram, Pocket, Readwise, Browser Bookmarks |
+| **Analysis** | Knowledge Fingerprint, Contradiction Finder, Topic Evolution, Sentiment Timeline, Knowledge Gaps, Writing Style |
+| **Action** | Flashcard Engine, Mind Map, Smart Collections, Blog Draft, Newsletter Writer, Resume Builder |
+| **AI** | Custom RAG, Domain Embeddings, Multi-Language, Conversation Prep, Learning Paths |
+| **Export** | Anki Export, Markdown Blog, Notion Sync, Obsidian Sync |
+| **Capture** | Voice-to-Memory, Image-to-Memory, Spotify History |
+
+<br />
 
 ## Architecture
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── page.tsx            # Landing page
-│   ├── app/                # Main app (9 pages)
-│   │   ├── page.tsx        # Dashboard + onboarding
-│   │   ├── import/         # ChatGPT ZIP/JSON, files, URLs
-│   │   ├── chat/           # RAG chat with source citations
-│   │   ├── explore/        # Browse & filter knowledge
-│   │   ├── learn/          # AI interview to learn about you
-│   │   ├── fingerprint/    # 3D WebGL knowledge graph
-│   │   ├── insights/       # Connections, contradictions, metabolism
-│   │   ├── connect/        # MCP setup guides
-│   │   └── settings/       # Multi-provider config, data management
-│   └── api/
-│       ├── health/         # Production health check
-│       ├── mcp/            # MCP server (JSON-RPC over HTTP)
-│       └── v1/             # 12 REST API routes
-├── lib/                    # Client utilities
-├── server/
-│   ├── db.ts               # PostgreSQL (Drizzle ORM + pgvector)
-│   ├── schema.ts           # Full schema with vector columns
-│   ├── retrieval.ts        # Triple-layer fusion (BM25 + vector + tree + RRF)
-│   ├── embeddings.ts       # Multi-provider (OpenAI / Gemini / Ollama)
-│   └── migrate.ts          # Idempotent migrations
-└── components/ui/          # shadcn/ui
+┌──────────────────────────────────────────────────────────┐
+│                        Client                            │
+│   Next.js 16 · React 19 · Tailwind · Plus Jakarta Sans  │
+├──────────────────────────────────────────────────────────┤
+│                      API Layer                           │
+│           66 routes · NextAuth · MCP Server              │
+├──────────────────────────────────────────────────────────┤
+│                    Plugin System                         │
+│       35 plugins · Shared AI Client · Job Queue          │
+├──────────────────────────────────────────────────────────┤
+│                      Data Layer                          │
+│     PostgreSQL · pgvector · BM25 · Drizzle ORM           │
+├──────────────────────────────────────────────────────────┤
+│                    AI Providers                           │
+│   OpenAI · Gemini · Ollama · OpenRouter · Custom API     │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Tech Stack
+- **No AI costs for MindStore** — users bring their own keys
+- **Embeddings** — multi-provider (Gemini, OpenAI, Ollama)
+- **Search** — hybrid BM25 + cosine similarity with HyDE
+- **Auth** — Google OAuth via NextAuth, single-user fallback
 
-- **Framework:** Next.js 16 + TypeScript + Tailwind CSS
-- **UI:** shadcn/ui, Framer Motion, reagraph (WebGL 3D)
-- **Database:** PostgreSQL + pgvector + pg_trgm
-- **ORM:** Drizzle ORM (postgres-js)
-- **Search:** Triple-layer fusion — BM25 (tsvector) + vector similarity (pgvector) + tree-navigated retrieval, fused with Reciprocal Rank Fusion
-- **Embeddings:** OpenAI text-embedding-3-small / Gemini text-embedding-004 / Ollama nomic-embed-text
-- **Chat:** Streaming SSE with RAG context injection (OpenAI or Gemini)
-- **Auth:** NextAuth v5 with Google OAuth
-- **Protocol:** Model Context Protocol (MCP) over HTTP
+<br />
 
-## Privacy
+## Roadmap
 
-Self-hosted. Your data stays in your PostgreSQL database. No tracking, no analytics, no data collection. All AI calls go directly from your server to the provider — MindStore never sees your API keys in transit.
+- [x] 35 plugins — all production-grade
+- [x] MCP server — connect any AI
+- [x] 12+ importers — ChatGPT, Kindle, YouTube, Obsidian, etc.
+- [x] Hybrid semantic search — BM25 + vector
+- [x] Chat with cited answers
+- [x] Knowledge Fingerprint — 3D visualization
+- [x] Plugin store with categories
+- [x] PWA support
+- [ ] `.mind` file format — portable knowledge files
+- [ ] Community knowledge bases — share, browse, import, merge
+- [ ] Onboarding wizard
+- [ ] Demo mode with sample data
+- [ ] Team workspaces
+
+<br />
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```bash
+# Development
+npm run dev          # Start dev server on port 3300
+npm run test         # Run 336 tests
+npm run build        # Production build
+npm run typecheck    # Type checking
+npm run lint         # Linting
+```
+
+All commits require [DCO sign-off](https://developercertificate.org/):
+```bash
+git commit -s -m "your message"
+```
+
+<br />
 
 ## License
 
-MindStore is currently licensed under the [MIT License](./LICENSE).
+MindStore is licensed under the [Functional Source License, Version 1.1, MIT Future License (FSL-1.1-MIT)](LICENSE).
 
-For the full project policy around licensing direction, contributions, plugins, and commercial use, see [LICENSING.md](./LICENSING.md).
+**What this means:**
 
-Brand usage is covered separately by [TRADEMARKS.md](./TRADEMARKS.md).
+- ✅ **Free to self-host** — personal, company, education, any size
+- ✅ **Free to modify** — change anything, build plugins, customize
+- ✅ **Free to redistribute** — share copies with the license included
+- ✅ **Source available** — read, audit, and learn from all code
+- ✅ **Converts to MIT** — each version becomes fully MIT after 2 years
+- ❌ **No competing service** — you can't offer MindStore as a hosted product that competes with us
 
-Project governance is described in [GOVERNANCE.md](./GOVERNANCE.md), and contribution-origin policy is described in [DCO.md](./DCO.md).
-
----
+<br />
 
 <div align="center">
-
-Built by [AltCorp](https://altcorp.frain.cloud)
-
-**MindStore** — because your AI should know you.
-
+  <a href="https://mindstore.org">
+    <img src="public/favicon.svg" height="24" alt="" />
+  </a>
+  <br />
+  <sub>Built with conviction, not just code.</sub>
 </div>

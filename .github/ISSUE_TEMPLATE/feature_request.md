@@ -1,23 +1,19 @@
 ---
-name: Feature request
-about: Suggest a new feature or platform improvement
+name: Feature Request
+about: Suggest an improvement or new feature
 title: "[Feature] "
-labels: ["enhancement"]
-assignees: []
+labels: enhancement
+assignees: ''
 ---
 
-## Problem
+**Problem**
+What problem does this solve? Who is it for?
 
-What problem are you trying to solve?
+**Proposed solution**
+Describe what you'd like to happen.
 
-## Proposed Solution
+**Alternatives considered**
+Any other approaches you've thought about.
 
-What would you like MindStore to do?
-
-## User Impact
-
-Who benefits and how?
-
-## Alternatives Considered
-
-List any alternatives or workarounds you considered.
+**Additional context**
+Screenshots, links, or examples from other products.

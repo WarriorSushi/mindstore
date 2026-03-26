@@ -1,37 +1,35 @@
 # Security Policy
 
-MindStore is a personal knowledge product. Security issues can expose private memories, provider credentials, or deployment infrastructure, so please report them responsibly.
+## Reporting a Vulnerability
 
-## Reporting
+If you discover a security vulnerability in MindStore, please report it responsibly.
 
-Please do not open public issues for security vulnerabilities.
+**Do NOT open a public issue.**
 
-Send a report that includes:
+Email: security@mindstore.org
 
-- A short summary of the issue
-- Impacted versions or branches
-- Steps to reproduce
-- Proof-of-concept details when safe
-- Suggested remediation if you have one
+Or use [GitHub Security Advisories](https://github.com/WarriorSushi/mindstore/security/advisories/new).
 
-Until a dedicated security inbox is established, use a private maintainer channel and mark the report as `security`.
+We will acknowledge receipt within 48 hours and provide a timeline for a fix.
 
-## Secret Handling
+## Scope
 
-- Never commit real secrets, production URLs with credentials, or live tokens to the repository.
-- Prefer environment variables or secret stores over tracked configuration.
-- If a secret was ever committed, rotate it immediately even if it is later removed from git history.
+- MindStore application code
+- API endpoints
+- Authentication flows
+- Plugin system
+- Data handling and storage
 
-## Current Notice
+## Out of Scope
 
-This repository previously contained literal production credentials in `PRODUCTION.md`. Those values must be treated as compromised and rotated out-of-band.
+- Vulnerabilities in third-party dependencies (report upstream)
+- Self-hosted instance misconfiguration
+- Social engineering
 
-## Supported Fix Window
+## Data Privacy
 
-Security fixes should be prioritized ahead of feature work when the issue affects:
-
-- Authentication or session handling
-- MCP exposure
-- Plugin execution or sandbox boundaries
-- Secret storage
-- Import pipelines that process untrusted content
+MindStore is designed with privacy first:
+- **Your data stays on your server** — no telemetry, no analytics
+- **AI keys are stored locally** — never sent to MindStore servers
+- **No accounts required** — works in single-user mode without OAuth
+- **Source available** — audit the code yourself

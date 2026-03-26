@@ -1,36 +1,28 @@
 ---
-name: Bug report
-about: Report a reproducible problem in MindStore
+name: Bug Report
+about: Something isn't working as expected
 title: "[Bug] "
-labels: ["bug"]
-assignees: []
+labels: bug
+assignees: ''
 ---
 
-## Summary
+**What happened?**
+A clear description of the bug.
 
-Describe the bug clearly.
+**Steps to reproduce**
+1. Go to '...'
+2. Click on '...'
+3. See error
 
-## Steps To Reproduce
+**Expected behavior**
+What should have happened.
 
-1. 
-2. 
-3. 
+**Environment**
+- MindStore version:
+- Browser:
+- OS:
+- Deployment: [self-hosted / Vercel / other]
+- AI Provider: [OpenAI / Gemini / Ollama / OpenRouter / Custom]
 
-## Expected Behavior
-
-What should have happened?
-
-## Actual Behavior
-
-What happened instead?
-
-## Environment
-
-- Branch/commit:
-- Browser/OS:
-- Deployment mode:
-- AI provider:
-
-## Evidence
-
-Add screenshots, logs, or terminal output when useful.
+**Screenshots**
+If applicable, add screenshots.

@@ -1,57 +1,80 @@
 # Contributing to MindStore
 
-MindStore is evolving into a personal knowledge layer for AI with a strong open plugin ecosystem. Contributions are welcome across product, docs, testing, platform, and plugin work.
+Thanks for your interest in contributing! MindStore is built by a small team and we value every contribution.
 
-## Working Norms
+## Quick Start
 
-- Never merge directly to `main`.
-- Use topic branches such as `codex/*`, `feat/*`, or `fix/*`.
-- Keep changes decision-documented when they affect architecture, security, or extension contracts.
-- Update docs for any user-visible or builder-visible behavior change.
+```bash
+git clone https://github.com/WarriorSushi/mindstore.git
+cd mindstore
+npm install
+cp .env.example .env.local  # Configure your database
+npm run dev                  # http://localhost:3300
+```
 
-## License And Contribution Origin
+## Requirements
 
-- This repository is currently licensed under [LICENSE](./LICENSE).
-- Contributions are accepted under the repository's current outbound license unless a subdirectory says otherwise.
-- Contributors should add a `Signed-off-by:` line to commits in line with [DCO.md](./DCO.md).
-- Branding rights are separate from code rights; see [TRADEMARKS.md](./TRADEMARKS.md).
-- Project stewardship and major policy authority are described in [GOVERNANCE.md](./GOVERNANCE.md).
+- Node.js 20+
+- PostgreSQL with pgvector extension
+- At least one AI provider key (Gemini is free)
 
-## Good First Contribution Areas
+## Development
 
-- Documentation improvements
-- Importer polish and edge cases
-- Plugin SDK/runtime ergonomics
-- Tests, CI, and reliability work
-- Accessibility and onboarding UX
+```bash
+npm run dev          # Dev server with hot reload
+npm run test         # Run all tests (336)
+npm run build        # Production build
+npm run typecheck    # TypeScript checking
+npm run lint         # ESLint
+npm run test:e2e     # Playwright E2E tests
+```
 
-## Development Loop
+## Commit Convention
 
-1. Install dependencies with `npm install`
-2. Configure `.env`
-3. Run `npm run migrate`
-4. Start the app with `npm run dev`
-5. Run `npm run typecheck`
-6. Run `npm run test`
-7. Run `npm run lint:ci`
+We use [DCO sign-off](https://developercertificate.org/) on all commits:
 
-## Pull Request Expectations
+```bash
+git commit -s -m "feat: add new importer for X"
+```
 
-- Explain the problem and user impact clearly
-- Include screenshots or terminal output for UI or DX changes when helpful
-- Add or update docs
-- Add or update tests for non-trivial behavior
-- Call out assumptions, tradeoffs, and follow-up work
-- Confirm contribution origin with a DCO sign-off where possible
+Prefix your commit message:
+- `feat:` — new feature
+- `fix:` — bug fix
+- `docs:` — documentation
+- `refactor:` — code change that neither fixes a bug nor adds a feature
+- `test:` — adding or updating tests
+- `chore:` — maintenance
 
-## Plugin and Platform Changes
+## Pull Requests
 
-If you touch plugin contracts, MCP behavior, or config surfaces:
+1. Fork the repo and create your branch from `main`
+2. Make your changes
+3. Ensure `npm run build` passes
+4. Ensure `npm run test` passes
+5. Write a clear PR description
+6. Submit!
 
-- Update the relevant docs in `docs/`
-- Add or update an ADR in `docs/adr/` when the decision is architectural
-- Keep backward compatibility in mind for plugin slugs and manifests
+## Building Plugins
+
+MindStore has a plugin system for adding importers, analysis tools, and actions. See [`docs/build/plugin-porting-guide.md`](docs/build/plugin-porting-guide.md) for the full guide.
+
+Quick version:
+1. Create your manifest in `src/server/plugins/registry.ts`
+2. Add your page in `src/app/app/your-plugin/page.tsx`
+3. Add your API route in `src/app/api/v1/plugins/your-plugin/route.ts`
+4. Add portable logic in `src/server/plugins/ports/your-plugin.ts`
+
+## Design Guidelines
+
+- OLED black (`#0a0a0b`) base, teal-500 primary, sky secondary
+- Lucide icons only (no emojis in UI)
+- Follow the design system in `.impeccable.md`
+- No violet, purple, or fuchsia colors
 
 ## Code of Conduct
 
-By participating, you agree to uphold the standards in [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+We follow the [Contributor Covenant](CODE_OF_CONDUCT.md). Be respectful.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [FSL-1.1-MIT](LICENSE) license.

@@ -1,27 +1,27 @@
 # Code of Conduct
 
-## Our Commitment
+## Our Pledge
 
-We want MindStore to be a welcoming, practical, and respectful community for builders, researchers, tinkerers, and users.
+We are committed to making participation in MindStore a welcoming experience for everyone, regardless of background or identity.
 
-## Expected Behavior
+## Our Standards
 
+**Do:**
 - Be respectful and constructive
-- Assume good intent while staying honest
-- Focus criticism on ideas, code, and behavior, not people
-- Help keep documentation and issue reports clear for newcomers
+- Welcome newcomers
+- Accept feedback gracefully
+- Focus on what's best for the community
 
-## Unacceptable Behavior
-
-- Harassment, threats, or personal attacks
-- Discrimination or exclusionary language
-- Doxxing or sharing private information
-- Bad-faith disruption of community spaces
+**Don't:**
+- Use hostile or derogatory language
+- Harass or troll others
+- Publish others' private information
+- Engage in behavior that would be inappropriate in a professional setting
 
 ## Enforcement
 
-Maintainers may remove content, restrict participation, or ban contributors who violate this policy.
+Instances of unacceptable behavior may be reported to the project maintainers. All complaints will be reviewed and investigated.
 
-## Reporting
+## Attribution
 
-Report issues privately to maintainers when possible. Security-sensitive reports should follow [SECURITY.md](./SECURITY.md).
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).

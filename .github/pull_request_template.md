@@ -1,29 +1,28 @@
 ## Summary
 
+Brief description of what this PR does.
+
+## Changes
+
+- 
+- 
 - 
 
-## Why
+## Type
 
-- 
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Plugin
+- [ ] Refactor
+- [ ] Documentation
+- [ ] Other
 
 ## Testing
 
-- [ ] `npm run typecheck`
-- [ ] `npm run test`
-- [ ] `npm run lint:ci`
-- [ ] `npm run build`
+- [ ] Build passes (`npm run build`)
+- [ ] Tests pass (`npm run test`)
+- [ ] Manually tested the change
 
-## Docs
+## Screenshots
 
-- [ ] User docs updated
-- [ ] Builder docs updated
-- [ ] ADR added or updated if architectural
-
-## License / Origin
-
-- [ ] I have the right to contribute this change under the repository license
-- [ ] I added a `Signed-off-by:` line to my commit(s) or otherwise confirmed DCO intent
-
-## Risks / Follow-Ups
-
-- 
+If UI change, include before/after screenshots.

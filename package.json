@@ -1,8 +1,27 @@
 {
-  "name": "mindstore-web",
+  "name": "mindstore",
   "version": "0.1.0",
+  "description": "Your knowledge, portable to any AI. Import from 12+ sources, search by meaning, connect to any AI via MCP.",
   "private": true,
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
+  "homepage": "https://mindstore.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WarriorSushi/mindstore.git"
+  },
+  "author": "MindStore Contributors",
+  "keywords": [
+    "knowledge-base",
+    "second-brain",
+    "personal-ai",
+    "mcp",
+    "semantic-search",
+    "chatgpt-export",
+    "knowledge-management",
+    "rag",
+    "pgvector",
+    "nextjs"
+  ],
   "workspaces": [
     "packages/*",
     "extensions/*"

@@ -213,9 +213,12 @@ export default function SettingsPage() {
             onClick={handleReindex}
             className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.06] border border-amber-500/15 px-4 py-3 hover:bg-amber-500/[0.1] transition-colors text-left"
           >
-            <div>
-              <p className="text-[13px] text-amber-300 font-medium">⚡ {reindexStatus.withoutEmbeddings} memories need embeddings</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">Tap to enable semantic search for all your data</p>
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+              <div>
+                <p className="text-[13px] text-amber-300 font-medium">{reindexStatus.withoutEmbeddings} memories need embeddings</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">Tap to enable semantic search for all your data</p>
+              </div>
             </div>
             <RefreshCw className="w-4 h-4 text-amber-400 shrink-0" />
           </button>
@@ -338,40 +341,33 @@ export default function SettingsPage() {
         />
 
         {/* Custom API */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-zinc-500/10 flex items-center justify-center text-zinc-400">
-                <Plug className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-medium">Custom API</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border font-medium text-zinc-400 bg-zinc-500/10 border-zinc-500/15">Any LLM</span>
-                </div>
-                <p className="text-[11px] text-zinc-500 mt-0.5">Any OpenAI-compatible endpoint (Groq, Together, Fireworks, DeepSeek, etc.)</p>
-              </div>
-            </div>
-            {providers.custom?.configured && (
-              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                <CheckCircle className="w-3 h-3 text-emerald-400" />
-                Connected
-              </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <input type="text" placeholder="API Base URL (e.g. https://api.groq.com/openai/v1/chat/completions)" value={customApiUrl} onChange={(e) => setCustomApiUrl(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
-            <input type="password" placeholder="API Key" value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
-            <input type="text" placeholder="Model name (e.g. llama-3.3-70b-versatile)" value={customApiModel} onChange={(e) => setCustomApiModel(e.target.value)} className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30" />
-          </div>
-          <button
-            onClick={() => handleSave('custom')}
-            disabled={!customApiKey.trim() || !customApiUrl.trim() || saving === 'custom'}
-            className="h-8 px-4 rounded-xl text-[12px] font-medium bg-zinc-700 hover:bg-zinc-600 disabled:opacity-30 transition-all"
-          >
-            {saving === 'custom' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Connect'}
-          </button>
-        </div>
+        <ProviderCard
+          name="Custom API"
+          icon={<Plug className="w-4 h-4" />}
+          iconColor="text-zinc-400"
+          badge="Any LLM"
+          badgeColor="text-zinc-400 bg-zinc-500/10 border-zinc-500/15"
+          connected={providers.custom?.configured}
+          preview={providers.custom?.model}
+          description={<>Any OpenAI-compatible endpoint — Groq, Together, Fireworks, DeepSeek, and more.</>}
+          inputProps={{ type: "text", placeholder: "API Base URL (e.g. https://api.groq.com/openai/v1)", value: customApiUrl, onChange: (e: any) => setCustomApiUrl(e.target.value) }}
+          extraInputs={[
+            { type: "password", placeholder: "API Key", value: customApiKey, onChange: (e: any) => setCustomApiKey(e.target.value) },
+            { type: "text", placeholder: "Model name (e.g. llama-3.3-70b-versatile)", value: customApiModel, onChange: (e: any) => setCustomApiModel(e.target.value) },
+          ]}
+          onSave={() => handleSave('custom')}
+          saving={saving === 'custom'}
+          disabled={!customApiKey.trim() || !customApiUrl.trim()}
+          buttonColor="bg-zinc-700 hover:bg-zinc-600"
+          guide={{
+            steps: [
+              "Get an API key from your chosen provider",
+              "Enter the OpenAI-compatible base URL",
+              "Enter your API key and model name",
+              "Test the connection to verify it works",
+            ],
+          }}
+        />
       </div>
       </Stagger>
       )}
@@ -711,7 +707,7 @@ export default function SettingsPage() {
   );
 }
 
-function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor, guide }: any) {
+function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, extraInputs, onSave, saving, disabled, buttonColor, guide }: any) {
   const [expanded, setExpanded] = useState(!connected);
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [latency, setLatency] = useState<number | null>(null);
@@ -825,6 +821,19 @@ function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, pre
                 'border-white/[0.08] focus:border-teal-500/30'
               }`}
             />
+
+            {/* Extra inputs for multi-field providers like Custom API */}
+            {extraInputs?.map((inp: any, i: number) => (
+              <input
+                key={i}
+                {...inp}
+                className={`w-full h-10 px-3 rounded-xl bg-white/[0.04] border text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none transition-all ${
+                  status === 'success' ? 'border-emerald-500/30 focus:border-emerald-500/40' :
+                  status === 'error' ? 'border-red-500/30 focus:border-red-500/40' :
+                  'border-white/[0.08] focus:border-teal-500/30'
+                }`}
+              />
+            ))}
 
             <button
               onClick={handleTestAndSave}

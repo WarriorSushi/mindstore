@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Security report
-    url: https://github.com/WarriorSushi/mindstore/blob/main/SECURITY.md
-    about: Please do not file vulnerabilities publicly.
+  - name: Documentation
+    url: https://mindstore.org/docs
+    about: Check the docs before filing an issue
+  - name: Discord
+    url: https://discord.gg/altcorp
+    about: Ask questions and get help from the community
