@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Puzzle, Search, X, Loader2, Check, AlertTriangle, ChevronRight,
-  Upload, BarChart3, Zap, FolderDown, Cpu, Star, Filter,
+  Upload, BarChart3, Zap, FolderDown, Cpu, Star,
   BookOpen, FileText, Play, Bookmark, Gem, MessageCircle, AtSign,
   Highlighter, BookmarkCheck, Send, Music, FileStack,
   Network, SearchX, TrendingUp, PenLine, Heart,
@@ -12,7 +12,7 @@ import {
   RefreshCw, Download,
   Mic, Image, Languages, Cog, Dna,
   Power, PowerOff, Settings, Trash2,
-  ArrowRight, ExternalLink, Sparkles, Package, Grid3X3, LayoutList,
+  ArrowRight, Sparkles, Grid3X3, LayoutList,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -73,12 +73,12 @@ const CATEGORIES: { key: string; label: string; icon: React.ComponentType<{ clas
   { key: 'ai', label: 'AI Tools', icon: Cpu, color: 'text-sky-400', description: 'Enhanced intelligence' },
 ];
 
-const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; gradient: string }> = {
-  import:   { bg: 'bg-blue-500/[0.06]',    border: 'border-blue-500/20',    text: 'text-blue-400',    dot: 'bg-blue-400',    gradient: 'from-blue-500/10 to-transparent' },
-  analysis: { bg: 'bg-teal-500/[0.06]',    border: 'border-teal-500/20',    text: 'text-teal-400',    dot: 'bg-teal-400',    gradient: 'from-teal-500/10 to-transparent' },
-  action:   { bg: 'bg-amber-500/[0.06]',   border: 'border-amber-500/20',   text: 'text-amber-400',   dot: 'bg-amber-400',   gradient: 'from-amber-500/10 to-transparent' },
-  export:   { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400', gradient: 'from-emerald-500/10 to-transparent' },
-  ai:       { bg: 'bg-sky-500/[0.06]',     border: 'border-sky-500/20',     text: 'text-sky-400',     dot: 'bg-sky-400',     gradient: 'from-sky-500/10 to-transparent' },
+const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+  import:   { bg: 'bg-blue-500/[0.06]',    border: 'border-blue-500/20',    text: 'text-blue-400',    dot: 'bg-blue-400' },
+  analysis: { bg: 'bg-teal-500/[0.06]',    border: 'border-teal-500/20',    text: 'text-teal-400',    dot: 'bg-teal-400' },
+  action:   { bg: 'bg-amber-500/[0.06]',   border: 'border-amber-500/20',   text: 'text-amber-400',   dot: 'bg-amber-400' },
+  export:   { bg: 'bg-emerald-500/[0.06]', border: 'border-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+  ai:       { bg: 'bg-sky-500/[0.06]',     border: 'border-sky-500/20',     text: 'text-sky-400',     dot: 'bg-sky-400' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -225,92 +225,11 @@ export default function PluginsPage() {
 
   // ─── Render helpers ────────────────────────────────────────
 
-  const renderPluginCard = (plugin: Plugin, size: 'sm' | 'md' | 'lg' = 'md') => {
+  const renderPluginCard = (plugin: Plugin) => {
     const colors = CATEGORY_COLORS[plugin.category] || CATEGORY_COLORS.import;
     const isActioning = actionLoading?.startsWith(plugin.slug);
     const hasRoute = PLUGIN_ROUTES[plugin.slug];
     const isActive = plugin.installed && plugin.status === 'active';
-
-    if (size === 'lg') {
-      // ─── Featured card (large) ────────────
-      return (
-        <div
-          key={plugin.slug}
-          className="group relative rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-white/[0.01] overflow-hidden transition-all duration-300 hover:border-white/[0.14] hover:shadow-lg hover:shadow-black/20"
-        >
-          {/* Gradient accent glow */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-60 pointer-events-none`} />
-          
-          <div className="relative p-5 sm:p-6 flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center`}>
-                <PluginIcon name={plugin.icon} className={`w-5 h-5 ${colors.text}`} />
-              </div>
-              <div className="flex items-center gap-1.5">
-                {plugin.featured && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400/80 bg-amber-500/[0.08] border border-amber-500/15 rounded-full px-2 py-0.5">
-                    <Star className="w-2.5 h-2.5 fill-amber-400" />
-                    Featured
-                  </span>
-                )}
-                <span className={`text-[10px] font-medium ${colors.text} bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-0.5`}>
-                  {TYPE_LABELS[plugin.type]}
-                </span>
-              </div>
-            </div>
-
-            {/* Body */}
-            <h3 className="text-[16px] font-semibold text-white mb-1.5 tracking-[-0.01em]">
-              {plugin.name}
-            </h3>
-            <p className="text-[13px] text-zinc-400 leading-relaxed mb-5 flex-1">
-              {plugin.description}
-            </p>
-
-            {/* Capabilities */}
-            {plugin.capabilities && plugin.capabilities.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-4">
-                {plugin.capabilities.slice(0, 3).map((cap) => (
-                  <span
-                    key={cap}
-                    className="text-[9px] font-mono text-zinc-600 bg-white/[0.03] border border-white/[0.05] rounded px-1.5 py-0.5"
-                  >
-                    {cap}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {isActive && hasRoute ? (
-                <button
-                  onClick={() => router.push(PLUGIN_ROUTES[plugin.slug])}
-                  className="h-8 px-4 rounded-lg bg-teal-500/15 border border-teal-500/25 text-[12px] font-semibold text-teal-400 hover:bg-teal-500/20 active:scale-[0.97] transition-all flex items-center gap-1.5"
-                >
-                  Open
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              ) : plugin.installed ? (
-                <span className="flex items-center gap-1.5 text-[12px] text-emerald-400/80 font-medium">
-                  <Check className="w-3.5 h-3.5" />
-                  Installed
-                </span>
-              ) : (
-                <button
-                  onClick={() => pluginAction(plugin.slug, 'install')}
-                  disabled={!!isActioning}
-                  className="h-8 px-4 rounded-lg bg-teal-600 text-[12px] font-semibold text-white hover:bg-teal-500 active:scale-[0.97] transition-all disabled:opacity-50"
-                >
-                  {isActioning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Install'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
 
     // ─── Standard card (grid / list) ────────────
     return (
@@ -506,56 +425,21 @@ export default function PluginsPage() {
   return (
     <PageTransition>
       {/* ═══════════════════════════════════════════════════════════
-          HEADER — Title, stats strip, search bar
+          HEADER — Title + inline stats, search bar
       ═══════════════════════════════════════════════════════════ */}
       <Stagger>
         <div className="mb-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-[22px] sm:text-[28px] font-semibold tracking-[-0.03em]">
-                Plugin Store
-              </h1>
-              <p className="text-[13px] text-zinc-500 mt-0.5">
-                33 plugins to extend your knowledge base
-              </p>
-            </div>
-          </div>
-
-          {/* Stats strip */}
-          {summary && (
-            <div className="flex items-center gap-2 mb-5 flex-wrap">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.025] border border-white/[0.05]">
-                <Package className="w-3 h-3 text-zinc-500" />
-                <span className="text-[11px] font-medium text-zinc-400 tabular-nums">{summary.total} total</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span className="text-[11px] font-medium text-emerald-400/80 tabular-nums">{summary.active} active</span>
-              </div>
-              {summary.installed > 0 && summary.installed !== summary.active && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.025] border border-white/[0.05]">
-                  <Check className="w-3 h-3 text-zinc-500" />
-                  <span className="text-[11px] font-medium text-zinc-400 tabular-nums">{summary.installed} installed</span>
-                </div>
+          <div className="mb-5">
+            <h1 className="text-[22px] sm:text-[28px] font-semibold tracking-[-0.03em]">
+              Plugin Store
+            </h1>
+            <p className="text-[13px] text-zinc-500 mt-0.5">
+              {summary ? `${summary.total} plugins` : 'Plugins'} to extend your knowledge base
+              {summary && summary.active > 0 && (
+                <span className="text-emerald-400/70"> · {summary.active} active</span>
               )}
-              <div className="hidden sm:flex items-center gap-1.5 ml-auto">
-                {SECTION_ORDER.map(cat => {
-                  const c = CATEGORY_COLORS[cat];
-                  const count = summary.byCategory[cat] || 0;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setCategory(cat)}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium text-zinc-600 hover:text-zinc-400 transition-colors"
-                    >
-                      <div className={`w-1 h-1 rounded-full ${c.dot}`} />
-                      {count}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            </p>
+          </div>
 
           {/* Search bar */}
           <div className="relative">
@@ -591,9 +475,9 @@ export default function PluginsPage() {
           FILTER BAR — Categories + Install filter + View toggle
       ═══════════════════════════════════════════════════════════ */}
       <Stagger>
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
-          {/* Category pills */}
-          <div className="flex items-center gap-1 shrink-0">
+        <div className="mb-6 space-y-3">
+          {/* Category pills — wraps on mobile */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
@@ -610,44 +494,40 @@ export default function PluginsPage() {
             ))}
           </div>
 
-          <div className="w-px h-5 bg-white/[0.06] shrink-0 mx-1" />
+          {/* Second row: install filter + view toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              {(['all', 'installed', 'available'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`h-[28px] px-2.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
+                    filter === f
+                      ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                      : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+                  }`}
+                >
+                  {f === 'all' ? 'All' : f === 'installed' ? 'Installed' : 'Available'}
+                </button>
+              ))}
+            </div>
 
-          {/* Install filter */}
-          <div className="flex items-center gap-1 shrink-0">
-            {(['all', 'installed', 'available'] as const).map((f) => (
+            <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/[0.06] rounded-lg p-0.5">
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`h-[30px] px-2.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all ${
-                  filter === f
-                    ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                    : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
-                }`}
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white/[0.08] text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+                title="Grid view"
               >
-                {f === 'all' ? 'All' : f === 'installed' ? 'Installed' : 'Available'}
+                <Grid3X3 className="w-3.5 h-3.5" />
               </button>
-            ))}
-          </div>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/[0.06] rounded-lg p-0.5 shrink-0">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white/[0.08] text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-              title="Grid view"
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white/[0.08] text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-              title="List view"
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-            </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white/[0.08] text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+                title="List view"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </Stagger>
@@ -657,32 +537,83 @@ export default function PluginsPage() {
       ═══════════════════════════════════════════════════════════ */}
       {showBrowseView && (
         <>
-          {/* ── Featured Spotlight ── */}
+          {/* ── Featured Spotlight — horizontal hero cards ── */}
           {featuredPlugins.length > 0 && (
             <Stagger>
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="mb-10">
+                <div className="flex items-center gap-2 mb-4">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <h2 className="text-[14px] font-semibold text-white tracking-[-0.01em]">Spotlight</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {featuredPlugins.map((p) => renderPluginCard(p, 'lg'))}
+                <div className="space-y-2">
+                  {featuredPlugins.map((p) => {
+                    const colors = CATEGORY_COLORS[p.category] || CATEGORY_COLORS.import;
+                    const isActioning = actionLoading?.startsWith(p.slug);
+                    const hasRoute = PLUGIN_ROUTES[p.slug];
+                    const isActive = p.installed && p.status === 'active';
+                    return (
+                      <div
+                        key={p.slug}
+                        className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-white/[0.06] bg-white/[0.015] hover:bg-white/[0.03] hover:border-white/[0.1] transition-all duration-200"
+                      >
+                        <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl ${colors.bg} border ${colors.border} flex items-center justify-center shrink-0`}>
+                          <PluginIcon name={p.icon} className={`w-5 h-5 ${colors.text}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h3 className="text-[15px] font-medium text-white truncate">{p.name}</h3>
+                            <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                            <span className={`hidden sm:inline text-[10px] font-medium ${colors.text} bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-0.5`}>
+                              {TYPE_LABELS[p.type]}
+                            </span>
+                          </div>
+                          <p className="text-[12px] sm:text-[13px] text-zinc-500 line-clamp-1">{p.description}</p>
+                        </div>
+                        <div className="shrink-0">
+                          {isActive && hasRoute ? (
+                            <button
+                              onClick={() => router.push(PLUGIN_ROUTES[p.slug])}
+                              className="h-8 px-4 rounded-lg bg-teal-500/15 border border-teal-500/25 text-[12px] font-semibold text-teal-400 hover:bg-teal-500/20 active:scale-[0.97] transition-all flex items-center gap-1.5"
+                            >
+                              Open
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          ) : p.installed ? (
+                            <span className="flex items-center gap-1.5 text-[12px] text-emerald-400/80 font-medium">
+                              <Check className="w-3.5 h-3.5" />
+                              Installed
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => pluginAction(p.slug, 'install')}
+                              disabled={!!isActioning}
+                              className="h-8 px-4 rounded-lg bg-teal-600 text-[12px] font-semibold text-white hover:bg-teal-500 active:scale-[0.97] transition-all disabled:opacity-50"
+                            >
+                              {isActioning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Install'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Stagger>
           )}
 
-          {/* ── Category Sections ── */}
-          {SECTION_ORDER.map((cat) => {
+          {/* ── Category Sections — alternating layouts ── */}
+          {SECTION_ORDER.map((cat, sectionIdx) => {
             const catPlugins = pluginsByCategory[cat];
             if (!catPlugins || catPlugins.length === 0) return null;
             const catConfig = CATEGORIES.find(c => c.key === cat);
-            const colors = CATEGORY_COLORS[cat];
             if (!catConfig) return null;
+
+            // Alternate between layouts: even = grid, odd = compact rows
+            const useCompactRows = sectionIdx % 2 === 1;
 
             return (
               <Stagger key={cat}>
-                <div className="mb-7">
+                <div className="mb-8">
                   {/* Section header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -699,10 +630,55 @@ export default function PluginsPage() {
                     </button>
                   </div>
 
-                  {/* Plugin cards */}
-                  {viewMode === 'grid' ? (
+                  {/* Alternating layout */}
+                  {useCompactRows ? (
+                    /* Compact row layout — no cards, just clean rows */
+                    <div className="space-y-0.5">
+                      {catPlugins.map((plugin) => {
+                        const colors = CATEGORY_COLORS[plugin.category] || CATEGORY_COLORS.import;
+                        const isActioning = actionLoading?.startsWith(plugin.slug);
+                        const hasRoute = PLUGIN_ROUTES[plugin.slug];
+                        const isActive = plugin.installed && plugin.status === 'active';
+                        return (
+                          <div
+                            key={plugin.slug}
+                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.025] transition-colors"
+                          >
+                            <PluginIcon name={plugin.icon} className={`w-4 h-4 ${colors.text} shrink-0`} />
+                            <span className="text-[13px] font-medium text-white truncate flex-1">{plugin.name}</span>
+                            <span className="hidden sm:block text-[11px] text-zinc-600 truncate max-w-[200px]">{plugin.description}</span>
+                            <div className="shrink-0">
+                              {isActive && hasRoute ? (
+                                <button
+                                  onClick={() => router.push(PLUGIN_ROUTES[plugin.slug])}
+                                  className="h-6 px-2.5 rounded-md bg-teal-500/10 text-[10px] font-medium text-teal-400 hover:bg-teal-500/15 active:scale-[0.97] transition-all flex items-center gap-1"
+                                >
+                                  Open <ArrowRight className="w-2.5 h-2.5" />
+                                </button>
+                              ) : plugin.installed ? (
+                                <div className="flex items-center gap-1">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${plugin.status === 'active' ? 'bg-emerald-400' : plugin.status === 'error' ? 'bg-red-400' : 'bg-zinc-600'}`} />
+                                  <span className={`text-[10px] font-medium ${plugin.status === 'active' ? 'text-emerald-400' : plugin.status === 'error' ? 'text-red-400' : 'text-zinc-600'}`}>
+                                    {plugin.status === 'active' ? 'Active' : plugin.status === 'error' ? 'Error' : 'Off'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => pluginAction(plugin.slug, 'install')}
+                                  disabled={!!isActioning}
+                                  className="h-6 px-2.5 rounded-md bg-white/[0.04] text-[10px] font-medium text-zinc-500 hover:bg-teal-500/10 hover:text-teal-400 active:scale-[0.97] transition-all disabled:opacity-50"
+                                >
+                                  {isActioning ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : 'Install'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {catPlugins.map((p) => renderPluginCard(p, 'md'))}
+                      {catPlugins.map((p) => renderPluginCard(p))}
                     </div>
                   ) : (
                     <div className="space-y-1.5">
@@ -712,7 +688,7 @@ export default function PluginsPage() {
                           onClick={() => setExpandedPlugin(expandedPlugin === p.slug ? null : p.slug)}
                           className="cursor-pointer"
                         >
-                          {renderPluginCard(p, 'md')}
+                          {renderPluginCard(p)}
                         </div>
                       ))}
                     </div>
@@ -751,7 +727,7 @@ export default function PluginsPage() {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filtered.map((p) => renderPluginCard(p, 'md'))}
+              {filtered.map((p) => renderPluginCard(p))}
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -761,7 +737,7 @@ export default function PluginsPage() {
                   onClick={() => setExpandedPlugin(expandedPlugin === p.slug ? null : p.slug)}
                   className="cursor-pointer"
                 >
-                  {renderPluginCard(p, 'md')}
+                  {renderPluginCard(p)}
                 </div>
               ))}
             </div>
@@ -769,16 +745,6 @@ export default function PluginsPage() {
         </Stagger>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════
-          FOOTER
-      ═══════════════════════════════════════════════════════════ */}
-      <Stagger>
-        <div className="mt-10 pt-6 border-t border-white/[0.04] text-center">
-          <p className="text-[11px] text-zinc-600">
-            {summary?.total || 0} plugins · {summary?.active || 0} active · All free
-          </p>
-        </div>
-      </Stagger>
     </PageTransition>
   );
 }
