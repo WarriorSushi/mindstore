@@ -19,6 +19,7 @@ import { KeyboardShortcuts, openKeyboardShortcuts } from "@/components/KeyboardS
 import { QuickCapture } from "@/components/QuickCapture";
 import { MemoryDrawer } from "@/components/MemoryDrawer";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface NavItem {
   href: string;
@@ -364,7 +365,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           "mx-auto",
           isChat ? "h-[calc(100dvh-3rem-52px)] md:h-[100dvh]" : "max-w-3xl px-4 py-5 md:px-8 md:py-8",
         )}>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
 
