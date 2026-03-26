@@ -179,7 +179,7 @@ Reason: good stress test for capture, media ingestion, provider handling, and sc
 - ✅ Unit tests in `tests/unit/<slug>.test.ts`
 - ✅ Plugin docs in `docs/plugins/<slug>.md`
 
-**Test coverage:** 299 tests across 42 test files, all passing.
+**Test coverage:** 336 tests across 44 test files, all passing (includes shared utility coverage).
 
 ### Reference Ports
 
