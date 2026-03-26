@@ -4,6 +4,40 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-26
 
+### 2026-03-26 04:00 UTC: Test Coverage Expansion — obsidian-importer & mind-map-generator (Frain)
+
+#### Scope
+
+Expand unit test coverage for the two thinnest test files in the project. Both had only 3 tests each despite having rich pure-function surfaces.
+
+#### Changes Completed
+
+**obsidian-importer: 3 → 24 tests**
+- parseFrontmatter: string/boolean/number/array YAML values, empty frontmatter, multi-line dash arrays
+- extractWikilinks: aliased links, image embed exclusion, deduplication
+- extractInlineTags: inline tags, digit-starting non-tags
+- extractHeadings: levels and positions, empty content
+- parseNote: full parsing, name/folder derivation, no-frontmatter, tag dedup, word count
+- stripVaultRoot: common prefix stripping, mixed-root no-op
+- analyzeVault: links/backlinks/orphans, alias resolution, date range computation
+- formatNoteContent: metadata formatting, wikilink resolution
+- chunkNote: single chunk for short notes, splitting for long content
+- buildObsidianPreview: graph stats and sample notes
+
+**mind-map-generator: 3 → 10 tests**
+- Empty set, deterministic clustering, similarity grouping
+- maxTopics cap (20), maxDepth cap (4)
+- Connection validation (source/target format, strength range)
+- Source type tracking per topic
+- Sub-topic creation for large clusters
+- Pinned status preservation in simplified memories
+
+#### Quality
+
+- All 254 tests pass (up from 225)
+- Zero TypeScript errors
+- Zero color violations
+
 ### 2026-03-26 03:00 UTC: Final Route Slimming — 35/35 Routes DB-Free (Frain)
 
 #### Scope
