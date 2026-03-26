@@ -173,33 +173,27 @@ Reason: good stress test for capture, media ingestion, provider handling, and sc
 
 ## Current Porting Status
 
-- `flashcard-maker`: ported on `codex/local-dev` as the first full convergence example
-- `voice-to-memory`: ported on `codex/local-dev` with the shared AI client path
-- `kindle-importer`: ported on `codex/local-dev` as the importer reference port
+**ALL 35 PLUGINS PORTED** — as of 2026-03-26, every plugin has:
+- ✅ Port module in `src/server/plugins/ports/<slug>.ts`
+- ✅ Thin route wrapper in `src/app/api/v1/plugins/<slug>/route.ts`
+- ✅ Unit tests in `tests/unit/<slug>.test.ts`
+- ✅ Plugin docs in `docs/plugins/<slug>.md`
 
-Flashcard Maker is still the first reference because it exercises the action-plugin pattern:
+**Test coverage:** 299 tests across 42 test files, all passing.
 
-- dedicated UI page
-- AI-backed action route
-- persistent user-owned state
-- review algorithm logic
-- runtime-aware plugin registration
-- docs plus unit coverage
+### Reference Ports
 
-Voice-to-Memory is the second reference because it exercises the media/plugin path:
+- `kindle-importer` (45-line route): importer reference — file parsing, dedup, preview-first UX
+- `flashcard-maker` (131-line route): action-plugin reference — AI-backed, persistent state, review algo
+- `voice-to-memory` (137-line route): media-plugin reference — audio capture, transcription, provider resolution
 
-- browser microphone capture
-- transcription provider resolution
-- media-specific validation
-- save-to-memory integration
-- reusable shared AI/transcription client usage
+### Porting Complete (by batch)
 
-Kindle Importer is the importer reference because it exercises:
-
-- parser extraction
-- deduplication and grouping logic
-- preview-first import UX
-- codex shared import pipeline usage
+- **Batch A (Core):** flashcard-maker, voice-to-memory, kindle-importer, pdf-epub-parser, youtube-transcript, reddit-saved, browser-bookmarks, notion-importer, obsidian-importer
+- **Batch B (Analysis/Action):** mind-map-generator, learning-paths, knowledge-gaps, contradiction-finder, writing-style, sentiment-timeline, topic-evolution, conversation-prep, newsletter-writer, blog-draft, resume-builder
+- **Batch C (Imports):** twitter-importer, telegram-importer, pocket-importer, readwise-importer, spotify-importer, image-to-memory
+- **Batch D (Export/Sync):** anki-export, markdown-blog-export, notion-sync, obsidian-sync
+- **Batch E (Advanced AI):** custom-rag, domain-embeddings, multi-language
 
 ## Copyability Assessment
 
