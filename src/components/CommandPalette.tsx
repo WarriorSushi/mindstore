@@ -535,6 +535,18 @@ export function CommandPalette() {
           setOpen(false);
         },
       },
+      {
+        id: "whats-new",
+        icon: Sparkles,
+        iconColor: "text-teal-400",
+        label: "What's New",
+        desc: "See recent improvements and updates to MindStore",
+        keywords: ["whats", "new", "changelog", "updates", "version", "release", "changes", "features"],
+        action: () => {
+          setOpen(false);
+          setTimeout(() => window.dispatchEvent(new Event("mindstore:open-whats-new")), 100);
+        },
+      },
     ];
 
     // Filter by query

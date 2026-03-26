@@ -16,6 +16,10 @@ import dynamic from "next/dynamic";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MindStoreLogo } from "@/components/MindStoreLogo";
 import { useAiStatus } from "@/lib/use-ai-status";
+import { hasUnseenChangelog } from "@/components/WhatsNew";
+
+// Version display — bump when releasing
+const APP_VERSION = "0.3";
 
 // ─── Lazy load overlays & drawers (triggered by user action, not immediately visible) ───
 const Onboarding = dynamic(() => import("@/components/Onboarding").then(m => ({ default: m.Onboarding })), { ssr: false });
@@ -25,6 +29,7 @@ const KeyboardShortcuts = dynamic(() => import("@/components/KeyboardShortcuts")
 const QuickCapture = dynamic(() => import("@/components/QuickCapture").then(m => ({ default: m.QuickCapture })), { ssr: false });
 const MemoryDrawer = dynamic(() => import("@/components/MemoryDrawer").then(m => ({ default: m.MemoryDrawer })), { ssr: false });
 const NotificationCenter = dynamic(() => import("@/components/NotificationCenter").then(m => ({ default: m.NotificationCenter })), { ssr: false });
+const WhatsNew = dynamic(() => import("@/components/WhatsNew").then(m => ({ default: m.WhatsNew })), { ssr: false });
 
 interface NavItem {
   href: string;
@@ -141,6 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const aiStatus = useAiStatus();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showNewDot, setShowNewDot] = useState(false);
   // Track which sidebar sections are collapsed (by section id)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     // Default: all sections expanded
@@ -159,6 +165,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
     }
   }, [pathname]);
+
+  // Check for unseen changelog (client-side only, avoids hydration mismatch)
+  useEffect(() => {
+    setShowNewDot(hasUnseenChangelog());
+    function onWhatsNewOpened() { setShowNewDot(false); }
+    window.addEventListener("mindstore:open-whats-new", onWhatsNewOpened);
+    return () => window.removeEventListener("mindstore:open-whats-new", onWhatsNewOpened);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -185,6 +199,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <GlobalDropZone />
       {/* ════════ KEYBOARD SHORTCUTS HELP ════════ */}
       <KeyboardShortcuts />
+      {/* ════════ WHAT'S NEW ════════ */}
+      <WhatsNew />
       {/* ════════ QUICK CAPTURE ════════ */}
       <QuickCapture />
       {/* ════════ MEMORY DETAIL DRAWER ════════ */}
@@ -356,7 +372,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="flex-1 text-left">Shortcuts</span>
             <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px]">?</kbd>
           </button>
-          <p className="text-[10px] text-zinc-600 font-medium tracking-wide px-2.5">MINDSTORE v0.3</p>
+          <button
+            onClick={() => window.dispatchEvent(new Event("mindstore:open-whats-new"))}
+            className="w-full flex items-center gap-1.5 text-[10px] text-zinc-600 hover:text-zinc-400 font-medium tracking-wide px-2.5 py-1 rounded-lg hover:bg-white/[0.04] transition-all text-left relative"
+          >
+            MINDSTORE v{APP_VERSION}
+            {showNewDot && (
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+            )}
+          </button>
         </div>
       </aside>
 
