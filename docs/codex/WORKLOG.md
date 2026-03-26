@@ -8,6 +8,55 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 - `codex/local-dev`
 
+### Route Slimming: domain-embeddings, notion-sync, spotify-importer
+
+#### Scope
+
+- Continue slimming the fattest remaining routes by extracting inline DB logic and document-building into port modules.
+
+#### Changes Completed
+
+- **domain-embeddings route**: 249 → 129 lines (48% reduction)
+  - Extracted `ensureInstalled()`, `getProviderAvailability()`, `getPluginConfig()`, `saveDomainConfig()`, `getDomainStats()`, `tagMemoryDomain()`, `batchDetectDomains()` into `ports/domain-embeddings.ts`
+  - Port grew from ~300 → 475 lines, now contains all business + DB logic
+  - Route is a pure HTTP dispatcher
+
+- **notion-sync route**: 244 → 202 lines (17% reduction)
+  - Replaced inline batch push loop + filter with port's existing `pushBatch()` and `filterUnsyncedMemories()` helpers
+  - Extracted `loadUserMemories()` helper to reduce duplication between preview and sync actions
+
+- **spotify-importer route**: 214 → 153 lines (28% reduction)
+  - Extracted `buildImportDocuments()` into port — taste profile, artist summaries, monthly listening document construction moved out of the route
+
+#### Quality Metrics
+
+- **TypeScript:** Clean `tsc --noEmit`
+- **Tests:** 42 files, 225 tests, all passing
+- **Build:** `next build` clean, all pages render
+- **Color violations:** Zero
+- **Net:** 295 insertions, 278 deletions across 5 files
+
+#### Route Fat Ranking (current)
+
+Top remaining routes (for future slimming reference):
+1. readwise-importer: 217 lines
+2. image-to-memory: 205 lines
+3. notion-sync: 202 lines
+4. multi-language: 200 lines
+5. obsidian-sync: 199 lines
+
+All routes ≤217 lines. No route exceeds 250 anymore (was domain-embeddings at 249).
+
+#### Convergence Status
+
+The route slimming phase is reaching diminishing returns — the remaining routes are in the 150–217 range, which is within acceptable "thin wrapper" territory. The next convergence focus should shift to either:
+1. **UI page reconciliation** (38 pages still diverge in content/styling)
+2. **Root-level doc merge** (README, CONTRIBUTING, config files)
+
+### Branch
+
+- `codex/local-dev`
+
 ### Convergence: Color Violations + AI Client Migration
 
 #### Scope
