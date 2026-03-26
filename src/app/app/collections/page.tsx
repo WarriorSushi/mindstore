@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { getSourceType } from '@/lib/source-types';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { EmptyState } from '@/components/EmptyState';
 import { openMemoryDrawer } from '@/components/MemoryDrawer';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -511,23 +512,25 @@ export default function CollectionsPage() {
 
         {/* Empty state */}
         {stats?.insufficientData && (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-teal-500/[0.08] border border-teal-500/15 flex items-center justify-center mx-auto mb-4">
-              <FolderOpen className="w-6 h-6 text-teal-400" />
-            </div>
-            <h2 className="text-[16px] font-semibold text-zinc-200 mb-1.5">Not enough data yet</h2>
-            <p className="text-[13px] text-zinc-500 max-w-md mx-auto">
-              Import at least 3 memories with embeddings enabled to see your knowledge automatically organized into collections.
-            </p>
-          </div>
+          <EmptyState
+            icon={FolderOpen}
+            title="Not enough data for collections"
+            description="Import at least 3 memories with an AI provider connected. MindStore will automatically organize your knowledge into thematic collections."
+            action={{ label: "Import knowledge", href: "/app/import" }}
+            secondaryAction={{ label: "Connect AI provider", href: "/app/settings" }}
+            color="teal"
+          />
         )}
 
         {/* No results */}
         {!stats?.insufficientData && filtered.length === 0 && search && (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-            <p className="text-[14px] text-zinc-400 mb-1">No collections match "{search}"</p>
-            <p className="text-[12px] text-zinc-600">Try a different search term</p>
-          </div>
+          <EmptyState
+            icon={Search}
+            title={`No collections match "${search}"`}
+            description="Try a different search term or clear your filter."
+            color="sky"
+            compact
+          />
         )}
 
         {/* Collections Grid */}

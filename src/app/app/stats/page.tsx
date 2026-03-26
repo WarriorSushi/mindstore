@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { EmptyState } from "@/components/EmptyState";
 import { getSourceType } from "@/lib/source-types";
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -288,21 +289,14 @@ export default function StatsPage() {
         <Stagger>
           <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Knowledge Stats</h1>
         </Stagger>
-        <Stagger>
-          <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-3">
-              <BarChart3 className="w-6 h-6 text-zinc-700" />
-            </div>
-            <p className="text-[14px] text-zinc-400 font-medium">No data yet</p>
-            <p className="text-[12px] text-zinc-600 mt-1 mb-4">Import some knowledge to see analytics</p>
-            <Link
-              href="/app/import"
-              className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97]"
-            >
-              Import your first memory
-            </Link>
-          </div>
-        </Stagger>
+        <EmptyState
+          icon={BarChart3}
+          title="No stats yet"
+          description="Import knowledge to see detailed analytics about your memories — growth over time, source breakdown, content depth, and more."
+          action={{ label: "Import knowledge", href: "/app/import" }}
+          secondaryAction={{ label: "Try demo data", href: "/app?demo=true" }}
+          color="teal"
+        />
       </PageTransition>
     );
   }

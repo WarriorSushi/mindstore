@@ -9,6 +9,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouter } from 'next/navigation';
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -403,23 +404,16 @@ export default function TopicEvolutionPage() {
               </p>
             </div>
           </Stagger>
-          <Stagger>
-            <div className="mt-12 flex flex-col items-center gap-4 py-16">
-              <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-teal-400" />
-              </div>
-              <p className="text-sm text-zinc-400 text-center max-w-sm">
-                You need at least 5 memories to see your topic evolution.
-                Keep importing knowledge and come back!
-              </p>
-              <button
-                onClick={() => router.push('/app/import')}
-                className="mt-2 h-9 px-5 rounded-xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-500 active:scale-[0.97] transition-all"
-              >
-                Import Knowledge
-              </button>
-            </div>
-          </Stagger>
+          <div className="mt-8">
+            <EmptyState
+              icon={TrendingUp}
+              title="Not enough data for evolution tracking"
+              description="Import at least 5 memories to see how your interests have evolved over time. The more history you add, the richer the timeline."
+              action={{ label: "Import knowledge", href: "/app/import" }}
+              secondaryAction={{ label: "Try demo data", href: "/app?demo=true" }}
+              color="teal"
+            />
+          </div>
         </div>
       </PageTransition>
     );

@@ -8,6 +8,7 @@ import {
   TrendingUp, Shield, Compass, ChevronRight, X,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -356,28 +357,15 @@ export default function KnowledgeGapsPage() {
   if (stats?.insufficientData) {
     return (
       <PageTransition>
-        <div className="max-w-2xl mx-auto px-4 py-16">
-          <Stagger>
-            <div className="text-center space-y-6">
-              <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mx-auto">
-                <Target className="w-8 h-8 text-teal-400" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-200">Not enough data yet</h2>
-                <p className="text-sm text-zinc-500 mt-2 max-w-sm mx-auto">
-                  Import at least 5 memories with embeddings to analyze knowledge gaps. 
-                  The more diverse your knowledge, the better the gap analysis.
-                </p>
-              </div>
-              <button
-                onClick={() => router.push('/app/import')}
-                className="h-10 px-5 rounded-xl bg-teal-500/10 text-teal-400 text-sm font-medium
-                  hover:bg-teal-500/15 transition-all active:scale-[0.97]"
-              >
-                Import Knowledge
-              </button>
-            </div>
-          </Stagger>
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <EmptyState
+            icon={Target}
+            title="Not enough data for gap analysis"
+            description="Import at least 5 memories with an AI provider connected. The more diverse your knowledge, the better the gap analysis."
+            action={{ label: "Import knowledge", href: "/app/import" }}
+            secondaryAction={{ label: "Connect AI provider", href: "/app/settings" }}
+            color="teal"
+          />
         </div>
       </PageTransition>
     );
