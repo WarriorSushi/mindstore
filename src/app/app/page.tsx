@@ -575,24 +575,21 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Stat Summary */}
+      {/* Source Breakdown */}
       {total > 0 && (
         <Stagger>
-          <div className="flex items-center gap-6 md:gap-8 overflow-x-auto scrollbar-none px-1 -mx-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1">
             {[
-              { label: "Total", value: total, color: "text-teal-400" },
-              { label: "ChatGPT", value: chatgpt, color: "text-green-400" },
-              { label: "Notes", value: notes, color: "text-blue-400" },
-              { label: "URLs", value: urls, color: "text-orange-400" },
-            ].filter(s => s.value > 0 || s.label === "Total").map((s, i, arr) => (
-              <div key={s.label} className="flex items-center gap-6 md:gap-8">
-                <div className="shrink-0">
-                  <p className={`text-[22px] md:text-[28px] font-semibold tracking-[-0.03em] tabular-nums ${s.color}`}>{s.value.toLocaleString()}</p>
-                  <p className="text-[10px] md:text-[11px] text-zinc-600 font-medium mt-0.5">{s.label}</p>
-                </div>
-                {i < arr.length - 1 && (
-                  <div className="w-px h-8 bg-white/[0.06] shrink-0" />
-                )}
+              { label: "ChatGPT", value: chatgpt, color: "bg-green-400" },
+              { label: "Notes", value: notes, color: "bg-blue-400" },
+              { label: "URLs", value: urls, color: "bg-orange-400" },
+            ].filter(s => s.value > 0).map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${s.color}`} />
+                <span className="text-[12px] text-zinc-500">
+                  <span className="text-zinc-300 font-medium tabular-nums">{s.value.toLocaleString()}</span>
+                  {" "}{s.label}
+                </span>
               </div>
             ))}
           </div>
@@ -762,7 +759,7 @@ export default function DashboardPage() {
       {/* Pinned Memories */}
       {stats?.pinnedMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-2 mt-2">
+          <div className="space-y-2 mt-1">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5">
                 <Pin className="w-3 h-3 text-amber-400 fill-amber-400/30" />
@@ -811,21 +808,22 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Quick Actions */}
+      {/* Quick Actions — inline text links, not identical cards */}
       <Stagger>
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 md:pb-0">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 md:pb-0">
           {[
-            { href: "/app/import", icon: Upload, label: "Import", color: "text-teal-400", hoverBg: "hover:bg-teal-500/[0.08]" },
-            { href: "/app/chat", icon: MessageSquare, label: "Chat", color: "text-blue-400", hoverBg: "hover:bg-blue-500/[0.06]" },
-            { href: "/app/explore", icon: Compass, label: "Explore", color: "text-emerald-400", hoverBg: "hover:bg-emerald-500/[0.06]" },
-            { href: "/app/learn", icon: GraduationCap, label: "Learn", color: "text-amber-400", hoverBg: "hover:bg-amber-500/[0.06]" },
-          ].map((a) => (
-            <Link key={a.href} href={a.href}>
-              <div className={`flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] ${a.hoverBg} px-4 py-2.5 transition-all active:scale-[0.97] whitespace-nowrap`}>
-                <a.icon className={`w-4 h-4 ${a.color}`} />
-                <span className="text-[13px] font-medium text-zinc-300">{a.label}</span>
-              </div>
-            </Link>
+            { href: "/app/import", icon: Upload, label: "Import", color: "text-teal-400", hoverColor: "hover:text-teal-300" },
+            { href: "/app/chat", icon: MessageSquare, label: "Chat", color: "text-blue-400", hoverColor: "hover:text-blue-300" },
+            { href: "/app/explore", icon: Compass, label: "Explore", color: "text-emerald-400", hoverColor: "hover:text-emerald-300" },
+            { href: "/app/learn", icon: GraduationCap, label: "Learn", color: "text-amber-400", hoverColor: "hover:text-amber-300" },
+          ].map((a, i, arr) => (
+            <div key={a.href} className="flex items-center shrink-0">
+              <Link href={a.href} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-white/[0.04] transition-all active:scale-[0.97]`}>
+                <a.icon className={`w-3.5 h-3.5 ${a.color}`} />
+                <span className={`text-[13px] font-medium text-zinc-400 ${a.hoverColor} transition-colors`}>{a.label}</span>
+              </Link>
+              {i < arr.length - 1 && <div className="w-px h-3 bg-white/[0.06] mx-0.5" />}
+            </div>
           ))}
         </div>
       </Stagger>
@@ -833,7 +831,7 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       {stats?.recentMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-1 mt-2">
+          <div className="space-y-1 mt-3">
             <div className="flex items-center justify-between px-1 mb-3">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Recent Activity</p>
               <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
@@ -878,40 +876,39 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Discover */}
+      {/* Discover — compact grid, not repeated rows */}
       <Stagger>
-        <div className="space-y-1 mt-2">
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1 mb-3">Discover</p>
-          {[
-            { href: "/app/fingerprint", icon: Fingerprint, label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL", iconColor: "text-teal-400" },
-            { href: "/app/insights", icon: Lightbulb, label: "Mind Insights", desc: "Connections, contradictions, metabolism", iconColor: "text-amber-400" },
-            { href: "/app/connect", icon: Plug, label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400" },
-          ].map((f) => (
-            <Link key={f.href} href={f.href}>
-              <div className="flex items-center gap-3.5 rounded-xl -mx-1 px-4 py-3 hover:bg-white/[0.03] transition-colors group">
-                <f.icon className={`w-[18px] h-[18px] ${f.iconColor} shrink-0`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+        <div className="space-y-2.5 mt-4">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Discover</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-white/[0.04] rounded-xl overflow-hidden border border-white/[0.06]">
+            {[
+              { href: "/app/fingerprint", icon: Fingerprint, label: "Fingerprint", desc: "3D mind topology", tag: "WebGL", iconColor: "text-teal-400" },
+              { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections & patterns", iconColor: "text-amber-400" },
+              { href: "/app/connect", icon: Plug, label: "Connect", desc: "Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400" },
+            ].map((f) => (
+              <Link key={f.href} href={f.href}>
+                <div className="bg-[#0a0a0b] px-4 py-3.5 hover:bg-white/[0.03] transition-colors group h-full">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <f.icon className={`w-4 h-4 ${f.iconColor} shrink-0`} />
                     <p className="text-[13px] font-medium text-zinc-200">{f.label}</p>
                     {f.tag && (
-                      <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-teal-500/10 text-teal-400 border border-teal-500/15">
+                      <span className="text-[8px] font-bold uppercase tracking-[0.1em] px-1 py-[1px] rounded bg-teal-500/10 text-teal-400 border border-teal-500/15 ml-auto shrink-0">
                         {f.tag}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">{f.desc}</p>
+                  <p className="text-[11px] text-zinc-500">{f.desc}</p>
                 </div>
-                <ArrowRight className="w-3.5 h-3.5 text-zinc-700 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
       </Stagger>
 
       {/* Sources */}
       {stats?.topSources?.length > 0 && (
         <Stagger>
-          <div className="space-y-1 mt-2">
+          <div className="space-y-1 mt-3">
             <div className="flex items-center justify-between px-1 mb-3">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Top Sources</p>
               <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
@@ -954,11 +951,10 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-/** Activity chart showing 14-day knowledge growth */
+/** Activity chart showing 14-day knowledge growth — borderless, integrated */
 function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }) {
   const total = data.reduce((s, d) => s + d.count, 0);
   const max = Math.max(...data.map((d) => d.count), 1);
-  const activeDays = data.filter((d) => d.count > 0).length;
 
   // Calculate streak (consecutive days ending at today/yesterday)
   let streak = 0;
@@ -972,62 +968,55 @@ function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }
   if (total === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+    <div className="space-y-2.5 px-1">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <BarChart3 className="w-3.5 h-3.5 text-teal-400" />
+        <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">
-            Activity
+            14-day activity
           </span>
-          <span className="text-[10px] text-zinc-600">· 14 days</span>
-        </div>
-        <div className="flex items-center gap-3">
           {streak > 1 && (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
-              <Flame className="w-3 h-3" /> {streak}-day streak
+              <Flame className="w-2.5 h-2.5" /> {streak}d streak
             </span>
           )}
-          <span className="text-[10px] text-zinc-600 tabular-nums">
-            {total} memor{total === 1 ? "y" : "ies"} added
-          </span>
         </div>
+        <span className="text-[10px] text-zinc-600 tabular-nums">
+          {total} added
+        </span>
       </div>
 
-      {/* Bar chart */}
-      <div className="flex items-end gap-[3px] h-16 relative">
+      {/* Bar chart — no card wrapper */}
+      <div className="flex items-end gap-[3px] h-12 md:h-14">
         {data.map((d, i) => {
           const height = d.count > 0 ? Math.max((d.count / max) * 100, 8) : 0;
           const isToday = i === data.length - 1;
-          const date = new Date(d.day);
-          const dayLabel = date.toLocaleDateString(undefined, { weekday: "short" });
-          const dateLabel = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          const dateLabel = new Date(d.day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
           const isHovered = hoveredIdx === i;
 
           return (
             <div
               key={d.day}
-              className="flex-1 flex flex-col items-center justify-end h-full relative group"
+              className="flex-1 flex flex-col items-center justify-end h-full relative"
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
             >
               {/* Tooltip */}
               {isHovered && d.count > 0 && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-10 px-2 py-1 rounded-lg bg-[#1a1a1d] border border-white/[0.1] shadow-lg shadow-black/40 whitespace-nowrap pointer-events-none">
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-10 px-2 py-0.5 rounded-md bg-[#1a1a1d] border border-white/[0.1] shadow-lg shadow-black/40 whitespace-nowrap pointer-events-none">
                   <span className="text-[10px] font-medium text-zinc-300">{d.count}</span>
                   <span className="text-[10px] text-zinc-600 ml-1">{dateLabel}</span>
                 </div>
               )}
-              {/* Bar */}
               <div
-                className={`w-full rounded-t-[3px] rounded-b-[1px] transition-all duration-200 ${
+                className={`w-full rounded-sm transition-all duration-200 ${
                   d.count === 0
-                    ? "bg-white/[0.03] min-h-[2px]"
+                    ? "bg-white/[0.04]"
                     : isToday
-                      ? "bg-gradient-to-t from-teal-500 to-teal-400 shadow-sm shadow-teal-500/20"
+                      ? "bg-teal-400"
                       : isHovered
-                        ? "bg-teal-400/60"
-                        : "bg-teal-500/30"
+                        ? "bg-teal-400/50"
+                        : "bg-teal-500/25"
                 }`}
                 style={{ height: d.count > 0 ? `${height}%` : "2px" }}
               />
@@ -1036,8 +1025,8 @@ function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }
         })}
       </div>
 
-      {/* Day labels (show first, middle, and last) */}
-      <div className="flex justify-between px-0.5">
+      {/* Day labels */}
+      <div className="flex justify-between">
         {[0, 6, 13].map((idx) => {
           const d = new Date(data[idx]?.day || "");
           return (
