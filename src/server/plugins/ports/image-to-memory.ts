@@ -2,9 +2,12 @@
  * Image-to-Memory — Portable logic module
  *
  * Extracted from the route for convergence with codex runtime.
- * Handles: context prompts, tag extraction, vision API request building.
- * Does NOT include actual fetch calls (those are runtime-specific).
+ * Handles: context prompts, tag extraction, vision API request building,
+ * vision config resolution, and vision API dispatch.
  */
+
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -165,3 +168,117 @@ export const ALLOWED_IMAGE_TYPES = [
 ];
 
 export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
+
+// ─── Vision Config ───────────────────────────────────────────
+
+export interface VisionConfig {
+  type: "openai" | "gemini" | "ollama" | "openrouter" | "custom";
+  key: string;
+  model: string;
+  url?: string;
+}
+
+export async function getVisionConfig(): Promise<VisionConfig | null> {
+  const settings = await db.execute(sql`
+    SELECT key, value FROM settings
+    WHERE key IN ('openai_api_key','gemini_api_key','ollama_url','openrouter_api_key','custom_api_key','custom_api_url','chat_provider')
+  `);
+  const c: Record<string, string> = {};
+  for (const row of settings as unknown as { key: string; value: string }[]) {
+    c[row.key] = row.value;
+  }
+
+  const p = c.chat_provider;
+  const oai = c.openai_api_key || process.env.OPENAI_API_KEY;
+  const gem = c.gemini_api_key || process.env.GEMINI_API_KEY;
+  const orr = c.openrouter_api_key || process.env.OPENROUTER_API_KEY;
+  const oll = c.ollama_url || process.env.OLLAMA_URL;
+
+  if (p === "openai" && oai) return { type: "openai", key: oai, model: "gpt-4o" };
+  if (p === "gemini" && gem) return { type: "gemini", key: gem, model: "gemini-2.0-flash-lite" };
+  if (p === "openrouter" && orr)
+    return { type: "openrouter", key: orr, model: "google/gemini-2.0-flash-001", url: "https://openrouter.ai/api/v1/chat/completions" };
+  if (p === "ollama" && oll) return { type: "ollama", key: "", model: "llava", url: oll };
+  if (oai) return { type: "openai", key: oai, model: "gpt-4o" };
+  if (gem) return { type: "gemini", key: gem, model: "gemini-2.0-flash-lite" };
+  if (orr)
+    return { type: "openrouter", key: orr, model: "google/gemini-2.0-flash-001", url: "https://openrouter.ai/api/v1/chat/completions" };
+  if (oll) return { type: "ollama", key: "", model: "llava", url: oll };
+  return null;
+}
+
+// ─── Vision API Dispatch ─────────────────────────────────────
+
+export async function analyzeImage(
+  config: VisionConfig,
+  base64: string,
+  mimeType: string,
+  prompt: string,
+): Promise<VisionAnalysisResult> {
+  if (config.type === "gemini") {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.key}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildGeminiVisionRequest(base64, mimeType, prompt)) },
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data as { error?: { message?: string } }).error?.message || `Gemini Vision failed (${res.status})`);
+    }
+    const data = await res.json();
+    return extractTagsFromResponse(data.candidates?.[0]?.content?.parts?.[0]?.text || "");
+  }
+
+  if (config.type === "ollama") {
+    const url = (config.url || "http://localhost:11434").replace(/\/$/, "");
+    const res = await fetch(`${url}/api/generate`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildOllamaVisionRequest(config.model, base64, prompt)),
+    });
+    if (!res.ok) throw new Error(`Ollama vision failed (${res.status})`);
+    const data = await res.json();
+    return extractTagsFromResponse(data.response || "");
+  }
+
+  // OpenAI / OpenRouter / custom
+  const endpoint = config.url || "https://api.openai.com/v1/chat/completions";
+  const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${config.key}` };
+  if (config.type === "openrouter") {
+    headers["HTTP-Referer"] = "https://mindstore.app";
+    headers["X-Title"] = "MindStore";
+  }
+  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(buildOpenAIVisionRequest(config.model, base64, mimeType, prompt)) });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: { message?: string } }).error?.message || `Vision API failed (${res.status})`);
+  }
+  const data = await res.json();
+  return extractTagsFromResponse(data.choices?.[0]?.message?.content || "");
+}
+
+// ─── Image Table Bootstrap ───────────────────────────────────
+
+export async function ensureImageTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS image_analyses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL,
+      title TEXT,
+      description TEXT,
+      image_data TEXT,
+      image_size INTEGER,
+      image_format TEXT DEFAULT 'png',
+      image_width INTEGER,
+      image_height INTEGER,
+      tags TEXT[] DEFAULT '{}',
+      context_type TEXT DEFAULT 'general',
+      provider TEXT,
+      model TEXT,
+      word_count INTEGER,
+      saved_as_memory BOOLEAN DEFAULT false,
+      memory_id UUID,
+      custom_prompt TEXT,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
