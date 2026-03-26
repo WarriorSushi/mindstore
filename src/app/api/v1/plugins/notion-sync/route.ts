@@ -16,17 +16,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/server/user';
 import { db, schema } from '@/server/db';
-import { eq, sql, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import {
   type NotionSyncConfig,
-  type SyncRecord,
+  type MemoryForSync,
   defaultSyncConfig,
   validateNotionToken,
   listNotionDatabases,
   createNotionDatabase,
-  pushMemoryToNotion,
-  formatSourceType,
   filterUnsyncedMemories,
+  pushBatch,
   buildSyncRecord,
 } from '@/server/plugins/ports/notion-sync';
 
@@ -41,30 +40,26 @@ async function getPluginConfig(userId: string): Promise<NotionSyncConfig> {
 }
 
 async function savePluginConfig(config: NotionSyncConfig) {
-  try {
-    const [existing] = await db.select().from(schema.plugins).where(eq(schema.plugins.slug, 'notion-sync')).limit(1);
-    if (existing) {
-      await db.update(schema.plugins).set({ config: config as any, updatedAt: new Date() }).where(eq(schema.plugins.slug, 'notion-sync'));
-    } else {
-      await db.insert(schema.plugins).values({
-        slug: 'notion-sync', name: 'Notion Sync', version: '1.0.0',
-        type: 'extension', status: 'active', config: config as any,
-      });
-    }
-  } catch {
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS plugins (
-        id SERIAL PRIMARY KEY, slug VARCHAR(255) UNIQUE NOT NULL, name VARCHAR(255) NOT NULL,
-        version VARCHAR(50) DEFAULT '1.0.0', type VARCHAR(50) DEFAULT 'extension',
-        status VARCHAR(50) DEFAULT 'active', config JSONB DEFAULT '{}',
-        "createdAt" TIMESTAMP DEFAULT NOW(), "updatedAt" TIMESTAMP DEFAULT NOW()
-      )
-    `);
+  const [existing] = await db.select().from(schema.plugins).where(eq(schema.plugins.slug, 'notion-sync')).limit(1);
+  if (existing) {
+    await db.update(schema.plugins).set({ config: config as any, updatedAt: new Date() }).where(eq(schema.plugins.slug, 'notion-sync'));
+  } else {
     await db.insert(schema.plugins).values({
       slug: 'notion-sync', name: 'Notion Sync', version: '1.0.0',
       type: 'extension', status: 'active', config: config as any,
     });
   }
+}
+
+/** Load user memories (up to 500) for sync preview/execution. */
+async function loadUserMemories(userId: string): Promise<MemoryForSync[]> {
+  const rows = await db.select({
+    id: schema.memories.id, content: schema.memories.content,
+    sourceType: schema.memories.sourceType, sourceTitle: schema.memories.sourceTitle,
+    createdAt: schema.memories.createdAt, metadata: schema.memories.metadata,
+  }).from(schema.memories).where(eq(schema.memories.userId, userId))
+    .orderBy(desc(schema.memories.createdAt)).limit(500);
+  return rows as unknown as MemoryForSync[];
 }
 
 // ─── GET ─────────────────────────────────────────────────────
@@ -79,7 +74,6 @@ export async function GET(req: NextRequest) {
     if (action === 'config') {
       let databases: Array<{ id: string; title: string }> = [];
       if (config.apiToken) databases = await listNotionDatabases(config.apiToken);
-
       return NextResponse.json({
         connected: !!config.apiToken,
         databaseId: config.databaseId || null,
@@ -101,14 +95,9 @@ export async function GET(req: NextRequest) {
 
     if (action === 'preview') {
       const syncedIds = new Set(config.syncedMemoryIds || []);
-      const memories = await db.select({
-        id: schema.memories.id, content: schema.memories.content,
-        sourceType: schema.memories.sourceType, sourceTitle: schema.memories.sourceTitle,
-        createdAt: schema.memories.createdAt,
-      }).from(schema.memories).where(eq(schema.memories.userId, userId))
-        .orderBy(desc(schema.memories.createdAt)).limit(500);
+      const memories = await loadUserMemories(userId);
+      const unsynced = filterUnsyncedMemories(memories, syncedIds);
 
-      const unsynced = memories.filter(m => !syncedIds.has(String(m.id)));
       const sourceBreakdown: Record<string, number> = {};
       for (const m of unsynced) sourceBreakdown[m.sourceType || 'text'] = (sourceBreakdown[m.sourceType || 'text'] || 0) + 1;
 
@@ -176,43 +165,12 @@ export async function POST(req: NextRequest) {
       if (!config.databaseId) return NextResponse.json({ error: 'No database selected' }, { status: 400 });
 
       const syncedIds = new Set(config.syncedMemoryIds || []);
-      const allMemories = await db.select({
-        id: schema.memories.id, content: schema.memories.content,
-        sourceType: schema.memories.sourceType, sourceTitle: schema.memories.sourceTitle,
-        createdAt: schema.memories.createdAt, metadata: schema.memories.metadata,
-      }).from(schema.memories).where(eq(schema.memories.userId, userId))
-        .orderBy(desc(schema.memories.createdAt)).limit(500);
-
-      let toSync = allMemories.filter(m => !syncedIds.has(String(m.id)));
-      if (config.filterBySource?.length) {
-        toSync = toSync.filter(m => config.filterBySource!.includes(m.sourceType || 'text'));
-      }
-
-      const batch = toSync.slice(0, 50);
-      let successCount = 0;
-      const errors: string[] = [];
-      const newSyncedIds = [...(config.syncedMemoryIds || [])];
-
-      for (let i = 0; i < batch.length; i += 3) {
-        const chunk = batch.slice(i, i + 3);
-        const results = await Promise.allSettled(
-          chunk.map(m => pushMemoryToNotion(config.apiToken!, config.databaseId!, m as any))
-        );
-        for (let j = 0; j < results.length; j++) {
-          const result = results[j];
-          if (result.status === 'fulfilled' && result.value.success) {
-            successCount++;
-            newSyncedIds.push(String(chunk[j].id));
-          } else {
-            const error = result.status === 'fulfilled' ? result.value.error || 'Unknown error' : (result.reason?.message || 'Failed');
-            errors.push(`Memory ${chunk[j].id}: ${error}`);
-          }
-        }
-        if (i + 3 < batch.length) await new Promise(r => setTimeout(r, 400));
-      }
+      const allMemories = await loadUserMemories(userId);
+      const toSync = filterUnsyncedMemories(allMemories, syncedIds, config.filterBySource);
+      const { successCount, errors, syncedIds: newIds } = await pushBatch(config.apiToken, config.databaseId, toSync, 50);
 
       const syncRecord = buildSyncRecord(successCount, errors);
-      config.syncedMemoryIds = newSyncedIds;
+      config.syncedMemoryIds = [...(config.syncedMemoryIds || []), ...newIds];
       config.lastSyncAt = new Date().toISOString();
       config.lastSyncCount = successCount;
       config.totalSynced = (config.totalSynced || 0) + successCount;
@@ -221,7 +179,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true, synced: successCount, errors: errors.length,
-        remaining: toSync.length - batch.length, record: syncRecord,
+        remaining: toSync.length - Math.min(toSync.length, 50), record: syncRecord,
       });
     }
 

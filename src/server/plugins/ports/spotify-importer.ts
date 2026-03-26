@@ -189,3 +189,67 @@ export function formatMonthlyListening(listeningByMonth: Record<string, number>)
     }),
   ].join('\n');
 }
+
+// ─── Import Document Builder ────────────────────────────────────
+
+export interface SpotifyImportDocument {
+  title: string;
+  content: string;
+  sourceType: string;
+  metadata: Record<string, unknown>;
+}
+
+/**
+ * Build import-ready documents from a music profile:
+ * taste profile + top artist summaries + monthly summary.
+ */
+export function buildImportDocuments(profile: MusicProfile): SpotifyImportDocument[] {
+  const documents: SpotifyImportDocument[] = [];
+
+  // 1. Taste profile
+  documents.push({
+    title: 'My Music Taste Profile',
+    content: profile.tasteProfile,
+    sourceType: 'spotify',
+    metadata: {
+      type: 'taste-profile',
+      totalHours: Math.round(profile.totalListeningMs / 3600000),
+      uniqueArtists: profile.uniqueArtists,
+      uniqueTracks: profile.uniqueTracks,
+      importedVia: 'spotify-importer-plugin',
+    },
+  });
+
+  // 2. Top 20 artist summaries
+  for (const artist of profile.topArtists.slice(0, 20)) {
+    documents.push({
+      title: `Artist: ${artist.name}`,
+      content: formatArtistContent(artist),
+      sourceType: 'spotify',
+      metadata: {
+        type: 'artist-profile',
+        artist: artist.name,
+        totalMs: artist.totalMs,
+        trackCount: artist.trackCount,
+        importedVia: 'spotify-importer-plugin',
+      },
+    });
+  }
+
+  // 3. Monthly listening summary
+  const months = Object.keys(profile.listeningByMonth);
+  if (months.length > 0) {
+    documents.push({
+      title: 'Monthly Listening History',
+      content: formatMonthlyListening(profile.listeningByMonth),
+      sourceType: 'spotify',
+      metadata: {
+        type: 'monthly-summary',
+        months: months.length,
+        importedVia: 'spotify-importer-plugin',
+      },
+    });
+  }
+
+  return documents;
+}
