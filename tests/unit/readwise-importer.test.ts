@@ -60,4 +60,188 @@ describe("readwise importer port", () => {
     expect(memory.content).not.toContain("**Note:**");
     expect(memory.metadata.tags).toBeUndefined();
   });
+
+  it("truncates long highlight text in the title", () => {
+    const longHighlight: ReadwiseHighlight = {
+      id: 5003,
+      text: "A".repeat(200),
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(longHighlight, SAMPLE_BOOK);
+
+    // Title should truncate to ~60 chars of the text + ellipsis
+    expect(memory.title.length).toBeLessThan(200);
+    expect(memory.title).toContain("...");
+    expect(memory.title).toContain("Atomic Habits");
+  });
+
+  it("does not add ellipsis for short highlight text in title", () => {
+    const shortHighlight: ReadwiseHighlight = {
+      id: 5004,
+      text: "Short quote",
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(shortHighlight, SAMPLE_BOOK);
+
+    expect(memory.title).not.toContain("...");
+    expect(memory.title).toContain("Short quote");
+  });
+
+  it("includes location metadata when present", () => {
+    const memory = formatHighlightMemory(SAMPLE_HIGHLIGHT, SAMPLE_BOOK);
+
+    expect(memory.metadata.location).toBe(42);
+  });
+
+  it("omits location metadata when not present", () => {
+    const noLocation: ReadwiseHighlight = {
+      id: 5005,
+      text: "Highlight without location",
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(noLocation, SAMPLE_BOOK);
+
+    expect(memory.metadata.location).toBeUndefined();
+  });
+
+  it("includes color metadata when present", () => {
+    const coloredHighlight: ReadwiseHighlight = {
+      id: 5006,
+      text: "A colored highlight",
+      book_id: 100,
+      tags: [],
+      color: "yellow",
+    };
+
+    const memory = formatHighlightMemory(coloredHighlight, SAMPLE_BOOK);
+
+    expect(memory.metadata.color).toBe("yellow");
+  });
+
+  it("includes source URL from book when available", () => {
+    const bookWithUrl: ReadwiseBook = {
+      ...SAMPLE_BOOK,
+      source_url: "https://example.com/article",
+    };
+
+    const highlight: ReadwiseHighlight = {
+      id: 5007,
+      text: "Article highlight",
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(highlight, bookWithUrl);
+
+    expect(memory.metadata.sourceUrl).toBe("https://example.com/article");
+  });
+
+  it("includes cover image from book when available", () => {
+    const bookWithCover: ReadwiseBook = {
+      ...SAMPLE_BOOK,
+      cover_image_url: "https://images.example.com/cover.jpg",
+    };
+
+    const highlight: ReadwiseHighlight = {
+      id: 5008,
+      text: "A highlight",
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(highlight, bookWithCover);
+
+    expect(memory.metadata.coverImage).toBe("https://images.example.com/cover.jpg");
+  });
+
+  it("defaults createdAt to current date when highlighted_at is missing", () => {
+    const noDate: ReadwiseHighlight = {
+      id: 5009,
+      text: "Undated highlight",
+      book_id: 100,
+      tags: [],
+    };
+
+    const before = new Date();
+    const memory = formatHighlightMemory(noDate, SAMPLE_BOOK);
+    const after = new Date();
+
+    expect(memory.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+    expect(memory.createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
+  });
+
+  it("handles article category from Readwise", () => {
+    const articleBook: ReadwiseBook = {
+      id: 200,
+      title: "How AI Will Transform Everything",
+      author: "Blog Author",
+      category: "articles",
+      source: "web",
+      num_highlights: 2,
+    };
+
+    const highlight: ReadwiseHighlight = {
+      id: 6001,
+      text: "AI is going to be huge",
+      book_id: 200,
+      tags: [{ id: 10, name: "ai" }],
+    };
+
+    const memory = formatHighlightMemory(highlight, articleBook);
+
+    expect(memory.metadata.readwiseCategory).toBe("articles");
+    expect(memory.metadata.bookTitle).toBe("How AI Will Transform Everything");
+    expect(memory.metadata.bookAuthor).toBe("Blog Author");
+    expect(memory.metadata.importedVia).toBe("readwise-importer-plugin");
+  });
+
+  it("sets dedupKey from highlight ID as string", () => {
+    const highlight: ReadwiseHighlight = {
+      id: 99999,
+      text: "Dedup test",
+      book_id: 100,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(highlight, SAMPLE_BOOK);
+
+    expect(memory.dedupKey).toBe("99999");
+    expect(typeof memory.dedupKey).toBe("string");
+  });
+
+  it("includes book author in content attribution line", () => {
+    const memory = formatHighlightMemory(SAMPLE_HIGHLIGHT, SAMPLE_BOOK);
+
+    expect(memory.content).toContain("— Atomic Habits by James Clear");
+  });
+
+  it("handles book with no author gracefully", () => {
+    const noAuthorBook: ReadwiseBook = {
+      id: 300,
+      title: "Anonymous Text",
+      author: "",
+      category: "supplementals",
+      source: "manual",
+      num_highlights: 1,
+    };
+
+    const highlight: ReadwiseHighlight = {
+      id: 7001,
+      text: "Some supplemental content",
+      book_id: 300,
+      tags: [],
+    };
+
+    const memory = formatHighlightMemory(highlight, noAuthorBook);
+
+    // Should have the title but not " by " when author is empty
+    expect(memory.content).toContain("— Anonymous Text");
+    expect(memory.content).not.toContain("by ");
+  });
 });
