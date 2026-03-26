@@ -539,10 +539,23 @@ export default function NewsletterPage() {
               </button>
             </div>
 
-            {/* Loading */}
+            {/* Loading Skeleton */}
             {loading && (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] animate-pulse" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-4 w-52 rounded-lg bg-white/[0.05] animate-pulse" />
+                        <div className="h-3 w-36 rounded-lg bg-white/[0.03] animate-pulse" />
+                      </div>
+                      <div className="h-6 w-16 rounded-full bg-white/[0.04] animate-pulse" />
+                    </div>
+                    <div className="h-3 w-full rounded bg-white/[0.03] animate-pulse" />
+                    <div className="h-3 w-2/3 rounded bg-white/[0.02] animate-pulse" />
+                  </div>
+                ))}
               </div>
             )}
 

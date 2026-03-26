@@ -388,10 +388,29 @@ export default function ResumeBuilderPage() {
             </button>
           </div>
 
-          {/* Loading */}
+          {/* Loading Skeleton */}
           {loading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.04] animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 w-44 rounded-lg bg-white/[0.05] animate-pulse" />
+                      <div className="h-3 w-28 rounded-lg bg-white/[0.03] animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-full rounded bg-white/[0.03] animate-pulse" />
+                    <div className="h-3 w-5/6 rounded bg-white/[0.02] animate-pulse" />
+                    <div className="h-3 w-2/3 rounded bg-white/[0.02] animate-pulse" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-16 rounded-full bg-white/[0.04] animate-pulse" />
+                    <div className="h-6 w-20 rounded-full bg-white/[0.04] animate-pulse" />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

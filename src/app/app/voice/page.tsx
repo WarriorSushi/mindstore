@@ -718,8 +718,17 @@ export default function VoicePage() {
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 text-zinc-600 animate-spin" />
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-white/[0.04] animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3.5 w-36 rounded bg-white/[0.05] animate-pulse" />
+                      <div className="h-2.5 w-24 rounded bg-white/[0.03] animate-pulse" />
+                    </div>
+                    <div className="h-3 w-12 rounded bg-white/[0.03] animate-pulse" />
+                  </div>
+                ))}
               </div>
             ) : recordings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
