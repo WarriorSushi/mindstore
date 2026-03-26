@@ -1,258 +1,263 @@
-/**
- * Shared Vector & Clustering Utilities — Portable module
- * 
- * Extracted from topic-evolution, knowledge-gaps, mind-map-generator, 
- * and smart-collections. These functions were duplicated 4+ times.
- * 
- * Zero external dependencies. Pure math.
- */
+const STOP_WORDS = new Set([
+  "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
+  "be", "been", "being", "have", "has", "had", "do", "does", "did",
+  "will", "would", "could", "should", "may", "might", "shall", "can",
+  "to", "of", "in", "for", "on", "with", "at", "by", "from", "about",
+  "as", "into", "through", "during", "before", "after", "above", "below",
+  "between", "under", "over", "then", "than", "so", "no", "not", "only",
+  "very", "just", "also", "more", "most", "other", "some", "such", "any",
+  "each", "every", "all", "both", "few", "many", "much", "own", "same",
+  "this", "that", "these", "those", "it", "its", "i", "me", "my", "we",
+  "us", "our", "you", "your", "he", "his", "she", "her", "they", "them",
+  "their", "what", "which", "who", "whom", "when", "where", "why", "how",
+  "if", "because", "while", "although", "though", "since", "until",
+  "like", "well", "back", "even", "still", "already", "really", "here",
+  "there", "now", "up", "out", "way", "new", "one", "two", "first",
+  "last", "next", "good", "great", "make", "think", "know", "get",
+  "see", "come", "go", "want", "use", "find", "give", "tell", "work",
+  "say", "take", "need", "look", "try", "ask", "let", "keep", "help",
+  "start", "show", "set", "put", "end", "another", "something", "things",
+  "thing", "people", "time", "year", "years", "day", "days", "part",
+  "long", "used", "able", "using", "different", "however", "example",
+  "based", "important", "actually", "often", "going", "right", "sure",
+  "point", "always",
+]);
 
-// ─── Types ────────────────────────────────────────────────────
-
-export interface ClusterMember {
+export interface EmbeddedMemoryLike {
   id: string;
   content: string;
-  embedding: number[];
   sourceType: string;
   sourceTitle: string;
+  embedding: number[];
   createdAt: string;
-  [key: string]: unknown;
 }
 
-export interface Cluster<T extends ClusterMember = ClusterMember> {
+export interface VectorCluster<T extends { embedding: number[] }> {
   centroid: number[];
   members: T[];
   coherence: number;
 }
 
-// ─── Vector Operations ────────────────────────────────────────
-
 export function parseEmbedding(raw: unknown): number[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
+  if (Array.isArray(raw)) {
+    return raw.filter((value): value is number => typeof value === "number");
+  }
+  if (typeof raw === "string") {
     try {
-      const cleaned = raw.replace(/^\[|\]$/g, '');
-      return cleaned.split(',').map(Number);
-    } catch { return []; }
+      const cleaned = raw.replace(/^\[/, "").replace(/\]$/, "");
+      return cleaned.split(",").map((value) => Number.parseFloat(value)).filter(Number.isFinite);
+    } catch {
+      return [];
+    }
   }
   return [];
 }
 
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length || a.length === 0) return 0;
-  let dot = 0, normA = 0, normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    normA += a[i]! * a[i]!;
-    normB += b[i]! * b[i]!;
+export function cosineSimilarity(left: number[], right: number[]) {
+  if (left.length !== right.length || left.length === 0) {
+    return 0;
   }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
+
+  let dot = 0;
+  let normLeft = 0;
+  let normRight = 0;
+
+  for (let index = 0; index < left.length; index += 1) {
+    const leftValue = left[index] || 0;
+    const rightValue = right[index] || 0;
+    dot += leftValue * rightValue;
+    normLeft += leftValue * leftValue;
+    normRight += rightValue * rightValue;
+  }
+
+  const denominator = Math.sqrt(normLeft) * Math.sqrt(normRight);
+  return denominator > 0 ? dot / denominator : 0;
 }
 
-export function vectorAdd(a: number[], b: number[]): number[] {
-  return a.map((v, i) => v + (b[i] || 0));
-}
-
-export function vectorScale(v: number[], s: number): number[] {
-  return v.map(x => x * s);
-}
-
-// ─── K-Means Clustering (k-means++ init) ──────────────────────
-
-export function kMeansClustering<T extends ClusterMember>(
+export function kMeansClustering<T extends { embedding: number[] }>(
   items: T[],
   k: number,
-  maxIter = 20,
-): Cluster<T>[] {
-  if (items.length === 0) return [];
+  iterations: number,
+): Array<VectorCluster<T>> {
+  if (!items.length) {
+    return [];
+  }
+
   if (items.length <= k) {
-    return items.map(m => ({
-      centroid: m.embedding,
-      members: [m],
+    return items.map((item) => ({
+      centroid: [...item.embedding],
+      members: [item],
       coherence: 1,
     }));
   }
 
-  const dim = items[0]!.embedding.length;
-  if (dim === 0) return [];
-
-  // k-means++ initialization
+  const dimension = items[0]?.embedding.length || 0;
   const centroids: number[][] = [];
-  centroids.push([...items[Math.floor(Math.random() * items.length)]!.embedding]);
+  const firstIndex = Math.floor(Math.random() * items.length);
+  centroids.push([...(items[firstIndex]?.embedding || [])]);
 
-  for (let c = 1; c < k; c++) {
-    const distances = items.map(m => {
-      const minDist = centroids.reduce((min, cent) => {
-        const d = 1 - cosineSimilarity(m.embedding, cent);
-        return Math.min(min, d);
+  for (let clusterIndex = 1; clusterIndex < k; clusterIndex += 1) {
+    const distances = items.map((item) => {
+      const minDistance = centroids.reduce((min, centroid) => {
+        const similarity = cosineSimilarity(item.embedding, centroid);
+        return Math.min(min, 1 - similarity);
       }, Infinity);
-      return minDist * minDist;
+      return minDistance * minDistance;
     });
 
-    const totalDist = distances.reduce((a, b) => a + b, 0);
-    if (totalDist === 0) break;
+    const totalDistance = distances.reduce((sum, value) => sum + value, 0);
+    if (!totalDistance) {
+      break;
+    }
 
-    let r = Math.random() * totalDist;
-    for (let i = 0; i < distances.length; i++) {
-      r -= distances[i]!;
-      if (r <= 0) {
-        centroids.push([...items[i]!.embedding]);
+    let threshold = Math.random() * totalDistance;
+    let chosenIndex = 0;
+    for (let index = 0; index < distances.length; index += 1) {
+      threshold -= distances[index] || 0;
+      if (threshold <= 0) {
+        chosenIndex = index;
         break;
       }
     }
+
+    centroids.push([...(items[chosenIndex]?.embedding || [])]);
   }
 
   let assignments = new Array(items.length).fill(0);
 
-  for (let iter = 0; iter < maxIter; iter++) {
-    const newAssignments = items.map(m => {
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const nextAssignments = items.map((item) => {
       let bestCluster = 0;
-      let bestSim = -Infinity;
-      for (let c = 0; c < centroids.length; c++) {
-        const sim = cosineSimilarity(m.embedding, centroids[c]!);
-        if (sim > bestSim) {
-          bestSim = sim;
-          bestCluster = c;
+      let bestSimilarity = -Infinity;
+
+      for (let clusterIndex = 0; clusterIndex < centroids.length; clusterIndex += 1) {
+        const similarity = cosineSimilarity(item.embedding, centroids[clusterIndex] || []);
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestCluster = clusterIndex;
         }
       }
+
       return bestCluster;
     });
 
-    const changed = newAssignments.some((a, i) => a !== assignments[i]);
-    assignments = newAssignments;
-    if (!changed) break;
+    const changed = nextAssignments.some((assignment, index) => assignment !== assignments[index]);
+    assignments = nextAssignments;
+    if (!changed) {
+      break;
+    }
 
-    for (let c = 0; c < centroids.length; c++) {
-      const members = items.filter((_, i) => assignments[i] === c);
-      if (members.length === 0) continue;
-      const sum = members.reduce(
-        (acc, m) => vectorAdd(acc, m.embedding),
-        new Array(dim).fill(0) as number[],
-      );
-      centroids[c] = vectorScale(sum, 1 / members.length);
+    for (let clusterIndex = 0; clusterIndex < centroids.length; clusterIndex += 1) {
+      const members = items.filter((_, index) => assignments[index] === clusterIndex);
+      if (!members.length) {
+        continue;
+      }
+
+      const nextCentroid = new Array(dimension).fill(0);
+      for (const member of members) {
+        for (let dim = 0; dim < dimension; dim += 1) {
+          nextCentroid[dim] += member.embedding[dim] || 0;
+        }
+      }
+
+      for (let dim = 0; dim < dimension; dim += 1) {
+        nextCentroid[dim] /= members.length;
+      }
+
+      centroids[clusterIndex] = nextCentroid;
     }
   }
 
-  return centroids.map((centroid, c) => {
-    const members = items.filter((_, i) => assignments[i] === c);
-    const coherence = members.length > 0
-      ? members.reduce((sum, m) => sum + cosineSimilarity(m.embedding, centroid), 0) / members.length
-      : 0;
-    return { centroid, members, coherence };
-  }).filter(c => c.members.length > 0);
+  return centroids
+    .map((centroid, clusterIndex) => {
+      const members = items.filter((_, index) => assignments[index] === clusterIndex);
+      return {
+        centroid,
+        members,
+        coherence: computeCoherence(centroid, members),
+      };
+    })
+    .filter((cluster) => cluster.members.length > 0);
 }
 
-// ─── Keyword Extraction ───────────────────────────────────────
+export function computeCoherence<T extends { embedding: number[] }>(centroid: number[], members: T[]) {
+  if (members.length <= 1) {
+    return 1;
+  }
 
-const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
-  'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-  'could', 'should', 'may', 'might', 'shall', 'can', 'not', 'no', 'nor',
-  'so', 'if', 'then', 'than', 'too', 'very', 'just', 'about', 'also',
-  'more', 'some', 'any', 'each', 'every', 'all', 'both', 'few', 'most',
-  'other', 'into', 'over', 'such', 'after', 'before', 'between', 'under',
-  'again', 'there', 'here', 'when', 'where', 'why', 'how', 'what', 'which',
-  'who', 'whom', 'this', 'that', 'these', 'those', 'i', 'me', 'my', 'we',
-  'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'it', 'its',
-  'they', 'them', 'their', 'up', 'out', 'one', 'two', 'get', 'got',
-  'like', 'make', 'made', 'use', 'used', 'using', 'new', 'way', 'want',
-  'know', 'think', 'see', 'said', 'say', 'need', 'well', 'back', 'much',
-  'even', 'many', 'let', 'still', 'take', 'look', 'come', 'go', 'good',
-  'give', 'going', 'right', 'sure', 'really', 'thing', 'things', 'don',
-  'people', 'time', 'work', 'actually', 'something', 'first', 'long',
-  'example', 'different', 'help', 'same', 'part', 'able', 'based',
-  'always', 'never', 'yes', 'however', 'though', 'since', 'without',
-  'only', 'already', 'while', 'through', 'because', 'rather', 'another',
-  'ask', 'told', 'tell', 'point', 'set', 'keep', 'kind', 'start',
-  'trying', 'try', 'put', 'lot', 'mean', 'end', 'own', 'called',
-  'doesn', 'didn', 'isn', 'aren', 'wasn', 'weren', 'won',
-  'couldn', 'shouldn', 'wouldn', 'haven', 'hasn', 'hadn',
-]);
+  const similarities = members.map((member) => cosineSimilarity(centroid, member.embedding));
+  return round(similarities.reduce((sum, value) => sum + value, 0) / similarities.length, 2);
+}
 
-export function extractKeywords(items: { content: string }[], count: number, minFreqRatio = 0.15): string[] {
-  const wordFreq = new Map<string, number>();
+export function extractKeywords<T extends { content: string }>(items: T[], count: number) {
+  const wordCounts: Record<string, number> = {};
+  const documentCounts: Record<string, number> = {};
+
   for (const item of items) {
     const words = item.content
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/[^a-z0-9\s-]/g, "")
       .split(/\s+/)
-      .filter(w => w.length >= 3 && !STOP_WORDS.has(w) && !/^\d+$/.test(w));
-    const unique = new Set(words);
-    for (const word of unique) {
-      wordFreq.set(word, (wordFreq.get(word) || 0) + 1);
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+
+    const seen = new Set<string>();
+    for (const word of words) {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+      if (!seen.has(word)) {
+        documentCounts[word] = (documentCounts[word] || 0) + 1;
+        seen.add(word);
+      }
     }
   }
-  return [...wordFreq.entries()]
-    .filter(([_, freq]) => freq >= Math.max(2, items.length * minFreqRatio))
-    .sort((a, b) => b[1] - a[1])
+
+  return Object.entries(wordCounts)
+    .filter(([, frequency]) => frequency >= 2)
+    .map(([word, frequency]) => {
+      const documentFrequency = documentCounts[word] || 1;
+      const inverseFrequency = Math.log(items.length / documentFrequency) + 1;
+      return { word, score: frequency * inverseFrequency };
+    })
+    .sort((left, right) => right.score - left.score)
     .slice(0, count)
-    .map(([word]) => word);
+    .map((entry) => entry.word);
 }
 
-// ─── Topic Label Extraction ───────────────────────────────────
+export function extractTopicLabel<T extends { content: string; sourceTitle: string }>(items: T[]) {
+  const sourceCounts: Record<string, number> = {};
 
-export function extractTopicLabel(items: { content: string; sourceTitle: string }[]): string {
-  const sourceCounts = new Map<string, number>();
-  for (const m of items) {
-    if (m.sourceTitle && m.sourceTitle !== 'Untitled') {
-      sourceCounts.set(m.sourceTitle, (sourceCounts.get(m.sourceTitle) || 0) + 1);
+  for (const item of items) {
+    sourceCounts[item.sourceTitle] = (sourceCounts[item.sourceTitle] || 0) + 1;
+  }
+
+  const topSource = Object.entries(sourceCounts).sort((left, right) => right[1] - left[1])[0];
+  if (topSource && topSource[1] / items.length > 0.6) {
+    const title = topSource[0];
+    if (title && title !== "Untitled" && title.length <= 40) {
+      return title;
     }
   }
-  const dominant = [...sourceCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (dominant && dominant[1] > items.length * 0.6) {
-    return truncate(dominant[0], 30);
-  }
+
   const keywords = extractKeywords(items, 3);
-  if (keywords.length >= 2) return capitalize(keywords.slice(0, 2).join(' & '));
-  if (keywords.length === 1) return capitalize(keywords[0]!);
-  return truncate(items[0]!.content.split('\n')[0]!.trim(), 30);
+  if (keywords.length > 0) {
+    return keywords
+      .slice(0, 2)
+      .map((keyword) => keyword.charAt(0).toUpperCase() + keyword.slice(1))
+      .join(" & ");
+  }
+
+  return `Topic ${Math.floor(Math.random() * 100)}`;
 }
 
-// ─── Source Type Counting ─────────────────────────────────────
-
-export function countSourceTypes(items: { sourceType: string }[]): Record<string, number> {
+export function countSourceTypes<T extends { sourceType: string }>(items: T[]) {
   const counts: Record<string, number> = {};
-  for (const m of items) counts[m.sourceType] = (counts[m.sourceType] || 0) + 1;
+  for (const item of items) {
+    counts[item.sourceType] = (counts[item.sourceType] || 0) + 1;
+  }
   return counts;
 }
 
-// ─── Cluster Similarity (for hierarchical/mind-map) ───────────
-
-export function clusterSimilarity<T extends ClusterMember>(a: Cluster<T>, b: Cluster<T>): number {
-  return cosineSimilarity(a.centroid, b.centroid);
-}
-
-// ─── Density Classification ───────────────────────────────────
-
-export function getDensityLevel(
-  clusterSize: number,
-  totalItems: number,
-  coherence: number,
-): 'deep' | 'moderate' | 'thin' | 'sparse' {
-  const sizeRatio = clusterSize / totalItems;
-  if (sizeRatio > 0.15 && coherence > 0.8) return 'deep';
-  if (sizeRatio > 0.08 || coherence > 0.75) return 'moderate';
-  if (sizeRatio > 0.03 || coherence > 0.65) return 'thin';
-  return 'sparse';
-}
-
-// ─── Coherence Computation ────────────────────────────────────
-
-export function computeCoherence<T extends ClusterMember>(centroid: number[], members: T[]): number {
-  if (members.length === 0) return 0;
-  return members.reduce((sum, m) => sum + cosineSimilarity(m.embedding, centroid), 0) / members.length;
-}
-
-// ─── String Helpers ───────────────────────────────────────────
-
-export function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return s.slice(0, max - 1).trim() + '…';
-}
-
-export function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function round(value: number, digits: number) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
 }

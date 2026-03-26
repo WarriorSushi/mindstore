@@ -12,9 +12,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
-import { eq, sql } from 'drizzle-orm';
-import { buildStoreCatalog, getPluginManifest, PLUGIN_MANIFESTS } from '@/server/plugins/registry';
+import { eq } from 'drizzle-orm';
+import { FEATURED_PLUGIN_SLUGS, pluginRuntime } from '@/server/plugins/runtime';
 import type { PluginStatus } from '@/server/plugins/types';
+import {
+  getPluginJobSchedules,
+  runPluginJob,
+  upsertPluginJobSchedule,
+} from '@/server/plugin-jobs';
+import { getUserId } from '@/server/user';
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,29 +31,36 @@ export async function GET(req: NextRequest) {
 
     // ─── Single plugin detail ─────────────────────────────────
     if (slug) {
-      const manifest = getPluginManifest(slug);
+      const userId = await getUserId();
+      const canonicalSlug = pluginRuntime.resolveSlug(slug) ?? slug;
+      const manifest = pluginRuntime.getManifest(canonicalSlug);
       if (!manifest) {
         return NextResponse.json({ error: 'Plugin not found' }, { status: 404 });
       }
 
-      // Check if installed (gracefully handle missing table)
-      let dbRecord: any = null;
-      try {
-        const [row] = await db
-          .select()
-          .from(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
-          .limit(1);
-        dbRecord = row;
-      } catch {
-        // Table might not exist
-      }
+      // Check if installed
+      const [dbRecord] = await db
+        .select()
+        .from(schema.plugins)
+        .where(eq(schema.plugins.slug, canonicalSlug))
+        .limit(1);
 
       return NextResponse.json({
         ...manifest,
+        source: pluginRuntime.resolvePlugin(canonicalSlug)?.descriptor.source ?? 'builtin',
         installed: !!dbRecord,
         status: dbRecord?.status || null,
         config: dbRecord?.config || {},
+        dashboardWidgets: pluginRuntime.getDashboardWidgetDefinitions(canonicalSlug),
+        jobs: pluginRuntime.getJobDefinitions(canonicalSlug),
+        runtimeSurfaces: {
+          dashboardWidgets: pluginRuntime.getDashboardWidgetDefinitions(canonicalSlug).length,
+          jobs: pluginRuntime.getJobDefinitions(canonicalSlug).length,
+        },
+        jobRuns: getJobRuns(dbRecord?.metadata),
+        jobSchedules: Object.fromEntries(
+          (await getPluginJobSchedules(userId, canonicalSlug)).map((schedule) => [schedule.jobId, schedule])
+        ),
         installedAt: dbRecord?.installedAt || null,
         lastError: dbRecord?.lastError || null,
       });
@@ -55,20 +68,14 @@ export async function GET(req: NextRequest) {
 
     // ─── Full catalog ─────────────────────────────────────────
     
-    // Get all installed plugins from DB (gracefully handle missing table)
-    let installedPlugins: any[] = [];
-    try {
-      installedPlugins = await db.select().from(schema.plugins);
-    } catch (e: any) {
-      // Table might not exist yet — that's fine, just show catalog without install status
-      console.warn('[plugins] plugins table not found, showing catalog only:', e.message);
-    }
+    // Get all installed plugins from DB
+    const installedPlugins = await db.select().from(schema.plugins);
     const installedMap = new Map(
       installedPlugins.map((p) => [p.slug, { status: p.status, config: p.config as Record<string, unknown> }])
     );
 
     // Build catalog
-    let catalog = buildStoreCatalog(installedMap);
+    let catalog = pluginRuntime.buildStoreCatalog(installedMap, FEATURED_PLUGIN_SLUGS);
 
     // Filter by category
     if (category) {
@@ -91,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     // Count summary
     const summary = {
-      total: Object.keys(PLUGIN_MANIFESTS).length,
+      total: pluginRuntime.getAllManifests().length,
       installed: installedPlugins.length,
       active: installedPlugins.filter((p) => p.status === 'active').length,
       byCategory: {
@@ -112,9 +119,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Ensure plugins table exists (auto-migrate)
-    await ensurePluginsTable();
-    
     const body = await req.json();
     const { action, slug, config } = body;
 
@@ -122,7 +126,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plugin slug is required' }, { status: 400 });
     }
 
-    const manifest = getPluginManifest(slug);
+    const canonicalSlug = pluginRuntime.resolveSlug(slug) ?? slug;
+    const manifest = pluginRuntime.getManifest(canonicalSlug);
     if (!manifest) {
       return NextResponse.json({ error: `Unknown plugin: ${slug}` }, { status: 404 });
     }
@@ -134,7 +139,7 @@ export async function POST(req: NextRequest) {
         const [existing] = await db
           .select()
           .from(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .limit(1);
 
         if (existing) {
@@ -142,10 +147,25 @@ export async function POST(req: NextRequest) {
         }
 
         // Install
+        const normalizedInstall = pluginRuntime.validateAndNormalizeConfig(canonicalSlug, config, {
+          existingConfig: {},
+          includeDefaults: true,
+        });
+
+        if (!normalizedInstall.isValid) {
+          return NextResponse.json(
+            {
+              error: 'Plugin configuration is invalid',
+              fieldErrors: normalizedInstall.errors,
+            },
+            { status: 400 }
+          );
+        }
+
         const [installed] = await db
           .insert(schema.plugins)
           .values({
-            slug: manifest.slug,
+            slug: canonicalSlug,
             name: manifest.name,
             description: manifest.description,
             version: manifest.version,
@@ -154,18 +174,23 @@ export async function POST(req: NextRequest) {
             icon: manifest.icon,
             category: manifest.category,
             author: manifest.author,
-            config: config || manifest.ui?.settingsSchema?.reduce((acc, field) => {
-              if (field.default !== undefined) acc[field.key] = field.default;
-              return acc;
-            }, {} as Record<string, unknown>) || {},
+            config: normalizedInstall.config,
             metadata: {
               capabilities: manifest.capabilities,
               hooks: manifest.hooks,
               routes: manifest.routes,
               mcpTools: manifest.mcpTools,
+              aliases: manifest.aliases || [],
+              dashboardWidgets: manifest.ui?.dashboardWidgets || [],
+              jobs: manifest.jobs || [],
+              jobRuns: {},
             },
           })
           .returning();
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onInstall', {
+          pluginConfig: (installed.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ 
           message: `${manifest.name} installed successfully`,
@@ -177,12 +202,16 @@ export async function POST(req: NextRequest) {
       case 'uninstall': {
         const [deleted] = await db
           .delete(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!deleted) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onUninstall', {
+          pluginConfig: (deleted.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ 
           message: `${manifest.name} uninstalled successfully`,
@@ -194,12 +223,16 @@ export async function POST(req: NextRequest) {
         const [updated] = await db
           .update(schema.plugins)
           .set({ status: 'active' as PluginStatus, updatedAt: new Date(), lastError: null })
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!updated) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onEnable', {
+          pluginConfig: (updated.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ message: `${manifest.name} enabled`, plugin: updated });
       }
@@ -209,12 +242,16 @@ export async function POST(req: NextRequest) {
         const [updated] = await db
           .update(schema.plugins)
           .set({ status: 'disabled' as PluginStatus, updatedAt: new Date() })
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
         if (!updated) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
+
+        await pluginRuntime.runHookForPlugin(canonicalSlug, 'onDisable', {
+          pluginConfig: (updated.config as Record<string, unknown>) || {},
+        });
 
         return NextResponse.json({ message: `${manifest.name} disabled`, plugin: updated });
       }
@@ -229,27 +266,128 @@ export async function POST(req: NextRequest) {
         const [existing] = await db
           .select()
           .from(schema.plugins)
-          .where(eq(schema.plugins.slug, slug))
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .limit(1);
 
         if (!existing) {
           return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
         }
 
-        const mergedConfig = { ...(existing.config as Record<string, unknown>), ...config };
+        const normalizedConfig = pluginRuntime.validateAndNormalizeConfig(canonicalSlug, config, {
+          existingConfig: (existing.config as Record<string, unknown>) || {},
+        });
+
+        if (!normalizedConfig.isValid) {
+          return NextResponse.json(
+            {
+              error: 'Plugin configuration is invalid',
+              fieldErrors: normalizedConfig.errors,
+            },
+            { status: 400 }
+          );
+        }
 
         const [updated] = await db
           .update(schema.plugins)
-          .set({ config: mergedConfig, updatedAt: new Date() })
-          .where(eq(schema.plugins.slug, slug))
+          .set({ config: normalizedConfig.config, updatedAt: new Date() })
+          .where(eq(schema.plugins.slug, canonicalSlug))
           .returning();
 
-        return NextResponse.json({ message: `${manifest.name} configured`, plugin: updated });
+        return NextResponse.json({
+          message: `${manifest.name} configured`,
+          plugin: updated,
+          fieldErrors: {},
+        });
+      }
+
+      // ─── CONFIGURE JOB SCHEDULE ───────────────────────────
+      case 'configure-job-schedule': {
+        const userId = await getUserId();
+        const jobId = typeof body.jobId === 'string' ? body.jobId : '';
+        const enabled = body.enabled !== false;
+        const intervalMinutes =
+          typeof body.intervalMinutes === 'number' && Number.isFinite(body.intervalMinutes)
+            ? body.intervalMinutes
+            : undefined;
+
+        if (!jobId) {
+          return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+        }
+
+        const jobDefinition = pluginRuntime
+          .getJobDefinitions(canonicalSlug)
+          .find((job) => job.id === jobId);
+
+        if (!jobDefinition) {
+          return NextResponse.json({ error: `Unknown job: ${jobId}` }, { status: 404 });
+        }
+
+        if (jobDefinition.trigger !== 'scheduled') {
+          return NextResponse.json(
+            { error: `Job ${jobId} is not declared as scheduled.` },
+            { status: 400 }
+          );
+        }
+
+        const schedule = await upsertPluginJobSchedule({
+          userId,
+          pluginSlug: canonicalSlug,
+          jobId,
+          enabled,
+          intervalMinutes,
+        });
+
+        return NextResponse.json({
+          message: enabled ? `${manifest.name} schedule enabled` : `${manifest.name} schedule disabled`,
+          jobId,
+          schedule,
+        });
+      }
+
+      // ─── RUN JOB ───────────────────────────────────────────
+      case 'run-job': {
+        const userId = await getUserId();
+        const jobId = typeof body.jobId === 'string' ? body.jobId : '';
+        const reason = typeof body.reason === 'string' ? body.reason : undefined;
+
+        if (!jobId) {
+          return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+        }
+
+        const [existing] = await db
+          .select()
+          .from(schema.plugins)
+          .where(eq(schema.plugins.slug, canonicalSlug))
+          .limit(1);
+
+        if (!existing) {
+          return NextResponse.json({ error: 'Plugin not installed' }, { status: 404 });
+        }
+
+        const result = await runPluginJob({
+          userId,
+          pluginSlug: canonicalSlug,
+          jobId,
+          reason,
+        });
+
+        const [updated] = await db
+          .select()
+          .from(schema.plugins)
+          .where(eq(schema.plugins.slug, canonicalSlug))
+          .limit(1);
+
+        return NextResponse.json({
+          message: `${manifest.name} job completed`,
+          result,
+          jobId,
+          plugin: updated,
+        });
       }
 
       default:
         return NextResponse.json(
-          { error: `Unknown action: ${action}. Valid: install, uninstall, enable, disable, configure` },
+          { error: `Unknown action: ${action}. Valid: install, uninstall, enable, disable, configure, configure-job-schedule, run-job` },
           { status: 400 }
         );
     }
@@ -259,41 +397,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/** Ensure plugins table + enums exist (idempotent) */
-async function ensurePluginsTable() {
-  try {
-    await db.execute(sql`
-      DO $$ BEGIN
-        CREATE TYPE plugin_type AS ENUM ('extension', 'mcp', 'prompt');
-      EXCEPTION WHEN duplicate_object THEN null;
-      END $$
-    `);
-    await db.execute(sql`
-      DO $$ BEGIN
-        CREATE TYPE plugin_status AS ENUM ('installed', 'active', 'disabled', 'error');
-      EXCEPTION WHEN duplicate_object THEN null;
-      END $$
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS plugins (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        slug TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        version TEXT DEFAULT '1.0.0',
-        type plugin_type NOT NULL DEFAULT 'extension',
-        status plugin_status NOT NULL DEFAULT 'installed',
-        icon TEXT,
-        category TEXT,
-        author TEXT DEFAULT 'MindStore',
-        config JSONB DEFAULT '{}',
-        metadata JSONB DEFAULT '{}',
-        installed_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        last_error TEXT
-      )
-    `);
-  } catch (e) {
-    console.warn('[plugins] ensurePluginsTable warning:', e);
+function getJobRuns(metadata: unknown): Record<string, unknown> {
+  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata)) {
+    return {};
   }
+
+  const jobRuns = (metadata as Record<string, unknown>).jobRuns;
+  if (typeof jobRuns !== 'object' || jobRuns === null || Array.isArray(jobRuns)) {
+    return {};
+  }
+
+  return jobRuns as Record<string, unknown>;
 }

@@ -185,18 +185,6 @@ export const plugins = pgTable('plugins', {
   index('idx_plugins_category').on(table.category),
 ]);
 
-// API Keys (for MCP server auth)
-export const apiKeys = pgTable('api_keys', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').references(() => users.id).notNull(),
-  key: text('key').unique().notNull(),
-  name: text('name'),
-  lastUsedAt: timestamp('last_used_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-});
-
-// === PLUGIN JOB SCHEDULING ===
-
 export const pluginJobSchedules = pgTable('plugin_job_schedules', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id).notNull(),
@@ -217,8 +205,6 @@ export const pluginJobSchedules = pgTable('plugin_job_schedules', {
   index('idx_plugin_job_schedule_due').on(table.enabled, table.nextRunAt),
 ]);
 
-// === FLASHCARD DECKS ===
-
 export const flashcardDecks = pgTable('flashcard_decks', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id).notNull(),
@@ -232,8 +218,6 @@ export const flashcardDecks = pgTable('flashcard_decks', {
   index('idx_flashcard_decks_user').on(table.userId),
   index('idx_flashcard_decks_updated').on(table.updatedAt),
 ]);
-
-// === VOICE RECORDINGS ===
 
 export const voiceRecordings = pgTable('voice_recordings', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -259,13 +243,23 @@ export const voiceRecordings = pgTable('voice_recordings', {
   index('idx_voice_recordings_saved').on(table.savedAsMemory),
 ]);
 
+// API Keys (for MCP server auth)
+export const apiKeys = pgTable('api_keys', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  key: text('key').unique().notNull(),
+  name: text('name'),
+  lastUsedAt: timestamp('last_used_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // === TAGS SYSTEM ===
 
 export const tags = pgTable('tags', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id).notNull(),
   name: text('name').notNull(),
-  color: text('color').default('teal'), // teal, sky, emerald, amber, red, blue, orange, zinc
+  color: text('color').default('teal'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
   uniqueIndex('idx_tags_user_name').on(table.userId, table.name),

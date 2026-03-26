@@ -5,6 +5,108 @@
  * Handles: parsing Pocket HTML export, Instapaper CSV export, formatting.
  */
 
+import { ensurePluginInstalled } from "./plugin-config";
+import { importDocuments } from "@/server/import-service";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+
+const SLUG = "pocket-importer";
+
+// ─── Plugin lifecycle ─────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export function getPocketConfig() {
+  return {
+    sources: [
+      {
+        id: "pocket",
+        name: "Pocket",
+        format: "HTML",
+        exportUrl: "https://getpocket.com/export",
+        instructions: [
+          "Go to getpocket.com/export",
+          'Click "Export" to download your data as HTML',
+          "Upload the ril_export.html file here",
+        ],
+      },
+      {
+        id: "instapaper",
+        name: "Instapaper",
+        format: "CSV",
+        exportUrl: "https://www.instapaper.com/user",
+        instructions: [
+          "Go to instapaper.com → Settings",
+          'Click "Export" under Data',
+          "Download the CSV file",
+          "Upload it here",
+        ],
+      },
+    ],
+  };
+}
+
+export async function getPocketStats(userId: string) {
+  let stats = { imported: 0, pocket: 0, instapaper: 0 };
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE metadata->>'importSource' = 'pocket') as pocket,
+        COUNT(*) FILTER (WHERE metadata->>'importSource' = 'instapaper') as instapaper,
+        COUNT(*) as total
+      FROM memories
+      WHERE user_id = ${userId}
+      AND metadata->>'importedVia' = 'pocket-importer-plugin'
+    `);
+    const row = (rows as Record<string, string>[])[0];
+    stats.imported = parseInt(row?.total || "0");
+    stats.pocket = parseInt(row?.pocket || "0");
+    stats.instapaper = parseInt(row?.instapaper || "0");
+  } catch {
+    /* ignore */
+  }
+  return stats;
+}
+
+export async function runImport(
+  userId: string,
+  action: "import-pocket" | "import-instapaper",
+  data: string,
+) {
+  const articles =
+    action === "import-pocket"
+      ? parsePocketHTML(data)
+      : parseInstapaperCSV(data);
+
+  if (articles.length === 0) {
+    const formatName = action === "import-pocket" ? "Pocket HTML" : "Instapaper CSV";
+    throw new Error(
+      `No articles found. Make sure you uploaded the correct ${formatName} file.`,
+    );
+  }
+
+  const documents = articles.map((article) => ({
+    title: article.title,
+    content: formatArticleContent(article),
+    sourceType: article.source as string,
+    sourceId: article.url,
+    timestamp: article.addedAt ? new Date(article.addedAt) : undefined,
+    metadata: buildArticleMetadata(article),
+  }));
+
+  const result = await importDocuments({ userId, documents });
+
+  return {
+    success: true,
+    imported: result.chunks,
+    embedded: result.embedded,
+    total: articles.length,
+    source: action === "import-pocket" ? "pocket" : "instapaper",
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface SavedArticle {

@@ -4,8 +4,11 @@
  * Domain profiles, keyword-based domain detection, and model recommendations
  * for specialized knowledge areas (code, medical, legal, scientific, financial).
  *
- * Pure logic: no HTTP, no DB.
+ * Includes DB-aware helpers for stats, provider checks, batch-detect, and config storage.
  */
+
+import { db, schema } from '@/server/db';
+import { sql, eq } from 'drizzle-orm';
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -296,4 +299,177 @@ export function availableModelsForDomain(
       (m.provider === 'ollama' && providers.ollama) ||
       (m.provider === 'huggingface' && providers.huggingface),
   );
+}
+
+// ─── DB-Aware Helpers ──────────────────────────────────────────
+
+const PLUGIN_SLUG = 'domain-embeddings';
+
+/** Ensure the plugin row exists in the plugins table. */
+export async function ensureInstalled(): Promise<void> {
+  try {
+    const existing = await db.select().from(schema.plugins).where(eq(schema.plugins.slug, PLUGIN_SLUG)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(schema.plugins).values({
+        slug: PLUGIN_SLUG,
+        name: 'Domain Embeddings',
+        description: 'Specialized embedding models for specific knowledge domains.',
+        version: '1.0.0',
+        type: 'extension',
+        status: 'active',
+        icon: 'Dna',
+        category: 'ai',
+        config: {},
+      });
+    }
+  } catch {}
+}
+
+/** Check which AI providers are available from settings + env. */
+export async function getProviderAvailability(): Promise<{
+  providers: { openai: boolean; gemini: boolean; ollama: boolean };
+  currentProvider: string;
+}> {
+  const settings = await db.execute(sql`
+    SELECT key, value FROM settings
+    WHERE key IN ('openai_api_key', 'gemini_api_key', 'ollama_url', 'embedding_provider')
+  `);
+  const config: Record<string, string> = {};
+  for (const row of settings as any[]) config[row.key] = row.value;
+
+  return {
+    providers: {
+      openai: !!(config.openai_api_key || process.env.OPENAI_API_KEY),
+      gemini: !!(config.gemini_api_key || process.env.GEMINI_API_KEY),
+      ollama: !!(config.ollama_url || process.env.OLLAMA_URL),
+    },
+    currentProvider: config.embedding_provider || 'auto',
+  };
+}
+
+/** Get the plugin config from DB. */
+export async function getPluginConfig(): Promise<Record<string, unknown>> {
+  const rows = await db.execute(sql`SELECT config FROM plugins WHERE slug = ${PLUGIN_SLUG}`);
+  return ((rows as any[])[0]?.config || {}) as Record<string, unknown>;
+}
+
+/** Save domain model configuration into the plugin config. */
+export async function saveDomainConfig(body: {
+  domainModels?: Record<string, unknown>;
+  autoDetect?: boolean;
+  defaultDomain?: string;
+}): Promise<void> {
+  const { domainModels, autoDetect = true, defaultDomain = 'general' } = body;
+  await db.execute(sql`
+    UPDATE plugins SET config = config || ${JSON.stringify({ domainModels: domainModels || {}, autoDetect, defaultDomain })}::jsonb
+    WHERE slug = ${PLUGIN_SLUG}
+  `);
+}
+
+/** Get domain distribution stats for a user's memories. */
+export async function getDomainStats(userId: string): Promise<{
+  domainDistribution: Array<{ domain: string; name: string; count: number; examples: string[] }>;
+  totalAnalyzed: number;
+  embeddingCoverage: { withEmbeddings: number; total: number };
+}> {
+  const allMemories = await db.execute(sql`
+    SELECT id, content, metadata FROM memories
+    WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 500
+  `);
+
+  const domainCounts: Record<string, number> = { general: 0 };
+  const domainExamples: Record<string, string[]> = {};
+
+  for (const mem of allMemories as any[]) {
+    const content = mem.content || '';
+    const existingDomain = mem.metadata?.domain;
+
+    if (existingDomain) {
+      domainCounts[existingDomain] = (domainCounts[existingDomain] || 0) + 1;
+    } else {
+      const detected = detectDomain(content);
+      if (detected.length > 0 && detected[0].score > 0.05) {
+        const domain = detected[0].domain;
+        domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+        if (!domainExamples[domain]) domainExamples[domain] = [];
+        if (domainExamples[domain].length < 3) domainExamples[domain].push(content.slice(0, 100));
+      } else {
+        domainCounts.general++;
+      }
+    }
+  }
+
+  const embStats = await db.execute(sql`
+    SELECT COUNT(*) FILTER (WHERE embedding IS NOT NULL) as with_embeddings, COUNT(*) as total
+    FROM memories WHERE user_id = ${userId}
+  `);
+  const eRow = (embStats as any[])[0] || {};
+
+  return {
+    domainDistribution: Object.entries(domainCounts)
+      .map(([domain, count]) => ({
+        domain,
+        name: DOMAIN_PROFILES.find(d => d.id === domain)?.name || domain,
+        count,
+        examples: domainExamples[domain] || [],
+      }))
+      .sort((a, b) => b.count - a.count),
+    totalAnalyzed: (allMemories as any[]).length,
+    embeddingCoverage: {
+      withEmbeddings: parseInt(eRow.with_embeddings || '0'),
+      total: parseInt(eRow.total || '0'),
+    },
+  };
+}
+
+/** Tag a single memory with a domain. */
+export async function tagMemoryDomain(userId: string, memoryId: string, domain: string): Promise<void> {
+  if (!DOMAIN_PROFILES.find(d => d.id === domain) && domain !== 'general') {
+    throw new Error('Invalid domain');
+  }
+  await db.execute(sql`
+    UPDATE memories SET metadata = COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ domain })}::jsonb
+    WHERE id = ${memoryId} AND user_id = ${userId}
+  `);
+}
+
+/** Batch auto-detect domains for untagged memories. */
+export async function batchDetectDomains(userId: string, batchSize: number = 100): Promise<{
+  tagged: number;
+  remaining: number;
+  domainCounts: Record<string, number>;
+}> {
+  const untagged = await db.execute(sql`
+    SELECT id, content, metadata FROM memories
+    WHERE user_id = ${userId}
+    AND (metadata->>'domain' IS NULL OR metadata->>'domain' = '')
+    ORDER BY created_at DESC LIMIT ${batchSize}
+  `);
+
+  let tagged = 0;
+  const domainCounts: Record<string, number> = {};
+
+  for (const mem of untagged as any[]) {
+    const detected = detectDomain(mem.content || '');
+    const domain = detected.length > 0 && detected[0].score > 0.05 ? detected[0].domain : 'general';
+    const newMeta = { ...(mem.metadata || {}), domain };
+    await db.execute(sql`
+      UPDATE memories SET metadata = ${JSON.stringify(newMeta)}::jsonb
+      WHERE id = ${mem.id} AND user_id = ${userId}
+    `);
+    tagged++;
+    domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+  }
+
+  const remaining = await db.execute(sql`
+    SELECT COUNT(*) as count FROM memories
+    WHERE user_id = ${userId}
+    AND (metadata->>'domain' IS NULL OR metadata->>'domain' = '')
+  `);
+
+  return {
+    tagged,
+    remaining: parseInt((remaining as any[])[0]?.count || '0'),
+    domainCounts,
+  };
 }

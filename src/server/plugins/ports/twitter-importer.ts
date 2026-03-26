@@ -6,6 +6,111 @@
  * JS module format detection, tweet formatting, manual import.
  */
 
+import { ensurePluginInstalled } from "./plugin-config";
+import { importDocuments } from "@/server/import-service";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+
+const SLUG = "twitter-importer";
+
+// ─── Plugin lifecycle ─────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export function getTwitterConfig() {
+  return {
+    supportedFormats: [
+      {
+        id: "bookmarks-js",
+        name: "bookmarks.js",
+        description:
+          "From your Twitter data archive (Settings → Your Account → Download Archive)",
+      },
+      {
+        id: "tweets-js",
+        name: "tweets.js",
+        description: "Full tweet history from your Twitter data archive",
+      },
+      {
+        id: "json",
+        name: "JSON",
+        description: "Raw JSON array of tweet objects",
+      },
+    ],
+    instructions: [
+      "Go to twitter.com → Settings → Your Account → Download an archive",
+      "Wait for Twitter to prepare your data (can take 24-48 hours)",
+      "Download and unzip the archive",
+      "Find data/bookmarks.js or data/tweets.js",
+      "Upload the file here",
+    ],
+  };
+}
+
+export async function getTwitterStats(userId: string) {
+  let imported = 0;
+  try {
+    const rows = await db.execute(sql`
+      SELECT COUNT(*) as count FROM memories
+      WHERE user_id = ${userId} AND source_type = 'twitter'
+    `);
+    imported = parseInt((rows as Record<string, string>[])[0]?.count || "0");
+  } catch {
+    /* ignore */
+  }
+  return { imported };
+}
+
+export async function importArchive(userId: string, rawData: string) {
+  const { memories, total, valid } = processArchiveImport(rawData);
+
+  if (total === 0) {
+    throw new Error("No tweets found in the provided data");
+  }
+
+  const documents = memories.map((m) => ({
+    title: m.title,
+    content: m.content,
+    sourceType: "twitter" as const,
+    sourceId: m.dedupKey,
+    timestamp: m.createdAt,
+    metadata: m.metadata,
+  }));
+
+  const result = await importDocuments({ userId, documents });
+
+  return {
+    success: true,
+    imported: result.chunks,
+    embedded: result.embedded,
+    total,
+    validTweets: valid,
+  };
+}
+
+export async function importManual(
+  userId: string,
+  manualTweets: Array<{ text?: string; content?: string; author?: string; url?: string }>,
+) {
+  const memories = formatManualTweets(manualTweets);
+  const documents = memories.map((m) => ({
+    title: m.title,
+    content: m.content,
+    sourceType: "twitter" as const,
+    metadata: m.metadata,
+  }));
+
+  const result = await importDocuments({ userId, documents });
+
+  return {
+    success: true,
+    imported: result.chunks,
+    embedded: result.embedded,
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface ParsedTweet {
@@ -78,7 +183,7 @@ export function parseArchive(rawData: string): ParsedTweet[] {
       const entities = tweet.entities || {};
 
       tweets.push({
-        id: tweet.id_str || tweet.id || '',
+        id: tweet.id_str || tweet.tweetId || tweet.id || '',
         text,
         author: tweet.user?.name || tweet.core?.user_results?.result?.legacy?.name || undefined,
         authorHandle: tweet.user?.screen_name || tweet.core?.user_results?.result?.legacy?.screen_name || undefined,
@@ -98,7 +203,7 @@ export function parseArchive(rawData: string): ParsedTweet[] {
       for (const item of data) {
         const tweet = item.tweet || item;
         tweets.push({
-          id: tweet.id_str || tweet.id || '',
+          id: tweet.id_str || tweet.tweetId || tweet.id || '',
           text: tweet.full_text || tweet.text || '',
           createdAt: tweet.created_at || undefined,
           likes: parseInt(tweet.favorite_count || '0'),

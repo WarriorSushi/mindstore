@@ -1,21 +1,13 @@
-/**
- * PDF & EPUB Parser — Portable logic module
- *
- * Extracted from the route for convergence with codex runtime.
- * Handles: PDF section extraction via heuristics, EPUB HTML-to-text,
- * smart chunking by document structure, content formatting.
- *
- * Note: Actual PDF/EPUB binary parsing still requires platform-specific
- * libraries (pdf-parse, epub2). This module extracts the text processing,
- * section detection, and chunking logic that is fully portable.
- */
+import path from "path";
+import { importDocuments } from "@/server/import-service";
+import { assertPluginEnabled } from "@/server/plugins/ports/plugin-config";
 
-// ─── Types ────────────────────────────────────────────────────
+const PLUGIN_SLUG = "pdf-epub-parser";
 
 export interface DocumentSection {
   title: string;
   content: string;
-  level: number; // 1=chapter, 2=section, 3=subsection
+  level: number;
   pageStart?: number;
   pageEnd?: number;
 }
@@ -23,7 +15,7 @@ export interface DocumentSection {
 export interface ParsedDocument {
   title: string;
   author?: string;
-  format: 'pdf' | 'epub';
+  format: "pdf" | "epub";
   totalPages?: number;
   totalChapters?: number;
   sections: DocumentSection[];
@@ -35,15 +27,6 @@ export interface Chunk {
   sourceTitle: string;
 }
 
-export interface ChunkStats {
-  chunks: number;
-  totalWords: number;
-  totalChars: number;
-  estimatedReadingTime: number;
-}
-
-// ─── PDF Section Extraction ──────────────────────────────────
-
 const HEADING_PATTERNS = [
   /^(?:chapter|ch\.?)\s+\d+/i,
   /^(?:section|sec\.?)\s+\d+/i,
@@ -54,14 +37,14 @@ const HEADING_PATTERNS = [
   /^[IVXLC]+\.\s+/,
 ];
 
-/**
- * Detect if a line is likely a heading in PDF-extracted text.
- * Uses heuristics since PDFs lack semantic heading markers.
- */
+export async function ensurePdfEpubParserReady() {
+  await assertPluginEnabled(PLUGIN_SLUG);
+}
+
 export function isLikelyHeading(
   line: string,
   prevLine: string,
-  nextLine: string
+  nextLine: string,
 ): { is: boolean; level: number } {
   const trimmed = line.trim();
   if (!trimmed || trimmed.length > 120) return { is: false, level: 0 };
@@ -74,21 +57,25 @@ export function isLikelyHeading(
     }
   }
 
-  // ALL CAPS short lines
   if (
-    trimmed.length > 3 && trimmed.length < 80 &&
-    trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed) &&
-    !prevLine.trim() &&
-    (!nextLine.trim() || nextLine.trim().length > trimmed.length * 2)
+    trimmed.length > 3
+    && trimmed.length < 80
+    && trimmed === trimmed.toUpperCase()
+    && /[A-Z]/.test(trimmed)
+    && !prevLine.trim()
+    && (!nextLine.trim() || nextLine.trim().length > trimmed.length * 2)
   ) {
     return { is: true, level: 1 };
   }
 
-  // Short title-like lines surrounded by blank lines
   if (
-    trimmed.length > 3 && trimmed.length < 60 &&
-    !prevLine.trim() && !nextLine?.trim() &&
-    /^[A-Z]/.test(trimmed) && !trimmed.endsWith('.') && !trimmed.endsWith(',')
+    trimmed.length > 3
+    && trimmed.length < 60
+    && !prevLine.trim()
+    && !nextLine.trim()
+    && /^[A-Z]/.test(trimmed)
+    && !trimmed.endsWith(".")
+    && !trimmed.endsWith(",")
   ) {
     return { is: true, level: 2 };
   }
@@ -96,145 +83,134 @@ export function isLikelyHeading(
   return { is: false, level: 0 };
 }
 
-/**
- * Extract sections from raw PDF text using heading detection heuristics.
- */
 export function extractPDFSections(text: string, docTitle: string): DocumentSection[] {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   const sections: DocumentSection[] = [];
   let currentSection: DocumentSection | null = null;
   let contentBuffer: string[] = [];
 
-  function flushSection() {
+  const flushSection = () => {
     if (currentSection) {
-      currentSection.content = contentBuffer.join('\n').trim();
+      currentSection.content = contentBuffer.join("\n").trim();
       if (currentSection.content.length > 20) {
         sections.push(currentSection);
       }
     }
     contentBuffer = [];
-  }
+  };
 
-  for (let i = 0; i < lines.length; i++) {
-    const heading = isLikelyHeading(lines[i], lines[i - 1] || '', lines[i + 1] || '');
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = isLikelyHeading(lines[index], lines[index - 1] || "", lines[index + 1] || "");
 
     if (heading.is) {
       flushSection();
-      currentSection = { title: lines[i].trim(), content: '', level: heading.level };
+      currentSection = {
+        title: lines[index].trim(),
+        content: "",
+        level: heading.level,
+      };
     } else {
-      contentBuffer.push(lines[i]);
+      contentBuffer.push(lines[index]);
     }
   }
+
   flushSection();
 
   if (sections.length === 0) {
     const cleaned = text.trim();
     if (cleaned.length > 0) {
-      sections.push({ title: docTitle, content: cleaned, level: 1 });
+      sections.push({
+        title: docTitle,
+        content: cleaned,
+        level: 1,
+      });
     }
   }
 
   return sections;
 }
 
-// ─── EPUB HTML → Text ────────────────────────────────────────
-
-/**
- * Convert EPUB HTML content to clean text, preserving basic structure.
- */
 export function htmlToText(html: string): string {
   return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(?:p|div|h[1-6]|li|tr|blockquote|section|article)>/gi, '\n')
-    .replace(/<(?:h[1-6])[^>]*>/gi, '\n\n## ')
-    .replace(/<li[^>]*>/gi, '\n- ')
-    .replace(/<\/ul>|<\/ol>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|h[1-6]|li|tr|blockquote|section|article)>/gi, "\n")
+    .replace(/<(?:h[1-6])[^>]*>/gi, "\n\n## ")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<\/ul>|<\/ol>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num)))
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number.parseInt(num, 10)))
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-// ─── Smart Chunking ──────────────────────────────────────────
-
-const MAX_CHUNK = 4000;
-const MIN_CHUNK = 200;
-
-function formatSectionHeader(
-  doc: ParsedDocument,
-  section: DocumentSection,
-  part?: number
-): string {
-  const headingMark = '#'.repeat(Math.min(section.level, 3));
-  const lines: string[] = [
-    `${headingMark} ${section.title}${part ? ` (Part ${part})` : ''}`,
-    `**Source:** ${doc.title}${doc.author ? ` by ${doc.author}` : ''}`,
+function formatSectionHeader(doc: ParsedDocument, section: DocumentSection, part?: number) {
+  const headingMark = "#".repeat(Math.min(section.level, 3));
+  const lines = [
+    `${headingMark} ${section.title}${part ? ` (Part ${part})` : ""}`,
+    `**Source:** ${doc.title}${doc.author ? ` by ${doc.author}` : ""}`,
   ];
+
   if (section.pageStart) {
-    lines.push(`**Pages:** ${section.pageStart}${section.pageEnd ? `–${section.pageEnd}` : ''}`);
+    lines.push(`**Pages:** ${section.pageStart}${section.pageEnd ? `-${section.pageEnd}` : ""}`);
   }
-  lines.push('');
-  return lines.join('\n');
+
+  lines.push("");
+  return lines.join("\n");
 }
 
-/**
- * Smart chunking that respects document structure.
- * - Sections under MAX_CHUNK → single chunk
- * - Longer sections → split at paragraph boundaries
- */
-export function smartChunk(doc: ParsedDocument): Chunk[] {
+export function smartChunkDocument(doc: ParsedDocument): Chunk[] {
   const chunks: Chunk[] = [];
+  const maxChunk = 4000;
+  const minChunk = 200;
 
   for (const section of doc.sections) {
-    const content = section.content;
-
-    if (content.length <= MAX_CHUNK) {
-      const header = formatSectionHeader(doc, section);
+    if (section.content.length <= maxChunk) {
       chunks.push({
-        content: header + content,
+        content: `${formatSectionHeader(doc, section)}${section.content}`,
         sourceTitle: `${doc.title} — ${section.title}`,
       });
-    } else {
-      const paragraphs = content.split(/\n\s*\n/);
-      let buffer = '';
-      let partNum = 1;
+      continue;
+    }
 
-      for (const para of paragraphs) {
-        if (buffer.length + para.length > MAX_CHUNK && buffer.length > MIN_CHUNK) {
-          const header = formatSectionHeader(doc, section, partNum);
-          chunks.push({
-            content: header + buffer.trim(),
-            sourceTitle: `${doc.title} — ${section.title} (Part ${partNum})`,
-          });
-          buffer = '';
-          partNum++;
-        }
-        buffer += para + '\n\n';
-      }
+    const paragraphs = section.content.split(/\n\s*\n/);
+    let buffer = "";
+    let partNumber = 1;
 
-      if (buffer.trim().length > MIN_CHUNK) {
-        const header = formatSectionHeader(doc, section, partNum > 1 ? partNum : undefined);
+    for (const paragraph of paragraphs) {
+      if (buffer.length + paragraph.length > maxChunk && buffer.length > minChunk) {
         chunks.push({
-          content: header + buffer.trim(),
-          sourceTitle: `${doc.title} — ${section.title}${partNum > 1 ? ` (Part ${partNum})` : ''}`,
+          content: `${formatSectionHeader(doc, section, partNumber)}${buffer.trim()}`,
+          sourceTitle: `${doc.title} — ${section.title} (Part ${partNumber})`,
         });
+        buffer = "";
+        partNumber += 1;
       }
+
+      buffer += `${paragraph}\n\n`;
+    }
+
+    if (buffer.trim().length > minChunk) {
+      chunks.push({
+        content: `${formatSectionHeader(doc, section, partNumber > 1 ? partNumber : undefined)}${buffer.trim()}`,
+        sourceTitle:
+          `${doc.title} — ${section.title}${partNumber > 1 ? ` (Part ${partNumber})` : ""}`,
+      });
     }
   }
 
   if (chunks.length === 0) {
-    const allContent = doc.sections.map(s => s.content).join('\n\n');
+    const allContent = doc.sections.map((section) => section.content).join("\n\n");
     if (allContent.trim()) {
       chunks.push({
-        content: `# ${doc.title}\n${doc.author ? `**Author:** ${doc.author}\n` : ''}\n${allContent}`,
+        content: `# ${doc.title}\n${doc.author ? `**Author:** ${doc.author}\n` : ""}\n${allContent}`,
         sourceTitle: doc.title,
       });
     }
@@ -243,22 +219,189 @@ export function smartChunk(doc: ParsedDocument): Chunk[] {
   return chunks;
 }
 
-// ─── Utilities ───────────────────────────────────────────────
-
-export function countWords(text: string): number {
+export function countWords(text: string) {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
-/**
- * Compute stats for a set of chunks from a parsed document.
- */
-export function computeStats(doc: ParsedDocument, chunks: Chunk[]): ChunkStats {
-  const totalWords = doc.sections.reduce((s, sec) => s + countWords(sec.content), 0);
-  const totalChars = doc.sections.reduce((s, sec) => s + sec.content.length, 0);
+export function previewParsedDocument(doc: ParsedDocument, chunks: Chunk[]) {
+  const totalWords = doc.sections.reduce((sum, section) => sum + countWords(section.content), 0);
+  const totalChars = doc.sections.reduce((sum, section) => sum + section.content.length, 0);
+
   return {
+    document: {
+      title: doc.title,
+      author: doc.author,
+      format: doc.format,
+      totalPages: doc.totalPages,
+      totalChapters: doc.sections.length,
+      totalWords,
+      totalChars,
+      metadata: doc.metadata,
+    },
+    sections: doc.sections.map((section) => ({
+      title: section.title,
+      level: section.level,
+      wordCount: countWords(section.content),
+      charCount: section.content.length,
+      preview: section.content.substring(0, 200),
+    })),
     chunks: chunks.length,
-    totalWords,
-    totalChars,
     estimatedReadingTime: Math.max(1, Math.round(totalWords / 225)),
+  };
+}
+
+// ─── Parsing ─────────────────────────────────────────────────
+
+function getChapterContent(epub: any, chapterId: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    epub.getChapter(chapterId, (error: Error | null, text: string) => {
+      if (error) reject(error);
+      else resolve(text || "");
+    });
+  });
+}
+
+function findTocTitle(epub: any, idOrHref: string): string | null {
+  for (const item of epub.toc || []) {
+    if (item.id === idOrHref || item.href?.includes(idOrHref)) {
+      return item.title || null;
+    }
+  }
+  return null;
+}
+
+export async function parsePDF(buffer: Buffer, fileName: string): Promise<ParsedDocument> {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+
+  const textResult = await parser.getText();
+  const fullText = textResult.text || "";
+
+  let info: Record<string, string> = {};
+  try {
+    info = ((await parser.getInfo())?.info || {}) as Record<string, string>;
+  } catch {
+    info = {};
+  }
+
+  const title = info.Title || fileName.replace(/\.pdf$/i, "");
+  const author = info.Author || undefined;
+  const totalPages = textResult?.pages?.length || undefined;
+
+  await parser.destroy().catch(() => {});
+
+  return {
+    title,
+    author,
+    format: "pdf",
+    totalPages,
+    totalChapters: undefined,
+    sections: extractPDFSections(fullText, title),
+    metadata: {
+      ...(info.Title ? { title: info.Title } : {}),
+      ...(info.Author ? { author: info.Author } : {}),
+      ...(info.Subject ? { subject: info.Subject } : {}),
+      ...(info.Creator ? { creator: info.Creator } : {}),
+      ...(info.Producer ? { producer: info.Producer } : {}),
+      ...(totalPages ? { pages: String(totalPages) } : {}),
+    },
+  };
+}
+
+export async function parseEPUB(buffer: Buffer, fileName: string): Promise<ParsedDocument> {
+  const { EPub } = await import("epub2");
+  const os = await import("os");
+  const fs = await import("fs/promises");
+  const tempPath = path.join(os.tmpdir(), `mindstore-epub-${Date.now()}.epub`);
+  await fs.writeFile(tempPath, buffer);
+
+  try {
+    const epub = await EPub.createAsync(tempPath);
+    const title = epub.metadata?.title || fileName.replace(/\.epub$/i, "");
+    const author = epub.metadata?.creator || epub.metadata?.author || undefined;
+    const sections = [];
+
+    for (let index = 0; index < (epub.flow || []).length; index += 1) {
+      const chapter = epub.flow[index];
+      if (!chapter?.id) continue;
+
+      try {
+        const text = htmlToText(await getChapterContent(epub, chapter.id));
+        if (text.trim().length < 20) continue;
+
+        sections.push({
+          title: findTocTitle(epub, chapter.id || chapter.href) || `Chapter ${index + 1}`,
+          content: text.trim(),
+          level: 1,
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    return {
+      title,
+      author,
+      format: "epub",
+      totalChapters: sections.length,
+      sections,
+      metadata: {
+        ...(epub.metadata?.title ? { title: epub.metadata.title } : {}),
+        ...(author ? { author } : {}),
+        ...(epub.metadata?.language ? { language: epub.metadata.language } : {}),
+        ...(epub.metadata?.publisher ? { publisher: epub.metadata.publisher } : {}),
+        ...(epub.metadata?.date ? { date: epub.metadata.date } : {}),
+        ...(epub.metadata?.description ? { description: epub.metadata.description } : {}),
+      },
+    };
+  } finally {
+    const fs = await import("fs/promises");
+    await fs.unlink(tempPath).catch(() => {});
+  }
+}
+
+export function parseDocument(buffer: Buffer, fileName: string, ext: string): Promise<ParsedDocument> {
+  return ext === ".pdf" ? parsePDF(buffer, fileName) : parseEPUB(buffer, fileName);
+}
+
+// ─── Import ──────────────────────────────────────────────────
+
+export async function importParsedDocument({
+  userId,
+  document,
+}: {
+  userId: string;
+  document: ParsedDocument;
+}) {
+  const chunks = smartChunkDocument(document);
+  const summary = await importDocuments({
+    userId,
+    documents: chunks.map((chunk) => ({
+      title: chunk.sourceTitle,
+      content: chunk.content,
+      sourceType: "document",
+      metadata: {
+        plugin: PLUGIN_SLUG,
+        format: document.format,
+        documentTitle: document.title,
+      },
+      preChunked: true,
+    })),
+  });
+
+  const totalWords = document.sections.reduce((sum, section) => sum + countWords(section.content), 0);
+
+  return {
+    imported: {
+      title: document.title,
+      author: document.author,
+      format: document.format,
+      sections: document.sections.length,
+      chunks: summary.chunks,
+      words: totalWords,
+      pages: document.totalPages,
+      embedded: summary.embedded,
+      readingTime: Math.max(1, Math.round(totalWords / 225)),
+    },
   };
 }

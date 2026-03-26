@@ -9,6 +9,10 @@ node_modules/
 # Build
 .next/
 out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
 # Data
 data/

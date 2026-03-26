@@ -6,11 +6,11 @@
 
 Import your ChatGPT conversations, Obsidian vault, Notion pages — then search semantically, discover hidden connections in your own thinking, and plug your knowledge into *any* AI via MCP.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-blue.svg)](https://modelcontextprotocol.io)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
 
-[**Try It →**](https://mindstore-sandy.vercel.app) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai)
+[**Try It →**](https://mindstore-sandy.vercel.app) · [**How It Works**](#how-it-works) · [**MCP Setup**](#connect-your-ai) · [**Docs**](./docs/index.md)
 
 </div>
 
@@ -44,6 +44,9 @@ Track your intellectual growth. A 0-10 fitness tracker for your brain — measur
 ### 🔌 MCP Server
 Connect your MindStore to **any AI** — Claude Desktop, Cursor, VS Code, OpenClaw. Your AI gets full context about you automatically.
 
+### 🌐 MindStore Everywhere
+A browser companion for capturing selections, pages, and supported AI conversations straight into MindStore, with lightweight on-page recall.
+
 ## How It Works
 
 ```
@@ -67,6 +70,8 @@ Connect your MindStore to **any AI** — Claude Desktop, Cursor, VS Code, OpenCl
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 16+ with [pgvector](https://github.com/pgvector/pgvector) and pg_trgm extensions
+
+That is the real hard requirement. You do **not** need Supabase specifically, and you do **not** need Vercel specifically. Any compatible PostgreSQL host and any Node-capable deployment target work.
 
 ### Setup
 
@@ -96,7 +101,18 @@ npm run dev
 | **OpenAI** | ~$0.01/10 queries | Get key at [platform.openai.com](https://platform.openai.com/api-keys) |
 | **Ollama** | Free (local) | Install from [ollama.ai](https://ollama.ai), run `ollama pull nomic-embed-text` |
 
-Configure via the Settings page or environment variables. **MindStore works for browsing and importing without any AI key** — you only need one for semantic search and chat.
+Configure via the Settings page or environment variables. **MindStore works for browsing and importing without any AI key** — you only need one for semantic search, chat, and AI-heavy plugin flows.
+
+## What You Actually Need
+
+- Required:
+  PostgreSQL with `pgvector` and `pg_trgm`
+- Optional:
+  Vercel, Supabase, Google OAuth, provider API keys
+- AI access today:
+  API key or local Ollama
+- Subscription-style provider login:
+  Planned, not the mainline path yet
 
 ## Connect Your AI
 
@@ -190,7 +206,13 @@ Self-hosted. Your data stays in your PostgreSQL database. No tracking, no analyt
 
 ## License
 
-MIT
+MindStore is currently licensed under the [MIT License](./LICENSE).
+
+For the full project policy around licensing direction, contributions, plugins, and commercial use, see [LICENSING.md](./LICENSING.md).
+
+Brand usage is covered separately by [TRADEMARKS.md](./TRADEMARKS.md).
+
+Project governance is described in [GOVERNANCE.md](./GOVERNANCE.md), and contribution-origin policy is described in [DCO.md](./DCO.md).
 
 ---
 

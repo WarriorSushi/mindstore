@@ -1,34 +1,41 @@
-/**
- * Topic Evolution Timeline — Portable logic module
- * 
- * Extracted from the route for convergence with codex runtime.
- * Handles: time period building, topic clustering, shift detection,
- * timeline construction. Uses shared-vectors for clustering.
- * 
- * Zero AI dependency — pure algorithmic analysis.
- */
-
+import { eq, sql } from "drizzle-orm";
+import { db, schema } from "@/server/db";
+import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 import {
-  type ClusterMember,
-  kMeansClustering,
+  countSourceTypes,
   extractKeywords,
   extractTopicLabel,
-  countSourceTypes,
-  truncate,
-} from './shared-vectors';
+  kMeansClustering,
+  parseEmbedding,
+} from "@/server/plugins/ports/shared-vectors";
 
-// ─── Types ────────────────────────────────────────────────────
+const PLUGIN_SLUG = "topic-evolution";
+const TOPIC_COLORS = [
+  "#14b8a6", "#0ea5e9", "#10b981", "#f59e0b", "#06b6d4",
+  "#f43f5e", "#84cc16", "#f97316", "#3b82f6", "#64748b",
+  "#22d3ee", "#a3e635", "#fb923c", "#38bdf8", "#34d399", "#fbbf24",
+];
 
-export interface TopicEvolutionMemory extends ClusterMember {
+type Granularity = "week" | "month" | "quarter";
+type ShiftType = "rising" | "declining" | "new" | "dormant" | "resurgent" | "steady";
+
+interface EmbeddedMemory {
   id: string;
   content: string;
-  embedding: number[];
   sourceType: string;
   sourceTitle: string;
+  embedding: number[];
   createdAt: string;
 }
 
-export interface Topic {
+interface Period {
+  start: Date;
+  end: Date;
+  label: string;
+  shortLabel: string;
+}
+
+export interface EvolutionTopic {
   id: string;
   label: string;
   keywords: string[];
@@ -45,7 +52,7 @@ export interface Topic {
 export interface PeriodTopic {
   topicId: string;
   count: number;
-  memories: { id: string; title: string; preview: string; sourceType: string }[];
+  memories: Array<{ id: string; title: string; preview: string; sourceType: string }>;
 }
 
 export interface TimelinePeriod {
@@ -57,251 +64,397 @@ export interface TimelinePeriod {
   topics: PeriodTopic[];
 }
 
-export interface Shift {
+export interface TopicShift {
   topicId: string;
   topicLabel: string;
-  type: 'rising' | 'declining' | 'new' | 'dormant' | 'resurgent' | 'steady';
+  type: ShiftType;
   description: string;
   periodLabel: string;
   magnitude: number;
 }
 
-export interface Period {
-  start: Date;
-  end: Date;
-  label: string;
-  shortLabel: string;
-}
-
-export interface TopicEvolutionResult {
+export interface TopicEvolutionResponse {
   timeline: TimelinePeriod[];
-  topics: Topic[];
-  shifts: Shift[];
+  topics: EvolutionTopic[];
+  shifts: TopicShift[];
   stats: {
     totalMemories: number;
     topicCount: number;
     periodCount: number;
-    granularity: string;
+    granularity: Granularity;
     dateRange: { start: string; end: string } | null;
     mostActiveMonth: string;
     insufficientData: boolean;
   };
 }
 
-// ─── Topic Colors ─────────────────────────────────────────────
+export async function ensureTopicEvolutionInstalled() {
+  const manifest = PLUGIN_MANIFESTS[PLUGIN_SLUG];
+  const [existing] = await db
+    .select()
+    .from(schema.plugins)
+    .where(eq(schema.plugins.slug, PLUGIN_SLUG))
+    .limit(1);
 
-export const TOPIC_COLORS = [
-  '#14b8a6', '#0ea5e9', '#10b981', '#f59e0b', '#06b6d4',
-  '#f43f5e', '#84cc16', '#f97316', '#3b82f6', '#64748b',
-  '#22d3ee', '#a3e635', '#fb923c', '#38bdf8', '#34d399', '#fbbf24',
-];
+  if (existing || !manifest) {
+    return;
+  }
 
-// ─── Main Analysis Pipeline ──────────────────────────────────
+  await db.insert(schema.plugins).values({
+    slug: manifest.slug,
+    name: manifest.name,
+    description: manifest.description,
+    version: manifest.version,
+    type: manifest.type,
+    status: "active",
+    icon: manifest.icon,
+    category: manifest.category,
+    author: manifest.author,
+    metadata: {
+      capabilities: manifest.capabilities,
+      hooks: manifest.hooks,
+      routes: manifest.routes,
+      aliases: manifest.aliases || [],
+      pages: manifest.ui?.pages || [],
+    },
+  });
+}
 
-export function analyzeTopicEvolution(
-  memories: TopicEvolutionMemory[],
-  granularity: 'week' | 'month' | 'quarter' = 'month',
-  maxTopics = 10,
-): TopicEvolutionResult {
+export async function analyzeTopicEvolution(
+  userId: string,
+  input: { granularity?: Granularity; maxTopics?: number } = {},
+): Promise<TopicEvolutionResponse> {
+  const granularity = input.granularity || "month";
+  const maxTopics = Math.min(input.maxTopics || 10, 16);
+  const rows = await db.execute(sql`
+    SELECT id, content, source_type, source_title, embedding, created_at
+    FROM memories
+    WHERE user_id = ${userId}::uuid AND embedding IS NOT NULL
+    ORDER BY created_at ASC
+  `) as unknown as Array<Record<string, unknown>>;
+
+  const memories: EmbeddedMemory[] = rows
+    .map((row) => ({
+      id: String(row.id),
+      content: String(row.content || ""),
+      sourceType: String(row.source_type || "unknown"),
+      sourceTitle: typeof row.source_title === "string" ? row.source_title : "Untitled",
+      embedding: parseEmbedding(row.embedding),
+      createdAt: normalizeDate(row.created_at),
+    }))
+    .filter((memory) => memory.embedding.length > 0);
+
   if (memories.length < 5) {
     return {
-      timeline: [], topics: [], shifts: [],
-      stats: { totalMemories: memories.length, topicCount: 0, periodCount: 0, granularity, dateRange: null, mostActiveMonth: '', insufficientData: true },
+      timeline: [],
+      topics: [],
+      shifts: [],
+      stats: {
+        totalMemories: memories.length,
+        topicCount: 0,
+        periodCount: 0,
+        granularity,
+        dateRange: null,
+        mostActiveMonth: "",
+        insufficientData: true,
+      },
     };
   }
 
-  const dates = memories.map(m => new Date(m.createdAt));
-  const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+  const dates = memories.map((memory) => new Date(memory.createdAt));
+  const minDate = new Date(Math.min(...dates.map((date) => date.getTime())));
+  const maxDate = new Date(Math.max(...dates.map((date) => date.getTime())));
+  const clusterCount = Math.min(maxTopics, Math.max(3, Math.floor(memories.length / 4)));
+  const clusters = kMeansClustering(memories, clusterCount, 20);
 
-  const numClusters = Math.min(maxTopics, Math.max(3, Math.floor(memories.length / 4)));
-  const clusters = kMeansClustering(memories, numClusters, 20);
-
-  // Build topics
-  const topics: Topic[] = clusters.map((cluster, i) => ({
-    id: `topic-${i}`,
-    label: extractTopicLabel(cluster.members),
-    keywords: extractKeywords(cluster.members, 5),
-    memoryCount: cluster.members.length,
-    sourceTypes: countSourceTypes(cluster.members),
-    coherence: cluster.coherence,
-    color: TOPIC_COLORS[i % TOPIC_COLORS.length]!,
+  const unsortedTopics = clusters.map((cluster, index) => ({
+    originalIndex: index,
+    topic: {
+      id: `topic-${index}`,
+      label: extractTopicLabel(cluster.members),
+      keywords: extractKeywords(cluster.members, 5),
+      memoryCount: cluster.members.length,
+      sourceTypes: countSourceTypes(cluster.members),
+      coherence: cluster.coherence,
+      color: TOPIC_COLORS[index % TOPIC_COLORS.length] || "#14b8a6",
+    } satisfies EvolutionTopic,
   }));
 
-  topics.sort((a, b) => b.memoryCount - a.memoryCount);
+  const sorted = unsortedTopics.sort((left, right) => right.topic.memoryCount - left.topic.memoryCount);
+  const sortedClusters: Array<{ cluster: typeof clusters[number]; topic: EvolutionTopic }> = sorted.map((entry, index) => ({
+    cluster: clusters[entry.originalIndex]!,
+    topic: {
+      ...entry.topic,
+      id: `topic-${index}`,
+      color: TOPIC_COLORS[index % TOPIC_COLORS.length] || "#14b8a6",
+    },
+  }));
 
-  const sortedClusters = topics.map((t, i) => {
-    const origIdx = parseInt(t.id.split('-')[1]!);
-    t.id = `topic-${i}`;
-    t.color = TOPIC_COLORS[i % TOPIC_COLORS.length]!;
-    return clusters[origIdx]!;
-  });
-
+  const topics = sortedClusters.map((entry) => entry.topic);
   const periods = buildPeriods(minDate, maxDate, granularity);
-
-  const timeline: TimelinePeriod[] = periods.map(period => {
-    const periodTopics: PeriodTopic[] = sortedClusters.map((cluster, topicIdx) => {
-      const periodMemories = cluster.members.filter(m => {
-        const d = new Date(m.createdAt);
-        return d >= period.start && d < period.end;
+  const timeline = periods.map((period) => {
+    const periodTopics = sortedClusters.map(({ cluster, topic }) => {
+      const periodMemories = cluster.members.filter((memory) => {
+        const date = new Date(memory.createdAt);
+        return date >= period.start && date < period.end;
       });
+
       return {
-        topicId: `topic-${topicIdx}`,
+        topicId: topic.id,
         count: periodMemories.length,
-        memories: periodMemories.slice(0, 3).map(m => ({
-          id: m.id,
-          title: m.sourceTitle || truncate(m.content.split('\n')[0]!, 50),
-          preview: truncate(m.content.replace(/\n/g, ' '), 100),
-          sourceType: m.sourceType,
+        memories: periodMemories.slice(0, 3).map((memory) => ({
+          id: memory.id,
+          title: memory.sourceTitle || truncate(memory.content.split("\n")[0] || memory.content, 50),
+          preview: truncate(memory.content.replace(/\n/g, " "), 100),
+          sourceType: memory.sourceType,
         })),
-      };
+      } satisfies PeriodTopic;
     });
+
     return {
       label: period.label,
       shortLabel: period.shortLabel,
       start: period.start.toISOString(),
       end: period.end.toISOString(),
-      totalCount: periodTopics.reduce((sum, t) => sum + t.count, 0),
+      totalCount: periodTopics.reduce((sum, topic) => sum + topic.count, 0),
       topics: periodTopics,
-    };
+    } satisfies TimelinePeriod;
   });
 
-  // Trim empty edges
-  let firstNonEmpty = timeline.findIndex(p => p.totalCount > 0);
-  let lastNonEmpty = timeline.length - 1;
-  while (lastNonEmpty > 0 && timeline[lastNonEmpty]!.totalCount === 0) lastNonEmpty--;
-  const trimmed = timeline.slice(Math.max(0, firstNonEmpty), lastNonEmpty + 1);
+  const trimmedTimeline = trimTimeline(timeline);
+  const shifts = detectShifts(trimmedTimeline, topics);
 
-  // Detect shifts
-  const shifts = detectShifts(trimmed, topics);
-
-  // Annotate peak periods
   for (const topic of topics) {
-    let maxCount = 0, peakPeriod = '';
-    for (const period of trimmed) {
-      const pt = period.topics.find(t => t.topicId === topic.id);
-      if (pt && pt.count > maxCount) { maxCount = pt.count; peakPeriod = period.label; }
+    let peakCount = 0;
+    let peakPeriod = "";
+    for (const period of trimmedTimeline) {
+      const periodTopic = period.topics.find((entry) => entry.topicId === topic.id);
+      if ((periodTopic?.count || 0) > peakCount) {
+        peakCount = periodTopic?.count || 0;
+        peakPeriod = period.label;
+      }
     }
+
+    topic.peakCount = peakCount;
     topic.peakPeriod = peakPeriod;
-    topic.peakCount = maxCount;
-    topic.firstSeen = trimmed.find(p => p.topics.find(t => t.topicId === topic.id && t.count > 0))?.label || '';
-    topic.lastSeen = [...trimmed].reverse().find(p => p.topics.find(t => t.topicId === topic.id && t.count > 0))?.label || '';
+    topic.firstSeen = trimmedTimeline.find((period) => period.topics.find((entry) => entry.topicId === topic.id && entry.count > 0))?.label || "";
+    topic.lastSeen = [...trimmedTimeline].reverse().find((period) => period.topics.find((entry) => entry.topicId === topic.id && entry.count > 0))?.label || "";
   }
 
   return {
-    timeline: trimmed, topics, shifts,
+    timeline: trimmedTimeline,
+    topics,
+    shifts,
     stats: {
       totalMemories: memories.length,
       topicCount: topics.length,
-      periodCount: trimmed.length,
+      periodCount: trimmedTimeline.length,
       granularity,
-      dateRange: { start: minDate.toISOString(), end: maxDate.toISOString() },
-      mostActiveMonth: trimmed.reduce((best, p) => p.totalCount > (best?.totalCount || 0) ? p : best, trimmed[0])?.label || '',
+      dateRange: {
+        start: minDate.toISOString(),
+        end: maxDate.toISOString(),
+      },
+      mostActiveMonth: trimmedTimeline.reduce((best, current) => current.totalCount > best.totalCount ? current : best, trimmedTimeline[0]!).label,
       insufficientData: false,
     },
   };
 }
 
-// ─── Time Period Builder ──────────────────────────────────────
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-export function buildPeriods(min: Date, max: Date, granularity: 'week' | 'month' | 'quarter'): Period[] {
+export function buildPeriods(minDate: Date, maxDate: Date, granularity: Granularity): Period[] {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const periods: Period[] = [];
 
-  if (granularity === 'week') {
-    const start = new Date(min);
+  if (granularity === "week") {
+    const start = new Date(minDate);
     start.setHours(0, 0, 0, 0);
-    const dow = start.getDay();
-    start.setDate(start.getDate() - ((dow + 6) % 7));
-    while (start <= max) {
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
+    while (start <= maxDate) {
       const end = new Date(start);
       end.setDate(end.getDate() + 7);
       periods.push({
-        start: new Date(start), end,
-        label: `Week of ${MONTHS[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()}`,
-        shortLabel: `${MONTHS[start.getMonth()]} ${start.getDate()}`,
+        start: new Date(start),
+        end,
+        label: `Week of ${months[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()}`,
+        shortLabel: `${months[start.getMonth()]} ${start.getDate()}`,
       });
       start.setDate(start.getDate() + 7);
     }
-  } else if (granularity === 'month') {
-    const start = new Date(min.getFullYear(), min.getMonth(), 1);
-    while (start <= max) {
-      const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
-      periods.push({
-        start: new Date(start), end,
-        label: `${MONTHS[start.getMonth()]} ${start.getFullYear()}`,
-        shortLabel: `${MONTHS[start.getMonth()]}`,
-      });
-      start.setMonth(start.getMonth() + 1);
-    }
-  } else {
-    const startQ = Math.floor(min.getMonth() / 3);
-    const start = new Date(min.getFullYear(), startQ * 3, 1);
-    while (start <= max) {
-      const q = Math.floor(start.getMonth() / 3) + 1;
+
+    return periods;
+  }
+
+  if (granularity === "quarter") {
+    const quarter = Math.floor(minDate.getMonth() / 3);
+    const start = new Date(minDate.getFullYear(), quarter * 3, 1);
+
+    while (start <= maxDate) {
+      const quarterLabel = Math.floor(start.getMonth() / 3) + 1;
       const end = new Date(start.getFullYear(), start.getMonth() + 3, 1);
       periods.push({
-        start: new Date(start), end,
-        label: `Q${q} ${start.getFullYear()}`,
-        shortLabel: `Q${q}`,
+        start: new Date(start),
+        end,
+        label: `Q${quarterLabel} ${start.getFullYear()}`,
+        shortLabel: `Q${quarterLabel}`,
       });
       start.setMonth(start.getMonth() + 3);
     }
+
+    return periods;
+  }
+
+  const start = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  while (start <= maxDate) {
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    periods.push({
+      start: new Date(start),
+      end,
+      label: `${months[start.getMonth()]} ${start.getFullYear()}`,
+      shortLabel: months[start.getMonth()] || "",
+    });
+    start.setMonth(start.getMonth() + 1);
   }
 
   return periods;
 }
 
-// ─── Shift Detection ─────────────────────────────────────────
-
-export function detectShifts(timeline: TimelinePeriod[], topics: Topic[]): Shift[] {
-  const shifts: Shift[] = [];
-  if (timeline.length < 2) return shifts;
+export function detectShifts(timeline: TimelinePeriod[], topics: EvolutionTopic[]): TopicShift[] {
+  const shifts: TopicShift[] = [];
+  if (timeline.length < 2) {
+    return shifts;
+  }
 
   for (const topic of topics) {
-    const counts = timeline.map(p => p.topics.find(t => t.topicId === topic.id)?.count || 0);
-    const totalCount = counts.reduce((a, b) => a + b, 0);
-    if (totalCount === 0) continue;
+    const counts = timeline.map((period) => period.topics.find((entry) => entry.topicId === topic.id)?.count || 0);
+    const totalCount = counts.reduce((sum, count) => sum + count, 0);
+    if (!totalCount) {
+      continue;
+    }
 
-    const firstNonZero = counts.findIndex(c => c > 0);
-    const lastNonZero = counts.length - 1 - [...counts].reverse().findIndex(c => c > 0);
+    const firstNonZero = counts.findIndex((count) => count > 0);
+    const lastNonZero = counts.length - 1 - [...counts].reverse().findIndex((count) => count > 0);
     const midpoint = Math.floor(counts.length / 2);
-    const firstHalf = counts.slice(0, midpoint).reduce((a, b) => a + b, 0);
-    const secondHalf = counts.slice(midpoint).reduce((a, b) => a + b, 0);
-    const totalHalves = firstHalf + secondHalf;
-    const recent = counts.slice(-3).reduce((a, b) => a + b, 0);
-    const earlier = counts.slice(0, -3).reduce((a, b) => a + b, 0);
+    const firstHalf = counts.slice(0, midpoint).reduce((sum, count) => sum + count, 0);
+    const secondHalf = counts.slice(midpoint).reduce((sum, count) => sum + count, 0);
+    const recent = counts.slice(-3).reduce((sum, count) => sum + count, 0);
+    const earlier = counts.slice(0, -3).reduce((sum, count) => sum + count, 0);
 
     if (firstNonZero >= midpoint && totalCount >= 2) {
-      shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'new', description: `"${topic.label}" is a new interest, first appearing in ${timeline[firstNonZero]!.label}`, periodLabel: timeline[firstNonZero]!.label, magnitude: Math.min(1, totalCount / 10) });
+      shifts.push({
+        topicId: topic.id,
+        topicLabel: topic.label,
+        type: "new",
+        description: `"${topic.label}" first appears in ${timeline[firstNonZero]?.label}.`,
+        periodLabel: timeline[firstNonZero]?.label || "",
+        magnitude: Math.min(1, totalCount / 10),
+      });
       continue;
     }
+
     if (recent === 0 && earlier > 0 && lastNonZero < counts.length - 2) {
-      shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'dormant', description: `"${topic.label}" hasn't had new content since ${timeline[lastNonZero]!.label}`, periodLabel: timeline[lastNonZero]!.label, magnitude: Math.min(1, earlier / totalCount) });
+      shifts.push({
+        topicId: topic.id,
+        topicLabel: topic.label,
+        type: "dormant",
+        description: `"${topic.label}" has not had new activity since ${timeline[lastNonZero]?.label}.`,
+        periodLabel: timeline[lastNonZero]?.label || "",
+        magnitude: Math.min(1, earlier / totalCount),
+      });
       continue;
     }
+
     if (counts.length >= 5) {
-      const midCounts = counts.slice(Math.max(1, Math.floor(counts.length * 0.3)), Math.floor(counts.length * 0.7));
-      if (midCounts.reduce((a, b) => a + b, 0) === 0 && firstHalf > 0 && recent > 0) {
-        shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'resurgent', description: `"${topic.label}" is making a comeback after inactivity`, periodLabel: timeline[lastNonZero]!.label, magnitude: Math.min(1, recent / (earlier || 1)) });
+      const middleCounts = counts.slice(Math.max(1, Math.floor(counts.length * 0.3)), Math.floor(counts.length * 0.7));
+      const middleSum = middleCounts.reduce((sum, count) => sum + count, 0);
+      if (middleSum === 0 && firstHalf > 0 && secondHalf > 0 && recent > 0) {
+        shifts.push({
+          topicId: topic.id,
+          topicLabel: topic.label,
+          type: "resurgent",
+          description: `"${topic.label}" returned after a quiet period.`,
+          periodLabel: timeline[lastNonZero]?.label || "",
+          magnitude: Math.min(1, recent / Math.max(1, earlier)),
+        });
         continue;
       }
     }
+
+    const totalHalves = firstHalf + secondHalf;
     if (totalHalves > 0 && secondHalf / totalHalves > 0.65) {
-      shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'rising', description: `"${topic.label}" is gaining momentum — ${Math.round(secondHalf / totalHalves * 100)}% of activity is recent`, periodLabel: timeline[timeline.length - 1]!.label, magnitude: secondHalf / totalHalves });
+      shifts.push({
+        topicId: topic.id,
+        topicLabel: topic.label,
+        type: "rising",
+        description: `"${topic.label}" is gaining momentum recently.`,
+        periodLabel: timeline[timeline.length - 1]?.label || "",
+        magnitude: secondHalf / totalHalves,
+      });
       continue;
     }
+
     if (totalHalves > 0 && firstHalf / totalHalves > 0.65) {
-      shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'declining', description: `"${topic.label}" has been less active lately`, periodLabel: timeline[0]!.label, magnitude: firstHalf / totalHalves });
+      shifts.push({
+        topicId: topic.id,
+        topicLabel: topic.label,
+        type: "declining",
+        description: `"${topic.label}" was stronger earlier than it is now.`,
+        periodLabel: timeline[0]?.label || "",
+        magnitude: firstHalf / totalHalves,
+      });
       continue;
     }
+
     if (totalCount >= 3) {
-      shifts.push({ topicId: topic.id, topicLabel: topic.label, type: 'steady', description: `"${topic.label}" has been a consistent interest`, periodLabel: '', magnitude: 0.5 });
+      shifts.push({
+        topicId: topic.id,
+        topicLabel: topic.label,
+        type: "steady",
+        description: `"${topic.label}" has remained a steady interest.`,
+        periodLabel: "",
+        magnitude: 0.5,
+      });
     }
   }
 
-  const typeOrder: Record<string, number> = { new: 0, rising: 1, resurgent: 2, steady: 3, declining: 4, dormant: 5 };
-  shifts.sort((a, b) => (typeOrder[a.type] || 3) - (typeOrder[b.type] || 3));
-  return shifts;
+  const order: Record<ShiftType, number> = {
+    new: 0,
+    rising: 1,
+    resurgent: 2,
+    steady: 3,
+    declining: 4,
+    dormant: 5,
+  };
+
+  return shifts.sort((left, right) => order[left.type] - order[right.type]);
+}
+
+function trimTimeline(timeline: TimelinePeriod[]) {
+  let firstNonEmpty = timeline.findIndex((period) => period.totalCount > 0);
+  let lastNonEmpty = timeline.length - 1;
+  while (lastNonEmpty > 0 && timeline[lastNonEmpty]?.totalCount === 0) {
+    lastNonEmpty -= 1;
+  }
+
+  if (firstNonEmpty < 0) {
+    firstNonEmpty = 0;
+  }
+
+  return timeline.slice(firstNonEmpty, lastNonEmpty + 1);
+}
+
+function normalizeDate(value: unknown) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === "string") {
+    return new Date(value).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+function truncate(value: string, max: number) {
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, max - 1).trim()}...`;
 }

@@ -182,6 +182,70 @@ async function migrate() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category)`);
 
+  // Plugin job schedules
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS plugin_job_schedules (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      plugin_slug TEXT NOT NULL,
+      job_id TEXT NOT NULL,
+      enabled INT NOT NULL DEFAULT 1,
+      interval_minutes INT NOT NULL DEFAULT 1440,
+      next_run_at TIMESTAMPTZ,
+      last_run_at TIMESTAMPTZ,
+      last_status TEXT,
+      last_summary TEXT,
+      last_error TEXT,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, plugin_slug, job_id)
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_plugin_job_schedule_due ON plugin_job_schedules(enabled, next_run_at)`);
+
+  // Flashcard decks
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS flashcard_decks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT NOT NULL,
+      cards JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcard_decks_user ON flashcard_decks(user_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flashcard_decks_updated ON flashcard_decks(updated_at)`);
+
+  // Voice recordings
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS voice_recordings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      title TEXT,
+      transcript TEXT,
+      duration_seconds REAL,
+      audio_size INT,
+      audio_format TEXT DEFAULT 'webm',
+      language TEXT,
+      provider TEXT,
+      model TEXT,
+      confidence REAL,
+      word_count INT,
+      saved_as_memory INT NOT NULL DEFAULT 0,
+      memory_id UUID REFERENCES memories(id),
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_voice_recordings_user ON voice_recordings(user_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_voice_recordings_created ON voice_recordings(created_at)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_voice_recordings_saved ON voice_recordings(saved_as_memory)`);
+
   // API Keys
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS api_keys (

@@ -6,6 +6,103 @@
  * text entity extraction, link extraction.
  */
 
+import { ensurePluginInstalled } from "./plugin-config";
+import { importDocuments } from "@/server/import-service";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+
+const SLUG = "telegram-importer";
+
+// ─── Plugin lifecycle ─────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export function getTelegramConfig() {
+  return {
+    supportedFormats: [
+      {
+        id: "telegram-json",
+        name: "Telegram Desktop JSON Export",
+        description:
+          "Export from Telegram Desktop: Settings → Advanced → Export Telegram Data → JSON format",
+      },
+      {
+        id: "result-json",
+        name: "result.json",
+        description: "The result.json file from a Telegram data export",
+      },
+    ],
+    instructions: [
+      "Open Telegram Desktop (not mobile)",
+      "Go to Settings → Advanced → Export Telegram Data",
+      "Select the chats/channels you want to export",
+      'Choose "Machine-readable JSON" format',
+      "Wait for export to complete",
+      "Upload the result.json file here",
+    ],
+    chatTypes: [
+      { id: "saved_messages", label: "Saved Messages" },
+      { id: "personal_chat", label: "Private Chats" },
+      { id: "private_group", label: "Groups" },
+      { id: "private_supergroup", label: "Supergroups" },
+      { id: "public_channel", label: "Channels" },
+    ],
+  };
+}
+
+export async function getTelegramStats(userId: string) {
+  let imported = 0;
+  try {
+    const rows = await db.execute(sql`
+      SELECT COUNT(*) as count FROM memories
+      WHERE user_id = ${userId} AND source_type = 'telegram'
+    `);
+    imported = parseInt((rows as Record<string, string>[])[0]?.count || "0");
+  } catch {
+    /* ignore */
+  }
+  return { imported };
+}
+
+export async function runImport(
+  userId: string,
+  opts: { data: string; chatFilter?: string[]; minLength?: number },
+) {
+  const result = processImport({
+    rawData: opts.data,
+    chatFilter: opts.chatFilter,
+    minLength: opts.minLength,
+  });
+
+  if (result.totalMessages === 0) {
+    throw new Error(
+      "No messages found. Make sure you exported in JSON format from Telegram Desktop.",
+    );
+  }
+
+  const documents = result.memories.map((m) => ({
+    title: m.title,
+    content: m.content,
+    sourceType: "telegram" as const,
+    sourceId: m.dedupKey,
+    timestamp: m.createdAt,
+    metadata: m.metadata,
+  }));
+
+  const importResult = await importDocuments({ userId, documents });
+
+  return {
+    success: true,
+    imported: importResult.chunks,
+    embedded: importResult.embedded,
+    totalMessages: result.totalMessages,
+    filteredMessages: result.filteredMessages,
+    groups: result.groups,
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface ParsedMessage {

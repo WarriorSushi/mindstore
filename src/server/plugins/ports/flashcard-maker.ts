@@ -1,24 +1,17 @@
-/**
- * Flashcard Maker — Portable logic for spaced repetition flashcard system
- *
- * Extracted from: src/app/api/v1/plugins/flashcard-maker/route.ts
- * Pure functions — no HTTP, no NextRequest/NextResponse.
- * AI calling injected via parameter (use shared ai-caller.ts).
- *
- * Key features:
- *   - SM-2 spaced repetition algorithm
- *   - Deck/card management (CRUD)
- *   - AI-powered flashcard generation from memory content
- *   - Review scheduling and mastery tracking
- */
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { db, schema } from "@/server/db";
+import { callTextPrompt, getTextGenerationConfig } from "@/server/ai-client";
+import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 
-// ─── Types ───────────────────────────────────────────────────
+const PLUGIN_SLUG = "flashcard-maker";
+const DECK_COLORS = ["teal", "sky", "emerald", "amber", "cyan", "rose", "lime", "orange"];
 
-export interface SM2State {
-  easeFactor: number;   // EF, starts at 2.5
-  interval: number;     // days until next review
-  repetitions: number;  // consecutive correct answers
-  nextReview: string;   // ISO date string
+export interface FlashcardSM2State {
+  easeFactor: number;
+  interval: number;
+  repetitions: number;
+  nextReview: string;
   lastReview: string | null;
 }
 
@@ -30,12 +23,13 @@ export interface Flashcard {
   tags: string[];
   sourceMemoryId?: string;
   sourceTitle?: string;
-  sm2: SM2State;
+  sm2: FlashcardSM2State;
   createdAt: string;
 }
 
-export interface Deck {
+export interface FlashcardDeck {
   id: string;
+  userId: string;
   name: string;
   description?: string;
   color: string;
@@ -44,7 +38,7 @@ export interface Deck {
   updatedAt: string;
 }
 
-export interface DeckSummary {
+export interface FlashcardDeckSummary {
   id: string;
   name: string;
   description?: string;
@@ -57,15 +51,6 @@ export interface DeckSummary {
   updatedAt: string;
 }
 
-export interface GeneratedCard {
-  front: string;
-  back: string;
-  hint?: string;
-  tags: string[];
-  sourceMemoryId?: string;
-  sourceTitle?: string;
-}
-
 export interface FlashcardStats {
   totalCards: number;
   totalDecks: number;
@@ -73,41 +58,331 @@ export interface FlashcardStats {
   mastered: number;
   reviewed: number;
   streak: number;
-  distribution: {
-    new: number;
-    learning: number;
-    reviewing: number;
-    mastered: number;
+  distribution: { new: number; learning: number; reviewing: number; mastered: number };
+}
+
+export interface FlashcardGenerationRequest {
+  memoryIds?: string[];
+  topic?: string;
+  limit?: number;
+}
+
+export interface FlashcardReviewSession {
+  deckId: string;
+  deckName: string;
+  deckColor: string;
+  totalCards: number;
+  dueCards: Flashcard[];
+  dueCount: number;
+  newCount: number;
+}
+
+export async function ensureFlashcardMakerInstalled() {
+  const manifest = PLUGIN_MANIFESTS[PLUGIN_SLUG];
+  const [existing] = await db
+    .select()
+    .from(schema.plugins)
+    .where(eq(schema.plugins.slug, PLUGIN_SLUG))
+    .limit(1);
+
+  if (existing || !manifest) {
+    return;
+  }
+
+  await db.insert(schema.plugins).values({
+    slug: manifest.slug,
+    name: manifest.name,
+    description: manifest.description,
+    version: manifest.version,
+    type: manifest.type,
+    status: "active",
+    icon: manifest.icon,
+    category: manifest.category,
+    author: manifest.author,
+    metadata: {
+      capabilities: manifest.capabilities,
+      hooks: manifest.hooks,
+      routes: manifest.routes,
+      mcpTools: manifest.mcpTools,
+      aliases: manifest.aliases || [],
+      dashboardWidgets: manifest.ui?.dashboardWidgets || [],
+      jobs: manifest.jobs || [],
+      jobRuns: {},
+    },
+  });
+}
+
+export async function listFlashcardDeckSummaries(userId: string): Promise<FlashcardDeckSummary[]> {
+  const decks = await getFlashcardDecks(userId);
+  const now = new Date();
+
+  return decks.map((deck) => {
+    const dueCards = deck.cards.filter((card) => new Date(card.sm2.nextReview) <= now);
+    const masteredCards = deck.cards.filter((card) => card.sm2.repetitions >= 5);
+    const avgEase = deck.cards.length
+      ? deck.cards.reduce((sum, card) => sum + card.sm2.easeFactor, 0) / deck.cards.length
+      : 2.5;
+
+    return {
+      id: deck.id,
+      name: deck.name,
+      description: deck.description,
+      color: deck.color,
+      cardCount: deck.cards.length,
+      dueCount: dueCards.length,
+      masteredCount: masteredCards.length,
+      avgEaseFactor: Math.round(avgEase * 100) / 100,
+      createdAt: deck.createdAt,
+      updatedAt: deck.updatedAt,
+    };
+  });
+}
+
+export async function getFlashcardDeckDetail(userId: string, deckId: string): Promise<FlashcardDeck | null> {
+  const [row] = await db
+    .select()
+    .from(schema.flashcardDecks)
+    .where(and(eq(schema.flashcardDecks.userId, userId), eq(schema.flashcardDecks.id, deckId)))
+    .limit(1);
+
+  return row ? normalizeDeckRow(row) : null;
+}
+
+export async function getFlashcardReviewSession(userId: string, deckId: string): Promise<FlashcardReviewSession | null> {
+  const deck = await getFlashcardDeckDetail(userId, deckId);
+  if (!deck) {
+    return null;
+  }
+
+  const now = new Date();
+  const dueCards = deck.cards
+    .filter((card) => new Date(card.sm2.nextReview) <= now)
+    .sort((a, b) => new Date(a.sm2.nextReview).getTime() - new Date(b.sm2.nextReview).getTime());
+
+  const newCards = deck.cards
+    .filter((card) => card.sm2.repetitions === 0 && !dueCards.some((due) => due.id === card.id))
+    .slice(0, 10);
+
+  return {
+    deckId: deck.id,
+    deckName: deck.name,
+    deckColor: deck.color,
+    totalCards: deck.cards.length,
+    dueCards: [...dueCards, ...newCards],
+    dueCount: dueCards.length,
+    newCount: newCards.length,
   };
 }
 
-export interface ReviewResult {
-  cardId: string;
-  oldState: SM2State;
-  newState: SM2State;
-  grade: number;
+export async function getFlashcardStats(userId: string): Promise<FlashcardStats> {
+  const decks = await getFlashcardDecks(userId);
+  const now = new Date();
+  const allCards = decks.flatMap((deck) => deck.cards);
+  const reviewDates = new Set<string>();
+
+  for (const card of allCards) {
+    if (card.sm2.lastReview) {
+      reviewDates.add(card.sm2.lastReview.slice(0, 10));
+    }
+  }
+
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i += 1) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const key = date.toISOString().slice(0, 10);
+    if (reviewDates.has(key)) {
+      streak += 1;
+    } else if (i > 0) {
+      break;
+    }
+  }
+
+  const distribution = { new: 0, learning: 0, reviewing: 0, mastered: 0 };
+  for (const card of allCards) {
+    if (card.sm2.repetitions === 0) distribution.new += 1;
+    else if (card.sm2.repetitions < 3) distribution.learning += 1;
+    else if (card.sm2.repetitions < 5) distribution.reviewing += 1;
+    else distribution.mastered += 1;
+  }
+
+  return {
+    totalCards: allCards.length,
+    totalDecks: decks.length,
+    dueNow: allCards.filter((card) => new Date(card.sm2.nextReview) <= now).length,
+    mastered: allCards.filter((card) => card.sm2.repetitions >= 5).length,
+    reviewed: allCards.filter((card) => card.sm2.lastReview !== null).length,
+    streak,
+    distribution,
+  };
 }
 
-// ─── Constants ───────────────────────────────────────────────
+export async function createFlashcardDeck(userId: string, input: { name: string; description?: string; color?: string }) {
+  const trimmedName = input.name.trim();
+  if (!trimmedName) {
+    throw new Error("Deck name required");
+  }
 
-export const DECK_COLORS = [
-  'teal', 'sky', 'emerald', 'amber', 'cyan', 'rose', 'lime', 'orange',
-] as const;
+  const countRows = await db
+    .select({ id: schema.flashcardDecks.id })
+    .from(schema.flashcardDecks)
+    .where(eq(schema.flashcardDecks.userId, userId));
 
-export const MASTERY_THRESHOLD = 5; // repetitions to be "mastered"
+  const [deck] = await db.insert(schema.flashcardDecks).values({
+    userId,
+    name: trimmedName,
+    description: input.description?.trim() || null,
+    color: input.color || DECK_COLORS[countRows.length % DECK_COLORS.length] || "teal",
+    cards: [],
+    updatedAt: new Date(),
+  }).returning();
 
-// ─── ID Generation ───────────────────────────────────────────
-
-export function generateFlashcardId(): string {
-  return `fc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return normalizeDeckRow(deck);
 }
 
-// ─── SM-2 Algorithm ──────────────────────────────────────────
+export async function saveFlashcardsToDeck(userId: string, deckId: string, cards: unknown[]) {
+  const deck = await getFlashcardDeckDetail(userId, deckId);
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
 
-/**
- * Returns the default SM-2 state for a new card (due immediately).
- */
-export function sm2Initial(): SM2State {
+  const nextCards = [
+    ...deck.cards,
+    ...cards.map((card) => normalizeFlashcardRecord(card)),
+  ];
+
+  await updateDeckCards(deckId, nextCards);
+
+  return {
+    saved: cards.length,
+    totalCards: nextCards.length,
+  };
+}
+
+export async function reviewFlashcard(userId: string, deckId: string, cardId: string, grade: number) {
+  const deck = await getFlashcardDeckDetail(userId, deckId);
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  const index = deck.cards.findIndex((card) => card.id === cardId);
+  if (index < 0) {
+    throw new Error("Card not found");
+  }
+
+  const oldState = deck.cards[index]!.sm2;
+  deck.cards[index] = {
+    ...deck.cards[index]!,
+    sm2: sm2Update(deck.cards[index]!.sm2, grade),
+  };
+
+  await updateDeckCards(deckId, deck.cards);
+
+  return {
+    cardId,
+    oldState,
+    newState: deck.cards[index]!.sm2,
+    grade,
+  };
+}
+
+export async function deleteFlashcardDeck(userId: string, deckId: string) {
+  const [deleted] = await db
+    .delete(schema.flashcardDecks)
+    .where(and(eq(schema.flashcardDecks.userId, userId), eq(schema.flashcardDecks.id, deckId)))
+    .returning();
+
+  if (!deleted) {
+    throw new Error("Deck not found");
+  }
+
+  return { deleted: true };
+}
+
+export async function deleteFlashcard(userId: string, deckId: string, cardId: string) {
+  const deck = await getFlashcardDeckDetail(userId, deckId);
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  const nextCards = deck.cards.filter((card) => card.id !== cardId);
+  if (nextCards.length === deck.cards.length) {
+    throw new Error("Card not found");
+  }
+
+  await updateDeckCards(deckId, nextCards);
+
+  return {
+    deleted: true,
+    remainingCards: nextCards.length,
+  };
+}
+
+export async function generateFlashcards(userId: string, input: FlashcardGenerationRequest) {
+  const limit = Math.min(Math.max(input.limit ?? 10, 1), 15);
+  const memories = await loadCandidateMemories(userId, input);
+
+  if (!memories.length) {
+    return {
+      cards: [],
+      count: 0,
+      memoriesUsed: 0,
+      message: "No memories found to generate from",
+    };
+  }
+
+  const aiConfig = await getTextGenerationConfig({
+    openai: "gpt-4o-mini",
+    openrouter: "anthropic/claude-3.5-haiku",
+    gemini: "gemini-2.0-flash-lite",
+    ollama: "llama3.2",
+    custom: "default",
+  });
+  if (!aiConfig) {
+    throw new Error("No AI provider configured");
+  }
+
+  const memoryTexts = memories.map((memory, index) => {
+    const title = memory.source_title || `Memory ${index + 1}`;
+    const preview = String(memory.content).slice(0, 1500);
+    return `[${memory.id}] "${title}"\n${preview}`;
+  }).join("\n\n---\n\n");
+
+  const system = `You are a flashcard generation expert. Create high-quality Q&A flashcards from the given knowledge content.
+
+RULES:
+1. Each flashcard should test one concept.
+2. Questions should be clear and unambiguous.
+3. Answers should be concise but complete.
+4. Include a short hint that nudges without giving away the answer.
+5. Extract meaningful tags from the content.
+6. Reference the source memory ID when possible.
+7. Aim for different question types: definitions, comparisons, applications, cause-effect.
+8. Skip trivial facts.
+9. Generate exactly ${limit} flashcards.
+
+Output a JSON array only.`;
+
+  const prompt = `Generate ${limit} flashcards from this knowledge:\n\n${memoryTexts}`;
+  const response = await callTextPrompt(aiConfig, prompt, system, {
+    temperature: 0.3,
+    maxTokens: 4096,
+  });
+  if (!response) {
+    throw new Error("AI generation failed");
+  }
+
+  const generatedCards = normalizeGeneratedCards(parseJsonArray(response));
+
+  return {
+    cards: generatedCards,
+    count: generatedCards.length,
+    memoriesUsed: memories.length,
+  };
+}
+
+export function sm2Initial(): FlashcardSM2State {
   return {
     easeFactor: 2.5,
     interval: 0,
@@ -117,38 +392,24 @@ export function sm2Initial(): SM2State {
   };
 }
 
-/**
- * SM-2 SuperMemo algorithm update.
- * @param state  Current SM-2 state
- * @param grade  0-5 (0-2 = fail, 3 = hard, 4 = good, 5 = easy)
- * @returns Updated SM-2 state
- */
-export function sm2Update(state: SM2State, grade: number): SM2State {
+export function sm2Update(state: FlashcardSM2State, grade: number): FlashcardSM2State {
   const now = new Date();
   let { easeFactor, interval, repetitions } = state;
 
   if (grade >= 3) {
-    // Correct response
-    if (repetitions === 0) {
-      interval = 1;
-    } else if (repetitions === 1) {
-      interval = 6;
-    } else {
-      interval = Math.round(interval * easeFactor);
-    }
+    if (repetitions === 0) interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else interval = Math.round(interval * easeFactor);
     repetitions += 1;
   } else {
-    // Incorrect — reset
     repetitions = 0;
     interval = 1;
   }
 
-  // Update ease factor
-  easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
-  easeFactor = Math.max(1.3, easeFactor); // minimum EF
+  easeFactor += 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02);
+  easeFactor = Math.max(1.3, easeFactor);
 
   const nextReview = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
-
   return {
     easeFactor: Math.round(easeFactor * 100) / 100,
     interval,
@@ -158,253 +419,120 @@ export function sm2Update(state: SM2State, grade: number): SM2State {
   };
 }
 
-// ─── Deck Operations ─────────────────────────────────────────
-
-/**
- * Compute summary stats for a list of decks.
- */
-export function summarizeDecks(decks: Deck[]): DeckSummary[] {
-  const now = new Date();
-  return decks.map(d => {
-    const dueCards = d.cards.filter(c => new Date(c.sm2.nextReview) <= now);
-    const masteredCards = d.cards.filter(c => c.sm2.repetitions >= MASTERY_THRESHOLD);
-    const avgEase = d.cards.length > 0
-      ? d.cards.reduce((sum, c) => sum + c.sm2.easeFactor, 0) / d.cards.length
-      : 2.5;
-    return {
-      id: d.id,
-      name: d.name,
-      description: d.description,
-      color: d.color,
-      cardCount: d.cards.length,
-      dueCount: dueCards.length,
-      masteredCount: masteredCards.length,
-      avgEaseFactor: Math.round(avgEase * 100) / 100,
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt,
-    };
-  });
+export function normalizeGeneratedCards(cards: unknown[]): Flashcard[] {
+  return cards
+    .filter((card) => isRecord(card) && typeof card.front === "string" && typeof card.back === "string")
+    .map((card) => normalizeFlashcardRecord(card));
 }
 
-/**
- * Create a new empty deck.
- */
-export function createDeck(
-  name: string,
-  opts?: { description?: string; color?: string; existingDeckCount?: number }
-): Deck {
-  const count = opts?.existingDeckCount ?? 0;
-  return {
-    id: generateFlashcardId(),
-    name: name.trim(),
-    description: opts?.description?.trim(),
-    color: opts?.color || DECK_COLORS[count % DECK_COLORS.length],
-    cards: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+async function getFlashcardDecks(userId: string): Promise<FlashcardDeck[]> {
+  const rows = await db
+    .select()
+    .from(schema.flashcardDecks)
+    .where(eq(schema.flashcardDecks.userId, userId))
+    .orderBy(desc(schema.flashcardDecks.updatedAt));
+
+  return rows.map((row) => normalizeDeckRow(row));
 }
 
-/**
- * Get cards due for review in a deck.
- * Returns due cards sorted by urgency + up to `newCardLimit` unreviewed cards.
- */
-export function getDueCards(
-  deck: Deck,
-  opts?: { newCardLimit?: number }
-): { dueCards: Flashcard[]; newCards: Flashcard[]; dueCount: number; newCount: number } {
-  const now = new Date();
-  const limit = opts?.newCardLimit ?? 10;
-
-  const dueCards = deck.cards
-    .filter(c => new Date(c.sm2.nextReview) <= now)
-    .sort((a, b) => new Date(a.sm2.nextReview).getTime() - new Date(b.sm2.nextReview).getTime());
-
-  const dueIds = new Set(dueCards.map(c => c.id));
-  const newCards = deck.cards
-    .filter(c => c.sm2.repetitions === 0 && !dueIds.has(c.id))
-    .slice(0, limit);
-
-  return {
-    dueCards,
-    newCards,
-    dueCount: dueCards.length,
-    newCount: newCards.length,
-  };
+async function updateDeckCards(deckId: string, cards: Flashcard[]) {
+  await db
+    .update(schema.flashcardDecks)
+    .set({ cards, updatedAt: new Date() })
+    .where(eq(schema.flashcardDecks.id, deckId));
 }
 
-/**
- * Review a card — apply SM-2 grade and return state transition.
- * Mutates the card in place.
- */
-export function reviewCard(card: Flashcard, grade: number): ReviewResult {
-  if (grade < 0 || grade > 5) throw new Error('grade must be 0-5');
-  const oldState = { ...card.sm2 };
-  card.sm2 = sm2Update(card.sm2, grade);
-  return {
-    cardId: card.id,
-    oldState,
-    newState: card.sm2,
-    grade,
-  };
-}
-
-/**
- * Add generated cards to a deck, initializing SM-2 state.
- * Returns the number of cards added.
- */
-export function addCardsToDeck(deck: Deck, cards: GeneratedCard[]): number {
-  let added = 0;
-  for (const card of cards) {
-    if (!card.front || !card.back) continue;
-    deck.cards.push({
-      id: generateFlashcardId(),
-      front: String(card.front).trim(),
-      back: String(card.back).trim(),
-      hint: card.hint ? String(card.hint).trim() : undefined,
-      tags: Array.isArray(card.tags) ? card.tags.map(String) : [],
-      sourceMemoryId: card.sourceMemoryId,
-      sourceTitle: card.sourceTitle,
-      sm2: sm2Initial(),
-      createdAt: new Date().toISOString(),
-    });
-    added++;
-  }
-  deck.updatedAt = new Date().toISOString();
-  return added;
-}
-
-// ─── Stats ───────────────────────────────────────────────────
-
-/**
- * Calculate aggregate stats across all decks.
- */
-export function computeStats(decks: Deck[]): FlashcardStats {
-  const now = new Date();
-  const allCards = decks.flatMap(d => d.cards);
-  const totalCards = allCards.length;
-  const dueNow = allCards.filter(c => new Date(c.sm2.nextReview) <= now).length;
-  const mastered = allCards.filter(c => c.sm2.repetitions >= MASTERY_THRESHOLD).length;
-  const reviewed = allCards.filter(c => c.sm2.lastReview !== null).length;
-
-  // Review streak — consecutive days with at least one review
-  const reviewDates = new Set<string>();
-  for (const card of allCards) {
-    if (card.sm2.lastReview) {
-      reviewDates.add(card.sm2.lastReview.slice(0, 10));
-    }
-  }
-  let streak = 0;
-  const today = new Date();
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
-    if (reviewDates.has(dateStr)) {
-      streak++;
-    } else if (i > 0) {
-      break;
-    }
+async function loadCandidateMemories(userId: string, input: FlashcardGenerationRequest) {
+  if (input.memoryIds?.length) {
+    return db.execute(sql`
+      SELECT id, content, source_title, source_type, metadata
+      FROM memories
+      WHERE user_id = ${userId}::uuid
+        AND id::text = ANY(${input.memoryIds}::text[])
+      LIMIT 20
+    `) as Promise<Array<Record<string, unknown>>>;
   }
 
-  // Mastery distribution
-  const distribution = { new: 0, learning: 0, reviewing: 0, mastered: 0 };
-  for (const card of allCards) {
-    if (card.sm2.repetitions === 0) distribution.new++;
-    else if (card.sm2.repetitions < 3) distribution.learning++;
-    else if (card.sm2.repetitions < MASTERY_THRESHOLD) distribution.reviewing++;
-    else distribution.mastered++;
+  if (input.topic?.trim()) {
+    const pattern = `%${input.topic.trim()}%`;
+    return db.execute(sql`
+      SELECT id, content, source_title, source_type, metadata
+      FROM memories
+      WHERE user_id = ${userId}::uuid
+        AND (content ILIKE ${pattern} OR source_title ILIKE ${pattern})
+      ORDER BY created_at DESC
+      LIMIT 20
+    `) as Promise<Array<Record<string, unknown>>>;
   }
 
-  return {
-    totalCards,
-    totalDecks: decks.length,
-    dueNow,
-    mastered,
-    reviewed,
-    streak,
-    distribution,
-  };
+  return db.execute(sql`
+    SELECT id, content, source_title, source_type, metadata
+    FROM memories
+    WHERE user_id = ${userId}::uuid
+      AND length(content) > 100
+    ORDER BY RANDOM()
+    LIMIT 15
+  `) as Promise<Array<Record<string, unknown>>>;
 }
 
-// ─── AI Generation ───────────────────────────────────────────
-
-/**
- * Build the AI prompt + system message for flashcard generation.
- * Returns { system, prompt } — caller passes them to their AI caller.
- */
-export function buildGenerationPrompt(
-  memoryTexts: { id: string; title: string; content: string }[],
-  limit: number
-): { system: string; prompt: string } {
-  const count = Math.min(limit, 15);
-
-  const formatted = memoryTexts.map((m, i) => {
-    const preview = m.content.slice(0, 1500);
-    return `[${m.id}] "${m.title}"\n${preview}`;
-  }).join('\n\n---\n\n');
-
-  const system = `You are a flashcard generation expert. Create high-quality Q&A flashcards from the given knowledge content.
-
-RULES:
-1. Each flashcard should test ONE concept — specific, not vague
-2. Questions should be clear and unambiguous
-3. Answers should be concise but complete (1-3 sentences)
-4. Include a short hint (1 keyword or phrase) that nudges without giving away the answer
-5. Extract meaningful tags from the content (1-3 per card)
-6. Reference the source memory ID so cards link back to the original knowledge
-7. Aim for different question types: definitions, comparisons, applications, cause-effect
-8. Skip trivial or overly obvious facts
-9. Generate exactly ${count} flashcards
-
-Output JSON array ONLY (no markdown fences, no explanation):
-[
-  {
-    "front": "question",
-    "back": "answer",
-    "hint": "hint keyword",
-    "tags": ["tag1", "tag2"],
-    "sourceMemoryId": "memory-uuid",
-    "sourceTitle": "source title"
-  }
-]`;
-
-  const prompt = `Generate ${count} flashcards from this knowledge:\n\n${formatted}`;
-
-  return { system, prompt };
-}
-
-/**
- * Parse AI response into normalized GeneratedCard[].
- * Returns empty array if parsing fails.
- */
-export function parseGeneratedCards(response: string): GeneratedCard[] {
-  let cards: any[] = [];
+function parseJsonArray(response: string): unknown[] {
   try {
-    let jsonStr = response.trim();
-    jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
-    cards = JSON.parse(jsonStr);
+    return JSON.parse(stripMarkdownFence(response));
   } catch {
     const match = response.match(/\[[\s\S]*\]/);
-    if (match) {
-      try {
-        cards = JSON.parse(match[0]);
-      } catch {
-        return [];
-      }
-    } else {
-      return [];
+    if (!match) {
+      throw new Error("AI response did not contain valid JSON");
     }
+    return JSON.parse(match[0]);
+  }
+}
+
+function stripMarkdownFence(value: string) {
+  return value.trim().replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
+}
+
+function normalizeDeckRow(row: typeof schema.flashcardDecks.$inferSelect): FlashcardDeck {
+  return {
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description || undefined,
+    color: row.color,
+    cards: Array.isArray(row.cards) ? row.cards.map((card) => normalizeFlashcardRecord(card)) : [],
+    createdAt: row.createdAt?.toISOString() || new Date().toISOString(),
+    updatedAt: row.updatedAt?.toISOString() || new Date().toISOString(),
+  };
+}
+
+function normalizeFlashcardRecord(card: unknown): Flashcard {
+  const value = isRecord(card) ? card : {};
+  return {
+    id: typeof value.id === "string" && value.id ? value.id : `fc_${randomUUID()}`,
+    front: typeof value.front === "string" ? value.front.trim() : "",
+    back: typeof value.back === "string" ? value.back.trim() : "",
+    hint: typeof value.hint === "string" && value.hint.trim() ? value.hint.trim() : undefined,
+    tags: Array.isArray(value.tags) ? value.tags.map(String).filter(Boolean).slice(0, 8) : [],
+    sourceMemoryId: typeof value.sourceMemoryId === "string" ? value.sourceMemoryId : undefined,
+    sourceTitle: typeof value.sourceTitle === "string" ? value.sourceTitle : undefined,
+    sm2: normalizeSm2State(value.sm2),
+    createdAt: typeof value.createdAt === "string" ? value.createdAt : new Date().toISOString(),
+  };
+}
+
+function normalizeSm2State(value: unknown): FlashcardSM2State {
+  if (!isRecord(value)) {
+    return sm2Initial();
   }
 
-  return cards
-    .filter((c: any) => c.front && c.back)
-    .map((c: any) => ({
-      front: String(c.front).trim(),
-      back: String(c.back).trim(),
-      hint: c.hint ? String(c.hint).trim() : undefined,
-      tags: Array.isArray(c.tags) ? c.tags.map(String) : [],
-      sourceMemoryId: c.sourceMemoryId || undefined,
-      sourceTitle: c.sourceTitle || undefined,
-    }));
+  return {
+    easeFactor: typeof value.easeFactor === "number" ? value.easeFactor : 2.5,
+    interval: typeof value.interval === "number" ? value.interval : 0,
+    repetitions: typeof value.repetitions === "number" ? value.repetitions : 0,
+    nextReview: typeof value.nextReview === "string" ? value.nextReview : new Date().toISOString(),
+    lastReview: typeof value.lastReview === "string" ? value.lastReview : null,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

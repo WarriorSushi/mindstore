@@ -1,36 +1,23 @@
-/**
- * Mind Map Generator — Portable logic module
- * 
- * Extracted from the route for convergence with codex runtime.
- * Handles: hierarchical clustering, tree building, cross-topic connections.
- * Uses shared-vectors for clustering.
- * 
- * Zero AI dependency — pure algorithmic.
- */
-
+import { eq, sql } from "drizzle-orm";
+import { db, schema } from "@/server/db";
+import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 import {
-  type ClusterMember,
-  kMeansClustering,
+  countSourceTypes,
   cosineSimilarity,
   extractKeywords,
   extractTopicLabel,
-  countSourceTypes,
-  truncate,
-} from './shared-vectors';
+  kMeansClustering,
+  parseEmbedding,
+  type EmbeddedMemoryLike,
+} from "@/server/plugins/ports/shared-vectors";
 
-// ─── Types ────────────────────────────────────────────────────
+const PLUGIN_SLUG = "mind-map-generator";
 
-export interface MindMapMemory extends ClusterMember {
-  id: string;
-  content: string;
-  embedding: number[];
-  sourceType: string;
-  sourceTitle: string;
-  createdAt: string;
-  pinned?: boolean;
+export interface MindMapMemory extends EmbeddedMemoryLike {
+  pinned: boolean;
 }
 
-export interface SimplifiedMemory {
+export interface SimplifiedMindMapMemory {
   id: string;
   title: string;
   preview: string;
@@ -39,13 +26,13 @@ export interface SimplifiedMemory {
   pinned: boolean;
 }
 
-export interface TopicNode {
+export interface MindMapTopicNode {
   id: string;
   label: string;
   keywords: string[];
   memoryCount: number;
-  memories: SimplifiedMemory[];
-  children: TopicNode[];
+  memories: SimplifiedMindMapMemory[];
+  children: MindMapTopicNode[];
   sourceTypes: Record<string, number>;
   coherence: number;
 }
@@ -54,18 +41,18 @@ export interface MindMapTree {
   id: string;
   label: string;
   memoryCount: number;
-  children: TopicNode[];
+  children: MindMapTopicNode[];
 }
 
-export interface CrossConnection {
+export interface MindMapConnection {
   source: string;
   target: string;
   strength: number;
 }
 
-export interface MindMapResult {
+export interface MindMapResponse {
   tree: MindMapTree;
-  connections: CrossConnection[];
+  connections: MindMapConnection[];
   stats: {
     totalMemories: number;
     topicCount: number;
@@ -78,117 +65,211 @@ export interface MindMapResult {
   };
 }
 
-// ─── Main Pipeline ────────────────────────────────────────────
+export async function ensureMindMapInstalled() {
+  const manifest = PLUGIN_MANIFESTS[PLUGIN_SLUG];
+  const [existing] = await db
+    .select()
+    .from(schema.plugins)
+    .where(eq(schema.plugins.slug, PLUGIN_SLUG))
+    .limit(1);
 
-export function generateMindMap(
-  memories: MindMapMemory[],
-  maxTopics = 12,
-  maxDepth = 3,
-): MindMapResult {
-  if (memories.length === 0) {
-    return {
-      tree: { id: 'root', label: 'Your Mind', children: [], memoryCount: 0 },
-      connections: [],
-      stats: { totalMemories: 0, topicCount: 0, subTopicCount: 0, maxDepth: 0, avgTopicSize: 0, largestTopic: '', largestTopicSize: 0, connectionCount: 0 },
-    };
+  if (existing || !manifest) {
+    return;
   }
 
-  const numClusters = Math.min(maxTopics, Math.max(3, Math.floor(memories.length / 5)));
-  const clusters = kMeansClustering(memories, numClusters, 15);
+  await db.insert(schema.plugins).values({
+    slug: manifest.slug,
+    name: manifest.name,
+    description: manifest.description,
+    version: manifest.version,
+    type: manifest.type,
+    status: "active",
+    icon: manifest.icon,
+    category: manifest.category,
+    author: manifest.author,
+    metadata: {
+      capabilities: manifest.capabilities,
+      hooks: manifest.hooks,
+      routes: manifest.routes,
+      aliases: manifest.aliases || [],
+      pages: manifest.ui?.pages || [],
+    },
+  });
+}
 
-  const topicNodes: TopicNode[] = [];
+export async function generateMindMap(
+  userId: string,
+  input: { maxTopics?: number; maxDepth?: number } = {},
+): Promise<MindMapResponse> {
+  const rows = await db.execute(sql`
+    SELECT id, content, source_type, source_title, embedding, created_at, metadata
+    FROM memories
+    WHERE user_id = ${userId}::uuid
+      AND embedding IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 500
+  `) as unknown as Array<Record<string, unknown>>;
 
-  for (let i = 0; i < clusters.length; i++) {
-    const cluster = clusters[i]!;
-    if (cluster.members.length === 0) continue;
+  const memories = rows
+    .map((row) => ({
+      id: String(row.id),
+      content: String(row.content || ""),
+      sourceType: String(row.source_type || "unknown"),
+      sourceTitle: typeof row.source_title === "string" ? row.source_title : "Untitled",
+      embedding: parseEmbedding(row.embedding),
+      createdAt: normalizeDate(row.created_at),
+      pinned: Boolean((row.metadata as { pinned?: boolean } | null)?.pinned),
+    }))
+    .filter((memory) => memory.embedding.length > 0);
 
-    const topicLabel = extractTopicLabel(cluster.members);
-    const topicKeywords = extractKeywords(cluster.members, 5);
+  return buildMindMapFromMemories(memories, input);
+}
 
-    // Sub-cluster for large topics
-    let children: TopicNode[] = [];
-    if (cluster.members.length >= 6 && maxDepth >= 2) {
-      const subClusters = kMeansClustering(
-        cluster.members,
-        Math.min(4, Math.floor(cluster.members.length / 3)),
-        10,
-      );
-      for (const sub of subClusters) {
-        if (sub.members.length === 0) continue;
-        children.push({
-          id: `sub-${i}-${children.length}`,
-          label: extractTopicLabel(sub.members),
-          keywords: extractKeywords(sub.members, 3),
-          memoryCount: sub.members.length,
-          memories: sub.members.slice(0, 8).map(simplifyMemory),
-          children: [],
-          sourceTypes: countSourceTypes(sub.members),
-          coherence: sub.coherence,
-        });
-      }
-    }
+export function buildMindMapFromMemories(
+  memories: MindMapMemory[],
+  input: { maxTopics?: number; maxDepth?: number } = {},
+): MindMapResponse {
+  if (!memories.length) {
+    return emptyMindMap();
+  }
 
-    topicNodes.push({
-      id: `topic-${i}`,
-      label: topicLabel,
-      keywords: topicKeywords,
+  const maxTopics = Math.min(input.maxTopics || 12, 20);
+  const maxDepth = Math.min(input.maxDepth || 3, 4);
+  const clusterCount = Math.min(maxTopics, Math.max(3, Math.floor(memories.length / 5)));
+  const clusters = kMeansClustering(memories, clusterCount, 15);
+
+  const sortedClusters = [...clusters].sort((left, right) => right.members.length - left.members.length);
+  const topicNodes = sortedClusters.map((cluster, topicIndex) => {
+    const children = buildSubTopics(cluster.members, maxDepth, topicIndex);
+    return {
+      id: `topic-${topicIndex}`,
+      label: extractTopicLabel(cluster.members),
+      keywords: extractKeywords(cluster.members, 5),
       memoryCount: cluster.members.length,
-      memories: children.length > 0 ? [] : cluster.members.slice(0, 8).map(simplifyMemory),
+      memories: children.length ? [] : cluster.members.slice(0, 8).map(simplifyMemory),
       children,
       sourceTypes: countSourceTypes(cluster.members),
       coherence: cluster.coherence,
-    });
-  }
+    } satisfies MindMapTopicNode;
+  });
 
-  topicNodes.sort((a, b) => b.memoryCount - a.memoryCount);
-
-  // Cross-topic connections
-  const connections: CrossConnection[] = [];
-  for (let i = 0; i < clusters.length; i++) {
-    for (let j = i + 1; j < clusters.length; j++) {
-      const sim = cosineSimilarity(clusters[i]!.centroid, clusters[j]!.centroid);
-      if (sim > 0.6) {
+  const connections: MindMapConnection[] = [];
+  for (let index = 0; index < sortedClusters.length; index += 1) {
+    for (let compare = index + 1; compare < sortedClusters.length; compare += 1) {
+      const similarity = cosineSimilarity(
+        sortedClusters[index]?.centroid || [],
+        sortedClusters[compare]?.centroid || [],
+      );
+      if (similarity > 0.6) {
         connections.push({
-          source: topicNodes[i]?.id || `topic-${i}`,
-          target: topicNodes[j]?.id || `topic-${j}`,
-          strength: sim,
+          source: `topic-${index}`,
+          target: `topic-${compare}`,
+          strength: round(similarity, 2),
         });
       }
     }
   }
-  connections.sort((a, b) => b.strength - a.strength);
 
   const tree: MindMapTree = {
-    id: 'root',
-    label: 'Your Mind',
+    id: "root",
+    label: "Your Mind",
     memoryCount: memories.length,
     children: topicNodes,
   };
 
   return {
-    tree, connections,
+    tree,
+    connections: connections.sort((left, right) => right.strength - left.strength),
     stats: {
       totalMemories: memories.length,
       topicCount: topicNodes.length,
-      subTopicCount: topicNodes.reduce((sum, t) => sum + t.children.length, 0),
-      maxDepth: topicNodes.some(t => t.children.length > 0) ? 2 : 1,
-      avgTopicSize: Math.round(memories.length / Math.max(topicNodes.length, 1)),
-      largestTopic: topicNodes[0]?.label || '',
+      subTopicCount: topicNodes.reduce((sum, topic) => sum + topic.children.length, 0),
+      maxDepth: topicNodes.some((topic) => topic.children.length > 0) ? 2 : 1,
+      avgTopicSize: Math.round(memories.length / Math.max(1, topicNodes.length)),
+      largestTopic: topicNodes[0]?.label || "",
       largestTopicSize: topicNodes[0]?.memoryCount || 0,
       connectionCount: connections.length,
     },
   };
 }
 
-// ─── Memory Simplification ───────────────────────────────────
+function buildSubTopics(memories: MindMapMemory[], maxDepth: number, topicIndex: number) {
+  if (memories.length < 6 || maxDepth < 2) {
+    return [];
+  }
 
-export function simplifyMemory(m: MindMapMemory): SimplifiedMemory {
+  const subClusters = kMeansClustering(
+    memories,
+    Math.min(4, Math.max(2, Math.floor(memories.length / 3))),
+    10,
+  );
+
+  return subClusters
+    .filter((cluster) => cluster.members.length > 0)
+    .map((cluster, childIndex) => ({
+      id: `sub-${topicIndex}-${childIndex}`,
+      label: extractTopicLabel(cluster.members),
+      keywords: extractKeywords(cluster.members, 3),
+      memoryCount: cluster.members.length,
+      memories: cluster.members.slice(0, 8).map(simplifyMemory),
+      children: [],
+      sourceTypes: countSourceTypes(cluster.members),
+      coherence: cluster.coherence,
+    }));
+}
+
+function simplifyMemory(memory: MindMapMemory): SimplifiedMindMapMemory {
+  const firstLine = memory.content.split("\n")[0]?.trim() || memory.content;
   return {
-    id: m.id,
-    title: m.sourceTitle || truncate(m.content.split('\n')[0]!, 50),
-    preview: truncate(m.content.replace(/\n/g, ' '), 100),
-    sourceType: m.sourceType,
-    sourceTitle: m.sourceTitle,
-    pinned: m.pinned || false,
+    id: memory.id,
+    title: memory.sourceTitle || truncate(firstLine, 40),
+    preview: truncate(memory.content.replace(/\n/g, " "), 120),
+    sourceType: memory.sourceType,
+    sourceTitle: memory.sourceTitle,
+    pinned: memory.pinned,
   };
+}
+
+function emptyMindMap(): MindMapResponse {
+  return {
+    tree: {
+      id: "root",
+      label: "Your Mind",
+      memoryCount: 0,
+      children: [],
+    },
+    connections: [],
+    stats: {
+      totalMemories: 0,
+      topicCount: 0,
+      subTopicCount: 0,
+      maxDepth: 0,
+      avgTopicSize: 0,
+      largestTopic: "",
+      largestTopicSize: 0,
+      connectionCount: 0,
+    },
+  };
+}
+
+function normalizeDate(value: unknown) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    return new Date(value).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+function truncate(value: string, max: number) {
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, max - 3).trim()}...`;
+}
+
+function round(value: number, digits: number) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
 }

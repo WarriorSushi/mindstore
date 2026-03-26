@@ -1,33 +1,17 @@
-/**
- * Voice-to-Memory — Portable logic module
- * 
- * Extracted from the route for convergence with codex runtime.
- * This module handles: transcription (Whisper/Gemini), recording management,
- * and saving transcripts as memories.
- */
+import { and, desc, eq, sql } from "drizzle-orm";
+import {
+  getTranscriptionConfig,
+  transcribeAudio,
+} from "@/server/ai-client";
+import { db, schema } from "@/server/db";
+import { createMemory } from "@/server/memory-ingest";
+import { PLUGIN_MANIFESTS } from "@/server/plugins/registry";
 
-import { db } from '@/server/db';
-import { generateEmbeddings } from '@/server/embeddings';
-import { sql } from 'drizzle-orm';
+const PLUGIN_SLUG = "voice-to-memory";
+const MAX_AUDIO_SIZE_BYTES = 25 * 1024 * 1024;
 
-// ─── Types ────────────────────────────────────────────────────
-
-export interface TranscriptionConfig {
-  type: 'openai' | 'gemini';
-  key: string;
-  model: string;
-}
-
-export interface TranscriptionResult {
-  text: string;
-  language: string;
-  duration: number;
-  segments?: any[];
-}
-
-export interface VoiceRecording {
+export interface VoiceRecordingRecord {
   id: string;
-  userId: string;
   title: string;
   transcript: string;
   durationSeconds: number;
@@ -36,13 +20,16 @@ export interface VoiceRecording {
   language: string;
   provider: string;
   model: string;
+  confidence: number | null;
   wordCount: number;
   savedAsMemory: boolean;
   memoryId: string | null;
+  metadata: Record<string, unknown>;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface VoiceStats {
+export interface VoiceRecordingStats {
   totalRecordings: number;
   totalDuration: number;
   totalWords: number;
@@ -50,276 +37,344 @@ export interface VoiceStats {
   avgDuration: number;
 }
 
-// ─── Table Setup ──────────────────────────────────────────────
-
-export async function ensureVoiceTable() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS voice_recordings (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL,
-      title TEXT,
-      transcript TEXT,
-      duration_seconds REAL,
-      audio_size INTEGER,
-      audio_format TEXT DEFAULT 'webm',
-      language TEXT,
-      provider TEXT,
-      model TEXT,
-      confidence REAL,
-      word_count INTEGER,
-      saved_as_memory BOOLEAN DEFAULT false,
-      memory_id UUID,
-      metadata JSONB DEFAULT '{}',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
+export interface VoiceProviderStatus {
+  available: boolean;
+  provider: string | null;
+  model: string | null;
 }
 
-// ─── Transcription Config ─────────────────────────────────────
+export interface VoiceTranscriptionInput {
+  userId: string;
+  audioBuffer: Buffer;
+  language?: string;
+  title?: string;
+  mimeType?: string;
+  audioFormat?: string;
+}
 
-export async function getTranscriptionConfig(): Promise<TranscriptionConfig | null> {
-  const settings = await db.execute(
-    sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'chat_provider')`
-  );
-  const config: Record<string, string> = {};
-  for (const row of settings as any[]) {
-    config[row.key] = row.value;
+export async function ensureVoiceToMemoryInstalled() {
+  const manifest = PLUGIN_MANIFESTS[PLUGIN_SLUG];
+  const [existing] = await db
+    .select()
+    .from(schema.plugins)
+    .where(eq(schema.plugins.slug, PLUGIN_SLUG))
+    .limit(1);
+
+  if (existing || !manifest) {
+    return;
   }
 
-  const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
-  const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
-
-  if (openaiKey) return { type: 'openai', key: openaiKey, model: 'whisper-1' };
-  if (geminiKey) return { type: 'gemini', key: geminiKey, model: 'gemini-2.0-flash' };
-  return null;
+  await db.insert(schema.plugins).values({
+    slug: manifest.slug,
+    name: manifest.name,
+    description: manifest.description,
+    version: manifest.version,
+    type: manifest.type,
+    status: "active",
+    icon: manifest.icon,
+    category: manifest.category,
+    author: manifest.author,
+    metadata: {
+      capabilities: manifest.capabilities,
+      hooks: manifest.hooks,
+      routes: manifest.routes,
+      mcpTools: manifest.mcpTools,
+      aliases: manifest.aliases || [],
+      dashboardWidgets: manifest.ui?.dashboardWidgets || [],
+      jobs: manifest.jobs || [],
+      jobRuns: {},
+    },
+  });
 }
 
-// ─── Transcription Providers ──────────────────────────────────
+export async function listVoiceRecordings(
+  userId: string,
+  input: { limit?: number; offset?: number } = {},
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 100);
+  const offset = Math.max(input.offset ?? 0, 0);
 
-export async function transcribeAudio(
-  audioBuffer: Buffer,
-  config: TranscriptionConfig,
-  language?: string,
-): Promise<TranscriptionResult> {
-  if (config.type === 'openai') {
-    return transcribeWithWhisper(audioBuffer, config.key, language);
+  const recordings = await db
+    .select()
+    .from(schema.voiceRecordings)
+    .where(eq(schema.voiceRecordings.userId, userId))
+    .orderBy(desc(schema.voiceRecordings.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [countRow] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(schema.voiceRecordings)
+    .where(eq(schema.voiceRecordings.userId, userId));
+
+  const total = countRow?.total || 0;
+
+  return {
+    recordings: recordings.map((recording) => normalizeVoiceRecording(recording)),
+    total,
+    hasMore: offset + limit < total,
+  };
+}
+
+export async function getVoiceRecordingStats(userId: string): Promise<VoiceRecordingStats> {
+  const [row] = await db.execute(sql`
+    SELECT
+      COUNT(*)::int AS total_recordings,
+      COALESCE(SUM(duration_seconds), 0) AS total_duration,
+      COALESCE(SUM(word_count), 0)::int AS total_words,
+      COUNT(CASE WHEN saved_as_memory = 1 THEN 1 END)::int AS saved_count,
+      COALESCE(AVG(duration_seconds), 0) AS avg_duration
+    FROM voice_recordings
+    WHERE user_id = ${userId}::uuid
+  `) as unknown as Array<{
+    total_recordings?: number;
+    total_duration?: number;
+    total_words?: number;
+    saved_count?: number;
+    avg_duration?: number;
+  }>;
+
+  return {
+    totalRecordings: row?.total_recordings || 0,
+    totalDuration: Number(row?.total_duration || 0),
+    totalWords: row?.total_words || 0,
+    savedCount: row?.saved_count || 0,
+    avgDuration: Number(row?.avg_duration || 0),
+  };
+}
+
+export async function getVoiceProviderStatus(): Promise<VoiceProviderStatus> {
+  const config = await getTranscriptionConfig();
+  return {
+    available: !!config,
+    provider: config?.type || null,
+    model: config?.model || null,
+  };
+}
+
+export async function transcribeVoiceRecording(input: VoiceTranscriptionInput) {
+  if (!input.audioBuffer.length) {
+    throw new Error("Empty audio file");
   }
-  return transcribeWithGemini(audioBuffer, config.key, language);
-}
 
-async function transcribeWithWhisper(
-  audioBuffer: Buffer,
-  apiKey: string,
-  language?: string,
-): Promise<TranscriptionResult> {
-  const formData = new FormData();
-  const uint8 = new Uint8Array(audioBuffer);
-  const blob = new Blob([uint8], { type: 'audio/webm' });
-  formData.append('file', blob, 'recording.webm');
-  formData.append('model', 'whisper-1');
-  formData.append('response_format', 'verbose_json');
-  if (language) formData.append('language', language);
+  if (input.audioBuffer.length > MAX_AUDIO_SIZE_BYTES) {
+    throw new Error("Audio file too large (max 25MB)");
+  }
 
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: formData,
+  const config = await getTranscriptionConfig();
+  if (!config) {
+    throw new Error("No transcription provider configured. Add an OpenAI or Gemini API key in Settings.");
+  }
+
+  const transcription = await transcribeAudio(config, {
+    audioBuffer: input.audioBuffer,
+    mimeType: input.mimeType || "audio/webm",
+    language: input.language,
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Whisper API error (${res.status}): ${errText}`);
+  if (!transcription.text || !transcription.text.trim()) {
+    throw new Error("No speech detected in recording");
   }
 
-  const data = await res.json();
-  return {
-    text: data.text || '',
-    language: data.language || 'en',
-    duration: data.duration || 0,
-    segments: data.segments,
-  };
-}
+  const finalTitle = input.title?.trim() || generateVoiceRecordingTitle(transcription.text);
+  const wordCount = transcription.text.split(/\s+/).filter(Boolean).length;
 
-async function transcribeWithGemini(
-  audioBuffer: Buffer,
-  apiKey: string,
-  language?: string,
-): Promise<TranscriptionResult> {
-  const base64Audio = audioBuffer.toString('base64');
-  const langHint = language ? ` The audio is in ${language}.` : '';
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inlineData: { mimeType: 'audio/webm', data: base64Audio } },
-            { text: `Transcribe this audio recording accurately and completely. Return ONLY the transcription text, nothing else.${langHint} If the audio is unclear or silent, respond with "[inaudible]".` },
-          ],
-        }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-      }),
+  const [recording] = await db.insert(schema.voiceRecordings).values({
+    userId: input.userId,
+    title: finalTitle,
+    transcript: transcription.text,
+    durationSeconds: transcription.duration,
+    audioSize: input.audioBuffer.length,
+    audioFormat: normalizeAudioFormat(input.audioFormat, input.mimeType),
+    language: transcription.language,
+    provider: transcription.provider,
+    model: transcription.model,
+    wordCount,
+    metadata: {
+      segments: transcription.segments || [],
+      mimeType: input.mimeType || "audio/webm",
     },
-  );
+    updatedAt: new Date(),
+  }).returning();
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Gemini API error (${res.status}): ${errText}`);
-  }
+  const normalized = normalizeVoiceRecording(recording);
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return { text: text.trim(), language: language || 'auto', duration: 0 };
-}
-
-// ─── Title Generation ─────────────────────────────────────────
-
-export function generateTitle(transcript: string): string {
-  if (!transcript || transcript === '[inaudible]') return 'Voice Recording';
-  const cleaned = transcript.replace(/\s+/g, ' ').trim();
-  const firstSentence = cleaned.split(/[.!?]\s/)[0]!;
-  if (firstSentence.length <= 60) return firstSentence.replace(/[.!?]$/, '');
-  const truncated = firstSentence.substring(0, 57);
-  const lastSpace = truncated.lastIndexOf(' ');
-  return (lastSpace > 20 ? truncated.substring(0, lastSpace) : truncated) + '…';
-}
-
-// ─── Recording Management ─────────────────────────────────────
-
-export async function listRecordings(
-  userId: string,
-  limit = 50,
-  offset = 0,
-): Promise<{ recordings: any[]; total: number; hasMore: boolean }> {
-  const recordings = await db.execute(sql`
-    SELECT id, title, transcript, duration_seconds, audio_size, audio_format,
-           language, provider, model, confidence, word_count,
-           saved_as_memory, memory_id, metadata, created_at
-    FROM voice_recordings
-    WHERE user_id = ${userId}::uuid
-    ORDER BY created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `);
-
-  const countResult = await db.execute(sql`
-    SELECT COUNT(*) as total FROM voice_recordings WHERE user_id = ${userId}::uuid
-  `);
-  const total = parseInt((countResult as any[])[0]?.total || '0');
-
-  return { recordings: recordings as any[], total, hasMore: offset + limit < total };
-}
-
-export async function getVoiceStats(userId: string): Promise<VoiceStats> {
-  const stats = await db.execute(sql`
-    SELECT
-      COUNT(*) as total_recordings,
-      COALESCE(SUM(duration_seconds), 0) as total_duration,
-      COALESCE(SUM(word_count), 0) as total_words,
-      COUNT(CASE WHEN saved_as_memory = true THEN 1 END) as saved_count,
-      COALESCE(AVG(duration_seconds), 0) as avg_duration
-    FROM voice_recordings
-    WHERE user_id = ${userId}::uuid
-  `);
-  const row = (stats as any[])[0] || {};
   return {
-    totalRecordings: parseInt(row.total_recordings || '0'),
-    totalDuration: parseFloat(row.total_duration || '0'),
-    totalWords: parseInt(row.total_words || '0'),
-    savedCount: parseInt(row.saved_count || '0'),
-    avgDuration: parseFloat(row.avg_duration || '0'),
+    ...normalized,
+    transcript: normalized.transcript,
+    duration: normalized.durationSeconds,
+    wordCount: normalized.wordCount,
+    provider: normalized.provider,
   };
 }
 
-export async function saveRecordingMetadata(
-  userId: string,
-  result: TranscriptionResult,
-  audioSize: number,
-  config: TranscriptionConfig,
-  title?: string,
-): Promise<{ id: string; title: string; wordCount: number }> {
-  const finalTitle = title || generateTitle(result.text);
-  const wordCount = result.text.split(/\s+/).filter(Boolean).length;
-  const recordingId = crypto.randomUUID();
-
-  await db.execute(sql`
-    INSERT INTO voice_recordings (id, user_id, title, transcript, duration_seconds,
-      audio_size, audio_format, language, provider, model, word_count, metadata)
-    VALUES (
-      ${recordingId}::uuid, ${userId}::uuid, ${finalTitle}, ${result.text},
-      ${result.duration}, ${audioSize}, 'webm',
-      ${result.language}, ${config.type}, ${config.model}, ${wordCount},
-      ${JSON.stringify({ segments: result.segments || [] })}::jsonb
-    )
-  `);
-
-  return { id: recordingId, title: finalTitle, wordCount };
-}
-
-// ─── Save as Memory ───────────────────────────────────────────
-
-export async function saveRecordingAsMemory(
+export async function saveVoiceRecordingAsMemory(
   userId: string,
   recordingId: string,
   customTitle?: string,
-): Promise<{ memoryId: string; title: string; wordCount: number }> {
-  const recordings = await db.execute(sql`
-    SELECT * FROM voice_recordings
-    WHERE id = ${recordingId}::uuid AND user_id = ${userId}::uuid
-  `);
-  const recording = (recordings as any[])[0];
-  if (!recording) throw new Error('Recording not found');
-  if (recording.saved_as_memory) throw new Error('Already saved as memory');
+) {
+  const recording = await getVoiceRecordingById(userId, recordingId);
+  if (!recording) {
+    throw new Error("Recording not found");
+  }
 
-  const memoryTitle = customTitle || recording.title || 'Voice Recording';
+  if (recording.savedAsMemory && recording.memoryId) {
+    throw new Error(`Already saved as memory:${recording.memoryId}`);
+  }
+
+  const memoryTitle = customTitle?.trim() || recording.title || "Voice Recording";
   const content = `# ${memoryTitle}\n\n${recording.transcript}`;
 
-  let embedding: number[] | null = null;
-  try {
-    const embeds = await generateEmbeddings([content]);
-    if (embeds?.length) embedding = embeds[0]!;
-  } catch (e) {
-    console.error('Embedding generation failed (non-fatal):', e);
-  }
+  const memory = await createMemory({
+    userId,
+    content,
+    sourceType: "audio",
+    sourceId: recording.id,
+    sourceTitle: memoryTitle,
+    metadata: {
+      plugin: PLUGIN_SLUG,
+      recordingId: recording.id,
+      provider: recording.provider,
+      model: recording.model,
+      language: recording.language,
+      durationSeconds: recording.durationSeconds,
+      wordCount: recording.wordCount,
+    },
+  });
 
-  const memoryId = crypto.randomUUID();
-  if (embedding) {
-    const embStr = `[${embedding.join(',')}]`;
-    await db.execute(sql`
-      INSERT INTO memories (id, user_id, content, embedding, source_type, source_title, created_at, imported_at)
-      VALUES (${memoryId}::uuid, ${userId}::uuid, ${content}, ${embStr}::vector, 'audio', ${memoryTitle}, NOW(), NOW())
-    `);
-  } else {
-    await db.execute(sql`
-      INSERT INTO memories (id, user_id, content, source_type, source_title, created_at, imported_at)
-      VALUES (${memoryId}::uuid, ${userId}::uuid, ${content}, 'audio', ${memoryTitle}, NOW(), NOW())
-    `);
-  }
+  await db
+    .update(schema.voiceRecordings)
+    .set({
+      savedAsMemory: 1,
+      memoryId: memory.id,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(schema.voiceRecordings.userId, userId),
+      eq(schema.voiceRecordings.id, recordingId),
+    ));
 
-  await db.execute(sql`
-    UPDATE voice_recordings SET saved_as_memory = true, memory_id = ${memoryId}::uuid
-    WHERE id = ${recordingId}::uuid
-  `);
-
-  return { memoryId, title: memoryTitle, wordCount: recording.word_count };
+  return {
+    memoryId: memory.id,
+    title: memoryTitle,
+    wordCount: recording.wordCount,
+    message: "Voice recording saved as memory",
+  };
 }
 
-// ─── Delete Recording ─────────────────────────────────────────
+export async function deleteVoiceRecording(userId: string, recordingId: string) {
+  const [deleted] = await db
+    .delete(schema.voiceRecordings)
+    .where(and(
+      eq(schema.voiceRecordings.userId, userId),
+      eq(schema.voiceRecordings.id, recordingId),
+    ))
+    .returning({ id: schema.voiceRecordings.id });
 
-export async function deleteRecording(userId: string, recordingId: string): Promise<void> {
-  await db.execute(sql`
-    DELETE FROM voice_recordings
-    WHERE id = ${recordingId}::uuid AND user_id = ${userId}::uuid
-  `);
+  if (!deleted) {
+    throw new Error("Recording not found");
+  }
+
+  return { deleted: true };
 }
 
-// ─── Update Recording ─────────────────────────────────────────
+export async function updateVoiceRecordingTitle(
+  userId: string,
+  recordingId: string,
+  title: string,
+) {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    throw new Error("Title required");
+  }
 
-export async function updateRecordingTitle(userId: string, recordingId: string, title: string): Promise<void> {
-  await db.execute(sql`
-    UPDATE voice_recordings SET title = ${title}
-    WHERE id = ${recordingId}::uuid AND user_id = ${userId}::uuid
-  `);
+  const [updated] = await db
+    .update(schema.voiceRecordings)
+    .set({
+      title: trimmedTitle,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(schema.voiceRecordings.userId, userId),
+      eq(schema.voiceRecordings.id, recordingId),
+    ))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Recording not found");
+  }
+
+  return {
+    updated: true,
+    recording: normalizeVoiceRecording(updated),
+  };
+}
+
+export function generateVoiceRecordingTitle(transcript: string) {
+  if (!transcript || transcript.trim() === "[inaudible]") {
+    return "Voice Recording";
+  }
+
+  const cleaned = transcript.replace(/\s+/g, " ").trim();
+  const firstSentence = cleaned.split(/[.!?]\s/)[0] || cleaned;
+
+  if (firstSentence.length <= 60) {
+    return firstSentence.replace(/[.!?]$/, "");
+  }
+
+  const truncated = firstSentence.slice(0, 57);
+  const lastSpace = truncated.lastIndexOf(" ");
+  const safeSlice = lastSpace > 20 ? truncated.slice(0, lastSpace) : truncated;
+  return `${safeSlice}...`;
+}
+
+async function getVoiceRecordingById(userId: string, recordingId: string) {
+  const [recording] = await db
+    .select()
+    .from(schema.voiceRecordings)
+    .where(and(
+      eq(schema.voiceRecordings.userId, userId),
+      eq(schema.voiceRecordings.id, recordingId),
+    ))
+    .limit(1);
+
+  return recording ? normalizeVoiceRecording(recording) : null;
+}
+
+function normalizeVoiceRecording(row: typeof schema.voiceRecordings.$inferSelect): VoiceRecordingRecord {
+  return {
+    id: row.id,
+    title: row.title || "Voice Recording",
+    transcript: row.transcript || "",
+    durationSeconds: row.durationSeconds || 0,
+    audioSize: row.audioSize || 0,
+    audioFormat: row.audioFormat || "webm",
+    language: row.language || "auto",
+    provider: row.provider || "unknown",
+    model: row.model || "",
+    confidence: row.confidence ?? null,
+    wordCount: row.wordCount || 0,
+    savedAsMemory: row.savedAsMemory === 1,
+    memoryId: row.memoryId || null,
+    metadata: isRecord(row.metadata) ? row.metadata : {},
+    createdAt: row.createdAt?.toISOString() || new Date().toISOString(),
+    updatedAt: row.updatedAt?.toISOString() || new Date().toISOString(),
+  };
+}
+
+function normalizeAudioFormat(audioFormat?: string, mimeType?: string) {
+  if (audioFormat?.trim()) {
+    return audioFormat.trim().toLowerCase();
+  }
+
+  if (!mimeType) {
+    return "webm";
+  }
+
+  const [, subtype] = mimeType.split("/");
+  return subtype?.split(";")[0]?.trim().toLowerCase() || "webm";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -9,6 +14,7 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
@@ -19,7 +25,27 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@mindstore/plugin-sdk": [
+        "./packages/plugin-sdk/src/index.ts"
+      ],
+      "@mindstore/plugin-sdk/*": [
+        "./packages/plugin-sdk/src/*"
+      ],
+      "@mindstore/plugin-runtime": [
+        "./packages/plugin-runtime/src/index.ts"
+      ],
+      "@mindstore/plugin-runtime/*": [
+        "./packages/plugin-runtime/src/*"
+      ],
+      "@mindstore/example-community-plugin": [
+        "./packages/example-community-plugin/src/index.ts"
+      ],
+      "@mindstore/example-community-plugin/*": [
+        "./packages/example-community-plugin/src/*"
+      ]
     }
   },
   "include": [
@@ -27,8 +53,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "**/*.cts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
