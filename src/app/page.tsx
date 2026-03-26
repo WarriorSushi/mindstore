@@ -37,12 +37,18 @@ export default function LandingPage() {
               MindStore
             </span>
           </Link>
-          <Link href="/app">
-            <button className="h-8 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.06] text-[13px] font-medium text-zinc-300 hover:text-white transition-all active:scale-[0.96] flex items-center gap-1.5">
-              Open App
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:inline-flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/></svg>
+              GitHub
+            </a>
+            <Link href="/app">
+              <button className="h-8 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.06] text-[13px] font-medium text-zinc-300 hover:text-white transition-all active:scale-[0.96] flex items-center gap-1.5">
+                Open App
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -315,6 +321,52 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══════ MCP & INTEROP ═══════ */}
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+          <div>
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 mb-4">
+              Open Protocol
+            </span>
+            <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] mb-4">
+              Connect your mind to any AI
+            </h2>
+            <p className="text-[15px] text-zinc-400 leading-[1.7] mb-6">
+              MindStore speaks <span className="text-white font-medium">MCP</span> (Model Context Protocol).
+              Connect Claude, ChatGPT, Cursor, or any MCP-compatible AI to your personal knowledge.
+            </p>
+            <div className="space-y-3">
+              {[
+                { label: "search_mind", desc: "Semantic search across all your knowledge" },
+                { label: "get_profile", desc: "Your AI-generated knowledge profile" },
+                { label: "get_context", desc: "Pull relevant context for any topic" },
+              ].map((tool) => (
+                <div key={tool.label} className="flex items-start gap-3 text-[13px]">
+                  <code className="shrink-0 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-mono text-[12px] border border-emerald-500/15">{tool.label}</code>
+                  <span className="text-zinc-500">{tool.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-[#0d0d0e] p-5 font-mono text-[12px] leading-relaxed">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-3 h-3 rounded-full bg-red-500/60" />
+              <div className="w-3 h-3 rounded-full bg-amber-500/60" />
+              <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
+              <span className="text-[10px] text-zinc-600 ml-2">claude_desktop_config.json</span>
+            </div>
+            <pre className="text-zinc-400 overflow-x-auto"><code>{`{
+  "mcpServers": {
+    "mindstore": {
+      "url": "https://mindstore.org/api/mcp"
+    }
+  }
+}`}</code></pre>
+            <p className="text-[11px] text-zinc-600 mt-3 font-sans">Add this to Claude Desktop. That&apos;s it.</p>
+          </div>
+        </div>
+      </section>
+
       {/* ═══════ WHY MINDSTORE ═══════ */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
         <h2 className="text-[28px] md:text-[36px] font-bold text-center tracking-[-0.03em] mb-4">
@@ -399,20 +451,26 @@ export default function LandingPage() {
 
       {/* ═══════ FOOTER ═══════ */}
       <footer className="border-t border-white/[0.04] py-8">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between text-[13px] text-zinc-600">
-          <div className="flex items-center gap-2">
-            <Brain className="w-4 h-4" />
-            <span className="font-medium">MindStore</span>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px] text-zinc-600">
+            <div className="flex items-center gap-2">
+              <Brain className="w-4 h-4" />
+              <span className="font-medium">MindStore</span>
+              <span className="text-zinc-700">·</span>
+              <span>Open Source</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300 transition-colors flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd"/></svg>
+                GitHub
+              </a>
+              <a href="/docs" className="hover:text-zinc-300 transition-colors">Docs</a>
+              <span>
+                Built by{" "}
+                <a href="https://github.com/WarriorSushi" className="text-zinc-500 hover:text-zinc-300 transition-colors">WarriorSushi</a>
+              </span>
+            </div>
           </div>
-          <span>
-            Built by{" "}
-            <a
-              href="https://github.com/WarriorSushi"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              WarriorSushi
-            </a>
-          </span>
         </div>
       </footer>
     </div>
