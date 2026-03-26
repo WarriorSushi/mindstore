@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MindStoreLogo } from "@/components/MindStoreLogo";
 
 // ─── Lazy load overlays & drawers (triggered by user action, not immediately visible) ───
 const Onboarding = dynamic(() => import("@/components/Onboarding").then(m => ({ default: m.Onboarding })), { ssr: false });
@@ -189,9 +190,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         "border-b border-white/[0.04]",
       )}>
         <Link href="/app" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
-            <Brain className="w-4 h-4 text-white" />
-          </div>
+          <MindStoreLogo className="w-7 h-7" />
           <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
         </Link>
         <div className="flex items-center gap-1">
@@ -271,9 +270,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex w-[220px] fixed left-0 top-0 h-screen flex-col z-30 bg-[#0a0a0b] border-r border-white/[0.04]" aria-label="Main navigation">
         <div className="h-14 flex items-center justify-between px-5 border-b border-white/[0.04]">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
-            </div>
+            <MindStoreLogo className="w-7 h-7" />
             <span className="font-semibold text-[15px] tracking-[-0.01em]">MindStore</span>
           </Link>
           <NotificationCenter />

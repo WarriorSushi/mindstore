@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="ms" x1="56" y1="56" x2="456" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <!-- MindStore Mark: Two brain-lobe arches forming M, center synapse dot -->
+  <path d="M104 408 V184 Q104 104 184 104 Q256 104 256 208 Q256 104 328 104 Q408 104 408 184 V408"
+        stroke="url(#ms)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="216" r="24" fill="url(#ms)"/>
+</svg>

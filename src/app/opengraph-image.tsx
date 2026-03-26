@@ -2,7 +2,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "MindStore — Your mind, searchable.";
+export const alt = "MindStore — Your AI-Powered Second Brain";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -47,28 +47,36 @@ export default async function OGImage() {
           }}
         />
 
-        {/* Logo */}
+        {/* Logo Mark — inline SVG path as text art */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 80,
-            height: 80,
-            borderRadius: 24,
-            background: "linear-gradient(135deg, #14b8a6, #0284c7)",
             marginBottom: 32,
-            boxShadow: "0 8px 32px rgba(20,184,166,0.3)",
           }}
         >
-          <div
-            style={{
-              fontSize: 40,
-              display: "flex",
-            }}
+          <svg
+            width="72"
+            height="72"
+            viewBox="0 0 32 32"
+            fill="none"
           >
-            🧠
-          </div>
+            <defs>
+              <linearGradient id="og-g" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#14b8a6" />
+                <stop offset="100%" stopColor="#0ea5e9" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M7 26 V12 Q7 6 12 6 Q16 6 16 13 Q16 6 20 6 Q25 6 25 12 V26"
+              stroke="url(#og-g)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="16" cy="13.5" r="2" fill="url(#og-g)" />
+          </svg>
         </div>
 
         {/* Title */}
@@ -83,7 +91,7 @@ export default async function OGImage() {
             display: "flex",
           }}
         >
-          Your mind, searchable.
+          Your AI-powered second brain.
         </div>
 
         {/* Subtitle */}
@@ -94,10 +102,10 @@ export default async function OGImage() {
             marginTop: 20,
             textAlign: "center",
             display: "flex",
-            maxWidth: 700,
+            maxWidth: 800,
           }}
         >
-          Import ChatGPT in 30 seconds · Ask anything · Get answers from your brain
+          Import from 12+ sources · Chat with your knowledge · 35 plugins · Free & open source
         </div>
 
         {/* Bottom pills */}
@@ -108,7 +116,7 @@ export default async function OGImage() {
             marginTop: 40,
           }}
         >
-          {["Self-Hosted", "AI-Powered", "100% Private", "33 Plugins"].map((label) => (
+          {["Self-Hosted", "AI-Powered", "100% Private", "35 Plugins", "MIT Licensed"].map((label) => (
             <div
               key={label}
               style={{

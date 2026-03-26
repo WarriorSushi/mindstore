@@ -9,6 +9,7 @@ import {
   Target, Route, FileUser, Mail, Download, Dna,
   type LucideIcon,
 } from "lucide-react";
+import { MindStoreLogo, MindStoreLogoMono } from "@/components/MindStoreLogo";
 
 // ─── Import source icons (for the import grid) ───────────────
 const importSources = [
@@ -49,9 +50,7 @@ export function LandingClient() {
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0a0a0b]/80 backdrop-blur-2xl backdrop-saturate-150 border-b border-white/[0.04]">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
-            </div>
+            <MindStoreLogo className="w-7 h-7" />
             <span className="font-semibold text-[15px] tracking-[-0.01em]">
               MindStore
             </span>
@@ -492,7 +491,7 @@ export function LandingClient() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px] text-zinc-600">
             <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4" />
+              <MindStoreLogoMono className="w-4 h-4" />
               <span className="font-medium">MindStore</span>
               <span className="text-zinc-700">·</span>
               <span>MIT License</span>
