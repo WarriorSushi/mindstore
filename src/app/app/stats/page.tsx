@@ -3,26 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
-  Brain, Database, FileText, Loader2,
-  BarChart3, TrendingUp, BookOpen, Hash, Sparkles, Calendar,
-  ArrowUpRight,
-  type LucideIcon,
+  BarChart3, ArrowUpRight,
 } from "lucide-react";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { EmptyState } from "@/components/EmptyState";
 import { getSourceType } from "@/lib/source-types";
 import { usePageTitle } from "@/lib/use-page-title";
-
-// Source type config delegated to shared module: getSourceType()
-
-// ─── Source bar colors (for the chart) ──────────────────────
-const barColors: Record<string, string> = {
-  chatgpt: "bg-green-500", text: "bg-teal-500", file: "bg-blue-500", url: "bg-orange-500",
-  kindle: "bg-amber-500", document: "bg-blue-400", youtube: "bg-red-500", bookmark: "bg-sky-500",
-  obsidian: "bg-teal-400", reddit: "bg-orange-400", audio: "bg-teal-400", image: "bg-sky-500",
-  notion: "bg-zinc-400", twitter: "bg-sky-400", telegram: "bg-teal-400",
-  pocket: "bg-emerald-500", instapaper: "bg-emerald-400", spotify: "bg-emerald-400", readwise: "bg-amber-400",
-};
 
 interface StatsData {
   total: number;
@@ -237,26 +223,27 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 md:space-y-10">
         <div className="space-y-2">
           <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-40" />
-          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-56" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-72" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="animate-pulse rounded-lg bg-white/[0.04] w-8 h-8" />
-                <div className="animate-pulse rounded-xl bg-white/[0.04] h-3.5 w-20" />
-              </div>
-              <div className="animate-pulse rounded-xl bg-white/[0.04] h-8 w-16" />
-              <div className="animate-pulse rounded-xl bg-white/[0.04] h-2.5 w-28" />
+        <div className="space-y-3">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-28" />
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-44 w-full" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-48" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="animate-pulse rounded bg-white/[0.04] w-3.5 h-3.5" />
+              <div className="animate-pulse rounded bg-white/[0.04] h-3 w-16" />
+              <div className="flex-1 h-[5px] rounded-full bg-white/[0.04]" />
+              <div className="animate-pulse rounded bg-white/[0.04] h-3 w-8" />
             </div>
           ))}
-        </div>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
-          <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-32" />
-          <div className="animate-pulse rounded-xl bg-white/[0.04] h-48 w-full" />
         </div>
       </div>
     );
@@ -318,217 +305,159 @@ export default function StatsPage() {
     : `${totalReadingMins}m`;
 
   return (
-    <PageTransition className="space-y-4 md:space-y-6">
-      {/* Header */}
+    <PageTransition className="space-y-6 md:space-y-10">
+      {/* Header with inline summary — replaces hero metric cards */}
       <Stagger>
         <div>
           <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Knowledge Stats</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">A bird&apos;s-eye view of your second brain</p>
-        </div>
-      </Stagger>
-
-      {/* ═══ Hero Stats Grid ═══ */}
-      <Stagger>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
-          {/* Total Memories */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 relative overflow-hidden group hover:bg-white/[0.04] transition-all">
-            <div className="absolute inset-0 bg-gradient-to-b from-teal-500/[0.04] to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Database className="w-3.5 h-3.5 text-teal-400" />
-                <span className="text-[10px] text-zinc-600 font-semibold uppercase tracking-[0.06em]">Memories</span>
-              </div>
-              <p className="text-[28px] font-bold tabular-nums tracking-[-0.02em] text-white">
-                {formatNumber(data.total)}
-              </p>
-            </div>
-          </div>
-
-          {/* Total Words */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 relative overflow-hidden group hover:bg-white/[0.04] transition-all">
-            <div className="absolute inset-0 bg-gradient-to-b from-sky-500/[0.04] to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Hash className="w-3.5 h-3.5 text-sky-400" />
-                <span className="text-[10px] text-zinc-600 font-semibold uppercase tracking-[0.06em]">Words</span>
-              </div>
-              <p className="text-[28px] font-bold tabular-nums tracking-[-0.02em] text-white">
-                {formatNumber(data.words.total)}
-              </p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">~{readingTimeLabel} reading time</p>
-            </div>
-          </div>
-
-          {/* Source Types */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 relative overflow-hidden group hover:bg-white/[0.04] transition-all">
-            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.04] to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-[10px] text-zinc-600 font-semibold uppercase tracking-[0.06em]">Sources</span>
-              </div>
-              <p className="text-[28px] font-bold tabular-nums tracking-[-0.02em] text-white">
-                {data.sources.length}
-              </p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">Diversity: {data.diversityScore}%</p>
-            </div>
-          </div>
-
-          {/* Knowledge Span */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 relative overflow-hidden group hover:bg-white/[0.04] transition-all">
-            <div className="absolute inset-0 bg-gradient-to-b from-amber-500/[0.04] to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-[10px] text-zinc-600 font-semibold uppercase tracking-[0.06em]">Span</span>
-              </div>
-              <p className="text-[28px] font-bold tabular-nums tracking-[-0.02em] text-white">
-                {knowledgeSpanLabel}
-              </p>
-              <p className="text-[10px] text-zinc-600 mt-0.5">of knowledge</p>
-            </div>
-          </div>
-        </div>
-      </Stagger>
-
-      {/* ═══ Knowledge Growth Chart ═══ */}
-      <Stagger>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 md:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-teal-400" />
-              <h2 className="text-[14px] font-semibold">Knowledge Growth</h2>
-            </div>
-            <span className="text-[10px] text-zinc-600">Last 12 months</span>
-          </div>
-          <canvas
-            ref={growthCanvasRef}
-            className="w-full"
-            style={{ height: "180px" }}
-          />
-          <div className="flex items-center gap-4 mt-3 justify-center">
-            <span className="flex items-center gap-1.5 text-[10px] text-zinc-600">
-              <span className="w-3 h-[3px] rounded-full bg-teal-500/40" />
-              Monthly additions
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 mt-1">
+            <span className="text-[13px] text-zinc-400">
+              <span className="text-zinc-200 font-medium tabular-nums">{formatNumber(data.total)}</span> memories
             </span>
-            <span className="flex items-center gap-1.5 text-[10px] text-zinc-600">
-              <span className="w-3 h-[2px] rounded-full bg-teal-500/80" />
-              Cumulative total
+            <span className="text-zinc-700 text-[13px]">·</span>
+            <span className="text-[13px] text-zinc-400">
+              <span className="text-zinc-200 font-medium tabular-nums">{formatNumber(data.words.total)}</span> words
+            </span>
+            <span className="text-zinc-700 text-[13px]">·</span>
+            <span className="text-[13px] text-zinc-400">
+              <span className="text-zinc-200 font-medium tabular-nums">{data.sources.length}</span> source types
+            </span>
+            <span className="text-zinc-700 text-[13px]">·</span>
+            <span className="text-[13px] text-zinc-400">
+              spanning <span className="text-zinc-200 font-medium">{knowledgeSpanLabel}</span>
+            </span>
+            <span className="text-zinc-700 text-[13px]">·</span>
+            <span className="text-[13px] text-zinc-400">
+              ~<span className="text-zinc-200 font-medium">{readingTimeLabel}</span> to read
             </span>
           </div>
         </div>
       </Stagger>
 
-      {/* ═══ Two-Column: Source Distribution + Content Depth ═══ */}
-      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
-        {/* Source Distribution */}
-        <Stagger>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 className="w-4 h-4 text-sky-400" />
-              <h2 className="text-[14px] font-semibold">Source Distribution</h2>
-            </div>
-            <div className="space-y-2">
-              {data.sources.map((s) => {
-                const cfg = getSourceType(s.type);
-                const Icon = cfg.icon;
-                const pct = data.total > 0 ? Math.round((s.count / data.total) * 100) : 0;
-                return (
-                  <div key={s.type} className="flex items-center gap-2.5">
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
-                      <Icon className={`w-3 h-3 ${cfg.textColor}`} />
-                    </div>
-                    <span className="text-[12px] text-zinc-400 w-20 shrink-0 truncate">{cfg.label}</span>
-                    <div className="flex-1 h-[6px] rounded-full bg-white/[0.04] overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${barColors[s.type] || "bg-zinc-500"} opacity-60 transition-all`}
-                        style={{ width: `${Math.max(pct, 2)}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] text-zinc-500 tabular-nums w-12 text-right shrink-0">
-                      {s.count} <span className="text-zinc-700">({pct}%)</span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+      {/* ═══ Knowledge Growth ═══ */}
+      <Stagger>
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[14px] font-medium text-zinc-300">Growth over time</h2>
+            <span className="text-[11px] text-zinc-600">Last 12 months</span>
           </div>
-        </Stagger>
-
-        {/* Content Depth */}
-        <Stagger>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-[14px] font-semibold">Content Depth</h2>
-              </div>
-              <span className="text-[10px] text-zinc-600">Avg: {data.words.avg} words</span>
-            </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 md:p-5">
             <canvas
-              ref={depthCanvasRef}
+              ref={growthCanvasRef}
               className="w-full"
-              style={{ height: "140px" }}
+              style={{ height: "180px" }}
             />
-            <div className="flex items-center gap-3 mt-3 justify-center flex-wrap">
-              <span className="text-[9px] text-zinc-600">
-                Brief <span className="text-sky-400/60">■</span>
+            <div className="flex items-center gap-4 mt-3">
+              <span className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+                <span className="w-3 h-[3px] rounded-full bg-teal-500/40" />
+                Monthly
               </span>
-              <span className="text-[9px] text-zinc-600">
-                Medium <span className="text-teal-400/60">■</span>
-              </span>
-              <span className="text-[9px] text-zinc-600">
-                Detailed <span className="text-emerald-400/60">■</span>
-              </span>
-              <span className="text-[9px] text-zinc-600">
-                Deep <span className="text-amber-400/60">■</span>
-              </span>
-              <span className="text-[9px] text-zinc-600">
-                Extensive <span className="text-red-400/50">■</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+                <span className="w-3 h-[2px] rounded-full bg-teal-500/80" />
+                Cumulative
               </span>
             </div>
           </div>
-        </Stagger>
-      </div>
+        </div>
+      </Stagger>
 
-      {/* ═══ Two-Column: Embedding Coverage + Word Stats ═══ */}
-      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
-        {/* Embedding Coverage */}
+      {/* ═══ Source Distribution — bare, no card wrapper ═══ */}
+      <Stagger>
+        <div>
+          <h2 className="text-[14px] font-medium text-zinc-300 mb-3">Where your knowledge comes from</h2>
+          <div className="space-y-1.5">
+            {data.sources.map((s) => {
+              const cfg = getSourceType(s.type);
+              const Icon = cfg.icon;
+              const pct = data.total > 0 ? Math.round((s.count / data.total) * 100) : 0;
+              return (
+                <div key={s.type} className="flex items-center gap-2.5 group">
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${cfg.textColor}`} />
+                  <span className="text-[12px] text-zinc-400 w-20 shrink-0 truncate">{cfg.label}</span>
+                  <div className="flex-1 h-[5px] rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-teal-500/50 transition-all duration-500`}
+                      style={{ width: `${Math.max(pct, 2)}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-zinc-600 tabular-nums shrink-0">
+                    {s.count}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Stagger>
+
+      {/* ═══ Content Depth + Semantic Coverage — side by side ═══ */}
+      <div className="grid md:grid-cols-5 gap-6 md:gap-8">
+        {/* Content Depth — takes 3 cols */}
         <Stagger>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Brain className="w-4 h-4 text-teal-400" />
-              <h2 className="text-[14px] font-semibold">Semantic Coverage</h2>
+          <div className="md:col-span-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[14px] font-medium text-zinc-300">Content depth</h2>
+              <span className="text-[11px] text-zinc-600">Avg {data.words.avg} words/memory</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <canvas
+                ref={depthCanvasRef}
+                className="w-full"
+                style={{ height: "140px" }}
+              />
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <span className="text-[9px] text-zinc-600">
+                  <span className="text-sky-400/60">■</span> Brief
+                </span>
+                <span className="text-[9px] text-zinc-600">
+                  <span className="text-teal-400/60">■</span> Medium
+                </span>
+                <span className="text-[9px] text-zinc-600">
+                  <span className="text-emerald-400/60">■</span> Detailed
+                </span>
+                <span className="text-[9px] text-zinc-600">
+                  <span className="text-amber-400/60">■</span> Deep
+                </span>
+                <span className="text-[9px] text-zinc-600">
+                  <span className="text-red-400/50">■</span> Extensive
+                </span>
+              </div>
+            </div>
+          </div>
+        </Stagger>
+
+        {/* Semantic Coverage — takes 2 cols, no card wrapper */}
+        <Stagger>
+          <div className="md:col-span-2">
+            <h2 className="text-[14px] font-medium text-zinc-300 mb-3">Semantic coverage</h2>
+            <div className="flex items-start gap-4">
               {/* Progress ring */}
-              <div className="relative w-20 h-20 shrink-0">
+              <div className="relative w-16 h-16 shrink-0">
                 <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
                   <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="6" />
                   <circle
                     cx="40" cy="40" r="34" fill="none"
-                    stroke="rgba(20, 184, 166, 0.7)"
+                    stroke="rgba(20, 184, 166, 0.6)"
                     strokeWidth="6"
                     strokeLinecap="round"
                     strokeDasharray={`${(data.embeddings.percentage / 100) * 2 * Math.PI * 34} ${2 * Math.PI * 34}`}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[18px] font-bold tabular-nums text-white">{data.embeddings.percentage}%</span>
+                  <span className="text-[15px] font-semibold tabular-nums text-zinc-200">{data.embeddings.percentage}%</span>
                 </div>
               </div>
-              <div>
+              <div className="pt-1">
                 <p className="text-[13px] text-zinc-300">
-                  <span className="font-semibold">{data.embeddings.covered.toLocaleString()}</span> of{" "}
-                  <span className="font-semibold">{data.embeddings.total.toLocaleString()}</span> memories
-                </p>
-                <p className="text-[11px] text-zinc-600 mt-1">
-                  have semantic embeddings for AI search
+                  <span className="font-medium">{data.embeddings.covered.toLocaleString()}</span>
+                  <span className="text-zinc-600"> / </span>
+                  <span className="text-zinc-500">{data.embeddings.total.toLocaleString()}</span>
+                  <span className="text-zinc-600 text-[12px]"> indexed</span>
                 </p>
                 {data.embeddings.percentage < 100 && (
                   <Link
                     href="/app/settings"
-                    className="inline-flex items-center gap-1 text-[11px] text-teal-400 hover:text-teal-300 mt-2 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] text-teal-400/80 hover:text-teal-300 mt-1.5 transition-colors"
                   >
                     Reindex to 100%
                     <ArrowUpRight className="w-3 h-3" />
@@ -536,62 +465,45 @@ export default function StatsPage() {
                 )}
               </div>
             </div>
-          </div>
-        </Stagger>
 
-        {/* Word Stats */}
-        <Stagger>
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Hash className="w-4 h-4 text-sky-400" />
-              <h2 className="text-[14px] font-semibold">Word Statistics</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wide font-semibold mb-1">Total Words</p>
-                <p className="text-[20px] font-bold tabular-nums text-white">{formatNumber(data.words.total)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wide font-semibold mb-1">Avg per Memory</p>
-                <p className="text-[20px] font-bold tabular-nums text-white">{data.words.avg}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wide font-semibold mb-1">Shortest</p>
-                <p className="text-[16px] font-semibold tabular-nums text-zinc-400">{data.words.min} words</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wide font-semibold mb-1">Longest</p>
-                <p className="text-[16px] font-semibold tabular-nums text-zinc-400">{formatNumber(data.words.max)} words</p>
+            {/* Word range — compact, no card */}
+            <div className="mt-6 space-y-2">
+              <h2 className="text-[14px] font-medium text-zinc-300">Word range</h2>
+              <div className="flex items-baseline gap-4">
+                <div>
+                  <span className="text-[18px] font-semibold tabular-nums text-zinc-200">{data.words.min}</span>
+                  <span className="text-[11px] text-zinc-600 ml-1">shortest</span>
+                </div>
+                <span className="text-zinc-700">→</span>
+                <div>
+                  <span className="text-[18px] font-semibold tabular-nums text-zinc-200">{formatNumber(data.words.max)}</span>
+                  <span className="text-[11px] text-zinc-600 ml-1">longest</span>
+                </div>
               </div>
             </div>
           </div>
         </Stagger>
       </div>
 
-      {/* ═══ Top Sources ═══ */}
+      {/* ═══ Top Sources — bare list ═══ */}
       <Stagger>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-4 h-4 text-amber-400" />
-            <h2 className="text-[14px] font-semibold">Top Sources</h2>
-          </div>
-          <div className="space-y-1">
-            {data.topSources.slice(0, 10).map((s, i) => {
+        <div>
+          <h2 className="text-[14px] font-medium text-zinc-300 mb-2">Top sources</h2>
+          <div className="divide-y divide-white/[0.04]">
+            {data.topSources.slice(0, 8).map((s, i) => {
               const cfg = getSourceType(s.type);
               const Icon = cfg.icon;
               return (
                 <div
                   key={`${s.type}-${s.title}-${i}`}
-                  className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/[0.03] transition-colors"
+                  className="flex items-center gap-3 py-2 group"
                 >
-                  <span className="text-[10px] text-zinc-700 tabular-nums w-5 text-right shrink-0">
-                    {i + 1}.
+                  <span className="text-[11px] text-zinc-700 tabular-nums w-4 text-right shrink-0">
+                    {i + 1}
                   </span>
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
-                    <Icon className={`w-2.5 h-2.5 ${cfg.textColor}`} />
-                  </div>
-                  <span className="text-[12px] text-zinc-300 truncate flex-1">{s.title}</span>
-                  <span className="text-[11px] text-zinc-600 tabular-nums shrink-0">{s.count} memories</span>
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${cfg.textColor}`} />
+                  <span className="text-[13px] text-zinc-300 truncate flex-1 group-hover:text-zinc-100 transition-colors">{s.title}</span>
+                  <span className="text-[11px] text-zinc-600 tabular-nums shrink-0">{s.count}</span>
                 </div>
               );
             })}

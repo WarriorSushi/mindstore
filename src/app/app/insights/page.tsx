@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import {
   Brain, Zap, AlertTriangle, Clock, TrendingUp, RefreshCw,
-  Loader2, MessageCircle, FileText, Globe, Type, Sparkles,
+  Loader2, Sparkles,
   ChevronRight, Activity, Search, Check, X, ArrowRight,
-  Gem, BookOpenCheck, MessageSquare, Shield, Trash2, Eye,
+  Shield,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { getSourceType } from '@/lib/source-types';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -38,17 +39,6 @@ interface Contradiction {
 }
 
 type TabId = 'connections' | 'contradictions' | 'forgetting';
-
-const sourceConfig: Record<string, { icon: any; color: string }> = {
-  chatgpt: { icon: MessageCircle, color: 'text-green-400 bg-green-500/10' },
-  text: { icon: Type, color: 'text-teal-400 bg-teal-500/10' },
-  file: { icon: FileText, color: 'text-blue-400 bg-blue-500/10' },
-  url: { icon: Globe, color: 'text-orange-400 bg-orange-500/10' },
-  kindle: { icon: BookOpenCheck, color: 'text-amber-400 bg-amber-500/10' },
-  document: { icon: FileText, color: 'text-blue-400 bg-blue-500/10' },
-  obsidian: { icon: Gem, color: 'text-sky-400 bg-sky-500/10' },
-  reddit: { icon: MessageSquare, color: 'text-orange-400 bg-orange-500/10' },
-};
 
 export default function InsightsPage() {
   usePageTitle("Insights");
@@ -186,7 +176,6 @@ export default function InsightsPage() {
       {metabolism && (
         <Stagger>
         <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/[0.08] to-sky-500/[0.04] pointer-events-none" />
           <div className="relative p-5 md:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 flex-1 min-w-0">
@@ -195,7 +184,7 @@ export default function InsightsPage() {
                   <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Knowledge Metabolism</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] bg-gradient-to-r from-teal-400 to-sky-400 bg-clip-text text-transparent leading-none">
+                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] text-teal-400 leading-none">
                     {metabolism.score}
                   </span>
                   <span className="text-[16px] text-zinc-600 font-medium">/10</span>
@@ -222,7 +211,6 @@ export default function InsightsPage() {
       {mindDiff && mindDiff.newMemories > 0 && (
         <Stagger>
           <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.06] to-emerald-500/[0.02] pointer-events-none" />
           <div className="relative p-4 md:p-5">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -283,7 +271,7 @@ export default function InsightsPage() {
                   Unexpected bridges between distant pieces of your knowledge — ideas you might not have connected.
                 </p>
                 {connections.length === 0 ? (
-                  <EmptyState message="Import more knowledge from different sources to discover cross-pollinations." />
+                  <InsightEmptyState message="Import more knowledge from different sources to discover cross-pollinations." />
                 ) : (
                   <div className="space-y-2.5">
                     {connections.map((c, i) => (
@@ -339,7 +327,7 @@ export default function InsightsPage() {
                 )}
 
                 {contradictions.length === 0 ? (
-                  <EmptyState
+                  <InsightEmptyState
                     message={scanning ? 'Scanning your knowledge for contradictions…' : 'No contradictions found. Hit "Deep Scan" to run an AI-powered analysis.'}
                     icon={scanning ? Loader2 : Shield}
                     iconClass={scanning ? 'animate-spin text-red-400' : 'text-emerald-500'}
@@ -367,7 +355,7 @@ export default function InsightsPage() {
                   Knowledge at risk of fading, based on the Ebbinghaus forgetting curve.
                 </p>
                 {forgetting.length === 0 ? (
-                  <EmptyState message="Nothing at risk yet. Check back after a few days." />
+                  <InsightEmptyState message="Nothing at risk yet. Check back after a few days." />
                 ) : (
                   <div className="space-y-1.5">
                     {forgetting.map((m, i) => {
@@ -381,7 +369,7 @@ export default function InsightsPage() {
                         : m.urgency > 0.6
                           ? 'bg-amber-500'
                           : 'bg-blue-500';
-                      const cfg = sourceConfig[m.source] || { icon: FileText, color: 'text-zinc-400 bg-zinc-500/10' };
+                      const cfg = getSourceType(m.source);
                       const SrcIcon = cfg.icon;
 
                       return (
@@ -395,7 +383,7 @@ export default function InsightsPage() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+                                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.textColor} ${cfg.bgColor}`}>
                                   <SrcIcon className="w-2.5 h-2.5" />
                                   {m.source}
                                 </span>
@@ -561,7 +549,7 @@ function ContradictionMemoryCard({ label, memory, accentColor }: {
   memory: MemoryLike;
   accentColor: string;
 }) {
-  const cfg = sourceConfig[memory.source] || { icon: FileText, color: 'text-zinc-400 bg-zinc-500/10' };
+  const cfg = getSourceType(memory.source);
   const SrcIcon = cfg.icon;
 
   const formatDate = (date?: string) => {
@@ -577,7 +565,7 @@ function ContradictionMemoryCard({ label, memory, accentColor }: {
       </div>
       
       <div className="flex items-center gap-2 mb-2">
-        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.textColor} ${cfg.bgColor}`}>
           <SrcIcon className="w-2.5 h-2.5" />
           {memory.source}
         </span>
@@ -596,13 +584,13 @@ function ContradictionMemoryCard({ label, memory, accentColor }: {
 // ──────────────────────────────────────────────────────────────
 
 function MemoryCard({ memory }: { memory: MemoryLike }) {
-  const cfg = sourceConfig[memory.source] || { icon: FileText, color: 'text-zinc-400 bg-zinc-500/10' };
+  const cfg = getSourceType(memory.source);
   const SrcIcon = cfg.icon;
 
   return (
     <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3">
       <div className="flex items-center gap-2 mb-1.5">
-        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.color}`}>
+        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.textColor} ${cfg.bgColor}`}>
           <SrcIcon className="w-2.5 h-2.5" />
           {memory.source}
         </span>
@@ -613,13 +601,11 @@ function MemoryCard({ memory }: { memory: MemoryLike }) {
   );
 }
 
-function EmptyState({ message, icon, iconClass }: { message: string; icon?: any; iconClass?: string }) {
+function InsightEmptyState({ message, icon, iconClass }: { message: string; icon?: any; iconClass?: string }) {
   const Icon = icon || Brain;
   return (
     <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-white/[0.08]">
-      <div className="w-10 h-10 rounded-2xl bg-white/[0.04] flex items-center justify-center mb-3">
-        <Icon className={`w-5 h-5 ${iconClass || 'text-zinc-600'}`} />
-      </div>
+      <Icon className={`w-5 h-5 mb-3 ${iconClass || 'text-zinc-600'}`} />
       <p className="text-[13px] text-zinc-500 text-center max-w-xs">{message}</p>
     </div>
   );
