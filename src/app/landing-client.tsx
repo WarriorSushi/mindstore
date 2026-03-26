@@ -107,6 +107,249 @@ function FeatureCard({ icon: Icon, color, title, desc, tags }: {
   );
 }
 
+/* ─── Product Preview — CSS-rendered app mockups ─── */
+function ProductPreview() {
+  const [activeTab, setActiveTab] = useState(0);
+  const tabs = [
+    { label: "Dashboard", icon: "◈" },
+    { label: "Chat", icon: "◉" },
+    { label: "Explore", icon: "◎" },
+  ];
+
+  return (
+    <section className="border-t border-white/[0.04] overflow-hidden">
+      <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+        <Reveal>
+          <p className="text-[12px] font-semibold text-teal-400 tracking-[0.1em] uppercase mb-3">See it in action</p>
+          <h2 className="text-[clamp(1.4rem,2.5vw,2rem)] font-bold tracking-[-0.03em] mb-3">
+            Not another note app. A knowledge OS.
+          </h2>
+          <p className="text-[13px] text-zinc-500 max-w-lg leading-[1.7] mb-8">
+            Every feature designed for depth. Every pixel considered.
+          </p>
+        </Reveal>
+
+        {/* Tab switcher */}
+        <Reveal delay={0.06}>
+          <div className="flex gap-1 mb-6 bg-zinc-900/60 border border-zinc-800/50 rounded-xl p-1 w-fit">
+            {tabs.map((tab, i) => (
+              <button
+                key={tab.label}
+                onClick={() => setActiveTab(i)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                  activeTab === i
+                    ? "bg-white/[0.08] text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <span className="text-[11px]">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* App mockup frame */}
+        <Reveal delay={0.1}>
+          <div className="rounded-2xl bg-[#0c0c0e] border border-zinc-800/50 overflow-hidden shadow-2xl shadow-black/40">
+            {/* Window chrome */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/40 bg-zinc-900/20">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/40" />
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/40" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/40" />
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex items-center gap-2 px-4 py-1 rounded-lg bg-zinc-900/60 border border-zinc-800/30">
+                  <Lock className="w-3 h-3 text-zinc-600" />
+                  <span className="text-[11px] text-zinc-500 font-mono">mindstore.org/app</span>
+                </div>
+              </div>
+              <div className="w-12" />
+            </div>
+
+            {/* App content — CSS rendered mockup */}
+            <div className="flex min-h-[340px] md:min-h-[420px]">
+              {/* Sidebar mockup */}
+              <div className="w-[180px] md:w-[200px] border-r border-zinc-800/40 bg-[#0a0a0c] p-3 hidden sm:block">
+                <div className="flex items-center gap-2 mb-5 px-1">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-teal-500 to-sky-600 flex items-center justify-center">
+                    <span className="text-[10px] text-white font-bold">M</span>
+                  </div>
+                  <span className="text-[12px] font-semibold text-zinc-200">MindStore</span>
+                </div>
+                {[
+                  { label: "Dashboard", active: activeTab === 0 },
+                  { label: "Chat", active: activeTab === 1 },
+                  { label: "Explore", active: activeTab === 2 },
+                  { label: "Import", active: false },
+                  { label: "Fingerprint", active: false },
+                  { label: "Insights", active: false },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className={`px-2.5 py-1.5 rounded-lg text-[12px] mb-0.5 transition-colors ${
+                      item.active
+                        ? "bg-teal-500/10 text-teal-400 font-medium"
+                        : "text-zinc-600 hover:text-zinc-400"
+                    }`}
+                  >
+                    {item.label}
+                  </div>
+                ))}
+                <div className="mt-4 pt-3 border-t border-zinc-800/40 space-y-0.5">
+                  {["Flashcards", "Blog Writer", "Mind Map", "Collections"].map((p) => (
+                    <div key={p} className="px-2.5 py-1.5 text-[11px] text-zinc-700">{p}</div>
+                  ))}
+                  <div className="px-2.5 py-1 text-[10px] text-zinc-700">+31 more plugins</div>
+                </div>
+              </div>
+
+              {/* Main content area */}
+              <div className="flex-1 p-5 md:p-6 overflow-hidden">
+                {activeTab === 0 && <DashboardMockup />}
+                {activeTab === 1 && <ChatMockup />}
+                {activeTab === 2 && <ExploreMockup />}
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* Mockup sub-components — pure CSS, no real data */
+function DashboardMockup() {
+  return (
+    <div className="space-y-5 animate-in fade-in duration-300">
+      <div>
+        <p className="text-[16px] font-semibold tracking-[-0.01em] text-zinc-200">Good afternoon</p>
+        <p className="text-[11px] text-zinc-600 mt-0.5">8,392 memories · last import 2h ago</p>
+      </div>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {[
+          { label: "Memories", value: "8,392", color: "text-teal-400" },
+          { label: "Sources", value: "12", color: "text-sky-400" },
+          { label: "Topics", value: "147", color: "text-emerald-400" },
+          { label: "This Week", value: "+234", color: "text-amber-400" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3">
+            <p className="text-[10px] text-zinc-600">{s.label}</p>
+            <p className={`text-[18px] font-bold tracking-tight ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+      {/* Search bar */}
+      <div className="h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3 gap-2">
+        <Search className="w-3.5 h-3.5 text-zinc-600" />
+        <span className="text-[12px] text-zinc-600">Search your knowledge...</span>
+      </div>
+      {/* Recent memories */}
+      <div className="space-y-1.5">
+        {[
+          { title: "Pricing strategy for SaaS", source: "ChatGPT", time: "2h ago" },
+          { title: "React Server Components deep dive", source: "ChatGPT", time: "5h ago" },
+          { title: "The Bitter Lesson — Rich Sutton", source: "URL", time: "1d ago" },
+        ].map((m) => (
+          <div key={m.title} className="flex items-center gap-3 rounded-xl bg-white/[0.02] border border-white/[0.04] p-3">
+            <div className="w-7 h-7 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0">
+              <FileText className="w-3 h-3 text-teal-400/60" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] text-zinc-300 truncate">{m.title}</p>
+              <p className="text-[10px] text-zinc-600">{m.source} · {m.time}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatMockup() {
+  return (
+    <div className="flex flex-col h-full animate-in fade-in duration-300" style={{ minHeight: 300 }}>
+      <div className="flex-1 space-y-4 pb-4">
+        {/* User message */}
+        <div className="flex justify-end">
+          <div className="max-w-[75%] rounded-2xl rounded-br-md bg-teal-600/20 border border-teal-500/15 px-4 py-2.5">
+            <p className="text-[12px] text-zinc-200 leading-relaxed">What did I learn about pricing strategy?</p>
+          </div>
+        </div>
+        {/* AI response */}
+        <div className="flex justify-start">
+          <div className="max-w-[85%] space-y-2.5">
+            <div className="rounded-2xl rounded-bl-md bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+              <p className="text-[12px] text-zinc-300 leading-[1.7]">
+                Based on your conversations, you&apos;ve explored pricing extensively:
+              </p>
+              <ul className="mt-2 space-y-1 text-[11px] text-zinc-400 leading-relaxed">
+                <li>• <strong className="text-zinc-300">Freemium</strong> works when marginal cost is near zero</li>
+                <li>• <strong className="text-zinc-300">Value-based pricing</strong> beats cost-plus for SaaS</li>
+                <li>• You noted YC&apos;s advice: &quot;charge more than you think&quot;</li>
+              </ul>
+            </div>
+            {/* Citations */}
+            <div className="flex gap-1.5 flex-wrap">
+              {["ChatGPT · Mar 2025", "Kindle · Zero to One", "YouTube · YC Talk"].map((c) => (
+                <span key={c} className="text-[9px] text-zinc-600 bg-zinc-900/60 border border-zinc-800/40 px-2 py-0.5 rounded-full">{c}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Input */}
+      <div className="h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3 gap-2 mt-auto">
+        <span className="text-[12px] text-zinc-600 flex-1">Ask about your knowledge...</span>
+        <div className="w-7 h-7 rounded-lg bg-teal-500/20 flex items-center justify-center">
+          <ArrowRight className="w-3 h-3 text-teal-400" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExploreMockup() {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* Search */}
+      <div className="h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3 gap-2">
+        <Search className="w-3.5 h-3.5 text-zinc-600" />
+        <span className="text-[12px] text-teal-400">machine learning</span>
+        <span className="ml-auto text-[10px] text-zinc-600">12 results · 0.04s</span>
+      </div>
+      {/* Filter chips */}
+      <div className="flex gap-1.5">
+        {["All", "ChatGPT", "Kindle", "URLs", "Notes"].map((f, i) => (
+          <span key={f} className={`text-[10px] px-2.5 py-1 rounded-lg border ${
+            i === 0 ? "bg-teal-500/10 border-teal-500/20 text-teal-400 font-medium" : "bg-white/[0.02] border-white/[0.04] text-zinc-600"
+          }`}>{f}</span>
+        ))}
+      </div>
+      {/* Results */}
+      <div className="space-y-1.5">
+        {[
+          { title: "Transformers vs RNNs — attention mechanism breakthrough", relevance: "98%", source: "ChatGPT" },
+          { title: "Neural networks learn features hierarchically", relevance: "94%", source: "ChatGPT" },
+          { title: "RAG paper summary — retrieval + generation", relevance: "91%", source: "PDF" },
+          { title: "The Bitter Lesson — computation > hand-crafting", relevance: "87%", source: "URL" },
+          { title: "Course notes: MIT 6.006 algorithms", relevance: "72%", source: "File" },
+        ].map((r) => (
+          <div key={r.title} className="flex items-center gap-3 rounded-xl bg-white/[0.02] border border-white/[0.04] p-3 hover:border-white/[0.08] transition-colors">
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] text-zinc-300 truncate">{r.title}</p>
+              <p className="text-[10px] text-zinc-600 mt-0.5">{r.source}</p>
+            </div>
+            <span className="text-[10px] text-teal-400/60 font-mono shrink-0">{r.relevance}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LandingClient() {
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-teal-500/20 overflow-x-hidden">
@@ -243,6 +486,101 @@ export function LandingClient() {
               ))}
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════ PRODUCT PREVIEW — show the actual app ═══════ */}
+      <ProductPreview />
+
+      {/* ═══════ CHATGPT IMPORT CALLOUT ═══════ */}
+      <section className="border-t border-white/[0.04] bg-gradient-to-b from-emerald-500/[0.02] to-transparent">
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+          <div className="grid md:grid-cols-[1fr_1.2fr] gap-10 md:gap-16 items-center">
+            <div>
+              <Reveal>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/[0.08] border border-emerald-500/15 text-[11px] font-medium text-emerald-400 mb-5">
+                  <Upload className="w-3 h-3" />
+                  Most popular import
+                </div>
+                <h2 className="text-[clamp(1.4rem,2.5vw,2rem)] font-bold tracking-[-0.03em]">
+                  Import your ChatGPT
+                  <br />
+                  <span className="text-emerald-400">in 30 seconds.</span>
+                </h2>
+              </Reveal>
+              <Reveal delay={0.08}>
+                <p className="text-[13px] text-zinc-500 mt-4 leading-[1.7] max-w-md">
+                  Every conversation you&apos;ve ever had with ChatGPT — searchable, connected,
+                  and ready to power your AI tools. Export from OpenAI, drop the file, done.
+                </p>
+              </Reveal>
+              <Reveal delay={0.12}>
+                <div className="mt-6 space-y-3">
+                  {[
+                    { step: "1", text: "Go to ChatGPT → Settings → Data controls → Export data" },
+                    { step: "2", text: "Upload the ZIP to MindStore" },
+                    { step: "3", text: "Search, chat, and discover connections instantly" },
+                  ].map((s) => (
+                    <div key={s.step} className="flex items-start gap-3">
+                      <span className="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-400 text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                        {s.step}
+                      </span>
+                      <p className="text-[13px] text-zinc-400 leading-relaxed">{s.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+              <Reveal delay={0.16}>
+                <Link href="/app/import" className="inline-flex items-center gap-2 mt-6 h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-[13px] font-semibold text-white transition-all active:scale-[0.97]">
+                  <Upload className="w-3.5 h-3.5" />
+                  Import Now
+                </Link>
+              </Reveal>
+            </div>
+
+            {/* Visual — import flow mockup */}
+            <Reveal delay={0.1}>
+              <div className="rounded-2xl bg-[#0c0c0e] border border-zinc-800/50 overflow-hidden shadow-2xl shadow-black/30">
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800/40 bg-zinc-900/20">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-700/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-700/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-700/60" />
+                  </div>
+                  <span className="text-[10px] text-zinc-600 ml-2 font-mono">MindStore — Import</span>
+                </div>
+                <div className="p-6 space-y-4">
+                  {/* Drop zone mockup */}
+                  <div className="border-2 border-dashed border-emerald-500/25 rounded-2xl p-8 flex flex-col items-center gap-3 bg-emerald-500/[0.02]">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <p className="text-[13px] text-zinc-300 font-medium">conversations.json</p>
+                    <p className="text-[11px] text-zinc-600">12.4 MB · ChatGPT export</p>
+                  </div>
+                  {/* Progress mockup */}
+                  <div className="space-y-2.5">
+                    {[
+                      { label: "Parsing conversations", count: "1,247", done: true },
+                      { label: "Creating memories", count: "8,392", done: true },
+                      { label: "Generating embeddings", count: "8,392", done: true },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <span className="text-[12px] text-zinc-400 flex-1">{item.label}</span>
+                        <span className="text-[11px] text-emerald-400/70 font-mono">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center pt-2">
+                    <p className="text-[13px] text-emerald-400 font-medium">✨ Done in 28 seconds</p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
