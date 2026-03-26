@@ -53,6 +53,12 @@ export const metadata: Metadata = {
     description: "Import from 12+ sources. Chat with your own mind. 35 plugins. Free & open source.",
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore.org"),
+  alternates: {
+    canonical: "/",
+  },
+  other: {
+    "msapplication-TileColor": "#0a0a0b",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
