@@ -12,6 +12,37 @@
  */
 
 import JSZip from 'jszip';
+import { ensurePluginInstalled, getPluginConfig } from './plugin-config';
+import { db } from '@/server/db';
+import { sql } from 'drizzle-orm';
+
+const SLUG = 'anki-export';
+
+// ─── Plugin lifecycle ────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export async function getDecks(): Promise<Deck[]> {
+  try {
+    const config = await getPluginConfig<{ decks?: Deck[] }>('flashcard-maker', { decks: [] });
+    return config.decks || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getMemoryCount(userId: string): Promise<number> {
+  try {
+    const rows = await db.execute(
+      sql`SELECT COUNT(*) as count FROM memories WHERE user_id = ${userId}`,
+    );
+    return parseInt((rows as Record<string, string>[])[0]?.count || '0');
+  } catch {
+    return 0;
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────
 

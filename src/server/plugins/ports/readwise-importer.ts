@@ -5,6 +5,129 @@
  * Handles: Readwise API pagination, highlight grouping, dedup key generation.
  */
 
+import { ensurePluginInstalled, getPluginConfig, savePluginConfig } from "./plugin-config";
+import { importDocuments } from "@/server/import-service";
+
+const SLUG = "readwise-importer";
+
+// ─── Plugin lifecycle ─────────────────────────────────────────
+
+interface ReadwisePluginConfig {
+  readwiseToken?: string;
+  lastSync?: string;
+  totalImported?: number;
+}
+
+const CONFIG_DEFAULTS: ReadwisePluginConfig = {};
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export async function getReadwiseConfig() {
+  const config = await getPluginConfig<ReadwisePluginConfig>(SLUG, CONFIG_DEFAULTS);
+  return {
+    hasToken: !!config.readwiseToken,
+    lastSync: config.lastSync || null,
+    totalImported: config.totalImported || 0,
+    instructions: [
+      "Get your Readwise API token from readwise.io/access_token",
+      "Paste it below and click Save",
+      "Click Import to fetch all your highlights",
+      "Supports: Books, Articles, Tweets, Podcasts, Supplementals",
+    ],
+    categories: ["books", "articles", "tweets", "podcasts", "supplementals"],
+  };
+}
+
+export async function getReadwiseStats(userId: string) {
+  const { db } = await import("@/server/db");
+  const { sql } = await import("drizzle-orm");
+
+  let stats = { imported: 0, books: 0, articles: 0, tweets: 0, podcasts: 0 };
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE metadata->>'readwiseCategory' = 'books') as books,
+        COUNT(*) FILTER (WHERE metadata->>'readwiseCategory' = 'articles') as articles,
+        COUNT(*) FILTER (WHERE metadata->>'readwiseCategory' = 'tweets') as tweets,
+        COUNT(*) FILTER (WHERE metadata->>'readwiseCategory' = 'podcasts') as podcasts
+      FROM memories WHERE user_id = ${userId} AND source_type = 'readwise'
+    `);
+    const row = (rows as Record<string, string>[])[0];
+    stats.imported = parseInt(row?.total || "0");
+    stats.books = parseInt(row?.books || "0");
+    stats.articles = parseInt(row?.articles || "0");
+    stats.tweets = parseInt(row?.tweets || "0");
+    stats.podcasts = parseInt(row?.podcasts || "0");
+  } catch {
+    /* ignore */
+  }
+  return stats;
+}
+
+export async function saveToken(token: string) {
+  const valid = await validateToken(token);
+  if (!valid) throw new Error("Invalid Readwise API token");
+
+  const config = await getPluginConfig<ReadwisePluginConfig>(SLUG, CONFIG_DEFAULTS);
+  config.readwiseToken = token;
+  await savePluginConfig(SLUG, config);
+  return { success: true };
+}
+
+export async function runImport(
+  userId: string,
+  opts: { token?: string; categories?: string[] },
+) {
+  const config = await getPluginConfig<ReadwisePluginConfig>(SLUG, CONFIG_DEFAULTS);
+  const token = (opts.token || config.readwiseToken) as string | undefined;
+  if (!token) throw new Error("No Readwise API token configured. Add one first.");
+
+  const result = await processImport({
+    token,
+    categories: opts.categories,
+    updatedAfter: config.lastSync,
+  });
+
+  if (result.memories.length === 0) {
+    return {
+      success: true,
+      imported: 0,
+      message: config.lastSync
+        ? "No new highlights since last sync."
+        : "No highlights found in your Readwise account.",
+    };
+  }
+
+  const documents = result.memories.map((m) => ({
+    title: m.title,
+    content: m.content,
+    sourceType: "readwise" as const,
+    sourceId: m.dedupKey,
+    timestamp: m.createdAt,
+    metadata: m.metadata,
+  }));
+
+  const importResult = await importDocuments({ userId, documents });
+
+  // Update sync state
+  const updatedConfig = await getPluginConfig<ReadwisePluginConfig>(SLUG, CONFIG_DEFAULTS);
+  updatedConfig.lastSync = new Date().toISOString();
+  updatedConfig.totalImported = (updatedConfig.totalImported || 0) + importResult.chunks;
+  await savePluginConfig(SLUG, updatedConfig);
+
+  return {
+    success: true,
+    imported: importResult.chunks,
+    embedded: importResult.embedded,
+    totalHighlights: result.memories.length,
+    booksProcessed: result.booksProcessed,
+    categories: result.categories,
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface ReadwiseBook {

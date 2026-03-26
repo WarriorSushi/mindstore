@@ -12,10 +12,10 @@
 
 import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/server/db';
-import { sql, eq } from 'drizzle-orm';
 import {
-  type Deck,
+  ensureInstalled,
+  getDecks,
+  getMemoryCount,
   summarizeDecks,
   totalCards,
   createExportPackage,
@@ -24,65 +24,19 @@ import {
   EXPORT_FORMATS,
 } from '@/server/plugins/ports/anki-export';
 
-const PLUGIN_SLUG = 'anki-export';
-
-async function ensureInstalled() {
-  try {
-    const existing = await db.select().from(schema.plugins).where(eq(schema.plugins.slug, PLUGIN_SLUG)).limit(1);
-    if (existing.length === 0) {
-      await db.insert(schema.plugins).values({
-        slug: PLUGIN_SLUG,
-        name: 'Anki Deck Export',
-        description: 'Export flashcards as Anki-compatible files for spaced repetition.',
-        version: '1.0.0',
-        type: 'extension',
-        status: 'active',
-        icon: 'Download',
-        category: 'export',
-        config: {},
-      });
-    }
-  } catch { /* table might not exist yet */ }
-}
-
-async function getDecks(): Promise<Deck[]> {
-  try {
-    const rows = await db.execute(
-      sql`SELECT config FROM plugins WHERE slug = 'flashcard-maker'`
-    );
-    const row = (rows as any[])[0];
-    if (!row?.config) return [];
-    const config = typeof row.config === 'string' ? JSON.parse(row.config) : row.config;
-    return config.decks || [];
-  } catch {
-    return [];
-  }
-}
-
-// ─── GET ─────────────────────────────────────────────────────
-
 export async function GET(req: NextRequest) {
   try {
-    const userId = await getUserId();
     await ensureInstalled();
-
+    const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action') || 'decks';
 
     if (action === 'decks') {
       const decks = await getDecks();
-      let totalMemories = 0;
-      try {
-        const memRows = await db.execute(
-          sql`SELECT COUNT(*) as count FROM memories WHERE user_id = ${userId}`
-        );
-        totalMemories = parseInt((memRows as any[])[0]?.count || '0');
-      } catch {}
-
       return NextResponse.json({
         decks: summarizeDecks(decks),
         totalCards: totalCards(decks),
-        totalMemories,
+        totalMemories: await getMemoryCount(userId),
         formats: EXPORT_FORMATS,
       });
     }
@@ -126,16 +80,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ─── POST ────────────────────────────────────────────────────
-
 export async function POST(req: NextRequest) {
   try {
-    await getUserId();
     await ensureInstalled();
+    await getUserId();
     const body = await req.json();
-    const action = body.action;
 
-    if (action === 'export') {
+    if (body.action === 'export') {
       const { deckIds = [], format = 'tsv', includeMetadata = false } = body;
       const decks = await getDecks();
 
@@ -155,7 +106,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (action === 'export-csv') {
+    if (body.action === 'export-csv') {
       const { deckIds = [], includeMetadata = true } = body;
       const decks = await getDecks();
       const { csv, cardCount } = exportCardsCSV(decks, deckIds, includeMetadata);

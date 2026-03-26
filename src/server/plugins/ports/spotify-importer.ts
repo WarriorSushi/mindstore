@@ -5,6 +5,94 @@
  * Handles: parsing Spotify streaming history JSON, building music taste profiles.
  */
 
+import { ensurePluginInstalled } from "./plugin-config";
+import { importDocuments } from "@/server/import-service";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+
+const SLUG = "spotify-importer";
+
+// ─── Plugin lifecycle ─────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export function getSpotifyConfig() {
+  return {
+    instructions: [
+      "Go to spotify.com → Account → Privacy",
+      'Click "Request data" under "Download your data"',
+      "Wait for Spotify to email you (usually 5-30 days)",
+      "Download and unzip the file",
+      "Find StreamingHistory_music_0.json (or similar)",
+      "Upload it here",
+    ],
+    expectedFiles: [
+      "StreamingHistory_music_0.json",
+      "StreamingHistory_music_1.json",
+      "Streaming_History_Audio_*.json (extended format)",
+    ],
+    features: [
+      "Builds a music taste profile as searchable knowledge",
+      "Top artists, tracks, and albums",
+      "Monthly listening patterns",
+      'Ask "What kind of music do I like?" in chat',
+    ],
+  };
+}
+
+export async function getSpotifyStats(userId: string) {
+  let stats = { imported: 0, hasProfile: false };
+  try {
+    const rows = await db.execute(sql`
+      SELECT COUNT(*) as count FROM memories
+      WHERE user_id = ${userId} AND source_type = 'spotify'
+    `);
+    stats.imported = parseInt((rows as Record<string, string>[])[0]?.count || "0");
+    stats.hasProfile = stats.imported > 0;
+  } catch {
+    /* ignore */
+  }
+  return stats;
+}
+
+export async function runImport(userId: string, rawData: string) {
+  const streams = parseSpotifyData(rawData);
+  if (streams.length === 0) {
+    throw new Error(
+      "No streaming history found. Make sure you uploaded a StreamingHistory file.",
+    );
+  }
+
+  const profile = buildMusicProfile(streams);
+
+  // Replace old spotify memories with fresh import
+  try {
+    await db.execute(sql`
+      DELETE FROM memories WHERE user_id = ${userId} AND source_type = 'spotify'
+    `);
+  } catch {
+    /* ignore */
+  }
+
+  const documents = buildImportDocuments(profile);
+  const result = await importDocuments({ userId, documents });
+
+  return {
+    success: true,
+    imported: result.chunks,
+    embedded: result.embedded,
+    stats: {
+      totalStreams: streams.length,
+      totalHours: Math.round(profile.totalListeningMs / 3600000),
+      uniqueArtists: profile.uniqueArtists,
+      uniqueTracks: profile.uniqueTracks,
+      topArtist: profile.topArtists[0]?.name || "N/A",
+    },
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface SpotifyStream {
