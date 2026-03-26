@@ -121,10 +121,112 @@ function DualTicker() {
 }
 
 /* ─── AI Model Logos (simple SVG marks) ─── */
-/* ─── Product Preview — CSS mockup of the app ─── */
+/* ─── Interactive Product Preview — animated semantic search demo ─── */
+
+const DEMO_QUERIES = [
+  {
+    query: "that pricing article from last year",
+    results: [
+      { title: "SaaS Pricing Strategies — 2024 Review", source: "Kindle", color: "#f59e0b", snippet: "The most common mistake in SaaS pricing is anchoring to cost instead of value…", score: "98%" },
+      { title: "Conversation about pricing tiers", source: "ChatGPT", color: "#10b981", snippet: "Discussed freemium vs. trial-based models. Key insight: conversion rate matters more than…", score: "94%" },
+      { title: "Stripe pricing page analysis", source: "URL", color: "#f97316", snippet: "Stripe's transparent pricing works because developers hate surprises. $0.029 + 30¢ per…", score: "87%" },
+    ],
+  },
+  {
+    query: "how do transformers actually work?",
+    results: [
+      { title: "AI Architecture Deep Dive", source: "ChatGPT", color: "#10b981", snippet: "Transformers use self-attention to process all tokens in parallel, unlike RNNs which…", score: "99%" },
+      { title: "Attention Is All You Need — notes", source: "Notes", color: "#3b82f6", snippet: "The key innovation: scaled dot-product attention lets the model weigh relevance of every…", score: "96%" },
+      { title: "Neural network lecture highlights", source: "YouTube", color: "#ef4444", snippet: "Features learned hierarchically — edges → textures → high-level concepts. Transfer learning…", score: "89%" },
+    ],
+  },
+  {
+    query: "what did Kahneman say about biases?",
+    results: [
+      { title: "Thinking, Fast and Slow — highlights", source: "Kindle", color: "#f59e0b", snippet: "System 1 is fast, intuitive, emotional. System 2 is slow, deliberate, logical. Most decisions…", score: "97%" },
+      { title: "Psychology Misconceptions thread", source: "ChatGPT", color: "#10b981", snippet: "The Dunning-Kruger effect isn't what most people think. The original paper showed regression…", score: "92%" },
+      { title: "Cognitive bias in product design", source: "Notes", color: "#3b82f6", snippet: "Anchoring bias: first number shown sets the frame. Used in pricing pages, negotiations…", score: "85%" },
+    ],
+  },
+];
+
 function ProductPreview() {
+  const [queryIdx, setQueryIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [phase, setPhase] = useState<"typing" | "results" | "pause" | "clearing">("typing");
+  const [visibleResults, setVisibleResults] = useState(0);
+  const [isInView, setIsInView] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Only animate when in viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => setIsInView(e.isIntersecting), { threshold: 0.2 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Respect reduced motion
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+
+  // Typing animation
+  useEffect(() => {
+    if (!isInView || reducedMotion) return;
+    const current = DEMO_QUERIES[queryIdx];
+    if (!current) return;
+
+    if (phase === "typing") {
+      if (charIdx < current.query.length) {
+        const speed = 35 + Math.random() * 30; // natural typing speed
+        const t = setTimeout(() => setCharIdx((c) => c + 1), speed);
+        return () => clearTimeout(t);
+      } else {
+        // Done typing → show results
+        const t = setTimeout(() => setPhase("results"), 300);
+        return () => clearTimeout(t);
+      }
+    }
+
+    if (phase === "results") {
+      if (visibleResults < current.results.length) {
+        const t = setTimeout(() => setVisibleResults((v) => v + 1), 180);
+        return () => clearTimeout(t);
+      } else {
+        // All results shown → pause
+        const t = setTimeout(() => setPhase("pause"), 2800);
+        return () => clearTimeout(t);
+      }
+    }
+
+    if (phase === "pause") {
+      setPhase("clearing");
+    }
+
+    if (phase === "clearing") {
+      const t = setTimeout(() => {
+        setQueryIdx((i) => (i + 1) % DEMO_QUERIES.length);
+        setCharIdx(0);
+        setVisibleResults(0);
+        setPhase("typing");
+      }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [isInView, reducedMotion, phase, charIdx, visibleResults, queryIdx]);
+
+  const current = DEMO_QUERIES[queryIdx];
+  const typedText = current ? current.query.slice(0, charIdx) : "";
+  const showResults = phase === "results" || phase === "pause";
+  const isClearing = phase === "clearing";
+
+  // Static fallback for reduced motion
+  const staticQuery = reducedMotion ? DEMO_QUERIES[0] : null;
+
   return (
-    <div className="relative mx-auto max-w-[900px]">
+    <div ref={containerRef} className="relative mx-auto max-w-[900px]">
       {/* Ambient glow */}
       <div className="absolute -inset-8 rounded-[40px] opacity-40 blur-[60px] pointer-events-none"
         style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(20,184,166,0.15), rgba(56,189,248,0.08), transparent 70%)" }}
@@ -146,7 +248,7 @@ function ProductPreview() {
               mindstore.org/app
             </div>
           </div>
-          <div className="w-16" /> {/* Balance */}
+          <div className="w-16" />
         </div>
 
         {/* App layout */}
@@ -154,17 +256,15 @@ function ProductPreview() {
           {/* Sidebar (hidden on mobile) */}
           <div className="hidden sm:flex w-[180px] flex-col shrink-0 p-3 gap-0.5"
             style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
-            {/* Logo */}
             <div className="flex items-center gap-2 px-2 py-2 mb-2">
               <div className="w-5 h-5 rounded-md" style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }} />
               <span className="text-[11px] font-bold text-zinc-300">MindStore</span>
             </div>
-            {/* Nav items */}
             {[
-              { label: "Dashboard", active: true },
+              { label: "Dashboard" },
               { label: "Chat" },
               { label: "Import" },
-              { label: "Explore" },
+              { label: "Explore", active: true },
               { label: "Fingerprint" },
               { label: "Insights" },
               { label: "Collections" },
@@ -184,74 +284,107 @@ function ProductPreview() {
           {/* Main content area */}
           <div className="flex-1 p-4 sm:p-5 overflow-hidden">
             {/* Header */}
-            <div className="mb-4">
-              <div className="text-[14px] sm:text-[16px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind</div>
-              <div className="text-[10px] text-zinc-600 mt-0.5">2,847 memories across 14 sources</div>
+            <div className="mb-3">
+              <div className="text-[14px] sm:text-[16px] font-semibold text-zinc-200 tracking-[-0.02em]">Explore</div>
+              <div className="text-[10px] text-zinc-600 mt-0.5">2,847 memories · Semantic search</div>
             </div>
 
-            {/* Search bar */}
-            <div className="flex items-center gap-2 px-3 h-8 rounded-lg mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <Search className="w-3 h-3 text-zinc-600" />
-              <span className="text-[10px] text-zinc-600">Search your memories…</span>
-              <span className="ml-auto text-[8px] text-zinc-700 font-mono bg-white/[0.04] px-1 py-0.5 rounded">⌘K</span>
-            </div>
-
-            {/* Stat cards row */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {[
-                { label: "Total", value: "2,847", color: "rgba(20,184,166,0.12)" },
-                { label: "ChatGPT", value: "1,423", color: "rgba(34,197,94,0.12)" },
-                { label: "Notes", value: "892", color: "rgba(59,130,246,0.12)" },
-                { label: "URLs", value: "532", color: "rgba(249,115,22,0.12)" },
-              ].map((s) => (
-                <div key={s.label} className="rounded-lg p-2" style={{ background: s.color, border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div className="text-[13px] sm:text-[15px] font-semibold text-zinc-200 tabular-nums">{s.value}</div>
-                  <div className="text-[8px] text-zinc-500 font-medium mt-0.5">{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Activity bars */}
-            <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div className="flex items-center gap-1.5 mb-2">
-                <div className="w-3 h-3 rounded bg-teal-500/20 flex items-center justify-center">
-                  <BarChart3 className="w-2 h-2 text-teal-400" />
-                </div>
-                <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">Activity · 14 days</span>
-                <span className="ml-auto text-[8px] text-amber-400 font-semibold">🔥 7-day streak</span>
+            {/* Animated search bar */}
+            <div
+              className="flex items-center gap-2 px-3 h-8 rounded-lg mb-3 transition-all duration-300"
+              style={{
+                background: (typedText || staticQuery) ? "rgba(20,184,166,0.04)" : "rgba(255,255,255,0.03)",
+                border: (typedText || staticQuery) ? "1px solid rgba(20,184,166,0.15)" : "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              <Search className={`w-3 h-3 shrink-0 transition-colors duration-300 ${(typedText || staticQuery) ? "text-teal-400" : "text-zinc-600"}`} />
+              <div className="flex-1 relative overflow-hidden">
+                {staticQuery ? (
+                  <span className="text-[10px] text-zinc-300">{staticQuery.query}</span>
+                ) : typedText ? (
+                  <span className="text-[10px] text-zinc-300">
+                    {typedText}
+                    {phase === "typing" && (
+                      <span className="inline-block w-[1px] h-[10px] bg-teal-400 ml-[1px] align-middle" style={{ animation: "blink-caret 0.8s step-end infinite" }} />
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-zinc-600">Search your memories…</span>
+                )}
               </div>
-              <div className="flex items-end gap-[3px] h-10">
-                {[35, 22, 0, 48, 65, 30, 45, 55, 72, 40, 60, 80, 50, 90].map((h, i) => (
-                  <div key={i} className="flex-1 rounded-t-[2px]"
+              <span className="ml-auto text-[8px] text-zinc-700 font-mono bg-white/[0.04] px-1 py-0.5 rounded shrink-0">⌘K</span>
+            </div>
+
+            {/* Results area */}
+            <div
+              className="space-y-1.5 transition-opacity duration-300"
+              style={{ opacity: isClearing ? 0 : 1 }}
+            >
+              {(staticQuery ? staticQuery.results : (showResults && current ? current.results : [])).map((result, i) => {
+                const isVisible = staticQuery ? true : i < visibleResults;
+                return (
+                  <div
+                    key={`${queryIdx}-${i}`}
+                    className="flex items-start gap-2.5 px-3 py-2 rounded-lg transition-all duration-300"
                     style={{
-                      height: `${Math.max(h, 4)}%`,
-                      background: i === 13
-                        ? "linear-gradient(to top, #14b8a6, #2dd4bf)"
-                        : h === 0 ? "rgba(255,255,255,0.03)" : "rgba(20,184,166,0.25)",
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid rgba(255,255,255,0.04)",
+                      opacity: isVisible ? 1 : 0,
+                      transform: isVisible ? "translateY(0)" : "translateY(8px)",
                     }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Recent memories (peek) */}
-            <div className="mt-3 space-y-1">
-              {[
-                { type: "chatgpt", title: "AI Architecture Deep Dive", snippet: "Discussed transformers vs RNNs…", color: "#10b981" },
-                { type: "kindle", title: "Thinking, Fast and Slow", snippet: "System 1 is fast, intuitive…", color: "#f59e0b" },
-              ].map((mem) => (
-                <div key={mem.title} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
-                  <div className="w-5 h-5 rounded shrink-0" style={{ background: `${mem.color}20` }}>
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-sm" style={{ background: `${mem.color}60` }} />
+                  >
+                    <div className="w-5 h-5 rounded shrink-0 flex items-center justify-center mt-0.5" style={{ background: `${result.color}18` }}>
+                      <div className="w-2 h-2 rounded-sm" style={{ background: `${result.color}70` }} />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-zinc-300 truncate">{result.title}</span>
+                        <span className="text-[7px] px-1 py-[1px] rounded bg-white/[0.04] text-zinc-600 shrink-0">{result.source}</span>
+                      </div>
+                      <div className="text-[8px] text-zinc-500 mt-0.5 line-clamp-1">{result.snippet}</div>
+                    </div>
+                    <div className="text-[8px] font-mono text-teal-500/70 shrink-0 mt-0.5">{result.score}</div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[9px] font-medium text-zinc-400 truncate">{mem.title}</div>
-                    <div className="text-[8px] text-zinc-600 truncate">{mem.snippet}</div>
+                );
+              })}
+
+              {/* Empty state when not searching */}
+              {!staticQuery && !showResults && !typedText && (
+                <div className="space-y-1.5">
+                  {/* Stat cards row */}
+                  <div className="grid grid-cols-4 gap-1.5 mb-2">
+                    {[
+                      { label: "Total", value: "2,847", color: "rgba(20,184,166,0.12)" },
+                      { label: "ChatGPT", value: "1,423", color: "rgba(34,197,94,0.12)" },
+                      { label: "Notes", value: "892", color: "rgba(59,130,246,0.12)" },
+                      { label: "URLs", value: "532", color: "rgba(249,115,22,0.12)" },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-lg p-1.5" style={{ background: s.color, border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div className="text-[11px] sm:text-[13px] font-semibold text-zinc-200 tabular-nums">{s.value}</div>
+                        <div className="text-[7px] text-zinc-500 font-medium mt-0.5">{s.label}</div>
+                      </div>
+                    ))}
                   </div>
+                  {/* Recent memories */}
+                  {[
+                    { title: "AI Architecture Deep Dive", snippet: "Discussed transformers vs RNNs…", color: "#10b981" },
+                    { title: "Thinking, Fast and Slow", snippet: "System 1 is fast, intuitive…", color: "#f59e0b" },
+                    { title: "React Server Components", snippet: "RSCs run on the server, reduce bundle…", color: "#3b82f6" },
+                  ].map((mem) => (
+                    <div key={mem.title} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div className="w-5 h-5 rounded shrink-0" style={{ background: `${mem.color}18` }}>
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-sm" style={{ background: `${mem.color}60` }} />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[9px] font-medium text-zinc-400 truncate">{mem.title}</div>
+                        <div className="text-[8px] text-zinc-600 truncate">{mem.snippet}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -337,6 +470,7 @@ export function LandingClient() {
         @keyframes tickerLeft { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
         @keyframes tickerRight { from { transform: translateX(-33.333%); } to { transform: translateX(0); } }
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes blink-caret { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; } }
       `}</style>
 
