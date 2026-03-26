@@ -311,15 +311,25 @@ export default function KnowledgeGapsPage() {
   // ─── Loading state ───────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center mx-auto">
-            <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
-          </div>
-          <div>
-            <p className="text-sm text-zinc-400">Analyzing your knowledge…</p>
-            <p className="text-xs text-zinc-600 mt-1">Clustering topics and detecting gaps</p>
-          </div>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-44" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-60" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="animate-pulse rounded-xl bg-white/[0.04] w-10 h-10" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-32" />
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-48" />
+                </div>
+              </div>
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-full" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-2/3" />
+            </div>
+          ))}
         </div>
       </div>
     );

@@ -236,10 +236,26 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
-          <span className="text-[13px] text-zinc-600">Loading knowledge stats…</span>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-40" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-56" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="animate-pulse rounded-lg bg-white/[0.04] w-8 h-8" />
+                <div className="animate-pulse rounded-xl bg-white/[0.04] h-3.5 w-20" />
+              </div>
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-8 w-16" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-2.5 w-28" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-32" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-48 w-full" />
         </div>
       </div>
     );

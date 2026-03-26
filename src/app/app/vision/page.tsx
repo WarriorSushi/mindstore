@@ -350,8 +350,22 @@ export default function ImageToMemoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-40" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-56" />
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-32" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2">
+                <div className="animate-pulse rounded-lg bg-white/[0.04] w-full h-20" />
+                <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-20" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

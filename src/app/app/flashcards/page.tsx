@@ -359,12 +359,23 @@ export default function FlashcardsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60dvh]">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mx-auto mb-3">
-            <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-36" />
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-48" />
           </div>
-          <p className="text-[13px] text-zinc-500">Loading flashcards…</p>
+          <div className="flex gap-2">
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-9 w-24" />
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-9 w-24" />
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="w-full max-w-lg rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 space-y-4">
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-20 mx-auto" />
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-6 w-3/4 mx-auto" />
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-1/2 mx-auto" />
+          </div>
         </div>
       </div>
     );

@@ -220,10 +220,28 @@ export default function CollectionsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
-          <p className="text-[13px] text-zinc-500">Analyzing your knowledge topology...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-36" />
+            <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-52" />
+          </div>
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-9 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="animate-pulse rounded-xl bg-white/[0.04] w-10 h-10" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-28" />
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-40" />
+                </div>
+              </div>
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-full" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-3/4" />
+            </div>
+          ))}
         </div>
       </div>
     );

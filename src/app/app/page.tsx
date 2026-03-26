@@ -474,10 +474,10 @@ export default function DashboardPage() {
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
               <input
-                placeholder="Quick search your memories…"
+                placeholder="Search your memories…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-11 pl-10 pr-9 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
+                className="w-full h-11 pl-10 pr-16 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
               />
               {searchQuery ? (
                 <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-white/[0.06] rounded-md transition-colors">
@@ -569,19 +569,19 @@ export default function DashboardPage() {
 
       {/* Stat Cards */}
       <Stagger>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
           {[
             { label: "Total", value: total, icon: Database, color: "from-teal-500/20 to-teal-500/5", iconColor: "text-teal-400" },
             { label: "ChatGPT", value: chatgpt, icon: MessageCircle, color: "from-green-500/20 to-green-500/5", iconColor: "text-green-400" },
             { label: "Notes", value: notes, icon: FileText, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400" },
             { label: "URLs", value: urls, icon: Globe, color: "from-orange-500/20 to-orange-500/5", iconColor: "text-orange-400" },
           ].map((s) => (
-            <div key={s.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div key={s.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 md:p-4">
               <div className={`absolute inset-0 bg-gradient-to-b ${s.color} pointer-events-none`} />
               <div className="relative">
-                <s.icon className={`w-4 h-4 ${s.iconColor} mb-2`} />
-                <p className="text-[22px] md:text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{s.value.toLocaleString()}</p>
-                <p className="text-[11px] text-zinc-500 font-medium mt-0.5">{s.label}</p>
+                <s.icon className={`w-4 h-4 ${s.iconColor} mb-1.5 md:mb-2`} />
+                <p className="text-[20px] md:text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{s.value.toLocaleString()}</p>
+                <p className="text-[10px] md:text-[11px] text-zinc-500 font-medium mt-0.5">{s.label}</p>
               </div>
             </div>
           ))}
@@ -610,10 +610,10 @@ export default function DashboardPage() {
                 const Icon = WIDGET_ICONS[w.icon] || Zap;
                 return (
                   <Link key={w.id} href={w.href}>
-                    <div className={`group relative rounded-2xl border ${colors.border} ${colors.bg} p-3.5 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
-                      <div className="flex items-center gap-1.5 mb-2.5">
-                        <Icon className={`w-3.5 h-3.5 ${colors.text}`} />
-                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">{w.title}</span>
+                    <div className={`group relative rounded-2xl border ${colors.border} ${colors.bg} p-3 md:p-3.5 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
+                      <div className="flex items-center gap-1 mb-2 md:mb-2.5">
+                        <Icon className={`w-3 h-3 md:w-3.5 md:h-3.5 ${colors.text} shrink-0`} />
+                        <span className="text-[9px] md:text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">{w.title}</span>
                       </div>
                       
                       {/* Widget-specific content */}
@@ -802,7 +802,7 @@ export default function DashboardPage() {
 
       {/* Actions Grid */}
       <Stagger>
-        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
           {[
             { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-teal-400" },
             { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask your mind", color: "text-blue-400" },
@@ -810,10 +810,10 @@ export default function DashboardPage() {
             { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you", color: "text-amber-400" },
           ].map((a) => (
             <Link key={a.href} href={a.href}>
-              <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-4 transition-all active:scale-[0.97] h-full">
-                <a.icon className={`w-5 h-5 ${a.color} mb-3 group-hover:scale-110 transition-transform`} />
-                <p className="text-[13px] font-medium">{a.label}</p>
-                <p className="text-[11px] text-zinc-600 mt-0.5">{a.desc}</p>
+              <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3 md:p-4 transition-all active:scale-[0.97] h-full">
+                <a.icon className={`w-5 h-5 ${a.color} mb-2 md:mb-3 group-hover:scale-110 transition-transform`} />
+                <p className="text-[12px] md:text-[13px] font-medium">{a.label}</p>
+                <p className="text-[10px] md:text-[11px] text-zinc-600 mt-0.5 leading-tight">{a.desc}</p>
               </div>
             </Link>
           ))}

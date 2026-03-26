@@ -169,13 +169,26 @@ export default function WritingStylePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center mx-auto">
-            <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
-          </div>
-          <div>
-            <div className="text-[13px] text-zinc-400">Analyzing your writing style…</div>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-40" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-52" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+              <div className="animate-pulse rounded-lg bg-white/[0.04] w-8 h-8" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-6 w-14" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-24" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-32" />
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-xl bg-white/[0.04] h-16 w-full" />
+            ))}
           </div>
         </div>
       </div>

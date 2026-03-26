@@ -878,12 +878,34 @@ export default function MindMapPage() {
         <Stagger>
           {/* Map container */}
           {loading ? (
-            <div className="flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.06]" style={{ height: 'calc(100dvh - 180px)' }}>
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+            <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden" style={{ height: 'calc(100dvh - 180px)' }}>
+              <div className="h-full flex flex-col">
+                {/* Simulated cluster bubbles skeleton */}
+                <div className="flex-1 flex items-center justify-center relative">
+                  <div className="absolute inset-0 p-8">
+                    <div className="w-full h-full relative">
+                      {[
+                        { w: 80, h: 80, top: '15%', left: '20%', delay: '0s' },
+                        { w: 60, h: 60, top: '30%', left: '55%', delay: '0.15s' },
+                        { w: 100, h: 100, top: '45%', left: '35%', delay: '0.3s' },
+                        { w: 50, h: 50, top: '20%', left: '70%', delay: '0.45s' },
+                        { w: 70, h: 70, top: '60%', left: '60%', delay: '0.6s' },
+                      ].map((b, i) => (
+                        <div
+                          key={i}
+                          className="absolute rounded-full bg-teal-500/[0.04] border border-teal-500/[0.08] animate-pulse"
+                          style={{ width: b.w, height: b.h, top: b.top, left: b.left, animationDelay: b.delay }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="relative flex flex-col items-center gap-3 z-10">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full border-2 border-teal-500/40 border-t-teal-400 animate-spin" />
+                    </div>
+                    <p className="text-[13px] text-zinc-500">Clustering your memories…</p>
+                  </div>
                 </div>
-                <p className="text-[13px] text-zinc-500">Clustering your memories…</p>
               </div>
             </div>
           ) : error ? (

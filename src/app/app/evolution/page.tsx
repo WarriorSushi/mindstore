@@ -350,11 +350,24 @@ export default function TopicEvolutionPage() {
   // ─── Render ─────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center">
-          <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-48" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-64" />
         </div>
-        <p className="text-sm text-zinc-500">Analyzing your knowledge timeline…</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+              <div className="animate-pulse rounded-lg bg-white/[0.04] w-8 h-8" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-6 w-12" />
+              <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-5 w-36" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-40 w-full" />
+        </div>
       </div>
     );
   }

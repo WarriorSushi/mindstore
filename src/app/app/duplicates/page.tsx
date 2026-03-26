@@ -211,14 +211,26 @@ export default function DuplicatesPage() {
 
       {/* Loading */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 flex items-center justify-center">
-              <ScanSearch className="w-5 h-5 text-teal-400 animate-pulse" />
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="animate-pulse rounded-xl bg-white/[0.04] w-10 h-10" />
+              <div className="space-y-1.5 flex-1">
+                <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-40" />
+                <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-56" />
+              </div>
             </div>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-3 border-t border-white/[0.04]">
+                <div className="animate-pulse rounded-xl bg-white/[0.04] w-10 h-10" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-3.5 w-48" />
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-72" />
+                </div>
+                <div className="animate-pulse rounded-xl bg-white/[0.04] h-6 w-16" />
+              </div>
+            ))}
           </div>
-          <p className="text-[13px] text-zinc-500">Scanning for duplicates…</p>
-          <p className="text-[11px] text-zinc-600">Comparing embeddings above {threshold}% similarity</p>
         </div>
       )}
 

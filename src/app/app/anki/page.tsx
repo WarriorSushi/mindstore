@@ -172,10 +172,24 @@ export default function AnkiExportPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-teal-500/60" />
-          <span className="text-[11px] text-zinc-700 font-medium">Loading flashcard decks…</span>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-7 w-36" />
+          <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-48" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="animate-pulse rounded-xl bg-white/[0.04] w-10 h-10" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-4 w-24" />
+                  <div className="animate-pulse rounded-xl bg-white/[0.04] h-3 w-16" />
+                </div>
+              </div>
+              <div className="animate-pulse rounded-full bg-white/[0.04] h-2 w-full" />
+            </div>
+          ))}
         </div>
       </div>
     );
