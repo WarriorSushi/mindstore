@@ -1,21 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
-import { MindStoreLogo, MindStoreLogoMono } from "@/components/MindStoreLogo";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  ArrowRight, Brain, Search, MessageSquare, Layers,
+  FileText, BookOpen, Globe, Mic, Image, Bookmark,
+  GitBranch, Zap, Shield, Database, Network, Target,
+  TrendingUp, BarChart3, PenTool, Lightbulb, Puzzle,
+  GraduationCap, Users, Download, Upload, Merge,
+  Sparkles, Eye, AlertTriangle, Cpu, Languages,
+  Route, Boxes, FileCode, Newspaper, FileCheck,
+  type LucideIcon,
+} from "lucide-react";
+import { MindStoreLogo } from "@/components/MindStoreLogo";
 
-/* ═══════════════════════════════════════════
-   MindStore Landing — "Dusk" v2
+/* ═══════════════════════════════════════════════════════════════
+   MindStore Landing — v3 "Real Power"
    
-   App-consistent palette: OLED black base,
-   teal-500 primary, sky secondary.
-   Dusk structure: ticker, horizontal scroll,
-   connected AI, creative layouts.
-   NO framer-motion — pure CSS animations.
-   ═══════════════════════════════════════════ */
+   OLED black (#0a0a0b) + teal primary + sky secondary.
+   Full-width sections. No vague copy. Real product capabilities.
+   Lucide icons instead of emojis. AI logos as custom SVGs.
+   ═══════════════════════════════════════════════════════════════ */
 
-/* ─── Hooks ─── */
 function useInView(threshold = 0.08) {
   const ref = useRef<HTMLDivElement>(null);
   const [v, setV] = useState(false);
@@ -29,17 +35,16 @@ function useInView(threshold = 0.08) {
   return { ref, visible: v };
 }
 
-function Reveal({ children, className = "", delay = 0, as: Tag = "div" }: { children: ReactNode; className?: string; delay?: number; as?: "div" | "section" }) {
+function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const { ref, visible } = useInView();
   return (
-    <Tag ref={ref} className={className} style={{
-      opacity: visible ? 1 : 0, transform: visible ? "none" : "translateY(22px)",
+    <div ref={ref} className={className} style={{
+      opacity: visible ? 1 : 0, transform: visible ? "none" : "translateY(20px)",
       transition: `opacity .7s cubic-bezier(.16,1,.3,1) ${delay}s, transform .7s cubic-bezier(.16,1,.3,1) ${delay}s`,
-    }}>{children}</Tag>
+    }}>{children}</div>
   );
 }
 
-/* ─── Counter ─── */
 function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
   const { ref, visible } = useInView();
   const [count, setCount] = useState(0);
@@ -58,7 +63,7 @@ function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
   return <span ref={ref}>{count}{suffix}</span>;
 }
 
-/* ─── Network Particle Canvas ─── */
+/* ─── Network particles ─── */
 function NetworkParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -66,110 +71,124 @@ function NetworkParticles() {
     if (!c) return;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    // Respect reduced motion
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let W: number, H: number, animId: number;
-    const particles: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
-
+    const ps: { x: number; y: number; vx: number; vy: number; r: number }[] = [];
     function resize() { W = c!.width = window.innerWidth; H = c!.height = window.innerHeight; }
-    resize();
-    window.addEventListener("resize", resize);
-
-    const count = Math.min(35, Math.floor(window.innerWidth / 50));
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * 2000, y: Math.random() * 2000,
-        vx: prefersReduced ? 0 : (Math.random() - .5) * .12,
-        vy: prefersReduced ? 0 : (Math.random() - .5) * .12,
-        r: Math.random() * .8 + .4,
-      });
-    }
-
+    resize(); window.addEventListener("resize", resize);
+    const count = Math.min(40, Math.floor(window.innerWidth / 45));
+    for (let i = 0; i < count; i++) ps.push({ x: Math.random() * 2000, y: Math.random() * 2000, vx: prefersReduced ? 0 : (Math.random() - .5) * .1, vy: prefersReduced ? 0 : (Math.random() - .5) * .1, r: Math.random() * .8 + .4 });
     function draw() {
       ctx!.clearRect(0, 0, W, H);
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0 || p.x > W) p.vx *= -1;
-        if (p.y < 0 || p.y > H) p.vy *= -1;
-        for (let j = i + 1; j < particles.length; j++) {
-          const d = Math.hypot(p.x - particles[j].x, p.y - particles[j].y);
-          if (d < 120) {
-            ctx!.beginPath();
-            ctx!.strokeStyle = `rgba(20,184,166,${.04 * (1 - d / 120)})`;
-            ctx!.lineWidth = .5;
-            ctx!.moveTo(p.x, p.y);
-            ctx!.lineTo(particles[j].x, particles[j].y);
-            ctx!.stroke();
-          }
+      for (let i = 0; i < ps.length; i++) {
+        const p = ps[i]; p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1;
+        for (let j = i + 1; j < ps.length; j++) {
+          const d = Math.hypot(p.x - ps[j].x, p.y - ps[j].y);
+          if (d < 130) { ctx!.beginPath(); ctx!.strokeStyle = `rgba(20,184,166,${.035 * (1 - d / 130)})`; ctx!.lineWidth = .5; ctx!.moveTo(p.x, p.y); ctx!.lineTo(ps[j].x, ps[j].y); ctx!.stroke(); }
         }
-        ctx!.beginPath();
-        ctx!.fillStyle = "rgba(20,184,166,0.15)";
-        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx!.fill();
+        ctx!.beginPath(); ctx!.fillStyle = "rgba(20,184,166,0.12)"; ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx!.fill();
       }
       animId = requestAnimationFrame(draw);
     }
     draw();
     return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
   }, []);
-
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true" />;
 }
 
-/* ─── Dual Ticker (two rows, opposite directions) ─── */
-const SOURCES_ROW1 = ["ChatGPT", "Kindle", "YouTube", "Notion", "Obsidian", "Reddit", "PDF/EPUB", "Twitter", "Browser Bookmarks"];
-const SOURCES_ROW2 = ["Telegram", "Pocket", "Spotify", "Readwise", "Voice Memos", "Images", "URLs", "Any Text", "Anki"];
+/* ─── Dual ticker ─── */
+const ROW1 = ["ChatGPT Exports", "Kindle Highlights", "YouTube Transcripts", "Notion Workspaces", "Obsidian Vaults", "Reddit Saved", "PDFs & EPUBs", "Twitter Bookmarks", "Browser Bookmarks"];
+const ROW2 = ["Telegram Messages", "Pocket Articles", "Spotify History", "Readwise", "Voice Memos", "Screenshots & Images", "URLs & Webpages", "Plain Text", "Anki Decks"];
 
 function DualTicker() {
   return (
-    <div className="py-4 space-y-2.5 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-      {/* Row 1 — moves left */}
-      <div className="flex gap-2.5" style={{ animation: "tickerLeft 45s linear infinite", width: "max-content" }}>
-        {[...SOURCES_ROW1, ...SOURCES_ROW1, ...SOURCES_ROW1].map((s, i) => (
-          <span key={i} className="px-4 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap shrink-0"
-            style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.06)", color: "rgba(161,161,170,0.7)" }}>
-            {s}
-          </span>
+    <div className="py-3 space-y-2 overflow-hidden" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+      <div className="flex gap-2.5" style={{ animation: "tickerLeft 50s linear infinite", width: "max-content" }}>
+        {[...ROW1, ...ROW1, ...ROW1].map((s, i) => (
+          <span key={i} className="px-4 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap shrink-0 text-zinc-500"
+            style={{ background: "rgba(20,184,166,0.03)", border: "1px solid rgba(20,184,166,0.06)" }}>{s}</span>
         ))}
       </div>
-      {/* Row 2 — moves right */}
-      <div className="flex gap-2.5" style={{ animation: "tickerRight 50s linear infinite", width: "max-content" }}>
-        {[...SOURCES_ROW2, ...SOURCES_ROW2, ...SOURCES_ROW2].map((s, i) => (
-          <span key={i} className="px-4 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap shrink-0"
-            style={{ background: "rgba(56,189,248,0.04)", border: "1px solid rgba(56,189,248,0.06)", color: "rgba(161,161,170,0.7)" }}>
-            {s}
-          </span>
+      <div className="flex gap-2.5" style={{ animation: "tickerRight 55s linear infinite", width: "max-content" }}>
+        {[...ROW2, ...ROW2, ...ROW2].map((s, i) => (
+          <span key={i} className="px-4 py-1.5 rounded-lg text-[12px] font-medium whitespace-nowrap shrink-0 text-zinc-500"
+            style={{ background: "rgba(56,189,248,0.03)", border: "1px solid rgba(56,189,248,0.06)" }}>{s}</span>
         ))}
       </div>
     </div>
   );
 }
 
-/* ─── AI Models ─── */
+/* ─── AI Model Logos (simple SVG marks) ─── */
+function AILogo({ name }: { name: string }) {
+  const size = 20;
+  // Recognizable simplified marks for each AI
+  switch (name) {
+    case "Claude": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-1-4-4-1 4-1 1-4 1 4 4 1-4 1-1 4z" fill="#d4a27f"/></svg>;
+    case "ChatGPT": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 4a2 2 0 110 4 2 2 0 010-4zm-3 8h6v1H9v-1z" fill="#10a37f"/></svg>;
+    case "Gemini": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.85 0 3.58-.51 5.06-1.39C14.13 19.08 12 16.77 12 14c0-2.77 2.13-5.08 5.06-6.61A9.94 9.94 0 0012 2z" fill="#4285f4"/><path d="M17.06 7.39C14.13 8.92 12 11.23 12 14c0 2.77 2.13 5.08 5.06 6.61A9.94 9.94 0 0022 12c0-3.87-2.2-7.22-5.44-8.87l.5.26z" fill="#34a853"/></svg>;
+    case "Cursor": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="#a78bfa" strokeWidth="2"/><path d="M8 12l3 3 5-6" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+    case "Ollama": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="10" r="6" fill="none" stroke="#f97316" strokeWidth="2"/><path d="M9 9.5a1 1 0 112 0M13 9.5a1 1 0 112 0M10 13c1 1 3 1 4 0" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round"/></svg>;
+    case "Copilot": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" fill="none" stroke="#60a5fa" strokeWidth="2"/><circle cx="12" cy="12" r="3" fill="#60a5fa"/></svg>;
+    case "Perplexity": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="none" stroke="#22d3ee" strokeWidth="2"/><path d="M12 7v10M7 12h10" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round"/></svg>;
+    case "OpenRouter": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M4 12h4m4 0h4m4 0h-2M12 4v4m0 4v4m0 4v-2" stroke="#e879f9" strokeWidth="2" strokeLinecap="round"/><circle cx="12" cy="12" r="2" fill="#e879f9"/></svg>;
+    case "Windsurf": return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><path d="M4 18c3-3 6-12 16-14-1 4-6 10-16 14z" fill="#22d3ee" opacity=".7"/></svg>;
+    default: return <Network className="w-5 h-5 text-zinc-500" />;
+  }
+}
+
 const AI_MODELS = [
-  { name: "Claude", color: "#f59e0b", desc: "Anthropic" },
-  { name: "ChatGPT", color: "#10b981", desc: "OpenAI" },
-  { name: "Gemini", color: "#38bdf8", desc: "Google" },
-  { name: "Cursor", color: "#a78bfa", desc: "IDE" },
-  { name: "Ollama", color: "#f97316", desc: "Local" },
-  { name: "Windsurf", color: "#22d3ee", desc: "Codeium" },
-  { name: "Copilot", color: "#60a5fa", desc: "GitHub" },
-  { name: "Perplexity", color: "#14b8a6", desc: "Search" },
-  { name: "OpenRouter", color: "#e879f9", desc: "200+ models" },
-  { name: "Any MCP Client", color: "#71717a", desc: "Universal" },
+  { name: "Claude", by: "Anthropic" },
+  { name: "ChatGPT", by: "OpenAI" },
+  { name: "Gemini", by: "Google" },
+  { name: "Cursor", by: "AI IDE" },
+  { name: "Ollama", by: "Run locally" },
+  { name: "Copilot", by: "GitHub" },
+  { name: "Perplexity", by: "Search AI" },
+  { name: "OpenRouter", by: "200+ models" },
+  { name: "Windsurf", by: "Codeium" },
+  { name: "Any MCP Client", by: "Universal protocol" },
 ];
 
-/* ─── Use Cases ─── */
-const USE_CASES = [
-  { emoji: "🎓", title: "Ace your exams", desc: "Flashcards auto-generated from everything you've ever read. Spaced repetition built in. Study smarter, not harder.", color: "#14b8a6" },
-  { emoji: "💼", title: "Nail the meeting", desc: "\"What do I know about this client?\" — instant context from past conversations, notes, and research.", color: "#38bdf8" },
-  { emoji: "✍️", title: "Write from your brain", desc: "Blog posts, newsletters, reports — all grounded in what you actually know, cited from your own data.", color: "#f59e0b" },
-  { emoji: "🔍", title: "Find that one thing", desc: "\"I read something about pricing last year...\" — semantic search finds it even if you don't remember the words.", color: "#10b981" },
-  { emoji: "🧠", title: "See your mind", desc: "Interactive 3D knowledge map. Watch clusters form. Spot blind spots. Find contradictions in your own thinking.", color: "#a78bfa" },
-  { emoji: "🤝", title: "Share your expertise", desc: "Export your knowledge base. Let teammates learn from your curated mind. Community brains, shared.", color: "#f97316" },
-  { emoji: "📚", title: "Never lose a highlight", desc: "Kindle, PDF, article highlights — all in one place, all connected, all searchable by meaning.", color: "#ec4899" },
-  { emoji: "🎯", title: "Fill knowledge gaps", desc: "AI analyzes what you know and maps what's missing. Get targeted learning paths for what matters.", color: "#22d3ee" },
+/* ─── Capability cards ─── */
+interface Cap {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  detail: string;
+}
+
+const CAPABILITIES: Cap[] = [
+  { icon: Search, title: "Semantic Search", desc: "Find by meaning, not keywords", detail: "BM25 + vector search. Ask \"that pricing article from last year\" and find it even if you never used the word \"pricing.\" HyDE, reranking, and contextual compression strategies built in." },
+  { icon: MessageSquare, title: "Chat With Your Knowledge", desc: "Every answer cited from your data", detail: "Ask questions. Get answers grounded in YOUR memories — not generic internet. Every claim linked to its source. Switch AI models per-message." },
+  { icon: Brain, title: "Knowledge Fingerprint", desc: "3D interactive map of your mind", detail: "WebGL visualization of your knowledge topology. See clusters form, spot isolated ideas, discover connections you never noticed. k-means clustering on your embeddings." },
+  { icon: AlertTriangle, title: "Contradiction Finder", desc: "Past-you vs present-you", detail: "AI scans your entire knowledge base for conflicting beliefs, outdated information, and inconsistencies. See exactly where your thinking changed." },
+  { icon: Route, title: "Topic Evolution", desc: "Watch your interests shift over time", detail: "Timeline visualization of how your knowledge evolved. Which topics grew, which faded. See your intellectual journey mapped chronologically." },
+  { icon: Target, title: "Knowledge Gaps", desc: "AI maps what you're missing", detail: "Analyzes your knowledge graph to identify blind spots. Generates targeted learning paths for areas you should know more about." },
+  { icon: Boxes, title: "Smart Collections", desc: "AI-organized knowledge clusters", detail: "k-means clustering groups your memories into coherent topics automatically. No manual tagging needed. Collections update as you add more knowledge." },
+  { icon: GraduationCap, title: "Flashcard Engine", desc: "Spaced repetition from your knowledge", detail: "Auto-generates flashcards from any memory. Built-in SM-2 algorithm. Export to Anki (.apkg). Your own knowledge becomes your study material." },
+  { icon: PenTool, title: "Content Generation", desc: "Blog posts, newsletters, resumes", detail: "Blog draft generator, newsletter curator, resume builder — all writing grounded in your actual knowledge, not hallucinated. Export to Markdown, Hugo, Jekyll, Astro." },
+  { icon: Cpu, title: "Custom RAG Strategies", desc: "5 retrieval strategies, swappable", detail: "Default, HyDE, multi-query, reranking, contextual compression, maximal. Tune retrieval per-query. Domain-specific embeddings for medical, legal, code." },
+  { icon: Languages, title: "Multi-Language", desc: "Store and search in any language", detail: "Cross-language semantic search. Write in English, find it in Japanese. Embeddings work across 100+ languages." },
+  { icon: Eye, title: "Vision & Voice", desc: "Images and audio become searchable", detail: "Upload images → AI describes → searchable memory. Record voice → Whisper transcription → saved. Every modality becomes text you can search and chat with." },
+];
+
+/* ─── What You Can Actually Do ─── */
+interface UseCase {
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  color: string;
+}
+
+const USE_CASES: UseCase[] = [
+  { icon: FileText, title: "Import 5 years of ChatGPT and search it in seconds", desc: "Export your ChatGPT data, drop the ZIP. MindStore indexes every conversation. Ask \"what did I discuss about React hooks in 2024?\" and get the exact thread.", color: "rgba(20,184,166,0.1)" },
+  { icon: BookOpen, title: "Turn 200 Kindle highlights into a connected knowledge graph", desc: "Import highlights from every book. See which ideas connect across authors. Find that Nassim Taleb quote that relates to your Kahneman notes.", color: "rgba(56,189,248,0.1)" },
+  { icon: Lightbulb, title: "Ask Claude about YOUR code — not generic docs", desc: "Connect MindStore via MCP. Claude searches your personal notes, meeting prep, and domain knowledge before answering. Context that no foundation model has.", color: "rgba(245,158,11,0.1)" },
+  { icon: BarChart3, title: "Discover contradictions in your own thinking", desc: "You wrote \"always use TypeScript\" in March and \"plain JS is fine for scripts\" in November. AI finds these. Track how your beliefs evolved.", color: "rgba(239,68,68,0.1)" },
+  { icon: Network, title: "Map your entire intellectual landscape in 3D", desc: "Knowledge Fingerprint renders your mind as a WebGL graph. Clusters of related ideas. Orphaned concepts. Bridge ideas connecting domains.", color: "rgba(168,85,247,0.1)" },
+  { icon: Newspaper, title: "Auto-curate a weekly newsletter from what you learned", desc: "Newsletter plugin scans recent memories, groups by topic, generates a digest. You edit, they read. Thought leadership from your actual knowledge.", color: "rgba(16,185,129,0.1)" },
 ];
 
 export function LandingClient() {
@@ -178,60 +197,62 @@ export function LandingClient() {
       <style jsx global>{`
         @keyframes tickerLeft { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
         @keyframes tickerRight { from { transform: translateX(-33.333%); } to { transform: translateX(0); } }
-        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-        @keyframes orbit { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
-        @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-        @media (prefers-reduced-motion: reduce) {
-          .ticker-row, [style*="animation"] { animation: none !important; }
-        }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; } }
       `}</style>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "SoftwareApplication", name: "MindStore",
         applicationCategory: "ProductivityApplication", operatingSystem: "Web",
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        description: "Personal knowledge OS. 35 plugins, 12+ sources, MCP protocol, MIT licensed.",
+        description: "Personal knowledge OS. Import from 12+ sources, semantic search, MCP protocol, 35 plugins. MIT licensed.",
       }) }} />
 
       <NetworkParticles />
 
-      {/* ═══════ NAV ═══════ */}
-      <nav className="fixed top-0 inset-x-0 z-50 h-[52px] px-4 md:px-8 flex items-center justify-between backdrop-blur-xl"
+      {/* NAV */}
+      <nav className="fixed top-0 inset-x-0 z-50 h-[52px] px-5 lg:px-8 flex items-center justify-between backdrop-blur-xl"
         style={{ background: "rgba(10,10,11,0.85)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <Link href="/" className="flex items-center gap-2" aria-label="MindStore home">
           <MindStoreLogo className="w-6 h-6" />
           <span className="font-bold text-[14px] tracking-[-0.01em]">MindStore</span>
         </Link>
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-5">
           <Link href="/docs" className="text-[12px] text-zinc-500 hover:text-zinc-200 transition hidden sm:block">Docs</Link>
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[12px] text-zinc-500 hover:text-zinc-200 transition hidden sm:block">GitHub</a>
+          <Link href="/app/plugins" className="text-[12px] text-zinc-500 hover:text-zinc-200 transition hidden md:block">Plugins</Link>
           <Link href="/app">
-            <button className="h-[30px] px-3.5 rounded-lg text-[12px] font-bold bg-teal-500 text-white border-none cursor-pointer hover:bg-teal-400 transition-colors">
-              Open App
-            </button>
+            <button className="h-[30px] px-3.5 rounded-lg text-[12px] font-bold bg-teal-500 text-white border-none cursor-pointer hover:bg-teal-400 transition-colors">Open App</button>
           </Link>
         </div>
       </nav>
 
       {/* ═══════ HERO ═══════ */}
-      <section className="pt-[clamp(130px,18vh,200px)] pb-[clamp(32px,5vh,48px)] relative z-10">
-        <div className="max-w-[920px] mx-auto px-5 md:px-8 text-center">
+      <section className="pt-[clamp(120px,16vh,180px)] pb-[clamp(24px,3vh,36px)] relative z-10">
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8 text-center">
           <Reveal>
-            <h1 className="text-[clamp(2.4rem,5.5vw,4.2rem)] font-extrabold leading-[1.04] tracking-[-0.04em]">
-              You&apos;ve spent years<br className="hidden sm:block" /> learning things.<br />
+            <h1 className="text-[clamp(2.2rem,5vw,3.8rem)] font-extrabold leading-[1.06] tracking-[-0.04em]">
+              You&apos;ve spent years learning things.<br />
               <span className="font-serif italic text-teal-400">Where did it all go?</span>
             </h1>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <p className="text-[clamp(14px,1.6vw,16px)] mt-5 max-w-[560px] mx-auto leading-[1.7] text-zinc-400">
+              MindStore imports everything you&apos;ve ever read, written, highlighted, or saved — makes it 
+              searchable by meaning — and connects it to <strong className="text-zinc-200 font-semibold">any AI model</strong> you use. 
+              Your knowledge, portable forever.
+            </p>
           </Reveal>
           <Reveal delay={0.14}>
             <div className="flex gap-3 justify-center mt-6 flex-wrap">
               <Link href="/app">
-                <button className="h-11 px-7 rounded-xl text-[14px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(20,184,166,0.2)]">
-                  Get Started — Free
+                <button className="h-11 px-7 rounded-xl text-[14px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(20,184,166,0.15)]">
+                  Get Started Free <ArrowRight className="w-4 h-4 inline ml-1" />
                 </button>
               </Link>
               <Link href="/app?demo=true">
                 <button className="h-11 px-5 rounded-xl text-[14px] font-medium bg-transparent text-zinc-500 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-200 hover:border-zinc-600">
-                  Live Demo
+                  Try Demo
                 </button>
               </Link>
             </div>
@@ -239,163 +260,131 @@ export function LandingClient() {
         </div>
       </section>
 
-      {/* ═══════ DUAL TICKER ═══════ */}
-      <div className="pt-6 pb-1 relative z-10">
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <p className="text-[14px] sm:text-[15px] leading-[1.7] text-zinc-500 text-center max-w-[500px] mx-auto">
-              MindStore imports everything — makes it searchable by meaning — and connects it to{" "}
-              <strong className="text-zinc-200 font-semibold">any AI</strong> you use. Your knowledge, portable forever.
-            </p>
-          </Reveal>
-        </div>
-      </div>
+      {/* ═══════ SOURCE TICKER ═══════ */}
       <DualTicker />
 
-      {/* ═══════ "THROW IN ANYTHING" ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10">
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-2 text-teal-500">Universal input</p>
-            <h2 className="text-[clamp(1.5rem,3.2vw,2.6rem)] font-extrabold tracking-[-0.04em] leading-[1.08]">
-              Throw in <span className="font-serif italic text-teal-400">anything.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.06}>
-            <p className="text-[14px] mt-3 leading-[1.75] max-w-[440px] text-zinc-500">
-              ChatGPT exports. Kindle highlights. YouTube transcripts. Voice memos. Screenshots. 
-              PDFs. URLs. Plain text. If it&apos;s knowledge, MindStore eats it — and makes every word 
-              searchable by <em className="text-zinc-300 not-italic">meaning</em>, not just keywords.
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="flex items-center gap-3 mt-5 text-[11px] text-zinc-600 flex-wrap">
-              <span><strong className="text-zinc-300 font-semibold">12+</strong> importers</span>
-              <span className="text-zinc-800">·</span>
-              <span>Drag &amp; drop</span>
-              <span className="text-zinc-800">·</span>
-              <span>Batch import</span>
-              <span className="text-zinc-800">·</span>
-              <span>ZIP upload</span>
+      {/* ═══════ IMPORT SECTION ═══════ */}
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10">
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div>
+              <Reveal>
+                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-3 text-teal-500">12+ importers</p>
+                <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                  Every source. One knowledge base.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="text-[14px] mt-3 leading-[1.75] text-zinc-400 max-w-[440px]">
+                  Drop a ChatGPT export ZIP — 5 years of conversations indexed in seconds. 
+                  Import Kindle highlights with book structure preserved. Obsidian vaults with 
+                  wikilinks and graph structure. Reddit saved posts. YouTube transcripts. 
+                  PDFs with chapter-aware chunking. Everything becomes one searchable brain.
+                </p>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <div className="flex gap-3 mt-5 text-[11px] text-zinc-500 flex-wrap">
+                  <span className="flex items-center gap-1.5"><Download className="w-3.5 h-3.5 text-teal-500" /> Drag &amp; drop</span>
+                  <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-teal-500" /> Batch import</span>
+                  <span className="flex items-center gap-1.5"><FileCheck className="w-3.5 h-3.5 text-teal-500" /> Deduplication</span>
+                  <span className="flex items-center gap-1.5"><Database className="w-3.5 h-3.5 text-teal-500" /> ZIP upload</span>
+                </div>
+              </Reveal>
             </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ═══════ PORTABILITY — AI Orbit ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <h2 className="text-[clamp(1.5rem,3.2vw,2.6rem)] font-extrabold tracking-[-0.04em] leading-[1.08]">
-              Your brain shouldn&apos;t be<br className="hidden sm:block" /> locked to{" "}
-              <span className="font-serif italic text-teal-400">one AI.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.06}>
-            <p className="text-[14px] mt-3 leading-[1.75] max-w-[440px] text-zinc-500">
-              Store once. Connect everywhere. Switch models freely. Your context follows you — not the platform.
-            </p>
-          </Reveal>
-          {/* AI model orbit / scatter layout */}
-          <Reveal delay={0.1}>
-            <div className="mt-8 relative">
-              {/* Desktop: scattered/organic layout */}
-              <div className="hidden md:block relative h-[240px]">
-                {AI_MODELS.map((ai, i) => {
-                  // Organic positions — hand-placed for visual balance
-                  const positions = [
-                    { top: "8%", left: "2%" },    // Claude
-                    { top: "0%", left: "25%" },   // ChatGPT
-                    { top: "15%", left: "52%" },  // Gemini
-                    { top: "4%", left: "76%" },   // Cursor
-                    { top: "42%", left: "0%" },   // Ollama
-                    { top: "38%", left: "34%" },  // Windsurf
-                    { top: "48%", left: "64%" },  // Copilot
-                    { top: "70%", left: "8%" },   // Perplexity
-                    { top: "72%", left: "40%" },  // OpenRouter
-                    { top: "68%", left: "72%" },  // Any MCP
-                  ];
-                  return (
-                    <div key={ai.name} className="absolute group cursor-default" style={{ ...positions[i], animation: `float ${3 + i * 0.4}s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }}>
-                      <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all duration-300 group-hover:scale-105"
-                        style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${ai.color}22` }}>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ai.color, boxShadow: `0 0 8px ${ai.color}40` }} />
-                        <div>
-                          <div className="text-[13px] font-semibold text-zinc-200">{ai.name}</div>
-                          <div className="text-[9px] text-zinc-600">{ai.desc}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Mobile: 2-column flowing grid */}
-              <div className="md:hidden grid grid-cols-2 gap-2">
-                {AI_MODELS.map((ai) => (
-                  <div key={ai.name} className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                    style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${ai.color}22` }}>
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ai.color, boxShadow: `0 0 6px ${ai.color}40` }} />
-                    <div>
-                      <div className="text-[12px] font-semibold text-zinc-200">{ai.name}</div>
-                      <div className="text-[9px] text-zinc-600">{ai.desc}</div>
-                    </div>
+            {/* Import sources visual */}
+            <Reveal delay={0.08}>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { icon: MessageSquare, label: "ChatGPT" },
+                  { icon: BookOpen, label: "Kindle" },
+                  { icon: Globe, label: "YouTube" },
+                  { icon: FileText, label: "Notion" },
+                  { icon: FileCode, label: "Obsidian" },
+                  { icon: Bookmark, label: "Reddit" },
+                  { icon: FileText, label: "PDF/EPUB" },
+                  { icon: Globe, label: "Twitter" },
+                  { icon: Mic, label: "Voice" },
+                  { icon: Image, label: "Images" },
+                  { icon: Globe, label: "URLs" },
+                  { icon: Puzzle, label: "+5 more" },
+                ].map((s, i) => (
+                  <div key={s.label} className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all hover:bg-white/[0.04]"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", animationDelay: `${i * 50}ms` }}>
+                    <s.icon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                    <span className="text-[12px] font-medium text-zinc-300">{s.label}</span>
                   </div>
                 ))}
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* ═══════ PIPELINE ═══════ */}
-      <div className="py-4 relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <div className="flex items-center gap-2 flex-wrap text-[14px] font-semibold">
-              {[
-                { icon: "📥", label: "Import" },
-                { icon: "⚡", label: "Embed" },
-                { icon: "🔍", label: "Search" },
-                { icon: "✨", label: "Create" },
-              ].map((step, i) => (
-                <span key={step.label} className="flex items-center gap-1">
-                  {i > 0 && <span className="text-zinc-800 mx-1">→</span>}
-                  <span className="text-zinc-100">{step.icon} {step.label}</span>
-                </span>
+      {/* ═══════ PORTABILITY — AI Models ═══════ */}
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="text-center max-w-[600px] mx-auto">
+            <Reveal>
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-3 text-teal-500">Portable knowledge</p>
+              <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                Connect to any AI. Your context follows you.
+              </h2>
+            </Reveal>
+            <Reveal delay={0.06}>
+              <p className="text-[14px] mt-3 leading-[1.75] text-zinc-400">
+                MindStore speaks MCP — the open protocol. Add it as a tool in Claude, ChatGPT, Cursor, or any MCP client. 
+                Three functions give any AI your entire knowledge context. Switch models anytime. Zero lock-in.
+              </p>
+            </Reveal>
+          </div>
+          {/* AI model grid — 2 rows of 5 on desktop, 2 cols on mobile */}
+          <Reveal delay={0.1}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-8 max-w-[900px] mx-auto">
+              {AI_MODELS.map((ai) => (
+                <div key={ai.name} className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl transition-all hover:bg-white/[0.04] cursor-default"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <AILogo name={ai.name} />
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-zinc-200 truncate">{ai.name}</div>
+                    <div className="text-[10px] text-zinc-600">{ai.by}</div>
+                  </div>
+                </div>
               ))}
             </div>
           </Reveal>
         </div>
-      </div>
+      </section>
 
       {/* ═══════ MCP ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10">
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <h2 className="text-[clamp(1.3rem,2.8vw,2rem)] font-extrabold tracking-[-0.04em]">
-              Three lines. <span className="font-serif italic text-teal-400">Any AI gets your brain.</span>
-            </h2>
-          </Reveal>
-          <div className="grid md:grid-cols-2 gap-8 items-start mt-5">
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
             <div>
+              <Reveal>
+                <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-3 text-teal-500">MCP Protocol</p>
+                <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                  Three lines of config. Any AI gets your brain.
+                </h2>
+              </Reveal>
               <Reveal delay={0.06}>
-                <p className="text-[13px] leading-[1.75] text-zinc-500">
-                  MindStore speaks MCP — the open protocol. Point any client at your instance. Three functions give any AI complete context.
+                <p className="text-[14px] mt-3 leading-[1.75] text-zinc-400 max-w-[420px]">
+                  Point any MCP client at your MindStore. Claude, Cursor, Windsurf — they instantly gain 
+                  access to search your memories, read your knowledge profile, and pull deep context on any topic.
                 </p>
               </Reveal>
               <Reveal delay={0.1}>
-                <div className="flex flex-col gap-2 mt-4">
+                <div className="flex flex-col gap-2.5 mt-5">
                   {[
                     { fn: "search_mind", desc: "Semantic search across all your knowledge" },
-                    { fn: "get_profile", desc: "Your knowledge profile and expertise" },
-                    { fn: "get_context", desc: "Deep context on any topic" },
+                    { fn: "get_profile", desc: "Your expertise areas, writing style, knowledge stats" },
+                    { fn: "get_context", desc: "Deep context: related memories, connections, timeline" },
                   ].map(t => (
                     <div key={t.fn} className="flex items-center gap-3">
-                      <code className="font-mono text-[10px] px-2.5 py-0.5 rounded border shrink-0 text-teal-400/60"
-                        style={{ background: "rgba(20,184,166,0.05)", borderColor: "rgba(20,184,166,0.1)" }}>
+                      <code className="font-mono text-[11px] px-2.5 py-0.5 rounded text-teal-400/70 shrink-0"
+                        style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.1)" }}>
                         {t.fn}
                       </code>
-                      <span className="text-[10px] text-zinc-600">{t.desc}</span>
+                      <span className="text-[11px] text-zinc-500">{t.desc}</span>
                     </div>
                   ))}
                 </div>
@@ -407,10 +396,10 @@ export function LandingClient() {
                   <div className="w-[7px] h-[7px] rounded-full" style={{ background: "rgba(239,68,68,0.4)" }} />
                   <div className="w-[7px] h-[7px] rounded-full" style={{ background: "rgba(234,179,8,0.4)" }} />
                   <div className="w-[7px] h-[7px] rounded-full" style={{ background: "rgba(34,197,94,0.4)" }} />
-                  <span className="font-mono text-[9px] ml-2 text-zinc-700">config.json</span>
+                  <span className="font-mono text-[9px] ml-2 text-zinc-700">claude_desktop_config.json</span>
                 </div>
                 <div className="p-4 font-mono text-[12px] leading-[1.9] text-zinc-600">
-                  <pre className="whitespace-pre"><code>{`{\n  `}<span className="text-zinc-400">{`"mcpServers"`}</span>{`: {\n    `}<span className="text-zinc-400">{`"mindstore"`}</span>{`: {\n      `}<span className="text-zinc-400">{`"url"`}</span>{`: `}<span className="text-teal-400">{`"https://mindstore.org/api/mcp"`}</span>{`\n    }\n  }\n}`}</code></pre>
+                  <pre className="whitespace-pre"><code>{`{\n  `}<span className="text-zinc-300">{`"mcpServers"`}</span>{`: {\n    `}<span className="text-zinc-300">{`"mindstore"`}</span>{`: {\n      `}<span className="text-zinc-300">{`"url"`}</span>{`: `}<span className="text-teal-400">{`"https://mindstore.org/api/mcp"`}</span>{`\n    }\n  }\n}`}</code></pre>
                 </div>
               </div>
             </Reveal>
@@ -418,34 +407,27 @@ export function LandingClient() {
         </div>
       </section>
 
-      {/* ═══════ USE CASES — staggered 2-col masonry ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-2 text-teal-500">Use cases</p>
-            <h2 className="text-[clamp(1.3rem,2.8vw,2rem)] font-extrabold tracking-[-0.04em]">
-              What will <span className="font-serif italic text-teal-400">you</span> use it for?
-            </h2>
-          </Reveal>
-          <div className="grid sm:grid-cols-2 gap-3 mt-6">
+      {/* ═══════ WHAT YOU CAN ACTUALLY DO ═══════ */}
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="text-center max-w-[600px] mx-auto mb-8">
+            <Reveal>
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-3 text-teal-500">Real power</p>
+              <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                Not another notes app. This is what you can actually do.
+              </h2>
+            </Reveal>
+          </div>
+          <div className="space-y-3">
             {USE_CASES.map((uc, i) => (
               <Reveal key={uc.title} delay={0.04 * i}>
-                <div className="group p-5 rounded-2xl cursor-default transition-all duration-300 hover:-translate-y-0.5"
-                  style={{ 
-                    background: "rgba(255,255,255,0.02)", 
-                    border: "1px solid rgba(255,255,255,0.04)",
-                    // Alternate heights for masonry feel
-                    ...(i % 3 === 0 ? { paddingBottom: "28px" } : {}),
-                  }}>
-                  <div className="flex items-start gap-3.5">
-                    <span className="text-[28px] shrink-0 mt-0.5 transition-transform duration-300 group-hover:scale-110">{uc.emoji}</span>
-                    <div>
-                      <h3 className="text-[14px] font-bold text-zinc-200">{uc.title}</h3>
-                      <p className="text-[12px] mt-1.5 leading-[1.65] text-zinc-500">{uc.desc}</p>
-                    </div>
+                <div className="group grid lg:grid-cols-[1fr_1.5fr] gap-4 lg:gap-8 p-5 lg:p-6 rounded-2xl transition-all duration-300 hover:translate-x-1"
+                  style={{ background: uc.color, border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="flex items-start gap-3">
+                    <uc.icon className="w-5 h-5 text-teal-400 shrink-0 mt-0.5" />
+                    <h3 className="text-[14px] lg:text-[15px] font-bold text-zinc-100 leading-[1.4]">{uc.title}</h3>
                   </div>
-                  {/* Accent line */}
-                  <div className="h-px mt-4 transition-all duration-300 group-hover:w-full w-0" style={{ background: uc.color, opacity: 0.3 }} />
+                  <p className="text-[13px] leading-[1.7] text-zinc-400">{uc.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -453,134 +435,139 @@ export function LandingClient() {
         </div>
       </section>
 
-      {/* ═══════ SUPERPOWERS — flowing tags ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <h2 className="text-[clamp(1.3rem,2.8vw,2rem)] font-extrabold tracking-[-0.04em]">
-              Not storage. <span className="font-serif italic text-teal-400">A thinking partner.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="flex flex-wrap gap-2 mt-6">
-              {[
-                { emoji: "💬", name: "Chat", desc: "Cited answers from your data" },
-                { emoji: "🧬", name: "Mind Fingerprint", desc: "3D knowledge topology" },
-                { emoji: "⚠️", name: "Contradiction Finder", desc: "Past vs present beliefs" },
-                { emoji: "🃏", name: "Flashcards", desc: "SRS from your knowledge" },
-                { emoji: "📈", name: "Topic Evolution", desc: "Interests over time" },
-                { emoji: "❤️", name: "Sentiment Timeline", desc: "Emotional patterns" },
-                { emoji: "🎯", name: "Knowledge Gaps", desc: "What you're missing" },
-                { emoji: "✍️", name: "Blog Draft", desc: "From your brain" },
-                { emoji: "📰", name: "Newsletter", desc: "Curated from knowledge" },
-                { emoji: "📄", name: "Resume Builder", desc: "Skills from your data" },
-                { emoji: "🕸️", name: "Mind Maps", desc: "Visual clusters" },
-                { emoji: "🎓", name: "Learning Paths", desc: "Personalized curriculum" },
-              ].map((f, i) => (
-                <div key={f.name} className="group flex items-center gap-2 px-3.5 py-2 rounded-xl cursor-default transition-all duration-200 hover:scale-[1.02]"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <span className="text-[15px]">{f.emoji}</span>
-                  <span className="text-[12px] font-semibold text-zinc-300">{f.name}</span>
-                  <span className="text-[10px] text-zinc-600 hidden sm:inline">— {f.desc}</span>
+      {/* ═══════ CAPABILITIES GRID ═══════ */}
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="text-center max-w-[600px] mx-auto mb-8">
+            <Reveal>
+              <p className="text-[10px] font-semibold tracking-[0.12em] uppercase mb-3 text-sky-400">35 plugins</p>
+              <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                Every tool your knowledge needs. Built in.
+              </h2>
+            </Reveal>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {CAPABILITIES.map((cap, i) => (
+              <Reveal key={cap.title} delay={0.03 * i}>
+                <div className="group p-5 rounded-2xl transition-all duration-300 hover:bg-white/[0.03] cursor-default"
+                  style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <cap.icon className="w-5 h-5 text-teal-500 mb-3" />
+                  <h3 className="text-[13px] font-bold text-zinc-200">{cap.title}</h3>
+                  <p className="text-[11px] text-zinc-500 mt-0.5 font-medium">{cap.desc}</p>
+                  <p className="text-[11px] text-zinc-600 mt-2 leading-[1.6] opacity-0 max-h-0 overflow-hidden transition-all duration-300 group-hover:opacity-100 group-hover:max-h-[200px] group-hover:mt-3">
+                    {cap.detail}
+                  </p>
                 </div>
-              ))}
-              <Link href="/app/plugins" className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12px] font-semibold text-teal-400 transition-all hover:bg-teal-500/10"
-                style={{ border: "1px solid rgba(20,184,166,0.15)" }}>
-                All 35 plugins <ArrowRight className="w-3 h-3" />
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={0.3}>
+            <div className="text-center mt-6">
+              <Link href="/app/plugins" className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-teal-400 hover:text-teal-300 transition">
+                Browse all 35 plugins <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* ═══════ COMMUNITY — share & grow ═══════ */}
-      <section className="py-[clamp(48px,8vh,72px)] relative z-10"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(20,184,166,0.015) 0%, transparent 100%)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold mb-4 text-teal-400"
-              style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.1)" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-              Coming soon
-            </div>
-            <h2 className="text-[clamp(1.3rem,2.8vw,2rem)] font-extrabold tracking-[-0.04em]">
-              Share minds. <span className="font-serif italic text-teal-400">Grow together.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.06}>
-            <p className="text-[14px] mt-3 leading-[1.75] max-w-[500px] text-zinc-500">
-              Community knowledge bases are coming. Browse curated minds on topics you care about. 
-              Grab what resonates. Share what you&apos;ve learned. Merge others&apos; expertise into your own. 
-              Knowledge isn&apos;t meant to sit in silos.
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-6">
-              {[
-                { emoji: "🔍", label: "Browse minds", desc: "Explore community knowledge" },
-                { emoji: "⬇️", label: "Import", desc: "Grab others' expertise" },
-                { emoji: "⬆️", label: "Share", desc: "Publish your knowledge" },
-                { emoji: "🔀", label: "Merge", desc: "Combine & grow" },
-              ].map(item => (
-                <div key={item.label} className="p-3.5 rounded-xl text-center transition-all hover:-translate-y-0.5"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <span className="text-[20px]">{item.emoji}</span>
-                  <div className="text-[12px] font-semibold text-zinc-300 mt-1">{item.label}</div>
-                  <div className="text-[10px] text-zinc-600 mt-0.5">{item.desc}</div>
+      {/* ═══════ COMMUNITY ═══════ */}
+      <section className="py-[clamp(56px,9vh,80px)] relative z-10"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.04)", background: "linear-gradient(180deg, rgba(20,184,166,0.01) 0%, transparent 100%)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div>
+              <Reveal>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold mb-4 text-teal-400"
+                  style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.1)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                  Coming soon
                 </div>
-              ))}
+                <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em] leading-[1.1]">
+                  Community knowledge bases.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="text-[14px] mt-3 leading-[1.75] text-zinc-400 max-w-[440px]">
+                  Browse curated knowledge bases from experts. A machine learning researcher shares their paper summaries. 
+                  A chef shares recipe knowledge. Import what resonates into your own MindStore. Share yours back. 
+                  Knowledge grows when it flows.
+                </p>
+              </Reveal>
             </div>
-          </Reveal>
+            <Reveal delay={0.08}>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { icon: Search, label: "Browse minds", desc: "Explore community knowledge on any topic" },
+                  { icon: Download, label: "Import", desc: "Grab expertise into your own MindStore" },
+                  { icon: Upload, label: "Share", desc: "Publish your knowledge base publicly" },
+                  { icon: Merge, label: "Merge", desc: "Combine multiple knowledge bases" },
+                ].map(item => (
+                  <div key={item.label} className="p-4 rounded-xl transition-all hover:-translate-y-0.5"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <item.icon className="w-4 h-4 text-teal-500 mb-2" />
+                    <div className="text-[12px] font-semibold text-zinc-200">{item.label}</div>
+                    <div className="text-[10px] text-zinc-600 mt-0.5 leading-[1.5]">{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ═══════ OPEN SOURCE ═══════ */}
-      <section className="py-[clamp(32px,4vh,40px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
-          <Reveal>
-            <h2 className="text-[clamp(1rem,1.8vw,1.3rem)] font-extrabold tracking-[-0.03em]">
-              Yours to own. <span className="font-serif italic text-teal-400">Yours to extend.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={0.06}>
-            <p className="text-[13px] mt-2 leading-[1.7] max-w-[500px] text-zinc-500">
-              MIT licensed. Plugin SDK. Community-driven. Self-hosted. Your AI keys, your data, zero vendor lock-in.
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3 text-[11px] text-zinc-600">
-              <span className="flex items-center gap-1.5">
-                <span className="w-[5px] h-[5px] rounded-full bg-teal-500 animate-pulse" />
-                Actively developed
-              </span>
-              <span><Counter end={336} /> tests</span>
-              <span><Counter end={103} /> docs</span>
-              <span>Plugin SDK</span>
-              <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer"
-                className="font-semibold text-teal-500 hover:text-teal-400 transition ml-auto">
-                Star on GitHub →
-              </a>
+      <section className="py-[clamp(40px,6vh,56px)] relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <div className="grid lg:grid-cols-[1fr_auto] gap-6 items-center">
+            <div>
+              <Reveal>
+                <h2 className="text-[clamp(1.1rem,2vw,1.4rem)] font-extrabold tracking-[-0.03em]">
+                  MIT licensed. Self-hosted. Community-driven.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="text-[13px] mt-2 leading-[1.7] text-zinc-500 max-w-[500px]">
+                  You own the code. You own the data. Your AI keys stay on your machine. 
+                  Plugin SDK for extending. Zero vendor lock-in. Zero AI costs for MindStore — you bring your own keys.
+                </p>
+              </Reveal>
             </div>
-          </Reveal>
+            <Reveal delay={0.1}>
+              <div className="flex flex-wrap items-center gap-4 text-[11px] text-zinc-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-[5px] h-[5px] rounded-full bg-teal-500 animate-pulse" />
+                  Actively developed
+                </span>
+                <span><Counter end={336} /> tests</span>
+                <span><Counter end={66} /> API routes</span>
+                <span><Counter end={103} /> docs</span>
+                <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer"
+                  className="font-semibold text-teal-500 hover:text-teal-400 transition">
+                  Star on GitHub →
+                </a>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ═══════ CTA ═══════ */}
-      <section className="py-[clamp(56px,10vh,88px)] text-center relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="max-w-[920px] mx-auto px-5 md:px-8">
+      <section className="py-[clamp(60px,10vh,88px)] text-center relative z-10" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
           <Reveal><MindStoreLogo className="w-12 h-12 mx-auto mb-4" /></Reveal>
           <Reveal delay={0.06}>
-            <h2 className="text-[clamp(1.3rem,2.8vw,2rem)] font-extrabold tracking-[-0.04em]">
+            <h2 className="text-[clamp(1.4rem,2.8vw,2.2rem)] font-extrabold tracking-[-0.04em]">
               Your knowledge deserves<br /><span className="font-serif italic text-teal-400">an operating system.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <p className="text-[12px] mt-2 text-zinc-600">Free · Private · No sign-up · MIT open source</p>
+            <p className="text-[13px] mt-2 text-zinc-500">Free · Self-hosted · MIT open source · No sign-up required</p>
           </Reveal>
           <Reveal delay={0.14}>
             <div className="flex gap-3 justify-center mt-5 flex-wrap">
               <Link href="/app">
-                <button className="h-11 px-7 rounded-xl text-[14px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(20,184,166,0.2)]">
+                <button className="h-11 px-7 rounded-xl text-[14px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(20,184,166,0.15)]">
                   Open MindStore <ArrowRight className="w-4 h-4 inline ml-1" />
                 </button>
               </Link>
@@ -594,11 +581,11 @@ export function LandingClient() {
         </div>
       </section>
 
-      {/* ═══════ FOOTER ═══════ */}
-      <footer className="py-3.5 px-5 md:px-8 flex flex-wrap items-center justify-between gap-2 text-[9px] text-zinc-800 max-w-[920px] mx-auto relative z-10"
+      {/* FOOTER */}
+      <footer className="py-4 px-5 lg:px-8 flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-800 max-w-[1120px] mx-auto relative z-10"
         style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <span>MindStore · MIT License</span>
-        <div className="flex gap-3">
+        <span>MindStore · MIT License · {new Date().getFullYear()}</span>
+        <div className="flex gap-4">
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-500 transition">GitHub</a>
           <Link href="/docs" className="hover:text-zinc-500 transition">Docs</Link>
           <Link href="/app/plugins" className="hover:text-zinc-500 transition">Plugins</Link>
