@@ -5,6 +5,50 @@
  * Handles: template definitions, slug generation, frontmatter, file naming.
  */
 
+import { ensurePluginInstalled } from "./plugin-config";
+import { db } from "@/server/db";
+import { sql } from "drizzle-orm";
+
+const SLUG = "markdown-blog-export";
+
+// ─── Plugin lifecycle ────────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export async function fetchMemories(userId: string, sourceType?: string): Promise<MemoryForExport[]> {
+  const condition = sourceType
+    ? sql`WHERE user_id = ${userId} AND source_type = ${sourceType} ORDER BY created_at DESC LIMIT 500`
+    : sql`WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 500`;
+  const rows = await db.execute(sql`
+    SELECT id, content, source_type, source_title, metadata, created_at
+    FROM memories ${condition}
+  `);
+  return (rows as any[]).map(r => ({
+    id: r.id,
+    content: r.content || '',
+    source_type: r.source_type || 'note',
+    source_title: r.source_title || '(untitled)',
+    metadata: r.metadata || {},
+    created_at: r.created_at,
+  }));
+}
+
+export async function getSourceStats(userId: string) {
+  const rows = await db.execute(sql`
+    SELECT source_type, COUNT(*) as count
+    FROM memories WHERE user_id = ${userId}
+    GROUP BY source_type ORDER BY count DESC
+  `);
+  const sourceTypes = (rows as any[]).map(r => ({
+    type: r.source_type || 'unknown',
+    count: parseInt(r.count || '0'),
+  }));
+  const total = sourceTypes.reduce((s, t) => s + t.count, 0);
+  return { total, sourceTypes };
+}
+
 // ─── Types ────────────────────────────────────────────────────
 
 export interface ExportTemplate {

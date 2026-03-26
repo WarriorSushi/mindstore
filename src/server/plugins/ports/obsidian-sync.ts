@@ -3,10 +3,47 @@
  *
  * Converts MindStore memories into Obsidian-compatible markdown files
  * with YAML frontmatter, wikilinks, backlinks, and folder structure.
- *
- * Pure logic: no HTTP, no DB, no ZIP library.
- * Caller provides memories + connections → gets back file map.
  */
+
+import { ensurePluginInstalled, getPluginConfig, savePluginConfig as saveConfig } from "./plugin-config";
+import { db, schema } from "@/server/db";
+import { eq, desc } from "drizzle-orm";
+
+const SLUG = "obsidian-sync";
+
+// ─── Plugin lifecycle ────────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export async function getObsidianConfig(): Promise<ObsidianSyncConfig> {
+  return getPluginConfig<ObsidianSyncConfig>(SLUG, defaultSyncConfig());
+}
+
+export async function saveObsidianConfig(config: ObsidianSyncConfig) {
+  await saveConfig(SLUG, config);
+}
+
+export async function loadMemories(userId: string): Promise<MemoryForExport[]> {
+  const rows = await db.select({
+    id: schema.memories.id, content: schema.memories.content,
+    sourceType: schema.memories.sourceType, sourceTitle: schema.memories.sourceTitle,
+    createdAt: schema.memories.createdAt, metadata: schema.memories.metadata,
+  }).from(schema.memories).where(eq(schema.memories.userId, userId))
+    .orderBy(desc(schema.memories.createdAt)).limit(2000);
+  return rows as unknown as MemoryForExport[];
+}
+
+export async function loadConnections(userId: string): Promise<ConnectionForExport[]> {
+  try {
+    const rows = await db.select().from(schema.connections)
+      .where(eq(schema.connections.userId, userId)).limit(5000);
+    return rows as unknown as ConnectionForExport[];
+  } catch {
+    return [];
+  }
+}
 
 // ─── Types ──────────────────────────────────────────────────────
 

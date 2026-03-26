@@ -2,11 +2,38 @@
  * Notion Sync — Portable Logic
  *
  * Push MindStore memories to a Notion database.
- * Pure logic for Notion API interactions and content formatting.
- *
- * Does NOT store config — the caller handles persistence.
- * Does NOT read DB directly — accepts data as arguments.
+ * Handles Notion API interactions, content formatting, config storage.
  */
+
+import { ensurePluginInstalled, getPluginConfig as getConfig, savePluginConfig as saveConfig } from "./plugin-config";
+import { db, schema } from "@/server/db";
+import { eq, desc } from "drizzle-orm";
+
+const SLUG = "notion-sync";
+
+// ─── Plugin lifecycle ────────────────────────────────────────────
+
+export async function ensureInstalled() {
+  await ensurePluginInstalled(SLUG);
+}
+
+export async function getNotionConfig(): Promise<NotionSyncConfig> {
+  return getConfig<NotionSyncConfig>(SLUG, defaultSyncConfig());
+}
+
+export async function saveNotionConfig(config: NotionSyncConfig) {
+  await saveConfig(SLUG, config);
+}
+
+export async function loadUserMemories(userId: string): Promise<MemoryForSync[]> {
+  const rows = await db.select({
+    id: schema.memories.id, content: schema.memories.content,
+    sourceType: schema.memories.sourceType, sourceTitle: schema.memories.sourceTitle,
+    createdAt: schema.memories.createdAt, metadata: schema.memories.metadata,
+  }).from(schema.memories).where(eq(schema.memories.userId, userId))
+    .orderBy(desc(schema.memories.createdAt)).limit(500);
+  return rows as unknown as MemoryForSync[];
+}
 
 // ─── Types ──────────────────────────────────────────────────────
 
