@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart, Compass } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart, Compass, Brain, GitBranch, Command } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { EmptyState } from "@/components/EmptyState";
@@ -1140,7 +1140,7 @@ export default function ExplorePage() {
         {/* Search History — shown when search is focused and empty */}
         {searchFocused && !search && searchHistory.length > 0 && !savedSearchMenuOpen && !saveSearchDialogOpen && (
           <>
-            <div className="fixed inset-0 z-15" onClick={() => setSearchFocused(false)} />
+            <div className="fixed inset-0 z-[15]" onClick={() => setSearchFocused(false)} />
             <div className="relative z-20 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
                 <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -1309,17 +1309,17 @@ export default function ExplorePage() {
                 <div className="flex items-center gap-1.5">
                   {searchLayers.bm25 > 0 && (
                     <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                      🔤 Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                      <Type className="w-2.5 h-2.5" /> Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
                     </span>
                   )}
                   {searchLayers.vector > 0 && (
                     <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
-                      🧠 Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                      <Brain className="w-2.5 h-2.5" /> Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
                     </span>
                   )}
                   {searchLayers.tree > 0 && (
                     <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                      🌳 Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                      <GitBranch className="w-2.5 h-2.5" /> Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
                     </span>
                   )}
                 </div>
@@ -2033,9 +2033,9 @@ export default function ExplorePage() {
             )}
 
             {/* Footer — different buttons for view vs edit mode */}
-            <div className="px-5 py-3 border-t border-white/[0.06] flex justify-between items-center">
+            <div className="px-5 py-3 border-t border-white/[0.06]">
               {editing ? (
-                <>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <button
                       onClick={cancelEditing}
@@ -2044,7 +2044,7 @@ export default function ExplorePage() {
                       Cancel
                     </button>
                     <span className="text-[10px] text-zinc-700 hidden sm:inline">
-                      ⌘↵ save · Esc cancel
+                      <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘</kbd>+<kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd> save · <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">Esc</kbd> cancel
                     </span>
                   </div>
                   <button
@@ -2059,14 +2059,24 @@ export default function ExplorePage() {
                     )}
                     {saving ? "Saving…" : "Save"}
                   </button>
-                </>
+                </div>
               ) : (
-                <>
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between gap-2">
+                  {/* Primary action — most useful on mobile */}
+                  <button
+                    onClick={() => askAboutMemory(selected)}
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-[12px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all active:scale-[0.97] shrink-0"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Ask about this</span>
+                    <span className="sm:hidden">Ask</span>
+                  </button>
+                  {/* Secondary actions — icon-only on mobile */}
+                  <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => togglePin(selected)}
                       disabled={pinning}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium transition-colors ${
                         selected.pinned
                           ? "text-amber-400 hover:bg-amber-500/10"
                           : "text-zinc-400 hover:bg-white/[0.06]"
@@ -2080,48 +2090,43 @@ export default function ExplorePage() {
                       ) : (
                         <Pin className="w-3.5 h-3.5" />
                       )}
-                      {selected.pinned ? "Unpin" : "Pin"}
+                      <span className="hidden sm:inline">{selected.pinned ? "Unpin" : "Pin"}</span>
                     </button>
                     <button
                       onClick={() => handleCopy(selected.content)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      title="Copy content"
                     >
                       {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-400" />
-                          <span className="text-green-400">Copied</span>
-                        </>
+                        <Check className="w-3.5 h-3.5 text-green-400" />
                       ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy
-                        </>
+                        <Copy className="w-3.5 h-3.5" />
                       )}
+                      <span className="hidden sm:inline">{copied ? <span className="text-green-400">Copied</span> : "Copy"}</span>
                     </button>
                     <button
                       onClick={startEditing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      title="Edit memory (e)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
-                      Edit
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                     <button
-                      onClick={() => askAboutMemory(selected)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-teal-400 hover:bg-teal-500/10 transition-colors"
+                      onClick={() => deleteMemory(selected.id)}
+                      disabled={deleting}
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      title="Delete memory"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      Ask about this
+                      {deleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span className="hidden sm:inline">{deleting ? "Deleting…" : "Delete"}</span>
                     </button>
                   </div>
-                  <button
-                    onClick={() => deleteMemory(selected.id)}
-                    disabled={deleting}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {deleting ? "Deleting…" : "Delete"}
-                  </button>
-                </>
+                </div>
               )}
             </div>
             {/* Keyboard hint */}
@@ -2129,7 +2134,7 @@ export default function ExplorePage() {
               {editing ? (
                 <>
                   <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘↵</kbd>
+                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘</kbd><kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd>
                     save
                   </span>
                   <span className="flex items-center gap-1 text-[10px] text-zinc-700">
