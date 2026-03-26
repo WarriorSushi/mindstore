@@ -854,29 +854,33 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                {/* Categorized suggestions */}
-                <div className="w-full max-w-sm space-y-3">
+                {/* Suggestion prompts — varied layout to avoid identical grid monotony */}
+                <div className="w-full max-w-md space-y-2">
                   {SUGGESTION_GROUPS.map((group, gi) => (
-                    <div key={gi} className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 px-1">
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center ${group.color.split(" ").slice(1).join(" ")}`}>
-                          <group.icon className={`w-3 h-3 ${group.color.split(" ")[0]}`} />
-                        </div>
-                      </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {group.items.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleSend(s)}
-                        className="text-left text-[12px] leading-snug p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/[0.1] text-zinc-400 transition-all active:scale-[0.97]"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+                    <div key={gi}>
+                      {group.items.map((s, si) => (
+                        <button
+                          key={s}
+                          onClick={() => handleSend(s)}
+                          className={cn(
+                            "w-full text-left text-[13px] leading-snug px-4 py-3 transition-all active:scale-[0.98]",
+                            "flex items-center gap-3",
+                            si === 0 && gi === 0 ? "rounded-t-2xl" : "",
+                            si === group.items.length - 1 && gi === SUGGESTION_GROUPS.length - 1 ? "rounded-b-2xl" : "",
+                            "border-x border-b first:border-t border-white/[0.06]",
+                            "bg-white/[0.02] hover:bg-white/[0.05]",
+                            "text-zinc-400 hover:text-zinc-200",
+                          )}
+                        >
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${group.color.split(" ").slice(1).join(" ")}`}>
+                            <group.icon className={`w-3.5 h-3.5 ${group.color.split(" ")[0]}`} />
+                          </div>
+                          <span>{s}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
             {/* Recent conversations quick-access */}
             {activeConversations.length > 0 && (
@@ -962,43 +966,29 @@ export default function ChatPage() {
                           } : {})}
                         />
                       ) : loading && i === messages.length - 1 ? (
-                        <span className="flex items-center gap-2 text-zinc-500">
-                          <span className="flex gap-[3px] items-center">
-                            <span
-                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
-                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }}
-                            />
-                            <span
-                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
-                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }}
-                            />
-                            <span
-                              className="w-[5px] h-[5px] rounded-full bg-teal-400/60"
-                              style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }}
-                            />
-                          </span>
-                          <span className="text-[11px] text-zinc-600">Generating…</span>
-                        </span>
+                        <PulsingDots label="Generating…" />
                       ) : (
                         ""
                       )}
                     </div>
-                    {msg.sources &&
-                      msg.sources.length > 0 &&
-                      msg.content && (
+                  </div>
+                  {/* Source citations — rendered OUTSIDE the message bubble to avoid cards-in-cards */}
+                  {msg.role === "assistant" && msg.sources &&
+                    msg.sources.length > 0 &&
+                    msg.content && (
+                      <div className="mt-1.5 ml-0.5">
                         <SourceCards
                           sources={msg.sources}
                           highlightedIndex={highlightedCitation?.msgIndex === i ? highlightedCitation.sourceIndex : null}
                         />
-                      )}
-                  </div>
-                  {/* Hover action buttons */}
+                      </div>
+                    )}
+                  {/* Action buttons — visible on hover (desktop) or tap (mobile via touch-visible) */}
                   {msg.content && (
                     msg.role === "assistant" ? (
                       <MessageActions
                         content={msg.content}
                         question={
-                          // Find the preceding user message as context for the title
                           messages.slice(0, i).reverse().find((m) => m.role === "user")?.content || ""
                         }
                         onRegenerate={!loading ? () => handleRegenerateAt(i) : undefined}
@@ -1027,11 +1017,7 @@ export default function ChatPage() {
                     {/* Step 1: Searching */}
                     <span className="flex items-center gap-2">
                       {thinkingStep === "searching" ? (
-                        <span className="flex gap-[3px] items-center">
-                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-                          <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
-                        </span>
+                        <PulsingDots />
                       ) : (thinkingStep === "found" || thinkingStep === "generating") ? (
                         <Check className="w-3 h-3 text-green-400/70" />
                       ) : null}
@@ -1047,11 +1033,7 @@ export default function ChatPage() {
                     {(thinkingStep === "found" || thinkingStep === "generating") && (
                       <span className="flex items-center gap-2">
                         {thinkingStep === "generating" ? (
-                          <span className="flex gap-[3px] items-center">
-                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-                            <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
-                          </span>
+                          <PulsingDots />
                         ) : (
                           <Loader2 className="w-3 h-3 text-teal-400/60 animate-spin" />
                         )}
@@ -1312,6 +1294,20 @@ function ModelSelector({ provider, selectedModel, onModelChange }: {
   );
 }
 
+/** Reusable pulsing dots indicator */
+function PulsingDots({ label }: { label?: string }) {
+  return (
+    <span className="flex items-center gap-2 text-zinc-500">
+      <span className="flex gap-[3px] items-center">
+        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
+        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
+        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
+      </span>
+      {label && <span className="text-[11px] text-zinc-600">{label}</span>}
+    </span>
+  );
+}
+
 /** Copy button that appears on message hover */
 function MessageCopyButton({ content, side }: { content: string; side: "left" | "right" }) {
   const [copied, setCopied] = useState(false);
@@ -1325,7 +1321,7 @@ function MessageCopyButton({ content, side }: { content: string; side: "left" | 
         });
       }}
       className={cn(
-        "absolute -bottom-1 opacity-0 group-hover/msg:opacity-100 transition-all",
+        "absolute -bottom-1 opacity-0 group-hover/msg:opacity-100 touch-visible transition-all",
         "w-6 h-6 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
         "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30",
         side === "right" ? "right-0" : "left-0",
@@ -1384,7 +1380,7 @@ function MessageActions({ content, question, onRegenerate }: { content: string; 
   };
 
   return (
-    <div className="absolute -bottom-1 left-0 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-all">
+    <div className="absolute -bottom-1 left-0 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 touch-visible transition-all">
       {/* Copy button */}
       <button
         onClick={() => {
@@ -1481,7 +1477,7 @@ function SourceCards({
   };
 
   return (
-    <div className="mt-2 pt-2 border-t border-white/[0.06]">
+    <div className="mt-0.5">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
           Sources · {sources.length}

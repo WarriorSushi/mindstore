@@ -161,6 +161,10 @@
   button, a, [role="button"] {
     -webkit-tap-highlight-color: transparent;
   }
+  /* Show hover-only actions on touch devices */
+  .touch-visible {
+    opacity: 0.5 !important;
+  }
 }
 
 /* Slide-in animations */
