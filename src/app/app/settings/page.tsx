@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash, AlertTriangle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -73,10 +73,11 @@ export default function SettingsPage() {
     const data = await res.json();
     setSaving(null);
     if (data.ok) {
-      toast.success(`${provider} connected`);
       setOpenaiKey(""); setGeminiKey(""); setOllamaUrl(""); setOpenrouterKey(""); setCustomApiKey(""); setCustomApiUrl(""); setCustomApiModel("");
       fetchSettings().then(setSettings);
-    } else toast.error(data.error || 'Failed');
+    } else {
+      throw new Error(data.error || 'Connection failed — check your key and try again');
+    }
   };
 
   const handleRemoveAll = async () => {
@@ -232,12 +233,22 @@ export default function SettingsPage() {
           badgeColor="text-emerald-400 bg-emerald-500/10 border-emerald-500/15"
           connected={providers.gemini?.configured}
           preview={providers.gemini?.preview}
-          description={<>Free embeddings & chat. <a href="https://aistudio.google.com/apikey" target="_blank" className="text-blue-400 font-medium">Get key ↗</a></>}
+          description={<>Free embeddings & chat — best for getting started.</>}
           inputProps={{ type: "password", placeholder: "AIza...", value: geminiKey, onChange: (e: any) => setGeminiKey(e.target.value) }}
           onSave={() => handleSave('gemini')}
           saving={saving === 'gemini'}
           disabled={!geminiKey.trim()}
           buttonColor="bg-blue-600 hover:bg-blue-500"
+          guide={{
+            steps: [
+              "Go to Google AI Studio (link below)",
+              "Sign in with your Google account",
+              "Click \"Create API key\" → select any project",
+              "Copy the key (starts with AIza...) and paste it here",
+            ],
+            url: "https://aistudio.google.com/apikey",
+            urlLabel: "Open Google AI Studio →",
+          }}
         />
 
         {/* OpenAI */}
@@ -249,12 +260,23 @@ export default function SettingsPage() {
           badgeColor="text-zinc-400 bg-zinc-500/10 border-zinc-500/15"
           connected={providers.openai?.configured}
           preview={providers.openai?.preview}
-          description={<>GPT-4o-mini + text-embedding-3-small. <a href="https://platform.openai.com/api-keys" target="_blank" className="text-emerald-400 font-medium">Get key ↗</a></>}
+          description={<>GPT-4o-mini + text-embedding-3-small. High quality responses.</>}
           inputProps={{ type: "password", placeholder: "sk-...", value: openaiKey, onChange: (e: any) => setOpenaiKey(e.target.value) }}
           onSave={() => handleSave('openai')}
           saving={saving === 'openai'}
           disabled={!openaiKey.trim()}
           buttonColor="bg-emerald-600 hover:bg-emerald-500"
+          guide={{
+            steps: [
+              "Go to OpenAI Platform (link below)",
+              "Sign in and navigate to API Keys",
+              "Click \"Create new secret key\"",
+              "Copy the key (starts with sk-...) and paste it here",
+              "Note: requires billing — add credits in Settings → Billing",
+            ],
+            url: "https://platform.openai.com/api-keys",
+            urlLabel: "Open OpenAI Dashboard →",
+          }}
         />
 
         {/* Ollama */}
@@ -266,12 +288,22 @@ export default function SettingsPage() {
           badgeColor="text-orange-400 bg-orange-500/10 border-orange-500/15"
           connected={providers.ollama?.configured}
           preview={providers.ollama?.url}
-          description={<>100% local. Install <a href="https://ollama.ai" target="_blank" className="text-orange-400 font-medium">Ollama ↗</a></>}
+          description={<>100% local, no API key. Your data never leaves your machine.</>}
           inputProps={{ placeholder: "http://localhost:11434", value: ollamaUrl, onChange: (e: any) => setOllamaUrl(e.target.value) }}
           onSave={() => handleSave('ollama')}
           saving={saving === 'ollama'}
           disabled={!ollamaUrl.trim()}
           buttonColor="bg-orange-600 hover:bg-orange-500"
+          guide={{
+            steps: [
+              "Install Ollama from ollama.ai (link below)",
+              "Run: ollama serve (starts on port 11434)",
+              "Pull a model: ollama pull llama3.2",
+              "Enter the URL below (default: http://localhost:11434)",
+            ],
+            url: "https://ollama.ai",
+            urlLabel: "Download Ollama →",
+          }}
         />
 
         {/* OpenRouter */}
@@ -283,12 +315,22 @@ export default function SettingsPage() {
           badgeColor="text-teal-400 bg-teal-500/10 border-teal-500/15"
           connected={providers.openrouter?.configured}
           preview={providers.openrouter?.preview}
-          description={<>Claude, Llama, Mistral & more. One key. <a href="https://openrouter.ai/keys" target="_blank" className="text-teal-400 font-medium">Get key ↗</a></>}
+          description={<>Claude, Llama, Mistral & more. One key for 200+ models.</>}
           inputProps={{ type: "password", placeholder: "sk-or-...", value: openrouterKey, onChange: (e: any) => setOpenrouterKey(e.target.value) }}
           onSave={() => handleSave('openrouter')}
           saving={saving === 'openrouter'}
           disabled={!openrouterKey.trim()}
           buttonColor="bg-teal-600 hover:bg-teal-500"
+          guide={{
+            steps: [
+              "Go to OpenRouter (link below)",
+              "Create an account and navigate to Keys",
+              "Click \"Create Key\"",
+              "Copy the key (starts with sk-or-...) and paste it here",
+            ],
+            url: "https://openrouter.ai/keys",
+            urlLabel: "Open OpenRouter →",
+          }}
         />
 
         {/* Custom API */}
@@ -665,44 +707,175 @@ export default function SettingsPage() {
   );
 }
 
-function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor }: any) {
+function ProviderCard({ name, icon, iconColor, badge, badgeColor, connected, preview, description, inputProps, onSave, saving, disabled, buttonColor, guide }: any) {
+  const [expanded, setExpanded] = useState(!connected);
+  const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [latency, setLatency] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Reset status when input changes
+  const handleInputChange = (e: any) => {
+    inputProps.onChange(e);
+    if (status === 'error' || status === 'success') {
+      setStatus('idle');
+      setErrorMsg('');
+    }
+  };
+
+  const handleTestAndSave = async () => {
+    setStatus('testing');
+    setErrorMsg('');
+    setLatency(null);
+    const start = performance.now();
+    try {
+      // onSave returns the result from the parent
+      await onSave();
+      const elapsed = Math.round(performance.now() - start);
+      setLatency(elapsed);
+      setStatus('success');
+      // Auto-collapse after success
+      setTimeout(() => setExpanded(false), 1500);
+    } catch (err: any) {
+      setStatus('error');
+      setErrorMsg(err?.message || 'Connection failed');
+    }
+  };
+
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-      <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center ${iconColor}`}>
-            {icon}
+    <div className={`rounded-2xl border overflow-hidden transition-all duration-300 ${
+      status === 'success' ? 'border-emerald-500/25 bg-emerald-500/[0.03]' :
+      status === 'error' ? 'border-red-500/20 bg-red-500/[0.02]' :
+      status === 'testing' ? 'border-teal-500/20 bg-teal-500/[0.02]' :
+      'border-white/[0.06] bg-white/[0.02]'
+    }`}>
+      {/* Header — always visible */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 flex items-center gap-2.5 text-left hover:bg-white/[0.02] transition-colors"
+      >
+        <div className={`w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0 ${iconColor}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-medium">{name}</span>
+            <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-[2px] rounded-md border ${badgeColor}`}>{badge}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] font-medium">{name}</span>
-              <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-[2px] rounded-md border ${badgeColor}`}>{badge}</span>
-              {connected && (
-                <span className="flex items-center gap-1 text-[10px] text-green-400 font-medium">
-                  <CheckCircle className="w-3 h-3" /> Connected
-                </span>
+          {!expanded && connected && preview && (
+            <p className="text-[11px] text-zinc-600 mt-0.5 truncate">Connected · <code className="bg-white/[0.06] px-1 py-0.5 rounded text-[10px]">{preview}</code></p>
+          )}
+        </div>
+        {connected && (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium shrink-0">
+            <CheckCircle className="w-3 h-3" />
+            <span className="hidden sm:inline">Connected</span>
+          </span>
+        )}
+        <svg className={`w-4 h-4 text-zinc-600 transition-transform duration-200 shrink-0 ${expanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-4 pb-4 space-y-3 border-t border-white/[0.04]">
+          <p className="text-[12px] text-zinc-500 leading-relaxed pt-3">{description}</p>
+
+          {/* Guide toggle */}
+          {guide && (
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="flex items-center gap-1.5 text-[11px] text-teal-500 hover:text-teal-400 font-medium transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              {showGuide ? 'Hide setup guide' : 'How to get a key →'}
+            </button>
+          )}
+
+          {/* Inline guide */}
+          {showGuide && guide && (
+            <div className="rounded-xl bg-teal-500/[0.04] border border-teal-500/10 p-3 space-y-2">
+              {guide.steps.map((step: string, i: number) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-teal-500/15 text-teal-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">{step}</p>
+                </div>
+              ))}
+              {guide.url && (
+                <a href={guide.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-teal-400 hover:text-teal-300 font-medium mt-1">
+                  <ExternalLink className="w-3 h-3" />
+                  {guide.urlLabel || 'Open →'}
+                </a>
               )}
             </div>
+          )}
+
+          {/* Input + action */}
+          <div className="space-y-2">
+            <input
+              {...inputProps}
+              onChange={handleInputChange}
+              onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && !disabled && handleTestAndSave()}
+              className={`w-full h-10 px-3 rounded-xl bg-white/[0.04] border text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none transition-all ${
+                status === 'success' ? 'border-emerald-500/30 focus:border-emerald-500/40' :
+                status === 'error' ? 'border-red-500/30 focus:border-red-500/40' :
+                'border-white/[0.08] focus:border-teal-500/30'
+              }`}
+            />
+
+            <button
+              onClick={handleTestAndSave}
+              disabled={disabled || status === 'testing'}
+              className={`w-full h-10 rounded-xl text-[13px] font-medium text-white transition-all active:scale-[0.97] disabled:opacity-40 flex items-center justify-center gap-2 ${
+                status === 'success' ? 'bg-emerald-600 hover:bg-emerald-500' :
+                status === 'error' ? 'bg-red-600/80 hover:bg-red-500/80' :
+                buttonColor
+              }`}
+            >
+              {status === 'testing' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Testing connection...
+                </>
+              ) : status === 'success' ? (
+                <>
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Connected{latency ? ` · ${latency}ms` : ''}
+                </>
+              ) : status === 'error' ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Retry
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5" />
+                  Test & Save
+                </>
+              )}
+            </button>
           </div>
+
+          {/* Validation result */}
+          {status === 'success' && (
+            <div className="flex items-center gap-2 text-[11px] text-emerald-400 animate-in fade-in">
+              <CheckCircle className="w-3 h-3" />
+              Key validated and saved. Ready to use for embeddings and chat.
+            </div>
+          )}
+
+          {status === 'error' && errorMsg && (
+            <div className="flex items-start gap-2 text-[11px] text-red-400 animate-in fade-in">
+              <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Current key preview when connected */}
+          {connected && preview && (
+            <p className="text-[11px] text-zinc-600">Current: <code className="bg-white/[0.06] px-1.5 py-0.5 rounded-md text-[10px]">{preview}</code></p>
+          )}
         </div>
-        <p className="text-[12px] text-zinc-500 leading-relaxed">{description}</p>
-        {preview && (
-          <p className="text-[11px] text-zinc-600">Current: <code className="bg-white/[0.06] px-1.5 py-0.5 rounded-md text-[10px]">{preview}</code></p>
-        )}
-        <div className="flex gap-2">
-          <input
-            {...inputProps}
-            className="flex-1 h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] font-mono placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
-          />
-          <button
-            onClick={onSave}
-            disabled={disabled || saving}
-            className={`h-9 px-4 rounded-xl text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.96] disabled:opacity-40 ${buttonColor}`}
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
