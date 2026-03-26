@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Brain, Upload, MessageSquare, Compass, Database, FileText,
-  Globe, MessageCircle, Sparkles, Key, Server, ExternalLink,
-  Loader2, GraduationCap, Lightbulb, ChevronRight, ArrowUpRight,
+  Globe, MessageCircle, Sparkles, Key, Server,
+  Loader2, GraduationCap, Lightbulb, ChevronRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
   Clock, Pin, BarChart3, BookOpen,
   Layers, AlertTriangle, Target, Copy, FolderOpen,
@@ -348,7 +348,7 @@ export default function DashboardPage() {
   const urls = stats?.byType?.url || 0;
 
   return (
-    <PageTransition className="space-y-6 md:space-y-8">
+    <PageTransition className="space-y-5 md:space-y-6 pb-8">
       {/* Demo Banner */}
       {demo && (
         <Stagger>
@@ -460,11 +460,18 @@ export default function DashboardPage() {
 
       {/* Hero Stats */}
       <Stagger>
-        <div className="space-y-1">
-          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Your Mind</h1>
-          <p className="text-[13px] text-zinc-500">
-            {total > 0 ? `${total.toLocaleString()} memories across ${stats?.totalSources || 0} sources` : "Import knowledge to get started"}
-          </p>
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Your Mind</h1>
+            <p className="text-[13px] text-zinc-500">
+              {total > 0 ? `${total.toLocaleString()} memories across ${stats?.totalSources || 0} sources` : "Import knowledge to get started"}
+            </p>
+          </div>
+          {total > 0 && (
+            <Link href="/app/import" className="hidden sm:flex items-center gap-1.5 text-[12px] text-teal-400 font-medium hover:text-teal-300 transition-colors shrink-0 pb-1">
+              <Upload className="w-3.5 h-3.5" /> Import
+            </Link>
+          )}
         </div>
       </Stagger>
 
@@ -568,26 +575,29 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Stat Cards */}
-      <Stagger>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
-          {[
-            { label: "Total", value: total, icon: Database, color: "from-teal-500/20 to-teal-500/5", iconColor: "text-teal-400" },
-            { label: "ChatGPT", value: chatgpt, icon: MessageCircle, color: "from-green-500/20 to-green-500/5", iconColor: "text-green-400" },
-            { label: "Notes", value: notes, icon: FileText, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400" },
-            { label: "URLs", value: urls, icon: Globe, color: "from-orange-500/20 to-orange-500/5", iconColor: "text-orange-400" },
-          ].map((s) => (
-            <div key={s.label} className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 md:p-4">
-              <div className={`absolute inset-0 bg-gradient-to-b ${s.color} pointer-events-none`} />
-              <div className="relative">
-                <s.icon className={`w-4 h-4 ${s.iconColor} mb-1.5 md:mb-2`} />
-                <p className="text-[20px] md:text-[26px] font-semibold tracking-[-0.02em] tabular-nums">{s.value.toLocaleString()}</p>
-                <p className="text-[10px] md:text-[11px] text-zinc-500 font-medium mt-0.5">{s.label}</p>
+      {/* Stat Summary */}
+      {total > 0 && (
+        <Stagger>
+          <div className="flex items-center gap-6 md:gap-8 overflow-x-auto scrollbar-none px-1 -mx-1">
+            {[
+              { label: "Total", value: total, color: "text-teal-400" },
+              { label: "ChatGPT", value: chatgpt, color: "text-green-400" },
+              { label: "Notes", value: notes, color: "text-blue-400" },
+              { label: "URLs", value: urls, color: "text-orange-400" },
+            ].filter(s => s.value > 0 || s.label === "Total").map((s, i, arr) => (
+              <div key={s.label} className="flex items-center gap-6 md:gap-8">
+                <div className="shrink-0">
+                  <p className={`text-[22px] md:text-[28px] font-semibold tracking-[-0.03em] tabular-nums ${s.color}`}>{s.value.toLocaleString()}</p>
+                  <p className="text-[10px] md:text-[11px] text-zinc-600 font-medium mt-0.5">{s.label}</p>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="w-px h-8 bg-white/[0.06] shrink-0" />
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      </Stagger>
+            ))}
+          </div>
+        </Stagger>
+      )}
 
       {/* Activity Chart — 14-day knowledge growth */}
       {stats?.dailyActivity?.length > 0 && total > 0 && (
@@ -752,7 +762,7 @@ export default function DashboardPage() {
       {/* Pinned Memories */}
       {stats?.pinnedMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-2">
+          <div className="space-y-2 mt-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5">
                 <Pin className="w-3 h-3 text-amber-400 fill-amber-400/30" />
@@ -763,7 +773,7 @@ export default function DashboardPage() {
                 View all →
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="space-y-0.5">
               {stats.pinnedMemories.slice(0, 4).map((mem: any, i: number) => {
                 const st = getSourceType(mem.sourceType);
                 const Icon = st.icon;
@@ -783,15 +793,15 @@ export default function DashboardPage() {
                     })}
                     className="text-left w-full"
                   >
-                    <div className="group relative flex items-start gap-3 p-3.5 rounded-2xl border border-amber-500/10 bg-gradient-to-br from-amber-500/[0.04] to-amber-500/[0.01] hover:from-amber-500/[0.08] hover:to-amber-500/[0.03] hover:border-amber-500/20 transition-all active:scale-[0.98]">
-                      <Pin className="absolute top-2.5 right-2.5 w-2.5 h-2.5 text-amber-500/40 fill-amber-400/20" />
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                    <div className="group flex items-start gap-3 rounded-xl -mx-1 px-4 py-2.5 hover:bg-amber-500/[0.04] transition-colors">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${st.bgColor}`}>
                         <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-medium text-zinc-300 truncate group-hover:text-white transition-colors">{mem.sourceTitle}</p>
+                        <p className="text-[12px] font-medium text-zinc-300 truncate group-hover:text-zinc-200 transition-colors">{mem.sourceTitle}</p>
                         <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed mt-0.5">{mem.content}</p>
                       </div>
+                      <Pin className="w-2.5 h-2.5 text-amber-500/40 fill-amber-400/20 shrink-0 mt-1" />
                     </div>
                   </button>
                 );
@@ -801,20 +811,19 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Actions Grid */}
+      {/* Quick Actions */}
       <Stagger>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 md:pb-0">
           {[
-            { href: "/app/import", icon: Upload, label: "Import", desc: "Add knowledge", color: "text-teal-400" },
-            { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask your mind", color: "text-blue-400" },
-            { href: "/app/explore", icon: Compass, label: "Explore", desc: "Browse all", color: "text-emerald-400" },
-            { href: "/app/learn", icon: GraduationCap, label: "Learn", desc: "Teach AI about you", color: "text-amber-400" },
+            { href: "/app/import", icon: Upload, label: "Import", color: "text-teal-400", hoverBg: "hover:bg-teal-500/[0.08]" },
+            { href: "/app/chat", icon: MessageSquare, label: "Chat", color: "text-blue-400", hoverBg: "hover:bg-blue-500/[0.06]" },
+            { href: "/app/explore", icon: Compass, label: "Explore", color: "text-emerald-400", hoverBg: "hover:bg-emerald-500/[0.06]" },
+            { href: "/app/learn", icon: GraduationCap, label: "Learn", color: "text-amber-400", hoverBg: "hover:bg-amber-500/[0.06]" },
           ].map((a) => (
             <Link key={a.href} href={a.href}>
-              <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3 md:p-4 transition-all active:scale-[0.97] h-full">
-                <a.icon className={`w-5 h-5 ${a.color} mb-2 md:mb-3 group-hover:scale-110 transition-transform`} />
-                <p className="text-[12px] md:text-[13px] font-medium">{a.label}</p>
-                <p className="text-[10px] md:text-[11px] text-zinc-600 mt-0.5 leading-tight">{a.desc}</p>
+              <div className={`flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] ${a.hoverBg} px-4 py-2.5 transition-all active:scale-[0.97] whitespace-nowrap`}>
+                <a.icon className={`w-4 h-4 ${a.color}`} />
+                <span className="text-[13px] font-medium text-zinc-300">{a.label}</span>
               </div>
             </Link>
           ))}
@@ -824,14 +833,14 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       {stats?.recentMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
+          <div className="space-y-1 mt-2">
+            <div className="flex items-center justify-between px-1 mb-3">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Recent Activity</p>
               <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
                 View all →
               </Link>
             </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
+            <div className="space-y-0.5">
               {stats.recentMemories.map((mem: any, i: number) => {
                 const st = getSourceType(mem.sourceType);
                 const Icon = st.icon;
@@ -851,20 +860,15 @@ export default function DashboardPage() {
                     })}
                     className="w-full text-left"
                   >
-                    <div className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${st.bgColor}`}>
+                    <div className="flex items-start gap-3 rounded-xl -mx-1 px-4 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${st.bgColor}`}>
                         <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-[12px] font-medium text-zinc-300 truncate">{mem.sourceTitle}</p>
-                        </div>
-                        <p className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed">{mem.content}</p>
+                        <p className="text-[12px] font-medium text-zinc-300 truncate group-hover:text-zinc-200 transition-colors">{mem.sourceTitle}</p>
+                        <p className="text-[11px] text-zinc-500 line-clamp-1 leading-relaxed mt-0.5">{mem.content}</p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 mt-1">
-                        <Clock className="w-2.5 h-2.5 text-zinc-700" />
-                        <span className="text-[10px] text-zinc-600 whitespace-nowrap">{formatRelativeTime(mem.createdAt)}</span>
-                      </div>
+                      <span className="text-[10px] text-zinc-600 whitespace-nowrap shrink-0 mt-1 tabular-nums">{formatRelativeTime(mem.createdAt)}</span>
                     </div>
                   </button>
                 );
@@ -874,23 +878,21 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
-      {/* Feature Cards */}
+      {/* Discover */}
       <Stagger>
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Discover</p>
+        <div className="space-y-1 mt-2">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1 mb-3">Discover</p>
           {[
-            { href: "/app/fingerprint", icon: Fingerprint, label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL", iconColor: "text-teal-400", iconBg: "bg-teal-500/10" },
-            { href: "/app/insights", icon: Lightbulb, label: "Mind Insights", desc: "Connections, contradictions, metabolism", iconColor: "text-amber-400", iconBg: "bg-amber-500/10" },
-            { href: "/app/connect", icon: Plug, label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400", iconBg: "bg-sky-500/10" },
+            { href: "/app/fingerprint", icon: Fingerprint, label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL", iconColor: "text-teal-400" },
+            { href: "/app/insights", icon: Lightbulb, label: "Mind Insights", desc: "Connections, contradictions, metabolism", iconColor: "text-amber-400" },
+            { href: "/app/connect", icon: Plug, label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400" },
           ].map((f) => (
             <Link key={f.href} href={f.href}>
-              <div className="flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3.5 transition-all active:scale-[0.98] group">
-                <div className={`w-9 h-9 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
-                  <f.icon className={`w-4 h-4 ${f.iconColor}`} />
-                </div>
+              <div className="flex items-center gap-3.5 rounded-xl -mx-1 px-4 py-3 hover:bg-white/[0.03] transition-colors group">
+                <f.icon className={`w-[18px] h-[18px] ${f.iconColor} shrink-0`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[13px] font-medium">{f.label}</p>
+                    <p className="text-[13px] font-medium text-zinc-200">{f.label}</p>
                     {f.tag && (
                       <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-[2px] rounded-md bg-teal-500/10 text-teal-400 border border-teal-500/15">
                         {f.tag}
@@ -899,7 +901,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-0.5">{f.desc}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400 transition-colors shrink-0" />
+                <ArrowRight className="w-3.5 h-3.5 text-zinc-700 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             </Link>
           ))}
@@ -909,18 +911,23 @@ export default function DashboardPage() {
       {/* Sources */}
       {stats?.topSources?.length > 0 && (
         <Stagger>
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Sources</p>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
+          <div className="space-y-1 mt-2">
+            <div className="flex items-center justify-between px-1 mb-3">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Top Sources</p>
+              <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
+                View all →
+              </Link>
+            </div>
+            <div className="space-y-0.5">
               {stats.topSources.slice(0, 6).map((src: any, i: number) => {
                 const st = getSourceType(src.type);
                 const SrcIcon = st.icon;
                 return (
-                <div key={src.id || i} className="flex items-center gap-3 px-4 py-3">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                <div key={src.id || i} className="flex items-center gap-3 rounded-xl -mx-1 px-4 py-2.5 hover:bg-white/[0.03] transition-colors">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${st.bgColor}`}>
                     <SrcIcon className={`w-3.5 h-3.5 ${st.textColor}`} />
                   </div>
-                  <p className="text-[13px] truncate flex-1 min-w-0">{src.title}</p>
+                  <p className="text-[13px] truncate flex-1 min-w-0 text-zinc-300">{src.title}</p>
                   <span className="text-[11px] text-zinc-600 tabular-nums font-medium shrink-0">{src.itemCount}</span>
                 </div>
                 );
