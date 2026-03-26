@@ -5,6 +5,7 @@ import {
   Brain, Lock, Search, Upload, Zap, MessageSquare, ArrowRight,
   Fingerprint, Shuffle, AlertTriangle, Timer, BarChart3, Swords,
   ChevronRight, Sparkles, Globe, FileText, Network, GraduationCap,
+  Loader2,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -117,6 +118,112 @@ export default function LandingPage() {
                 See How It Works
               </button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ CHATGPT IMPORT HIGHLIGHT ═══════ */}
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28 border-t border-white/[0.04]">
+        <div className="relative overflow-hidden rounded-3xl border border-teal-500/15 bg-gradient-to-br from-teal-500/[0.06] via-transparent to-sky-500/[0.04]">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-0">
+            {/* Left — Copy */}
+            <div className="p-8 md:p-12 flex flex-col justify-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/15 text-[11px] font-bold uppercase tracking-[0.1em] text-teal-400 w-fit mb-5">
+                <Upload className="w-3 h-3" />
+                Fastest Import
+              </div>
+              <h2 className="text-[28px] md:text-[36px] font-bold tracking-[-0.03em] leading-[1.1] mb-4">
+                Import your ChatGPT<br />
+                <span className="hero-gradient">in 30 seconds.</span>
+              </h2>
+              <p className="text-[15px] text-zinc-400 leading-[1.7] mb-8 max-w-md">
+                Years of conversations with AI — every insight, every question, every answer — 
+                instantly searchable. No copy-pasting. Just one file.
+              </p>
+
+              {/* Steps */}
+              <div className="space-y-4">
+                {[
+                  { step: "1", label: "Export from ChatGPT", desc: "Settings → Data Controls → Export", time: "10 sec" },
+                  { step: "2", label: "Download the ZIP", desc: "Check your email, click the link", time: "10 sec" },
+                  { step: "3", label: "Drop it in MindStore", desc: "Drag & drop — we handle the rest", time: "10 sec" },
+                ].map((s) => (
+                  <div key={s.step} className="flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[13px] font-bold text-teal-400">{s.step}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[14px] font-medium text-white">{s.label}</p>
+                        <span className="text-[10px] text-zinc-600 bg-white/[0.04] px-2 py-0.5 rounded-full font-mono">{s.time}</span>
+                      </div>
+                      <p className="text-[13px] text-zinc-500 mt-0.5">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <Link href="/app">
+                  <button className="h-11 px-7 rounded-2xl bg-teal-600 hover:bg-teal-500 text-[14px] font-semibold text-white transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20 flex items-center gap-2">
+                    Try It Now
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right — Visual mockup */}
+            <div className="relative p-6 md:p-10 flex items-center justify-center">
+              <div className="w-full max-w-sm">
+                {/* Fake app window */}
+                <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d0e] overflow-hidden shadow-2xl shadow-black/40">
+                  {/* Window chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.04]">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+                    <span className="text-[10px] text-zinc-600 ml-2 font-mono">mindstore.org/app/import</span>
+                  </div>
+                  {/* Upload area mockup */}
+                  <div className="p-6 space-y-4">
+                    <div className="rounded-2xl border-2 border-dashed border-teal-500/30 bg-teal-500/[0.04] p-8 text-center">
+                      <Upload className="w-8 h-8 text-teal-400 mx-auto mb-3" />
+                      <p className="text-[13px] text-zinc-300 font-medium">Drop your ChatGPT export</p>
+                      <p className="text-[11px] text-zinc-600 mt-1">conversations.json or .zip</p>
+                    </div>
+                    {/* Fake processing state */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <div className="w-4 h-4 rounded-full bg-teal-500/15 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                        </div>
+                        <span className="text-zinc-400">847 conversations parsed</span>
+                        <span className="ml-auto text-teal-400 font-medium">✓</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <div className="w-4 h-4 rounded-full bg-teal-500/15 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                        </div>
+                        <span className="text-zinc-400">12,340 memories created</span>
+                        <span className="ml-auto text-teal-400 font-medium">✓</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <div className="w-4 h-4 rounded-full bg-sky-500/15 flex items-center justify-center">
+                          <Loader2 className="w-2.5 h-2.5 text-sky-400 animate-spin" />
+                        </div>
+                        <span className="text-zinc-300">Generating embeddings…</span>
+                        <span className="ml-auto text-sky-400 font-mono text-[10px]">68%</span>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                      <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-teal-500 to-sky-500 transition-all" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

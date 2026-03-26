@@ -15,6 +15,7 @@ import { getSourceType } from "@/lib/source-types";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
+import { NoAIBanner } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -819,6 +820,13 @@ export default function ChatPage() {
                 </Link>
               )}
             </p>
+
+            {/* No AI provider notice */}
+            {!hasAI && memoryCount > 0 && (
+              <div className="w-full max-w-sm mb-4">
+                <NoAIBanner />
+              </div>
+            )}
 
             {/* Categorized suggestions */}
             <div className="w-full max-w-sm space-y-3">

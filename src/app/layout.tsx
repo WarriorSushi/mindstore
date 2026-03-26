@@ -13,17 +13,17 @@ export const metadata: Metadata = {
   authors: [{ name: "AltCorp" }],
   openGraph: {
     title: "MindStore — Your mind, searchable.",
-    description: "Import your ChatGPT conversations, notes, and knowledge. Ask anything. Get answers from YOUR brain. 100% private.",
-    url: "https://mindstore-sandy.vercel.app",
+    description: "Import your ChatGPT conversations in 30 seconds. Ask anything. Get synthesized answers from YOUR brain. 100% private, self-hosted.",
+    url: "https://mindstore.org",
     siteName: "MindStore",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "MindStore — Your mind, searchable.",
-    description: "Import your ChatGPT conversations, notes, and knowledge. Self-hosted and AI-powered.",
+    description: "Import your ChatGPT conversations in 30 seconds. Self-hosted, private, AI-powered second brain.",
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore-sandy.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore.org"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
