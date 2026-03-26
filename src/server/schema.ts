@@ -195,6 +195,70 @@ export const apiKeys = pgTable('api_keys', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// === PLUGIN JOB SCHEDULING ===
+
+export const pluginJobSchedules = pgTable('plugin_job_schedules', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  pluginSlug: text('plugin_slug').notNull(),
+  jobId: text('job_id').notNull(),
+  enabled: integer('enabled').default(1).notNull(),
+  intervalMinutes: integer('interval_minutes').default(1440).notNull(),
+  nextRunAt: timestamp('next_run_at'),
+  lastRunAt: timestamp('last_run_at'),
+  lastStatus: text('last_status'),
+  lastSummary: text('last_summary'),
+  lastError: text('last_error'),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_plugin_job_schedule_user_plugin_job').on(table.userId, table.pluginSlug, table.jobId),
+  index('idx_plugin_job_schedule_due').on(table.enabled, table.nextRunAt),
+]);
+
+// === FLASHCARD DECKS ===
+
+export const flashcardDecks = pgTable('flashcard_decks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  color: text('color').notNull(),
+  cards: jsonb('cards').default([]).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_flashcard_decks_user').on(table.userId),
+  index('idx_flashcard_decks_updated').on(table.updatedAt),
+]);
+
+// === VOICE RECORDINGS ===
+
+export const voiceRecordings = pgTable('voice_recordings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title'),
+  transcript: text('transcript'),
+  durationSeconds: real('duration_seconds'),
+  audioSize: integer('audio_size'),
+  audioFormat: text('audio_format').default('webm'),
+  language: text('language'),
+  provider: text('provider'),
+  model: text('model'),
+  confidence: real('confidence'),
+  wordCount: integer('word_count'),
+  savedAsMemory: integer('saved_as_memory').default(0).notNull(),
+  memoryId: uuid('memory_id').references(() => memories.id),
+  metadata: jsonb('metadata').default({}).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_voice_recordings_user').on(table.userId),
+  index('idx_voice_recordings_created').on(table.createdAt),
+  index('idx_voice_recordings_saved').on(table.savedAsMemory),
+]);
+
 // === TAGS SYSTEM ===
 
 export const tags = pgTable('tags', {
