@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://mindstore-sandy.vercel.app";
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://mindstore.org";
 
 export default function robots(): MetadataRoute.Robots {
   return {

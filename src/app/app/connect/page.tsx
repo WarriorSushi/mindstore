@@ -24,7 +24,7 @@ export default function ConnectPage() {
 
   useEffect(() => {
     loadStats();
-    setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore-sandy.vercel.app/api/mcp");
+    setApiEndpoint(typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "https://mindstore.org/api/mcp");
   }, []);
 
   async function loadStats() {
@@ -45,7 +45,7 @@ export default function ConnectPage() {
   const mcpConfig = `{
   "mcpServers": {
     "mindstore": {
-      "url": "${apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}",
+      "url": "${apiEndpoint || "https://mindstore.org/api/mcp"}",
       "description": "Your personal MindStore — searchable knowledge from your conversations, notes, and documents"
     }
   }
@@ -57,7 +57,7 @@ export default function ConnectPage() {
       "command": "npx",
       "args": ["mindstore-mcp"],
       "env": {
-        "MINDSTORE_URL": "${apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}"
+        "MINDSTORE_URL": "${apiEndpoint || "https://mindstore.org/api/mcp"}"
       }
     }
   }
@@ -248,10 +248,10 @@ export default function ConnectPage() {
         </div>
         <div className="flex items-center gap-2">
           <code className="flex-1 bg-white/[0.04] border border-white/[0.06] px-3.5 py-2.5 rounded-xl text-[12px] font-mono text-zinc-300 overflow-x-auto">
-            {apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp"}
+            {apiEndpoint || "https://mindstore.org/api/mcp"}
           </code>
           <button
-            onClick={() => copyToClipboard(apiEndpoint || "https://mindstore-sandy.vercel.app/api/mcp", "endpoint")}
+            onClick={() => copyToClipboard(apiEndpoint || "https://mindstore.org/api/mcp", "endpoint")}
             className="h-9 w-9 rounded-xl border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all active:scale-[0.95] shrink-0"
           >
             {copied === "endpoint" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
