@@ -348,6 +348,91 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
+      {/* ═══════ GETTING STARTED — shown when AI is connected but no data yet ═══════ */}
+      {hasKey && !demo && total === 0 && (
+        <Stagger>
+          <div className="space-y-6">
+            {/* Welcome header */}
+            <div className="text-center space-y-2 py-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 border border-teal-500/20 flex items-center justify-center mx-auto">
+                <Sparkles className="w-5 h-5 text-teal-400" />
+              </div>
+              <h2 className="text-[18px] font-semibold tracking-[-0.02em]">AI connected — let&apos;s build your mind</h2>
+              <p className="text-[13px] text-zinc-500 max-w-md mx-auto">Import your first knowledge source. ChatGPT exports are the fastest way to see MindStore in action.</p>
+            </div>
+
+            {/* Import options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+              <Link href="/app/import">
+                <div className="group rounded-2xl border border-teal-500/20 bg-gradient-to-br from-teal-500/[0.08] to-teal-500/[0.02] p-4 hover:from-teal-500/[0.12] hover:to-teal-500/[0.04] transition-all active:scale-[0.97]">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-teal-500/15 flex items-center justify-center">
+                      <Upload className="w-4 h-4 text-teal-400" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-medium text-white">Import ChatGPT</p>
+                      <p className="text-[11px] text-teal-400/70">Takes 30 seconds</p>
+                    </div>
+                  </div>
+                  <ol className="space-y-1.5 text-[11px] text-zinc-500">
+                    <li className="flex items-start gap-2"><span className="text-teal-500 font-bold shrink-0">1.</span>Go to chatgpt.com → Settings → Export</li>
+                    <li className="flex items-start gap-2"><span className="text-teal-500 font-bold shrink-0">2.</span>Download the ZIP from your email</li>
+                    <li className="flex items-start gap-2"><span className="text-teal-500 font-bold shrink-0">3.</span>Upload it on the Import page</li>
+                  </ol>
+                </div>
+              </Link>
+
+              <div className="space-y-3">
+                <Link href="/app/import">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0">
+                        <FileText className="w-3.5 h-3.5 text-sky-400" />
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-medium text-zinc-300">Notes & Documents</p>
+                        <p className="text-[10px] text-zinc-600">PDFs, Markdown, text files</p>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-zinc-700 ml-auto" />
+                    </div>
+                  </div>
+                </Link>
+                <Link href="/app/import">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Globe className="w-3.5 h-3.5 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-medium text-zinc-300">URLs & Bookmarks</p>
+                        <p className="text-[10px] text-zinc-600">Paste any link, import Kindle</p>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-zinc-700 ml-auto" />
+                    </div>
+                  </div>
+                </Link>
+                <button
+                  onClick={handleStartDemo}
+                  disabled={loadingDemo}
+                  className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97] text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      {loadingDemo ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" /> : <Zap className="w-3.5 h-3.5 text-emerald-400" />}
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-medium text-zinc-300">{loadingDemo ? "Loading…" : "Try Demo Data"}</p>
+                      <p className="text-[10px] text-zinc-600">24 sample memories to explore</p>
+                    </div>
+                    <ChevronRight className="w-3 h-3 text-zinc-700 ml-auto" />
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Stagger>
+      )}
+
       {/* Hero Stats */}
       <Stagger>
         <div className="space-y-1">
