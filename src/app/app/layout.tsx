@@ -12,14 +12,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useCallback } from "react";
-import { Onboarding } from "@/components/Onboarding";
-import { CommandPalette } from "@/components/CommandPalette";
-import { GlobalDropZone } from "@/components/GlobalDropZone";
-import { KeyboardShortcuts, openKeyboardShortcuts } from "@/components/KeyboardShortcuts";
-import { QuickCapture } from "@/components/QuickCapture";
-import { MemoryDrawer } from "@/components/MemoryDrawer";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import dynamic from "next/dynamic";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// ─── Lazy load overlays & drawers (triggered by user action, not immediately visible) ───
+const Onboarding = dynamic(() => import("@/components/Onboarding").then(m => ({ default: m.Onboarding })), { ssr: false });
+const CommandPalette = dynamic(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })), { ssr: false });
+const GlobalDropZone = dynamic(() => import("@/components/GlobalDropZone").then(m => ({ default: m.GlobalDropZone })), { ssr: false });
+const KeyboardShortcuts = dynamic(() => import("@/components/KeyboardShortcuts").then(m => ({ default: m.KeyboardShortcuts })), { ssr: false });
+const QuickCapture = dynamic(() => import("@/components/QuickCapture").then(m => ({ default: m.QuickCapture })), { ssr: false });
+const MemoryDrawer = dynamic(() => import("@/components/MemoryDrawer").then(m => ({ default: m.MemoryDrawer })), { ssr: false });
+const NotificationCenter = dynamic(() => import("@/components/NotificationCenter").then(m => ({ default: m.NotificationCenter })), { ssr: false });
 
 interface NavItem {
   href: string;
@@ -342,7 +345,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <kbd className="text-[10px] font-mono bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[1px]">⌘K</kbd>
           </button>
           <button
-            onClick={() => openKeyboardShortcuts()}
+            onClick={() => window.dispatchEvent(new CustomEvent("mindstore:open-shortcuts"))}
             className="w-full flex items-center gap-2 px-2.5 py-[7px] rounded-lg text-[12px] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-all"
           >
             <Keyboard className="w-3.5 h-3.5" />
