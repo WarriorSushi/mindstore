@@ -10,6 +10,7 @@ import {
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
   Clock, Pin, BarChart3, BookOpen,
   Layers, AlertTriangle, Target, Copy, FolderOpen,
+  Check, Flame, Type, Plug,
   type LucideIcon,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
@@ -352,7 +353,7 @@ export default function DashboardPage() {
       {demo && (
         <Stagger>
           <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-teal-500/[0.08] to-sky-500/[0.08] border border-teal-500/20 px-4 py-2.5">
-            <span className="text-[12px] text-teal-300 font-medium">✨ Demo mode — sample data</span>
+            <span className="text-[12px] text-teal-300 font-medium flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Demo mode — sample data</span>
             <button onClick={handleExitDemo} className="text-[11px] text-teal-400 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/[0.06] transition-colors">
               Exit
             </button>
@@ -365,7 +366,7 @@ export default function DashboardPage() {
         <Stagger>
           <Link href="/app/settings">
             <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-500/[0.06] to-cyan-500/[0.06] border border-blue-500/15 px-4 py-2.5 hover:bg-blue-500/[0.1] transition-colors">
-              <span className="text-[12px] text-blue-300 font-medium">⚡ Connect an AI provider for semantic search & chat — <span className="text-blue-400">Gemini is free</span></span>
+              <span className="text-[12px] text-blue-300 font-medium flex items-center gap-1.5"><Zap className="w-3 h-3" /> Connect an AI provider for semantic search & chat — <span className="text-blue-400">Gemini is free</span></span>
               <ChevronRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             </div>
           </Link>
@@ -505,17 +506,17 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-1.5">
                           {searchLayers.bm25 > 0 && (
                             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                              🔤 Keyword
+                              <Type className="w-2.5 h-2.5" /> Keyword
                             </span>
                           )}
                           {searchLayers.vector > 0 && (
                             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
-                              🧠 Semantic
+                              <Brain className="w-2.5 h-2.5" /> Semantic
                             </span>
                           )}
                           {searchLayers.tree > 0 && (
                             <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                              🌳 Structure
+                              <Network className="w-2.5 h-2.5" /> Structure
                             </span>
                           )}
                           {!searchLayers.vector && !searchLayers.tree && (
@@ -623,7 +624,7 @@ export default function DashboardPage() {
                             {w.data.dueCards > 0 ? (
                               <span className="text-amber-400">{w.data.dueCards} due</span>
                             ) : (
-                              <span className="text-emerald-400">✓ caught up</span>
+                              <span className="text-emerald-400 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> caught up</span>
                             )}
                           </p>
                           <p className="text-[10px] text-zinc-600 mt-0.5">
@@ -878,13 +879,15 @@ export default function DashboardPage() {
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] px-1">Discover</p>
           {[
-            { href: "/app/fingerprint", emoji: "🧬", label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL" },
-            { href: "/app/insights", emoji: "⚡", label: "Mind Insights", desc: "Connections, contradictions, metabolism" },
-            { href: "/app/connect", emoji: "🔌", label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP" },
+            { href: "/app/fingerprint", icon: Fingerprint, label: "Knowledge Fingerprint", desc: "3D map of your mind's topology", tag: "WebGL", iconColor: "text-teal-400", iconBg: "bg-teal-500/10" },
+            { href: "/app/insights", icon: Lightbulb, label: "Mind Insights", desc: "Connections, contradictions, metabolism", iconColor: "text-amber-400", iconBg: "bg-amber-500/10" },
+            { href: "/app/connect", icon: Plug, label: "Connect to AI", desc: "Use with Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400", iconBg: "bg-sky-500/10" },
           ].map((f) => (
             <Link key={f.href} href={f.href}>
               <div className="flex items-center gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] p-3.5 transition-all active:scale-[0.98] group">
-                <span className="text-xl leading-none">{f.emoji}</span>
+                <div className={`w-9 h-9 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
+                  <f.icon className={`w-4 h-4 ${f.iconColor}`} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-[13px] font-medium">{f.label}</p>
@@ -975,7 +978,7 @@ function ActivityChart({ data }: { data: Array<{ day: string; count: number }> }
         <div className="flex items-center gap-3">
           {streak > 1 && (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
-              🔥 {streak}-day streak
+              <Flame className="w-3 h-3" /> {streak}-day streak
             </span>
           )}
           <span className="text-[10px] text-zinc-600 tabular-nums">
