@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, MessageSquare, Zap, Globe, Plug, Link, HardDrive, Database, Activity, Shield, Cpu, BarChart3, TrendingUp, Layers, Clock, Hash, AlertTriangle, ExternalLink } from "lucide-react";
+import { Key, Download, Upload, Trash2, Loader2, Sparkles, Server, CheckCircle, RefreshCw, Zap, Globe, Plug, Database, Activity, Shield, Layers, AlertTriangle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
@@ -177,20 +177,21 @@ export default function SettingsPage() {
         <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           {([
             { id: 'providers' as const, label: 'Providers', icon: <Key className="w-3.5 h-3.5" /> },
-            { id: 'health' as const, label: 'System Health', icon: <Activity className="w-3.5 h-3.5" /> },
+            { id: 'health' as const, label: 'Health', icon: <Activity className="w-3.5 h-3.5" /> },
             { id: 'data' as const, label: 'Data', icon: <Database className="w-3.5 h-3.5" /> },
           ]).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
                 activeTab === tab.id
                   ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent'
               }`}
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden xs:inline">{tab.label}</span>
+              <span className="xs:hidden">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -464,72 +465,65 @@ export default function SettingsPage() {
                   }`}>
                     <Shield className={`w-5 h-5 ${health.status === 'healthy' ? 'text-emerald-400' : 'text-red-400'}`} />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className={`text-[14px] font-semibold ${health.status === 'healthy' ? 'text-emerald-300' : 'text-red-300'}`}>
                       {health.status === 'healthy' ? 'System Healthy' : 'Issues Detected'}
                     </p>
                     <p className="text-[11px] text-zinc-500">
-                      {health.database?.version || 'Unknown DB'} · Last checked {new Date().toLocaleTimeString()}
+                      {health.database?.version || 'Unknown DB'} · {health.memories.total.toLocaleString()} memories · {health.storage.totalSize}
                     </p>
                   </div>
                 </div>
 
-                {/* Key Metrics Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                  <MetricCard
-                    label="Total Memories"
-                    value={health.memories.total.toLocaleString()}
-                    icon={<Layers className="w-3.5 h-3.5" />}
-                    color="text-teal-400"
-                    bg="bg-teal-500/10"
-                  />
-                  <MetricCard
-                    label="Embedded"
-                    value={`${health.memories.embeddingPercent}%`}
-                    icon={<Cpu className="w-3.5 h-3.5" />}
-                    color={health.memories.embeddingPercent >= 90 ? "text-emerald-400" : health.memories.embeddingPercent >= 50 ? "text-amber-400" : "text-red-400"}
-                    bg={health.memories.embeddingPercent >= 90 ? "bg-emerald-500/10" : health.memories.embeddingPercent >= 50 ? "bg-amber-500/10" : "bg-red-500/10"}
-                    sub={`${health.memories.withEmbeddings} / ${health.memories.total}`}
-                  />
-                  <MetricCard
-                    label="Storage"
-                    value={health.storage.totalSize}
-                    icon={<HardDrive className="w-3.5 h-3.5" />}
-                    color="text-sky-400"
-                    bg="bg-sky-500/10"
-                    sub={`Content: ${health.storage.contentSize}`}
-                  />
-                  <MetricCard
-                    label="Connections"
-                    value={health.connections.toLocaleString()}
-                    icon={<TrendingUp className="w-3.5 h-3.5" />}
-                    color="text-amber-400"
-                    bg="bg-amber-500/10"
-                  />
-                </div>
-
-                {/* Embedding Coverage Bar */}
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+                {/* Memories & Embeddings — primary health indicator */}
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-[12px] font-medium text-zinc-300">Embedding Coverage</p>
-                    <span className="text-[11px] text-zinc-500">{health.memories.withEmbeddings} / {health.memories.total} memories</span>
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-teal-400" />
+                      <p className="text-[13px] font-medium text-zinc-200">Knowledge Base</p>
+                    </div>
+                    <span className="text-[11px] text-zinc-500 tabular-nums">{health.memories.total.toLocaleString()} memories</span>
                   </div>
-                  <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${
-                        health.memories.embeddingPercent >= 90 ? 'bg-emerald-500' :
-                        health.memories.embeddingPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${health.memories.embeddingPercent}%` }}
-                    />
+
+                  {/* Embedding coverage bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-zinc-500">Embedding coverage</span>
+                      <span className={`text-[12px] font-semibold tabular-nums ${
+                        health.memories.embeddingPercent >= 90 ? 'text-emerald-400' :
+                        health.memories.embeddingPercent >= 50 ? 'text-amber-400' : 'text-red-400'
+                      }`}>{health.memories.embeddingPercent}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${
+                          health.memories.embeddingPercent >= 90 ? 'bg-emerald-500' :
+                          health.memories.embeddingPercent >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${health.memories.embeddingPercent}%` }}
+                      />
+                    </div>
+                    {health.memories.withoutEmbeddings > 0 && (
+                      <p className="text-[11px] text-amber-400/80">
+                        {health.memories.withoutEmbeddings} memories missing embeddings — semantic search can&apos;t find them
+                      </p>
+                    )}
                   </div>
-                  {health.memories.withoutEmbeddings > 0 && (
-                    <p className="text-[11px] text-amber-400/80">
-                      {health.memories.withoutEmbeddings} memories without embeddings — semantic search won't find them
-                    </p>
-                  )}
+
+                  {/* Inline details */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 pt-1 border-t border-white/[0.04]">
+                    <InfoRow label="With embeddings" value={health.memories.withEmbeddings.toLocaleString()} />
+                    <InfoRow label="Pinned" value={String(health.memories.pinned)} />
+                    <InfoRow label="Knowledge span" value={
+                      health.memories.oldest && health.memories.newest
+                        ? `${new Date(health.memories.oldest).toLocaleDateString()} — ${new Date(health.memories.newest).toLocaleDateString()}`
+                        : 'N/A'
+                    } />
+                    <InfoRow label="Connections" value={health.connections.toLocaleString()} />
+                  </div>
+
                   {health.embeddings.dimensions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
+                    <div className="flex flex-wrap gap-2">
                       {health.embeddings.dimensions.map(d => (
                         <span key={d.dims} className="text-[10px] font-mono text-zinc-500 bg-white/[0.04] px-2 py-1 rounded-lg border border-white/[0.06]">
                           {d.dims}d × {d.count}
@@ -542,7 +536,7 @@ export default function SettingsPage() {
                 {/* Source Breakdown */}
                 {health.sources.length > 0 && (
                   <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-                    <p className="text-[12px] font-medium text-zinc-300">Source Breakdown</p>
+                    <p className="text-[12px] font-medium text-zinc-300">Sources</p>
                     <div className="space-y-2">
                       {health.sources.map((s) => {
                         const pct = health.memories.total > 0 ? (s.count / health.memories.total) * 100 : 0;
@@ -568,13 +562,15 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Recent Activity Sparkline */}
+                {/* Recent Activity */}
                 {health.activity.length > 0 && (
                   <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-                    <p className="text-[12px] font-medium text-zinc-300">Activity (Last 7 Days)</p>
-                    <div className="flex items-end gap-1 h-16">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[12px] font-medium text-zinc-300">Activity</p>
+                      <span className="text-[10px] text-zinc-600">Last 7 days</span>
+                    </div>
+                    <div className="flex items-end gap-1.5 h-20">
                       {(() => {
-                        // Fill missing days
                         const days: { day: string; count: number }[] = [];
                         for (let i = 6; i >= 0; i--) {
                           const d = new Date();
@@ -584,54 +580,40 @@ export default function SettingsPage() {
                           days.push({ day: dayStr, count: found?.count || 0 });
                         }
                         const max = Math.max(...days.map(d => d.count), 1);
-                        return days.map((day, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div
-                              className="w-full rounded-t-md bg-teal-500/40 hover:bg-teal-500/60 transition-colors min-h-[2px]"
-                              style={{ height: `${Math.max((day.count / max) * 100, 3)}%` }}
-                              title={`${day.day}: ${day.count} memories`}
-                            />
-                            <span className="text-[8px] text-zinc-600">
-                              {new Date(day.day).toLocaleDateString(undefined, { weekday: 'narrow' })}
-                            </span>
-                          </div>
-                        ));
+                        return days.map((day, i) => {
+                          const isToday = i === 6;
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1.5 group">
+                              <span className="text-[9px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">
+                                {day.count}
+                              </span>
+                              <div
+                                className={`w-full rounded-md transition-colors min-h-[3px] ${
+                                  isToday ? 'bg-teal-400/70 hover:bg-teal-400' : 'bg-teal-500/30 hover:bg-teal-500/50'
+                                }`}
+                                style={{ height: `${Math.max((day.count / max) * 100, 4)}%` }}
+                                title={`${day.day}: ${day.count} memories`}
+                              />
+                              <span className={`text-[9px] ${isToday ? 'text-zinc-400 font-medium' : 'text-zinc-600'}`}>
+                                {new Date(day.day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'narrow' })}
+                              </span>
+                            </div>
+                          );
+                        });
                       })()}
                     </div>
                   </div>
                 )}
 
-                {/* Storage Breakdown */}
+                {/* Storage & System — combined to avoid card repetition */}
                 <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-                  <p className="text-[12px] font-medium text-zinc-300">Storage Breakdown</p>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <div className="text-center">
-                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.contentSize}</p>
-                      <p className="text-[10px] text-zinc-600">Content</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.indexSize}</p>
-                      <p className="text-[10px] text-zinc-600">Indexes</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[16px] font-semibold text-zinc-200">{health.storage.totalSize}</p>
-                      <p className="text-[10px] text-zinc-600">Total</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Plugin & System Info */}
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
-                  <p className="text-[12px] font-medium text-zinc-300">System Info</p>
+                  <p className="text-[12px] font-medium text-zinc-300">System</p>
                   <div className="space-y-1.5">
                     <InfoRow label="Database" value={health.database?.version || 'Unknown'} />
-                    <InfoRow label="Plugins Installed" value={`${health.plugins.total} (${health.plugins.enabled} active)`} />
-                    <InfoRow label="Knowledge Span" value={
-                      health.memories.oldest && health.memories.newest
-                        ? `${new Date(health.memories.oldest).toLocaleDateString()} — ${new Date(health.memories.newest).toLocaleDateString()}`
-                        : 'N/A'
-                    } />
-                    <InfoRow label="Pinned Memories" value={String(health.memories.pinned)} />
+                    <InfoRow label="Content size" value={health.storage.contentSize} />
+                    <InfoRow label="Index size" value={health.storage.indexSize} />
+                    <InfoRow label="Total storage" value={health.storage.totalSize} />
+                    <InfoRow label="Plugins" value={`${health.plugins.total} installed · ${health.plugins.enabled} active`} />
                   </div>
                 </div>
               </>
@@ -944,23 +926,6 @@ function ChatProviderOption({ name, description, icon, iconColor, active, onClic
         <div className="w-5 h-5 rounded-full border border-white/[0.1] shrink-0" />
       )}
     </button>
-  );
-}
-
-function MetricCard({ label, value, icon, color, bg, sub }: {
-  label: string; value: string; icon: React.ReactNode; color: string; bg: string; sub?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1">
-      <div className="flex items-center gap-1.5">
-        <div className={`w-6 h-6 rounded-lg ${bg} flex items-center justify-center ${color}`}>
-          {icon}
-        </div>
-      </div>
-      <p className={`text-[18px] font-bold tabular-nums ${color}`}>{value}</p>
-      <p className="text-[10px] text-zinc-600 font-medium">{label}</p>
-      {sub && <p className="text-[9px] text-zinc-700">{sub}</p>}
-    </div>
   );
 }
 
