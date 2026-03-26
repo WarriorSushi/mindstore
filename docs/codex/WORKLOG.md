@@ -8,6 +8,36 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 - `codex/local-dev`
 
+### Convergence: Color Violations + AI Client Migration
+
+#### Scope
+
+- Eliminate last color violations (violet/purple/fuchsia) across codebase
+- Migrate routes with inline AI provider logic to shared ai-client.ts
+
+#### Changes Completed
+
+- Fixed `#7c3aed` (violet) in `layout.tsx` theme-color → `#14b8a6` (teal)
+- Added apple-touch-icon link to layout head (parity with frain/improve)
+- Replaced violet/fuchsia gradient in `opengraph-image.tsx` with teal/sky
+- Replaced `#8b5cf6` in fingerprint chart colors with sky `#0ea5e9`
+- **custom-rag route**: Removed 40-line inline AI provider (3 separate fetch calls to OpenAI/Gemini/OpenRouter), replaced with `getTextGenerationConfig()` + `callTextPrompt()` from shared `ai-client.ts`
+- **multi-language route**: Removed 20-line inline AI provider + `getAIProvider()` + `makeCallAI()`, replaced with shared ai-client
+- Zero inline AI provider calls remaining in any plugin route
+
+#### Quality Metrics
+
+- **Color violations:** 0 (was 3)
+- **Inline AI providers in routes:** 0 (was 2)
+- **TypeScript:** Clean `tsc --noEmit`
+- **Tests:** 42 files, 225 tests, all passing
+- **Net lines removed:** ~80 (29 added, 111 removed)
+
+#### Decisions
+
+- image-to-memory port keeps its own vision-specific AI calls because the shared ai-client is text-only and image analysis requires multimodal API support
+- The `provider` field in multi-language check response now returns `providerLabel` from the shared config instead of the old custom string
+
 ### Route Slimming: image-to-memory
 
 #### Scope
