@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart } from "lucide-react";
+import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart, Compass } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
+import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import {
@@ -1642,43 +1643,36 @@ export default function ExplorePage() {
         )}
 
         {memories.length === 0 && !loading && (
-          <div className="text-center py-16">
+          <>
             {totalMemories === 0 ? (
-              <div className="space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
-                  <Search className="w-6 h-6 text-zinc-700" />
-                </div>
-                <div>
-                  <p className="text-[14px] text-zinc-400 font-medium">Your knowledge base is empty</p>
-                  <p className="text-[12px] text-zinc-600 mt-1">Import conversations, notes, or files to get started</p>
-                </div>
-                <Link
-                  href="/app/import"
-                  className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97] mt-2"
-                >
-                  Import your first memory
-                </Link>
-              </div>
+              <EmptyState
+                icon={Compass}
+                title="Your knowledge base is empty"
+                description="Import your ChatGPT conversations, notes, or files to start exploring your mind."
+                action={{ label: "Import your first memory", href: "/app/import" }}
+                secondaryAction={{ label: "Try demo data", href: "/app?demo=true" }}
+                color="teal"
+              />
             ) : search.trim() ? (
-              <div className="space-y-2">
-                <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto">
-                  <Search className="w-5 h-5 text-zinc-700" />
-                </div>
-                <p className="text-[13px] text-zinc-500">No results for &ldquo;{search}&rdquo;</p>
-                <p className="text-[11px] text-zinc-700">Try a different query or remove filters</p>
-              </div>
+              <EmptyState
+                icon={Search}
+                title={`No results for "${search}"`}
+                description="Try a different query, check your spelling, or remove some filters."
+                action={{ label: "Clear search", href: "/app/explore" }}
+                color="sky"
+                compact
+              />
             ) : (
-              <div className="space-y-2">
-                <p className="text-[13px] text-zinc-500">No memories match this filter</p>
-                <button
-                  onClick={() => setFilter(null)}
-                  className="text-[12px] text-teal-400 hover:text-teal-300 transition-colors"
-                >
-                  Clear filter →
-                </button>
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No memories match this filter"
+                description="Try adjusting your filter criteria or browse all memories."
+                action={{ label: "View all", href: "/app/explore" }}
+                color="sky"
+                compact
+              />
             )}
-          </div>
+          </>
         )}
 
         {/* Keyboard hints (desktop only) */}

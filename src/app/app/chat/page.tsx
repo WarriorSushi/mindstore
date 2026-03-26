@@ -8,7 +8,7 @@ import {
   Plus, History, Trash2, X, MessageSquare, Clock,
   Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle,
   ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus,
+  BookmarkPlus, Upload, Key,
   Pin, PinOff, Download, Hash,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
@@ -802,41 +802,67 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center h-full px-6 pb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mb-3 ring-1 ring-teal-500/10">
-              <Brain className="w-6 h-6 text-teal-400" />
-            </div>
-            <h2 className="text-[17px] font-semibold text-zinc-200 mb-0.5 tracking-[-0.01em]">
-              {getGreeting()}
-            </h2>
-            <p className="text-[13px] text-zinc-500 mb-6">
-              {memoryCount > 0 ? (
-                `${memoryCount.toLocaleString()} memories ready to explore`
-              ) : (
-                <Link
-                  href="/app/import"
-                  className="text-teal-400 hover:text-teal-300 transition-colors"
-                >
-                  Import knowledge to start →
-                </Link>
-              )}
-            </p>
+            {memoryCount === 0 && !hasAI ? (
+              /* True empty state — no memories, no AI */
+              <>
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/15 to-sky-500/15 flex items-center justify-center mb-4 ring-1 ring-teal-500/10">
+                  <MessageSquare className="w-6 h-6 text-teal-400" />
+                </div>
+                <h2 className="text-[17px] font-semibold text-zinc-200 mb-1.5 tracking-[-0.01em]">
+                  Chat with your knowledge
+                </h2>
+                <p className="text-[13px] text-zinc-500 max-w-xs text-center leading-relaxed mb-6">
+                  Import your conversations and connect an AI provider to start asking questions about everything you know.
+                </p>
+                <div className="flex items-center gap-2.5">
+                  <Link href="/app/import" className="h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.96] flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5" />
+                    Import data
+                  </Link>
+                  <Link href="/app/settings" className="h-9 px-4 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-[13px] text-zinc-400 font-medium transition-all active:scale-[0.96] flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5" />
+                    Connect AI
+                  </Link>
+                </div>
+              </>
+            ) : (
+              /* Normal empty chat — has data or AI */
+              <>
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mb-3 ring-1 ring-teal-500/10">
+                  <Brain className="w-6 h-6 text-teal-400" />
+                </div>
+                <h2 className="text-[17px] font-semibold text-zinc-200 mb-0.5 tracking-[-0.01em]">
+                  {getGreeting()}
+                </h2>
+                <p className="text-[13px] text-zinc-500 mb-6">
+                  {memoryCount > 0 ? (
+                    `${memoryCount.toLocaleString()} memories ready to explore`
+                  ) : (
+                    <Link
+                      href="/app/import"
+                      className="text-teal-400 hover:text-teal-300 transition-colors"
+                    >
+                      Import knowledge to start →
+                    </Link>
+                  )}
+                </p>
 
-            {/* No AI provider notice */}
-            {!hasAI && memoryCount > 0 && (
-              <div className="w-full max-w-sm mb-4">
-                <NoAIBanner />
-              </div>
-            )}
-
-            {/* Categorized suggestions */}
-            <div className="w-full max-w-sm space-y-3">
-              {SUGGESTION_GROUPS.map((group, gi) => (
-                <div key={gi} className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 px-1">
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center ${group.color.split(" ").slice(1).join(" ")}`}>
-                      <group.icon className={`w-3 h-3 ${group.color.split(" ")[0]}`} />
-                    </div>
+                {/* No AI provider notice */}
+                {!hasAI && memoryCount > 0 && (
+                  <div className="w-full max-w-sm mb-4">
+                    <NoAIBanner />
                   </div>
+                )}
+
+                {/* Categorized suggestions */}
+                <div className="w-full max-w-sm space-y-3">
+                  {SUGGESTION_GROUPS.map((group, gi) => (
+                    <div key={gi} className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 px-1">
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center ${group.color.split(" ").slice(1).join(" ")}`}>
+                          <group.icon className={`w-3 h-3 ${group.color.split(" ")[0]}`} />
+                        </div>
+                      </div>
                   <div className="grid grid-cols-2 gap-1.5">
                     {group.items.map((s) => (
                       <button
@@ -880,6 +906,8 @@ export default function ChatPage() {
                   ))}
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         ) : (
