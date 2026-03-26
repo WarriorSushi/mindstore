@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Brain, RefreshCw, Loader2 } from 'lucide-react';
+import { Brain, RefreshCw, Loader2, Lightbulb, Network, Link2, Layers } from 'lucide-react';
 import { usePageTitle } from "@/lib/use-page-title";
 import { PageTransition } from "@/components/PageTransition";
 
@@ -21,7 +21,7 @@ export default function FingerprintPage() {
   usePageTitle("Knowledge Fingerprint");
   const [data, setData] = useState<{ nodes: any[]; edges: any[]; clusters: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'3d' | 'stats'>('3d');
+  const [viewMode, setViewMode] = useState<'graph' | 'breakdown'>('graph');
 
   useEffect(() => { loadFingerprint(); }, []);
 
@@ -62,31 +62,31 @@ export default function FingerprintPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Mind Map</h1>
-          <p className="text-[13px] text-zinc-500 mt-0.5">Your knowledge, visualized as a living graph</p>
+          <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Knowledge Fingerprint</h1>
+          <p className="text-[13px] text-zinc-500 mt-0.5">The shape of your thinking, visualized</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 mt-1">
           {/* View toggle */}
           <div className="flex rounded-xl bg-white/[0.04] border border-white/[0.06] p-0.5">
             <button
-              onClick={() => setViewMode('3d')}
+              onClick={() => setViewMode('graph')}
               className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
-                viewMode === '3d'
+                viewMode === 'graph'
                   ? 'bg-teal-500/15 text-teal-300 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              3D Graph
+              Graph
             </button>
             <button
-              onClick={() => setViewMode('stats')}
+              onClick={() => setViewMode('breakdown')}
               className={`px-3 py-1.5 rounded-[10px] text-[12px] font-medium transition-all ${
-                viewMode === 'stats'
+                viewMode === 'breakdown'
                   ? 'bg-teal-500/15 text-teal-300 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              Stats
+              Breakdown
             </button>
           </div>
           {/* Refresh */}
@@ -100,15 +100,13 @@ export default function FingerprintPage() {
         </div>
       </div>
 
-      {/* 3D Graph View */}
-      {viewMode === '3d' && (
+      {/* Graph View */}
+      {viewMode === 'graph' && (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden relative" style={{ height: 'calc(100dvh - 220px)', minHeight: '400px' }}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#0a0a0b]/80 backdrop-blur-sm">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/10 flex items-center justify-center mx-auto mb-3">
-                  <Brain className="w-6 h-6 text-teal-400 animate-pulse" />
-                </div>
+              <div className="flex items-center gap-3">
+                <Brain className="w-5 h-5 text-teal-400 animate-pulse" />
                 <p className="text-[13px] text-zinc-400">Mapping your mind…</p>
               </div>
             </div>
@@ -132,12 +130,10 @@ export default function FingerprintPage() {
           {data && graphNodes.length === 0 && !loading && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center max-w-xs px-6">
-                <div className="w-14 h-14 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-7 h-7 text-zinc-700" />
-                </div>
-                <p className="text-[15px] font-medium text-zinc-300 mb-1">Your mind is empty</p>
+                <Brain className="w-8 h-8 text-zinc-700 mx-auto mb-4" />
+                <p className="text-[15px] font-medium text-zinc-300 mb-1">No knowledge yet</p>
                 <p className="text-[12px] text-zinc-600 leading-relaxed mb-4">
-                  Import some knowledge first, then come back to see your mind fingerprint.
+                  Import some conversations or notes first — your fingerprint maps the connections between your ideas.
                 </p>
                 <Link
                   href="/app/import"
@@ -151,9 +147,9 @@ export default function FingerprintPage() {
         </div>
       )}
 
-      {/* Stats View */}
-      {viewMode === 'stats' && (
-        <div className="space-y-4">
+      {/* Breakdown View */}
+      {viewMode === 'breakdown' && (
+        <div className="space-y-6">
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
@@ -162,25 +158,25 @@ export default function FingerprintPage() {
 
           {data && !loading && (
             <>
-              {/* Summary stats */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Nodes", value: data.nodes.length, color: "text-teal-400" },
-                  { label: "Connections", value: data.edges.length, color: "text-blue-400" },
-                  { label: "Clusters", value: data.clusters.length, color: "text-emerald-400" },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <p className={`text-[22px] md:text-[28px] font-semibold tabular-nums ${s.color}`}>
-                      {s.value.toLocaleString()}
-                    </p>
-                    <p className="text-[11px] text-zinc-600 font-medium mt-0.5">{s.label}</p>
-                  </div>
-                ))}
+              {/* Summary — inline row, not cards */}
+              <div className="flex items-baseline gap-6 text-[13px] text-zinc-500">
+                <span className="flex items-center gap-1.5">
+                  <Network className="w-3.5 h-3.5 text-teal-400" />
+                  <span className="text-zinc-200 font-medium tabular-nums">{data.nodes.length.toLocaleString()}</span> nodes
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="text-zinc-200 font-medium tabular-nums">{data.edges.length.toLocaleString()}</span> connections
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-zinc-200 font-medium tabular-nums">{data.clusters.length}</span> clusters
+                </span>
               </div>
 
               {/* Clusters */}
               {data.clusters.length > 0 && (
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 md:p-5 space-y-4">
+                <div className="space-y-4">
                   <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">
                     Knowledge Clusters
                   </p>
@@ -213,16 +209,18 @@ export default function FingerprintPage() {
                 </div>
               )}
 
-              {/* About */}
-              <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-teal-500/[0.04] to-sky-500/[0.02] p-4 md:p-5">
-                <p className="text-[13px] font-medium text-zinc-300 mb-2">💡 What is a Knowledge Fingerprint?</p>
-                <p className="text-[12px] text-zinc-500 leading-relaxed">
-                  Your Knowledge Fingerprint is a unique visualization of your mind's topology.
-                  Each node represents a piece of knowledge, and edges show semantic connections.
-                  Clusters reveal your areas of expertise, while isolated nodes highlight potential
-                  blind spots. As you import more knowledge, your fingerprint grows and evolves —
-                  a living map of your intellectual landscape.
-                </p>
+              {/* About — plain text, no decorative card */}
+              <div className="border-t border-white/[0.06] pt-5 mt-2">
+                <div className="flex items-start gap-2.5">
+                  <Lightbulb className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[13px] font-medium text-zinc-400 mb-1">What is a Knowledge Fingerprint?</p>
+                    <p className="text-[12px] text-zinc-600 leading-relaxed max-w-lg">
+                      A unique topology of your mind. Nodes are pieces of knowledge, edges show semantic connections.
+                      Clusters reveal expertise areas; isolated nodes highlight blind spots. It grows as you learn.
+                    </p>
+                  </div>
+                </div>
               </div>
             </>
           )}
