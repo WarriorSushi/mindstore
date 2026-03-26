@@ -121,6 +121,145 @@ function DualTicker() {
 }
 
 /* ─── AI Model Logos (simple SVG marks) ─── */
+/* ─── Product Preview — CSS mockup of the app ─── */
+function ProductPreview() {
+  return (
+    <div className="relative mx-auto max-w-[900px]">
+      {/* Ambient glow */}
+      <div className="absolute -inset-8 rounded-[40px] opacity-40 blur-[60px] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(20,184,166,0.15), rgba(56,189,248,0.08), transparent 70%)" }}
+      />
+      
+      {/* Browser chrome */}
+      <div className="relative rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl shadow-black/40"
+        style={{ background: "#0c0c0e" }}>
+        {/* Title bar */}
+        <div className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className="flex gap-[6px]">
+            <div className="w-[10px] h-[10px] rounded-full" style={{ background: "rgba(239,68,68,0.5)" }} />
+            <div className="w-[10px] h-[10px] rounded-full" style={{ background: "rgba(234,179,8,0.5)" }} />
+            <div className="w-[10px] h-[10px] rounded-full" style={{ background: "rgba(34,197,94,0.5)" }} />
+          </div>
+          <div className="flex-1 flex justify-center">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] text-zinc-600" style={{ background: "rgba(255,255,255,0.03)" }}>
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(20,184,166,0.5)" }} />
+              mindstore.org/app
+            </div>
+          </div>
+          <div className="w-16" /> {/* Balance */}
+        </div>
+
+        {/* App layout */}
+        <div className="flex h-[340px] sm:h-[400px]">
+          {/* Sidebar (hidden on mobile) */}
+          <div className="hidden sm:flex w-[180px] flex-col shrink-0 p-3 gap-0.5"
+            style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+            {/* Logo */}
+            <div className="flex items-center gap-2 px-2 py-2 mb-2">
+              <div className="w-5 h-5 rounded-md" style={{ background: "linear-gradient(135deg, #14b8a6, #0ea5e9)" }} />
+              <span className="text-[11px] font-bold text-zinc-300">MindStore</span>
+            </div>
+            {/* Nav items */}
+            {[
+              { label: "Dashboard", active: true },
+              { label: "Chat" },
+              { label: "Import" },
+              { label: "Explore" },
+              { label: "Fingerprint" },
+              { label: "Insights" },
+              { label: "Collections" },
+              { label: "Flashcards" },
+            ].map((item) => (
+              <div key={item.label} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] ${
+                item.active
+                  ? "bg-white/[0.06] text-zinc-200 font-medium"
+                  : "text-zinc-600 hover:text-zinc-400"
+              }`}>
+                <div className={`w-3 h-3 rounded ${item.active ? "bg-teal-500/30" : "bg-white/[0.04]"}`} />
+                {item.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Main content area */}
+          <div className="flex-1 p-4 sm:p-5 overflow-hidden">
+            {/* Header */}
+            <div className="mb-4">
+              <div className="text-[14px] sm:text-[16px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind</div>
+              <div className="text-[10px] text-zinc-600 mt-0.5">2,847 memories across 14 sources</div>
+            </div>
+
+            {/* Search bar */}
+            <div className="flex items-center gap-2 px-3 h-8 rounded-lg mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <Search className="w-3 h-3 text-zinc-600" />
+              <span className="text-[10px] text-zinc-600">Search your memories…</span>
+              <span className="ml-auto text-[8px] text-zinc-700 font-mono bg-white/[0.04] px-1 py-0.5 rounded">⌘K</span>
+            </div>
+
+            {/* Stat cards row */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[
+                { label: "Total", value: "2,847", color: "rgba(20,184,166,0.12)" },
+                { label: "ChatGPT", value: "1,423", color: "rgba(34,197,94,0.12)" },
+                { label: "Notes", value: "892", color: "rgba(59,130,246,0.12)" },
+                { label: "URLs", value: "532", color: "rgba(249,115,22,0.12)" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-lg p-2" style={{ background: s.color, border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="text-[13px] sm:text-[15px] font-semibold text-zinc-200 tabular-nums">{s.value}</div>
+                  <div className="text-[8px] text-zinc-500 font-medium mt-0.5">{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Activity bars */}
+            <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <div className="w-3 h-3 rounded bg-teal-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-2 h-2 text-teal-400" />
+                </div>
+                <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">Activity · 14 days</span>
+                <span className="ml-auto text-[8px] text-amber-400 font-semibold">🔥 7-day streak</span>
+              </div>
+              <div className="flex items-end gap-[3px] h-10">
+                {[35, 22, 0, 48, 65, 30, 45, 55, 72, 40, 60, 80, 50, 90].map((h, i) => (
+                  <div key={i} className="flex-1 rounded-t-[2px]"
+                    style={{
+                      height: `${Math.max(h, 4)}%`,
+                      background: i === 13
+                        ? "linear-gradient(to top, #14b8a6, #2dd4bf)"
+                        : h === 0 ? "rgba(255,255,255,0.03)" : "rgba(20,184,166,0.25)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Recent memories (peek) */}
+            <div className="mt-3 space-y-1">
+              {[
+                { type: "chatgpt", title: "AI Architecture Deep Dive", snippet: "Discussed transformers vs RNNs…", color: "#10b981" },
+                { type: "kindle", title: "Thinking, Fast and Slow", snippet: "System 1 is fast, intuitive…", color: "#f59e0b" },
+              ].map((mem) => (
+                <div key={mem.title} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
+                  <div className="w-5 h-5 rounded shrink-0" style={{ background: `${mem.color}20` }}>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-sm" style={{ background: `${mem.color}60` }} />
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-medium text-zinc-400 truncate">{mem.title}</div>
+                    <div className="text-[8px] text-zinc-600 truncate">{mem.snippet}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AILogo({ name }: { name: string }) {
   const size = 20;
   // Recognizable simplified marks for each AI
@@ -260,6 +399,15 @@ export function LandingClient() {
         </div>
       </section>
 
+      {/* ═══════ PRODUCT PREVIEW ═══════ */}
+      <section className="pt-2 pb-[clamp(32px,5vh,48px)] relative z-10">
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <Reveal delay={0.18}>
+            <ProductPreview />
+          </Reveal>
+        </div>
+      </section>
+
       {/* ═══════ SOURCE TICKER ═══════ */}
       <DualTicker />
 
@@ -317,6 +465,53 @@ export function LandingClient() {
               </div>
             </Reveal>
           </div>
+        </div>
+      </section>
+
+      {/* ═══════ CHATGPT IMPORT HIGHLIGHT ═══════ */}
+      <section className="py-[clamp(32px,5vh,48px)] relative z-10">
+        <div className="max-w-[1120px] mx-auto px-5 lg:px-8">
+          <Reveal>
+            <div className="relative overflow-hidden rounded-2xl"
+              style={{ background: "linear-gradient(135deg, rgba(20,184,166,0.08), rgba(56,189,248,0.05))", border: "1px solid rgba(20,184,166,0.12)" }}>
+              <div className="relative flex flex-col sm:flex-row items-center gap-5 sm:gap-8 p-5 sm:p-7">
+                {/* Left: icon + text */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.15)" }}>
+                    <Zap className="w-5 h-5 text-teal-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-[16px] sm:text-[18px] font-bold tracking-[-0.02em] text-zinc-100">
+                      Import your ChatGPT in 30 seconds
+                    </h3>
+                    <p className="text-[12px] sm:text-[13px] text-zinc-500 mt-0.5 leading-relaxed">
+                      Export from ChatGPT settings → upload the ZIP → done. Years of conversations, instantly searchable.
+                    </p>
+                  </div>
+                </div>
+                {/* Right: steps */}
+                <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                  {[
+                    { step: "1", label: "Export" },
+                    { step: "2", label: "Upload" },
+                    { step: "3", label: "Search" },
+                  ].map((s, i) => (
+                    <div key={s.step} className="flex items-center gap-2">
+                      {i > 0 && <ArrowRight className="w-3 h-3 text-zinc-700 -ml-1" />}
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-teal-400"
+                          style={{ background: "rgba(20,184,166,0.15)" }}>
+                          {s.step}
+                        </span>
+                        <span className="text-[11px] font-semibold text-zinc-400">{s.label}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
