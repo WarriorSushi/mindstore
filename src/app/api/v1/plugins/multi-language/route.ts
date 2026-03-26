@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/server/user';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
+import { getTextGenerationConfig, callTextPrompt, type AITextConfig } from '@/server/ai-client';
 import {
   LANGUAGES,
   detectLanguage,
@@ -21,39 +22,12 @@ import {
   type CallAI,
 } from '@/server/plugins/ports/multi-language';
 
-// ─── AI Provider ─────────────────────────────────────────────
+// ─── AI Provider (shared ai-client) ─────────────────────────
 
-async function getAIProvider(): Promise<{ provider: string; apiKey: string } | null> {
-  const settings = await db.execute(sql`SELECT key, value FROM settings WHERE key IN ('openai_api_key', 'gemini_api_key', 'openrouter_api_key')`);
-  const config: Record<string, string> = {};
-  for (const row of settings as any[]) config[row.key] = row.value;
-  if (config.gemini_api_key) return { provider: 'gemini', apiKey: config.gemini_api_key };
-  if (config.openai_api_key) return { provider: 'openai', apiKey: config.openai_api_key };
-  if (config.openrouter_api_key) return { provider: 'openrouter', apiKey: config.openrouter_api_key };
-  if (process.env.GEMINI_API_KEY) return { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY };
-  if (process.env.OPENAI_API_KEY) return { provider: 'openai', apiKey: process.env.OPENAI_API_KEY };
-  return null;
-}
-
-function makeCallAI(ai: { provider: string; apiKey: string }): CallAI {
+function makeCallAI(config: AITextConfig): CallAI {
   return async (prompt, systemPrompt) => {
-    if (ai.provider === 'gemini') {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${ai.apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 2000 } }),
-      });
-      if (!res.ok) throw new Error(`Gemini error: ${res.statusText}`);
-      return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
-    const baseUrl = ai.provider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1';
-    const model = ai.provider === 'openrouter' ? 'google/gemini-2.0-flash-lite-001' : 'gpt-4o-mini';
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ai.apiKey}` },
-      body: JSON.stringify({ model, messages: [...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []), { role: 'user', content: prompt }], temperature: 0.1, max_tokens: 2000 }),
-    });
-    if (!res.ok) throw new Error(`AI error: ${res.statusText}`);
-    return (await res.json()).choices?.[0]?.message?.content || '';
+    const result = await callTextPrompt(config, prompt, systemPrompt, { temperature: 0.1, maxTokens: 2000 });
+    return result || '';
   };
 }
 
@@ -78,9 +52,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (action === 'check') {
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       return NextResponse.json({
-        aiAvailable: !!ai, provider: ai?.provider || null,
+        aiAvailable: !!ai, provider: ai?.providerLabel || null,
         supportedLanguages: Object.keys(LANGUAGES).length,
         features: { detection: !!ai, translation: !!ai, crossLanguageSearch: !!ai, heuristicDetection: true },
       });
@@ -89,7 +63,7 @@ export async function GET(req: NextRequest) {
     if (action === 'detect') {
       const text = searchParams.get('text');
       if (!text) return NextResponse.json({ error: 'Missing text parameter' }, { status: 400 });
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       const callAI = ai ? makeCallAI(ai) : null;
       const { language, method } = await detectLanguage(text, callAI);
       return NextResponse.json({ language, method });
@@ -98,9 +72,9 @@ export async function GET(req: NextRequest) {
     if (action === 'translate') {
       const text = searchParams.get('text'), from = searchParams.get('from') || 'auto', to = searchParams.get('to') || 'en';
       if (!text) return NextResponse.json({ error: 'Missing text parameter' }, { status: 400 });
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       if (!ai) return NextResponse.json({ error: 'No AI provider configured' }, { status: 400 });
-      const callAI = makeCallAI(ai);
+      const callAI = makeCallAI(ai!);
       let fromLang = from;
       if (from === 'auto') {
         try { fromLang = (await aiDetectLanguage(text, callAI)).code; } catch { fromLang = 'unknown'; }
@@ -113,9 +87,9 @@ export async function GET(req: NextRequest) {
     if (action === 'search') {
       const query = searchParams.get('q'), limit = parseInt(searchParams.get('limit') || '10');
       if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       if (!ai) return NextResponse.json({ error: 'No AI provider for cross-language search' }, { status: 400 });
-      const callAI = makeCallAI(ai);
+      const callAI = makeCallAI(ai!);
 
       const langResult = await db.execute(sql`SELECT DISTINCT metadata->>'language' as language FROM memories WHERE user_id = ${userId} AND metadata->>'language' IS NOT NULL AND metadata->>'language' != '' AND metadata->>'language' != 'en'`);
       const targetLanguages = (langResult as any[]).map(r => r.language).filter(Boolean);
@@ -168,7 +142,7 @@ export async function POST(req: NextRequest) {
       const memory = await db.execute(sql`SELECT id, content, metadata FROM memories WHERE id = ${memoryId} AND user_id = ${userId}`);
       if (!(memory as any[]).length) return NextResponse.json({ error: 'Memory not found' }, { status: 404 });
       const mem = (memory as any[])[0];
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       const callAI = ai ? makeCallAI(ai) : null;
       const { language } = await detectLanguage(mem.content || '', callAI);
       const newMeta = { ...(mem.metadata || {}), language: language.code, languageName: language.name, languageConfidence: language.confidence, languageScript: language.script };
@@ -180,7 +154,7 @@ export async function POST(req: NextRequest) {
       const body = await req.json().catch(() => ({}));
       const batchSize = body.batchSize || 50;
       const untagged = await db.execute(sql`SELECT id, content, metadata FROM memories WHERE user_id = ${userId} AND (metadata->>'language' IS NULL OR metadata->>'language' = '') ORDER BY created_at DESC LIMIT ${batchSize}`);
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       const callAI = ai ? makeCallAI(ai) : null;
       let tagged = 0, errors = 0;
       const languageCounts: Record<string, number> = {};
@@ -206,9 +180,9 @@ export async function POST(req: NextRequest) {
       const mem = (memory as any[])[0];
       const sourceLang = mem.metadata?.language || 'auto';
       if (sourceLang === targetLang) return NextResponse.json({ translation: mem.content, from: sourceLang, to: targetLang });
-      const ai = await getAIProvider();
+      const ai = await getTextGenerationConfig();
       if (!ai) return NextResponse.json({ error: 'No AI provider configured' }, { status: 400 });
-      const translation = await translate(mem.content, sourceLang, targetLang, makeCallAI(ai));
+      const translation = await translate(mem.content, sourceLang, targetLang, makeCallAI(ai!));
       return NextResponse.json({ translation, from: sourceLang, to: targetLang });
     }
 

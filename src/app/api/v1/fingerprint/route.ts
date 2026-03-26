@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     // Clusters
     const clusterColors: Record<string, string> = {
-      chatgpt: '#10b981', text: '#8b5cf6', file: '#f59e0b', url: '#3b82f6',
+      chatgpt: '#10b981', text: '#0ea5e9', file: '#f59e0b', url: '#3b82f6',
     };
 
     const clusters = sources.reduce((acc: any[], s: any) => {

@@ -17,7 +17,7 @@ export default async function Image() {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#0a0a0b',
-          backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 60%, rgba(217, 70, 239, 0.1) 0%, transparent 50%)',
+          backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(20, 184, 166, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 60%, rgba(56, 189, 248, 0.1) 0%, transparent 50%)',
         }}
       >
         <div
@@ -34,7 +34,7 @@ export default async function Image() {
               width: '64px',
               height: '64px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #8b5cf6, #d946ef)',
+              background: 'linear-gradient(135deg, #14b8a6, #38bdf8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

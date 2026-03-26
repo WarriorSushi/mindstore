@@ -16,6 +16,7 @@ import { eq, sql } from 'drizzle-orm';
 import { getUserId } from '@/server/user';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings, getEmbeddingConfig } from '@/server/embeddings';
+import { getTextGenerationConfig, callTextPrompt } from '@/server/ai-client';
 import {
   DEFAULT_CONFIG,
   STRATEGY_INFO,
@@ -31,69 +32,13 @@ import {
   type EmbedFn,
 } from '@/server/plugins/ports/custom-rag';
 
-// ─── AI Provider Setup ──────────────────────────────────────────
-
-async function getAIConfig() {
-  const settings = await db.execute(
-    sql`SELECT key, value FROM settings WHERE key IN (
-      'openai_api_key', 'gemini_api_key', 'chat_provider', 'chat_model',
-      'openrouter_api_key', 'custom_api_key', 'custom_api_url', 'custom_api_model'
-    )`
-  );
-  const config: Record<string, string> = {};
-  for (const row of settings as any[]) config[row.key] = row.value;
-  return config;
-}
+// ─── AI Provider Setup (shared ai-client) ───────────────────────
 
 const callAI: CallAI = async (systemPrompt, userPrompt) => {
-  const config = await getAIConfig();
-  const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;
-  const geminiKey = config.gemini_api_key || process.env.GEMINI_API_KEY;
-  const openrouterKey = config.openrouter_api_key || process.env.OPENROUTER_API_KEY;
-
-  if (openaiKey) {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
-        temperature: 0.7, max_tokens: 1000,
-      }),
-    });
-    if (res.ok) return (await res.json()).choices?.[0]?.message?.content || '';
-  }
-  if (geminiKey) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
-        }),
-      }
-    );
-    if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
-  }
-  if (openrouterKey) {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openrouterKey}`,
-        'HTTP-Referer': 'https://mindstore.app',
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3.5-haiku',
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
-        temperature: 0.7, max_tokens: 1000,
-      }),
-    });
-    if (res.ok) return (await res.json()).choices?.[0]?.message?.content || '';
-  }
-  throw new Error('No AI provider available for RAG strategies');
+  const config = await getTextGenerationConfig();
+  if (!config) throw new Error('No AI provider available for RAG strategies');
+  const result = await callTextPrompt(config, userPrompt, systemPrompt, { temperature: 0.7, maxTokens: 1000 });
+  return result || '';
 };
 
 const deps = {
@@ -132,10 +77,8 @@ export async function GET(req: NextRequest) {
     if (action === 'config') {
       const config = await getRAGConfig();
       const embeddingConfig = await getEmbeddingConfig();
-      const aiConfig = await getAIConfig();
-      const hasAI = !!(aiConfig.openai_api_key || process.env.OPENAI_API_KEY ||
-                       aiConfig.gemini_api_key || process.env.GEMINI_API_KEY ||
-                       aiConfig.openrouter_api_key || process.env.OPENROUTER_API_KEY);
+      const aiTextConfig = await getTextGenerationConfig();
+      const hasAI = aiTextConfig !== null;
       return NextResponse.json({
         config, strategies: STRATEGY_INFO,
         embeddingProvider: embeddingConfig?.provider || null,
