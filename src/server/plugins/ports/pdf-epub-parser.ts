@@ -1,3 +1,4 @@
+import path from "path";
 import { importDocuments } from "@/server/import-service";
 import { assertPluginEnabled } from "@/server/plugins/ports/plugin-config";
 
@@ -248,6 +249,122 @@ export function previewParsedDocument(doc: ParsedDocument, chunks: Chunk[]) {
     estimatedReadingTime: Math.max(1, Math.round(totalWords / 225)),
   };
 }
+
+// ─── Parsing ─────────────────────────────────────────────────
+
+function getChapterContent(epub: any, chapterId: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    epub.getChapter(chapterId, (error: Error | null, text: string) => {
+      if (error) reject(error);
+      else resolve(text || "");
+    });
+  });
+}
+
+function findTocTitle(epub: any, idOrHref: string): string | null {
+  for (const item of epub.toc || []) {
+    if (item.id === idOrHref || item.href?.includes(idOrHref)) {
+      return item.title || null;
+    }
+  }
+  return null;
+}
+
+export async function parsePDF(buffer: Buffer, fileName: string): Promise<ParsedDocument> {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+
+  const textResult = await parser.getText();
+  const fullText = textResult.text || "";
+
+  let info: Record<string, string> = {};
+  try {
+    info = ((await parser.getInfo())?.info || {}) as Record<string, string>;
+  } catch {
+    info = {};
+  }
+
+  const title = info.Title || fileName.replace(/\.pdf$/i, "");
+  const author = info.Author || undefined;
+  const totalPages = textResult?.pages?.length || undefined;
+
+  await parser.destroy().catch(() => {});
+
+  return {
+    title,
+    author,
+    format: "pdf",
+    totalPages,
+    totalChapters: undefined,
+    sections: extractPDFSections(fullText, title),
+    metadata: {
+      ...(info.Title ? { title: info.Title } : {}),
+      ...(info.Author ? { author: info.Author } : {}),
+      ...(info.Subject ? { subject: info.Subject } : {}),
+      ...(info.Creator ? { creator: info.Creator } : {}),
+      ...(info.Producer ? { producer: info.Producer } : {}),
+      ...(totalPages ? { pages: String(totalPages) } : {}),
+    },
+  };
+}
+
+export async function parseEPUB(buffer: Buffer, fileName: string): Promise<ParsedDocument> {
+  const { EPub } = await import("epub2");
+  const os = await import("os");
+  const fs = await import("fs/promises");
+  const tempPath = path.join(os.tmpdir(), `mindstore-epub-${Date.now()}.epub`);
+  await fs.writeFile(tempPath, buffer);
+
+  try {
+    const epub = await EPub.createAsync(tempPath);
+    const title = epub.metadata?.title || fileName.replace(/\.epub$/i, "");
+    const author = epub.metadata?.creator || epub.metadata?.author || undefined;
+    const sections = [];
+
+    for (let index = 0; index < (epub.flow || []).length; index += 1) {
+      const chapter = epub.flow[index];
+      if (!chapter?.id) continue;
+
+      try {
+        const text = htmlToText(await getChapterContent(epub, chapter.id));
+        if (text.trim().length < 20) continue;
+
+        sections.push({
+          title: findTocTitle(epub, chapter.id || chapter.href) || `Chapter ${index + 1}`,
+          content: text.trim(),
+          level: 1,
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    return {
+      title,
+      author,
+      format: "epub",
+      totalChapters: sections.length,
+      sections,
+      metadata: {
+        ...(epub.metadata?.title ? { title: epub.metadata.title } : {}),
+        ...(author ? { author } : {}),
+        ...(epub.metadata?.language ? { language: epub.metadata.language } : {}),
+        ...(epub.metadata?.publisher ? { publisher: epub.metadata.publisher } : {}),
+        ...(epub.metadata?.date ? { date: epub.metadata.date } : {}),
+        ...(epub.metadata?.description ? { description: epub.metadata.description } : {}),
+      },
+    };
+  } finally {
+    const fs = await import("fs/promises");
+    await fs.unlink(tempPath).catch(() => {});
+  }
+}
+
+export function parseDocument(buffer: Buffer, fileName: string, ext: string): Promise<ParsedDocument> {
+  return ext === ".pdf" ? parsePDF(buffer, fileName) : parseEPUB(buffer, fileName);
+}
+
+// ─── Import ──────────────────────────────────────────────────
 
 export async function importParsedDocument({
   userId,
