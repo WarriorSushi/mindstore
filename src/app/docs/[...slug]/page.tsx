@@ -1,7 +1,38 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getDocBySlug } from "@/lib/docs";
 
 export const dynamic = "force-static";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const doc = await getDocBySlug(slug);
+  if (!doc) return {};
+
+  const title = `${doc.title} — MindStore Docs`;
+  const description = doc.description || `MindStore documentation: ${doc.title}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: `https://mindstore.org/docs/${slug.join("/")}`,
+      siteName: "MindStore",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function DocPage({
   params,

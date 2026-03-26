@@ -1,7 +1,25 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getDocBySlug } from "@/lib/docs";
 
 export const dynamic = "force-static";
+
+export const metadata: Metadata = {
+  title: "Documentation — MindStore",
+  description: "Complete documentation for MindStore — your AI-powered personal knowledge OS. Guides for importing, searching, chatting, plugins, MCP, deployment, and more.",
+  openGraph: {
+    title: "Documentation — MindStore",
+    description: "Complete documentation for MindStore. Guides for importing, searching, plugins, MCP, and more.",
+    url: "https://mindstore.org/docs",
+    siteName: "MindStore",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Documentation — MindStore",
+    description: "Complete documentation for MindStore — your AI-powered personal knowledge OS.",
+  },
+};
 
 export default async function DocsHomePage() {
   const doc = await getDocBySlug([]);
