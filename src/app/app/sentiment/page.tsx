@@ -68,12 +68,12 @@ const sourceConfig: Record<string, { icon: any; color: string; label: string }> 
   reddit: { icon: MessageSquare, color: 'text-orange-400', label: 'Reddit' },
 };
 
-const moodConfig: Record<string, { icon: any; color: string; bg: string; label: string; emoji: string }> = {
-  positive: { icon: Smile, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Positive', emoji: '😊' },
-  negative: { icon: Frown, color: 'text-rose-400', bg: 'bg-rose-500/10', label: 'Negative', emoji: '😔' },
-  neutral: { icon: Meh, color: 'text-zinc-400', bg: 'bg-zinc-500/10', label: 'Neutral', emoji: '😐' },
-  mixed: { icon: Cloud, color: 'text-sky-400', bg: 'bg-sky-500/10', label: 'Mixed', emoji: '🤔' },
-  unknown: { icon: Meh, color: 'text-zinc-500', bg: 'bg-zinc-500/10', label: 'Unknown', emoji: '❓' },
+const moodConfig: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+  positive: { icon: Smile, color: 'text-emerald-400', bg: 'bg-emerald-500/10', label: 'Positive' },
+  negative: { icon: Frown, color: 'text-rose-400', bg: 'bg-rose-500/10', label: 'Negative' },
+  neutral: { icon: Meh, color: 'text-zinc-400', bg: 'bg-zinc-500/10', label: 'Neutral' },
+  mixed: { icon: Cloud, color: 'text-sky-400', bg: 'bg-sky-500/10', label: 'Mixed' },
+  unknown: { icon: Meh, color: 'text-zinc-500', bg: 'bg-zinc-500/10', label: 'Unknown' },
 };
 
 // Heatmap color scale (score → color) — teal/emerald positive, rose negative, zinc neutral
@@ -239,7 +239,7 @@ export default function SentimentPage() {
       {!loading && summary && summary.analyzed === 0 && (
         <Stagger>
           <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-white/[0.08]">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/15 to-emerald-500/15 flex items-center justify-center mb-4">
+            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/10 flex items-center justify-center mb-4">
               <Heart className="w-6 h-6 text-teal-400" />
             </div>
             <h3 className="text-[16px] font-medium mb-1.5">No sentiment data yet</h3>
@@ -401,11 +401,6 @@ function OverallMoodCard({ summary }: { summary: SummaryData }) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-      <div className={`absolute inset-0 bg-gradient-to-br ${
-        summary.overallMood === 'positive' ? 'from-emerald-500/[0.08] to-teal-500/[0.04]' :
-        summary.overallMood === 'negative' ? 'from-rose-500/[0.08] to-amber-500/[0.04]' :
-        'from-teal-500/[0.06] to-sky-500/[0.03]'
-      } pointer-events-none`} />
       <div className="relative p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2 flex-1 min-w-0">
@@ -414,13 +409,15 @@ function OverallMoodCard({ summary }: { summary: SummaryData }) {
               <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Overall Mood</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[36px] md:text-[44px] leading-none">{cfg.emoji}</span>
+              <div className={`w-10 h-10 rounded-xl ${cfg.bg} flex items-center justify-center`}>
+                <cfg.icon className={`w-5 h-5 ${cfg.color}`} />
+              </div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-[28px] md:text-[32px] font-bold tracking-[-0.04em] ${cfg.color}`}>
+                  <span className={`text-[24px] md:text-[28px] font-bold tracking-[-0.04em] ${cfg.color}`}>
                     {cfg.label}
                   </span>
-                  <span className={`text-[16px] font-medium tabular-nums ${getScoreColor(summary.overallScore)}`}>
+                  <span className={`text-[14px] font-medium tabular-nums ${getScoreColor(summary.overallScore)}`}>
                     {scoreDisplay}
                   </span>
                 </div>
