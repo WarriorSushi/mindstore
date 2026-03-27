@@ -1050,8 +1050,8 @@ export default function ImportPage() {
               {!obPreview ? (
                 <div className="space-y-3">
                   <label
-                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                      ${obParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-teal-500/30 hover:bg-teal-500/[0.03]'}`}
+                    className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                      ${obParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-teal-500/30 hover:bg-teal-500/[0.04]'}`}
                   >
                     {obParsing ? (
                       <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
@@ -1696,8 +1696,8 @@ export default function ImportPage() {
               {!bmPreview ? (
                 <div className="space-y-3">
                   <label
-                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                      ${bmParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-sky-500/30 hover:bg-sky-500/[0.03]'}`}
+                    className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                      ${bmParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-sky-500/30 hover:bg-sky-500/[0.04]'}`}
                   >
                     {bmParsing ? (
                       <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
@@ -1839,8 +1839,8 @@ export default function ImportPage() {
               {!rdPreview ? (
                 <div className="space-y-3">
                   <label
-                    className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                      ${rdParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-orange-500/30 hover:bg-orange-500/[0.03]'}`}
+                    className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                      ${rdParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-orange-500/30 hover:bg-orange-500/[0.04]'}`}
                   >
                     {rdParsing ? (
                       <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
@@ -1958,8 +1958,8 @@ export default function ImportPage() {
                 <p className="text-zinc-600">Settings → Your Account → Download an archive of your data → Extract ZIP → Find data/bookmarks.js</p>
               </div>
               <label
-                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                  ${twParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-sky-500/30 hover:bg-sky-500/[0.03]'}`}
+                className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                  ${twParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-sky-500/30 hover:bg-sky-500/[0.04]'}`}
               >
                 {twParsing ? (
                   <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
@@ -1995,8 +1995,8 @@ export default function ImportPage() {
                 <p className="text-zinc-600">Upload the <code className="text-[11px] text-teal-400/80 bg-teal-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">result.json</code> file from the export folder.</p>
               </div>
               <label
-                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                  ${tgParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-teal-500/30 hover:bg-teal-500/[0.03]'}`}
+                className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                  ${tgParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-teal-500/30 hover:bg-teal-500/[0.04]'}`}
               >
                 {tgParsing ? (
                   <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
@@ -2065,8 +2065,8 @@ export default function ImportPage() {
               </div>
 
               <label
-                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                  ${pkParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-emerald-500/30 hover:bg-emerald-500/[0.03]'}`}
+                className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                  ${pkParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-emerald-500/30 hover:bg-emerald-500/[0.04]'}`}
               >
                 {pkParsing ? (
                   <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
@@ -2116,8 +2116,8 @@ export default function ImportPage() {
               </div>
 
               <label
-                className={`flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed transition-all cursor-pointer
-                  ${spParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.08] hover:border-emerald-500/30 hover:bg-emerald-500/[0.03]'}`}
+                className={`flex flex-col items-center gap-3 py-10 md:py-12 rounded-2xl border-2 border-dashed transition-all cursor-pointer
+                  ${spParsing ? 'border-zinc-700 bg-white/[0.01] opacity-60' : 'border-white/[0.1] hover:border-emerald-500/30 hover:bg-emerald-500/[0.04]'}`}
               >
                 {spParsing ? (
                   <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
