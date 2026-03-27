@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
+import { processQuery } from '@/server/query-processor';
 import { sql } from 'drizzle-orm';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
@@ -24,16 +25,19 @@ export async function GET(req: NextRequest) {
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
     if (query.length > 2000) return NextResponse.json({ error: 'Query too long (max 2000 chars)' }, { status: 400 });
 
-    // Get embedding for the query using available provider
+    // Process query for better retrieval (abbreviation expansion, stop word removal)
+    const processed = processQuery(query);
+
+    // Get embedding for the expanded query using available provider
     let embedding: number[] | null = null;
     try {
-      const embeddings = await generateEmbeddings([query]);
+      const embeddings = await generateEmbeddings([processed.expanded || query]);
       if (embeddings && embeddings.length > 0) {
         embedding = embeddings[0];
       }
     } catch { /* fallback to BM25 only */ }
 
-    const results = await retrieve(query, embedding, {
+    const results = await retrieve(processed.expanded || query, embedding, {
       userId,
       limit,
       sourceTypes: sourceType ? [sourceType] : undefined,

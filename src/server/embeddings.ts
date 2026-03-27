@@ -8,6 +8,7 @@
 
 import { db } from './db';
 import { sql } from 'drizzle-orm';
+import { decrypt } from './encryption';
 
 export type EmbeddingProvider = 'openai' | 'gemini' | 'ollama';
 
@@ -25,7 +26,8 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
   
   const config: Record<string, string> = {};
   for (const row of settings as any[]) {
-    config[row.key] = row.value;
+    // Decrypt API keys that may be encrypted at rest
+    config[row.key] = row.key.includes('api_key') ? decrypt(row.value) : row.value;
   }
 
   // Explicit provider choice

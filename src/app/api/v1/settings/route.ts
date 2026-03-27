@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getEmbeddingConfig } from '@/server/embeddings';
+import { encrypt, decrypt } from '@/server/encryption';
 import {
   PROVIDER_AUTH_ROADMAP,
   PROVIDER_CATALOG,
@@ -28,7 +29,7 @@ export async function GET() {
 
     const config: Record<string, string> = {};
     for (const row of settings as unknown as SettingRow[]) {
-      config[row.key] = row.value;
+      config[row.key] = decryptSettingValue(row.key, row.value);
     }
 
     const embConfig = await getEmbeddingConfig();
@@ -251,9 +252,23 @@ async function triggerAutoReindex() {
   }
 }
 
+/** Keys that contain sensitive values and should be encrypted at rest */
+const SENSITIVE_KEYS = new Set([
+  'openai_api_key', 'gemini_api_key', 'openrouter_api_key',
+  'custom_api_key',
+]);
+
 async function upsertSetting(key: string, value: string) {
+  // Encrypt sensitive values (API keys)
+  const storedValue = SENSITIVE_KEYS.has(key) ? encrypt(value) : value;
   await db.execute(sql`
-    INSERT INTO settings (key, value, updated_at) VALUES (${key}, ${value}, NOW())
-    ON CONFLICT (key) DO UPDATE SET value = ${value}, updated_at = NOW()
+    INSERT INTO settings (key, value, updated_at) VALUES (${key}, ${storedValue}, NOW())
+    ON CONFLICT (key) DO UPDATE SET value = ${storedValue}, updated_at = NOW()
   `);
+}
+
+/** Read a setting value, decrypting if needed */
+function decryptSettingValue(key: string, value: string): string {
+  if (SENSITIVE_KEYS.has(key)) return decrypt(value);
+  return value;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
+import { decrypt } from '@/server/encryption';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
 /**
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
     );
     const config: Record<string, string> = {};
     for (const row of settings as any[]) {
-      config[row.key] = row.value;
+      // Decrypt API keys stored encrypted at rest
+      config[row.key] = row.key.includes('api_key') ? decrypt(row.value) : row.value;
     }
 
     const openaiKey = config.openai_api_key || process.env.OPENAI_API_KEY;

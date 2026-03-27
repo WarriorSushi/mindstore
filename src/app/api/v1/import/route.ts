@@ -216,13 +216,31 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert into PostgreSQL (batched for performance — 50 per transaction)
+    // Deduplication: skip chunks whose content already exists for this user
     const BATCH_SIZE = 50;
+    let skippedDuplicates = 0;
     for (let b = 0; b < allChunks.length; b += BATCH_SIZE) {
       const batch = allChunks.slice(b, b + BATCH_SIZE);
       
-      // Use a transaction for each batch
+      // Check for existing content in batch (dedup by exact content match)
+      const contentHashes = batch.map(c => c.content.trim().substring(0, 500));
+      const existingCheck = await db.execute(sql`
+        SELECT SUBSTRING(content, 1, 500) as prefix FROM memories
+        WHERE user_id = ${userId}::uuid
+        AND SUBSTRING(content, 1, 500) = ANY(${contentHashes})
+      `);
+      const existingPrefixes = new Set((existingCheck as any[]).map(r => r.prefix));
+
       for (let i = 0; i < batch.length; i++) {
         const chunk = batch[i];
+        const prefix = chunk.content.trim().substring(0, 500);
+        
+        // Skip if content already exists
+        if (existingPrefixes.has(prefix)) {
+          skippedDuplicates++;
+          continue;
+        }
+        
         const globalIdx = b + i;
         const embedding = embeddings?.[globalIdx];
         const memId = crypto.randomUUID();
@@ -267,6 +285,8 @@ export async function POST(req: NextRequest) {
         chunks: totalChunks,
         embedded: embeddings ? embeddings.length : 0,
         embeddingsSkipped: allChunks.length > MAX_EMBED_CHUNKS,
+        duplicatesSkipped: skippedDuplicates,
+        actuallyImported: totalChunks - skippedDuplicates,
       },
     });
   } catch (error: unknown) {
