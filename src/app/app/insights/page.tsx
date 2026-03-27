@@ -164,7 +164,7 @@ export default function InsightsPage() {
       {loading && !metabolism && (
         <Stagger>
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500/20 to-sky-500/20 flex items-center justify-center mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/10 flex items-center justify-center mb-4">
               <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
             </div>
             <p className="text-[13px] text-zinc-500">Analyzing your knowledge…</p>
@@ -184,10 +184,10 @@ export default function InsightsPage() {
                   <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Knowledge Metabolism</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[40px] md:text-[48px] font-bold tracking-[-0.04em] text-teal-400 leading-none">
+                  <span className="text-[28px] md:text-[32px] font-bold tracking-[-0.04em] text-teal-400 leading-none">
                     {metabolism.score}
                   </span>
-                  <span className="text-[16px] text-zinc-600 font-medium">/10</span>
+                  <span className="text-[14px] text-zinc-600 font-medium">/10</span>
                 </div>
                 <p className="text-[13px] text-zinc-400 leading-relaxed max-w-sm">{metabolism.verdict}</p>
               </div>
