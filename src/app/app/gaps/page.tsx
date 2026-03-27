@@ -357,7 +357,7 @@ export default function KnowledgeGapsPage() {
   if (stats?.insufficientData) {
     return (
       <PageTransition>
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="py-8">
           <EmptyState
             icon={Target}
             title="Not enough data for gap analysis"
@@ -377,7 +377,7 @@ export default function KnowledgeGapsPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-8">
+      <div className="space-y-8">
 
         {/* ─── Header ─────────────────────────────────────────── */}
         <Stagger>
