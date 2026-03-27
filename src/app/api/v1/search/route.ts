@@ -8,18 +8,25 @@ import { sql } from 'drizzle-orm';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
 /**
- * GET /api/v1/search?q=query&limit=10&source=chatgpt
+ * GET /api/v1/search?q=query&limit=10&source=chatgpt&dateFrom=...&dateTo=...
  * Triple-layer fusion search
+ *
+ * Enhanced: now returns timing info and supports date range filtering.
+ * Fully backward compatible — new fields are additive.
  */
 export async function GET(req: NextRequest) {
   const limited = applyRateLimit(req, 'search', RATE_LIMITS.standard);
   if (limited) return limited;
+
+  const startTime = performance.now();
 
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
     const limit = parseInt(searchParams.get('limit') || '10');
     const sourceType = searchParams.get('source');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
     const userId = await getUserId();
 
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
@@ -41,12 +48,17 @@ export async function GET(req: NextRequest) {
       userId,
       limit,
       sourceTypes: sourceType ? [sourceType] : undefined,
+      dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+      dateTo: dateTo ? new Date(dateTo) : undefined,
     });
+
+    const durationMs = Math.round(performance.now() - startTime);
 
     return NextResponse.json({
       query,
       results,
       totalResults: results.length,
+      durationMs,
       layers: {
         bm25: results.filter(r => r.layers.bm25).length,
         vector: results.filter(r => r.layers.vector).length,
@@ -55,6 +67,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('[search]', error);
-    return NextResponse.json({ query: '', results: [], totalResults: 0, layers: { bm25: 0, vector: 0, tree: 0 }, dbError: true });
+    const durationMs = Math.round(performance.now() - startTime);
+    return NextResponse.json({ query: '', results: [], totalResults: 0, durationMs, layers: { bm25: 0, vector: 0, tree: 0 }, dbError: true });
   }
 }
