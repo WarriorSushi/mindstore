@@ -393,7 +393,7 @@ export default function TopicEvolutionPage() {
   if (stats?.insufficientData || !timeline.length) {
     return (
       <PageTransition>
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+        <div className="space-y-6">
           <Stagger>
             <div>
               <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em] text-white">
@@ -424,7 +424,7 @@ export default function TopicEvolutionPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
+      <div className="space-y-6">
         {/* Header */}
         <Stagger>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
