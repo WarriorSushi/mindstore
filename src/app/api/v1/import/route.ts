@@ -21,29 +21,83 @@ function cleanTitle(filename: string): string {
     .trim() || filename;
 }
 
-// Chunking — intelligent paragraph/sentence splitting
+// Chunking — intelligent paragraph/sentence splitting with overlap
 function chunkText(text: string, maxChunkSize = 1000): string[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
   
-  // Short content — don't split, return as-is
+  // Short content — don't split
   if (trimmed.length <= maxChunkSize) return [trimmed];
   
+  // First try paragraph splitting (natural boundaries)
   const paragraphs = trimmed.split(/\n{2,}/);
+  
+  if (paragraphs.length > 1) {
+    const chunks: string[] = [];
+    let current = '';
+
+    for (const para of paragraphs) {
+      // If a single paragraph exceeds max, split it by sentences
+      if (para.length > maxChunkSize) {
+        if (current.trim()) {
+          chunks.push(current.trim());
+          current = '';
+        }
+        chunks.push(...splitBySentences(para, maxChunkSize));
+        continue;
+      }
+      
+      if (current.length + para.length + 2 > maxChunkSize && current.length > 0) {
+        chunks.push(current.trim());
+        current = '';
+      }
+      current += (current ? '\n\n' : '') + para;
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks.filter(c => c.trim().length > 20); // Drop fragments < 20 chars
+  }
+  
+  // No paragraph breaks — split by sentences
+  return splitBySentences(trimmed, maxChunkSize);
+}
+
+/** Split text by sentence boundaries, respecting max chunk size */
+function splitBySentences(text: string, maxSize: number): string[] {
+  // Match sentence boundaries (period/question/exclamation followed by space/newline or end)
+  const sentences = text.match(/[^.!?]*[.!?]+[\s]*/g) || [text];
   const chunks: string[] = [];
   let current = '';
 
-  for (const para of paragraphs) {
-    if (current.length + para.length > maxChunkSize && current.length > 0) {
+  for (const sentence of sentences) {
+    if (current.length + sentence.length > maxSize && current.length > 0) {
       chunks.push(current.trim());
       current = '';
     }
-    current += para + '\n\n';
+    current += sentence;
   }
   if (current.trim()) chunks.push(current.trim());
-
-  // Filter out whitespace-only fragments from splitting, but keep short meaningful text
-  return chunks.filter(c => c.trim().length > 0);
+  
+  // If still too large (no sentence breaks found), split by words
+  const result: string[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length <= maxSize) {
+      result.push(chunk);
+    } else {
+      // Hard split by words
+      const words = chunk.split(/\s+/);
+      let piece = '';
+      for (const word of words) {
+        if (piece.length + word.length + 1 > maxSize && piece.length > 0) {
+          result.push(piece.trim());
+          piece = '';
+        }
+        piece += (piece ? ' ' : '') + word;
+      }
+      if (piece.trim()) result.push(piece.trim());
+    }
+  }
+  
+  return result.filter(c => c.trim().length > 20);
 }
 
 // ChatGPT export parser — walks the conversation tree to preserve message order
