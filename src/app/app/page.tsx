@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Brain, Upload, MessageSquare, Compass, Database, FileText,
-  Globe, MessageCircle, Sparkles, Key, Server,
+  Globe, Sparkles, Key, Server,
   Loader2, GraduationCap, Lightbulb, ChevronRight,
   Fingerprint, Network, TrendingUp, Zap, Search, X, ArrowRight,
   Clock, Pin, BarChart3, BookOpen,
