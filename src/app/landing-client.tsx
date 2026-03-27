@@ -5,11 +5,11 @@ import { useEffect, useRef, useState, useCallback, type ReactNode, type CSSPrope
 import {
   ArrowRight, Brain, Search, MessageSquare, Layers,
   FileText, BookOpen, Globe, Mic, Image, Bookmark,
-  GitBranch, Zap, Shield, Database, Network, Target,
-  TrendingUp, BarChart3, PenTool, Lightbulb, Puzzle,
-  GraduationCap, Users, Download, Upload, Merge,
+  GitBranch, Network, Target,
+  BarChart3, PenTool, Lightbulb, Puzzle,
+  GraduationCap, Download, Upload, Merge,
   Sparkles, Eye, AlertTriangle, Cpu, Languages,
-  Route, Boxes, FileCode, Newspaper, FileCheck, ChevronRight,
+  Route, Boxes, FileCode, Newspaper, FileCheck,
   type LucideIcon,
 } from "lucide-react";
 import { MindStoreLogo } from "@/components/MindStoreLogo";
@@ -113,15 +113,7 @@ function Particles() {
   return <canvas ref={ref} className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true" />;
 }
 
-/* ─── Film grain overlay ─── */
-function Grain() {
-  return (
-    <div className="fixed inset-0 z-[1] pointer-events-none opacity-[0.035]"
-      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}
-      aria-hidden="true"
-    />
-  );
-}
+/* ─── Film grain removed — unnecessary visual noise, hurts performance ─── */
 
 /* ─── Dual ticker ─── */
 const ROW1 = ["ChatGPT Exports", "Kindle Highlights", "YouTube Transcripts", "Notion Workspaces", "Obsidian Vaults", "Reddit Saved", "PDFs & EPUBs", "Twitter Bookmarks", "Browser Bookmarks"];
@@ -151,11 +143,11 @@ const AI_MODELS = [
   { name: "Claude", by: "Anthropic", color: "#d4a27f" },
   { name: "ChatGPT", by: "OpenAI", color: "#10a37f" },
   { name: "Gemini", by: "Google", color: "#4285f4" },
-  { name: "Cursor", by: "AI IDE", color: "#a78bfa" },
+  { name: "Cursor", by: "AI IDE", color: "#38bdf8" },
   { name: "Ollama", by: "Local", color: "#f97316" },
   { name: "Copilot", by: "GitHub", color: "#60a5fa" },
   { name: "Perplexity", by: "Search", color: "#22d3ee" },
-  { name: "OpenRouter", by: "200+ models", color: "#e879f9" },
+  { name: "OpenRouter", by: "200+ models", color: "#f97316" },
   { name: "Windsurf", by: "Codeium", color: "#22d3ee" },
   { name: "Any MCP Client", by: "Open protocol", color: "#71717a" },
 ];
@@ -164,14 +156,14 @@ const AI_MODELS = [
 const CAPS: { icon: LucideIcon; title: string; desc: string; accent: string }[] = [
   { icon: Search, title: "Semantic Search", desc: "BM25 + vector search with HyDE, reranking, and contextual compression. Find anything by meaning.", accent: "rgba(20,184,166,0.12)" },
   { icon: MessageSquare, title: "Chat With Your Mind", desc: "Ask questions. Get cited answers from YOUR data — not generic internet. Switch AI models per-message.", accent: "rgba(56,189,248,0.12)" },
-  { icon: Brain, title: "Knowledge Fingerprint", desc: "3D WebGL visualization of your mind's topology. See clusters, connections, blind spots.", accent: "rgba(168,85,247,0.1)" },
+  { icon: Brain, title: "Knowledge Fingerprint", desc: "3D WebGL visualization of your mind's topology. See clusters, connections, blind spots.", accent: "rgba(20,184,166,0.1)" },
   { icon: AlertTriangle, title: "Contradiction Finder", desc: "AI scans for conflicting beliefs and outdated information across your entire knowledge base.", accent: "rgba(239,68,68,0.1)" },
   { icon: Route, title: "Topic Evolution", desc: "Timeline of how your interests evolved. Which topics grew, which faded. Your intellectual journey.", accent: "rgba(245,158,11,0.1)" },
   { icon: Target, title: "Knowledge Gaps", desc: "Identifies blind spots. Generates targeted learning paths for what you should know more about.", accent: "rgba(16,185,129,0.1)" },
   { icon: GraduationCap, title: "Flashcard Engine", desc: "Auto-generated spaced repetition from any memory. SM-2 algorithm. Export to Anki.", accent: "rgba(56,189,248,0.1)" },
   { icon: PenTool, title: "Content Generation", desc: "Blog drafts, newsletters, resumes — all grounded in your actual knowledge. Export to Markdown, Hugo, Jekyll.", accent: "rgba(20,184,166,0.1)" },
   { icon: Cpu, title: "Custom RAG", desc: "5 retrieval strategies. Domain-specific embeddings for medical, legal, code. Tune per-query.", accent: "rgba(245,158,11,0.1)" },
-  { icon: Languages, title: "Multi-Language", desc: "Cross-language semantic search. Write in English, find it in Japanese. 100+ languages.", accent: "rgba(168,85,247,0.1)" },
+  { icon: Languages, title: "Multi-Language", desc: "Cross-language semantic search. Write in English, find it in Japanese. 100+ languages.", accent: "rgba(56,189,248,0.1)" },
   { icon: Eye, title: "Vision & Voice", desc: "Images → AI description → searchable. Voice → Whisper transcription → saved. Every modality indexed.", accent: "rgba(239,68,68,0.1)" },
   { icon: Boxes, title: "Smart Collections", desc: "k-means clustering groups memories into topics automatically. No manual tagging needed.", accent: "rgba(16,185,129,0.1)" },
 ];
@@ -326,9 +318,9 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
             { x: 200, y: 140, r: 22, c: "#14b8a6", l: "Core" },
             { x: 310, y: 90, r: 14, c: "#38bdf8", l: "Code" },
             { x: 155, y: 210, r: 12, c: "#f59e0b", l: "Books" },
-            { x: 75, y: 185, r: 10, c: "#a78bfa", l: "Philosophy" },
+            { x: 75, y: 185, r: 10, c: "#71717a", l: "Philosophy" },
             { x: 345, y: 185, r: 11, c: "#10b981", l: "Finance" },
-            { x: 275, y: 230, r: 9, c: "#ec4899", l: "Health" },
+            { x: 275, y: 230, r: 9, c: "#f59e0b", l: "Health" },
             { x: 55, y: 140, r: 8, c: "#f97316", l: "Music" },
             { x: 365, y: 55, r: 7, c: "#22d3ee", l: "Travel" },
             { x: 200, y: 270, r: 10, c: "#ef4444", l: "Cooking" },
@@ -393,7 +385,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
           { topic: "Machine Learning", months: [2,3,5,7,8,9,8,7,6,5,4,3], c: "#14b8a6" },
           { topic: "React & Frontend", months: [6,5,4,3,3,4,5,7,8,9,8,7], c: "#38bdf8" },
           { topic: "Business Strategy", months: [1,2,3,4,6,7,8,7,6,5,4,3], c: "#f59e0b" },
-          { topic: "Philosophy", months: [4,5,6,5,3,2,1,2,3,4,5,6], c: "#a78bfa" },
+          { topic: "Philosophy", months: [4,5,6,5,3,2,1,2,3,4,5,6], c: "#71717a" },
           { topic: "Health & Fitness", months: [3,3,4,5,6,7,8,8,7,6,5,4], c: "#10b981" },
         ].map(row => (
           <div key={row.topic} className="flex items-center gap-2.5">
@@ -422,7 +414,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
           { name: "Contradiction Finder", desc: "Spot conflicting beliefs", icon: AlertTriangle, installed: false, c: "#ef4444" },
           { name: "Mind Map", desc: "Visual knowledge graph", icon: GitBranch, installed: true, c: "#10b981" },
           { name: "Blog Draft", desc: "Write from knowledge", icon: PenTool, installed: false, c: "#f59e0b" },
-          { name: "Voice to Memory", desc: "Whisper transcription", icon: Mic, installed: false, c: "#ec4899" },
+          { name: "Voice to Memory", desc: "Whisper transcription", icon: Mic, installed: false, c: "#f97316" },
         ].map(p => (
           <div key={p.name} className="p-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
             <div className="flex items-center gap-2 mb-1.5">
@@ -630,7 +622,7 @@ function Demo() {
 
 export function LandingClient() {
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-teal-500/20 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#0a0a0b] text-zinc-100 selection:bg-teal-500/20 overflow-x-hidden relative">
       <style jsx global>{`
         @keyframes tkL { from{transform:translateX(0)} to{transform:translateX(-33.333%)} }
         @keyframes tkR { from{transform:translateX(-33.333%)} to{transform:translateX(0)} }
@@ -648,11 +640,10 @@ export function LandingClient() {
       }) }} />
 
       <Particles />
-      <Grain />
 
       {/* ═══════ NAV ═══════ */}
       <nav className="fixed top-0 inset-x-0 z-50 h-14 px-6 lg:px-10 flex items-center justify-between backdrop-blur-2xl"
-        style={{ background: "rgba(9,9,11,0.8)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+        style={{ background: "rgba(10,10,11,0.85)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
         <Link href="/" className="flex items-center gap-2.5" aria-label="MindStore home">
           <MindStoreLogo className="w-7 h-7" />
           <span className="font-bold text-[15px] tracking-[-0.02em]">MindStore</span>
@@ -661,7 +652,7 @@ export function LandingClient() {
           <Link href="/docs" className="text-[13px] text-zinc-500 hover:text-zinc-200 transition hidden sm:block">Docs</Link>
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[13px] text-zinc-500 hover:text-zinc-200 transition hidden sm:block">GitHub</a>
           <Link href="/app">
-            <button className="h-8 px-4 rounded-lg text-[13px] font-bold bg-teal-500 text-white border-none cursor-pointer hover:bg-teal-400 transition-all hover:-translate-y-px">
+            <button className="h-8 px-4 rounded-lg text-[13px] font-bold bg-teal-500 text-white border-none cursor-pointer hover:bg-teal-400 transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
               Open App
             </button>
           </Link>
@@ -687,7 +678,7 @@ export function LandingClient() {
           <R delay={0.18}>
             <div className="flex gap-3 mt-8 flex-wrap">
               <Link href="/app">
-                <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)]">
+                <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
                   Get Started Free <ArrowRight className="w-4 h-4 inline ml-1.5" />
                 </button>
               </Link>
@@ -752,12 +743,12 @@ export function LandingClient() {
                   { icon: BookOpen, label: "Kindle", c: "#f59e0b" },
                   { icon: Globe, label: "YouTube", c: "#ef4444" },
                   { icon: FileText, label: "Notion", c: "#71717a" },
-                  { icon: FileCode, label: "Obsidian", c: "#a78bfa" },
+                  { icon: FileCode, label: "Obsidian", c: "#38bdf8" },
                   { icon: Bookmark, label: "Reddit", c: "#f97316" },
                   { icon: FileText, label: "PDF/EPUB", c: "#3b82f6" },
                   { icon: Globe, label: "Twitter", c: "#22d3ee" },
-                  { icon: Mic, label: "Voice", c: "#ec4899" },
-                  { icon: Image, label: "Images", c: "#a78bfa" },
+                  { icon: Mic, label: "Voice", c: "#f97316" },
+                  { icon: Image, label: "Images", c: "#38bdf8" },
                   { icon: Globe, label: "URLs", c: "#14b8a6" },
                   { icon: Puzzle, label: "+5 more", c: "#71717a" },
                 ].map((s) => (
@@ -893,7 +884,7 @@ export function LandingClient() {
             {CAPS.map((c, i) => (
               <R key={c.title} delay={0.02 * i}>
                 <div className="p-6 lg:p-7 transition-all duration-300 hover:bg-white/[0.02]"
-                  style={{ background: "#09090b" }}>
+                  style={{ background: "#0a0a0b" }}>
                   <c.icon className="w-5 h-5 text-teal-500 mb-4" />
                   <h3 className="text-[14px] font-bold text-zinc-200 mb-1">{c.title}</h3>
                   <p className="text-[13px] text-zinc-500 leading-[1.65]">{c.desc}</p>
@@ -978,9 +969,9 @@ export function LandingClient() {
                 <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
                 Active
               </span>
-              <span><Counter end={336} /> tests</span>
+              <span><Counter end={500} suffix="+" /> tests</span>
               <span><Counter end={66} /> APIs</span>
-              <span><Counter end={103} /> docs</span>
+              <span><Counter end={100} suffix="+" /> docs</span>
               <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer"
                 className="font-bold text-teal-500 hover:text-teal-400 transition">
                 GitHub →
@@ -1005,7 +996,7 @@ export function LandingClient() {
           <R delay={0.2}>
             <div className="flex gap-3 justify-center mt-8 flex-wrap">
               <Link href="/app">
-                <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)]">
+                <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
                   Open MindStore <ArrowRight className="w-4 h-4 inline ml-1.5" />
                 </button>
               </Link>
@@ -1020,7 +1011,7 @@ export function LandingClient() {
       </section>
 
       {/* FOOTER */}
-      <footer className="relative z-10 py-5 px-6 lg:px-10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-800 max-w-[1200px] mx-auto"
+      <footer className="relative z-10 py-5 px-6 lg:px-10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-700 max-w-[1200px] mx-auto"
         style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
         <span>MindStore · MIT License</span>
         <div className="flex gap-5">
