@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2, Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save, MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ, ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles, ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send, BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette, Star, Heart, Compass, Brain, GitBranch, Command } from "lucide-react";
+import {
+  Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2,
+  Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save,
+  MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ,
+  ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles,
+  ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send,
+  BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette,
+  Star, Heart, Compass, Brain, GitBranch, Command, Lightbulb, Zap,
+} from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { EmptyState } from "@/components/EmptyState";
@@ -57,9 +65,6 @@ interface Source {
   itemCount: number;
 }
 
-// Source type config — delegated to shared module
-// Usage: const st = getSourceType(type); st.icon, st.textColor, st.bgColor, st.badgeClasses
-
 // Tag color utility
 const TAG_COLOR_MAP: Record<string, string> = {
   teal:    'text-teal-400 bg-teal-500/10 border-teal-500/15',
@@ -71,9 +76,11 @@ const TAG_COLOR_MAP: Record<string, string> = {
   orange:  'text-orange-400 bg-orange-500/10 border-orange-500/15',
   zinc:    'text-zinc-400 bg-zinc-500/10 border-zinc-500/15',
 };
+
 function tagColorClasses(color: string): string {
   return TAG_COLOR_MAP[color] || TAG_COLOR_MAP.teal;
 }
+
 function tagDotColor(color: string): string {
   const m: Record<string, string> = {
     teal: 'bg-teal-400', sky: 'bg-sky-400', emerald: 'bg-emerald-400',
@@ -90,6 +97,14 @@ const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
   { id: "alpha-desc", label: "Title Z → A", icon: ArrowUpAZ },
   { id: "longest", label: "Longest first", icon: AlignLeft },
   { id: "shortest", label: "Shortest first", icon: AlignRight },
+];
+
+// Suggested search queries for discovery
+const SEARCH_SUGGESTIONS = [
+  { label: "Recent conversations", query: "", icon: Clock },
+  { label: "Ideas & brainstorms", query: "ideas brainstorm", icon: Lightbulb },
+  { label: "Code & technical", query: "code programming", icon: Zap },
+  { label: "Learning & insights", query: "learned insight", icon: BookOpen },
 ];
 
 export default function ExplorePage() {
@@ -140,8 +155,8 @@ export default function ExplorePage() {
   const [tagMenuOpen, setTagMenuOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
-  const [tagAssignOpen, setTagAssignOpen] = useState(false); // in detail view
-  const [batchTagMenuOpen, setBatchTagMenuOpen] = useState(false); // in select mode toolbar
+  const [tagAssignOpen, setTagAssignOpen] = useState(false);
+  const [batchTagMenuOpen, setBatchTagMenuOpen] = useState(false);
 
   // Saved searches
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -207,13 +222,18 @@ export default function ExplorePage() {
   const hasActiveFilters = search || filter || tagFilter || sortBy !== 'newest';
 
   // Derive unique source types from actual data
-  const sourceTypeCounts = sources.reduce((acc, s) => {
-    acc[s.type] = (acc[s.type] || 0) + s.itemCount;
-    return acc;
-  }, {} as Record<string, number>);
-  const activeSourceTypes = Object.entries(sourceTypeCounts)
-    .filter(([_, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1]); // Sort by count descending
+  const sourceTypeCounts = useMemo(() => {
+    return sources.reduce((acc, s) => {
+      acc[s.type] = (acc[s.type] || 0) + s.itemCount;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [sources]);
+
+  const activeSourceTypes = useMemo(() => {
+    return Object.entries(sourceTypeCounts)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1]);
+  }, [sourceTypeCounts]);
 
   // Navigate to adjacent memory in detail view
   const navigateMemory = useCallback((direction: 'prev' | 'next') => {
@@ -270,7 +290,6 @@ export default function ExplorePage() {
     setBatchDeleting(true);
     let deleted = 0;
     const ids = Array.from(selectedIds);
-    // Delete in parallel batches of 10
     for (let i = 0; i < ids.length; i += 10) {
       const batch = ids.slice(i, i + 10);
       const results = await Promise.allSettled(
@@ -287,8 +306,8 @@ export default function ExplorePage() {
 
   const handleBatchExport = useCallback(() => {
     if (selectedIds.size === 0) return;
-    const selected = memories.filter(m => selectedIds.has(m.id));
-    const md = selected.map(m => {
+    const sel = memories.filter(m => selectedIds.has(m.id));
+    const md = sel.map(m => {
       const date = new Date(m.timestamp).toLocaleDateString();
       return `## ${m.sourceTitle || 'Untitled'}\n*${m.source} · ${date}*\n\n${m.content}`;
     }).join('\n\n---\n\n');
@@ -303,8 +322,8 @@ export default function ExplorePage() {
 
   const handleBatchCopy = useCallback(() => {
     if (selectedIds.size === 0) return;
-    const selected = memories.filter(m => selectedIds.has(m.id));
-    const text = selected.map(m => {
+    const sel = memories.filter(m => selectedIds.has(m.id));
+    const text = sel.map(m => {
       return `[${m.source}] ${m.sourceTitle || 'Untitled'}\n${m.content}`;
     }).join('\n\n---\n\n');
     navigator.clipboard.writeText(text).then(() => {
@@ -344,7 +363,6 @@ export default function ExplorePage() {
     setEditContent(selected.content);
     setEditTitle(selected.sourceTitle);
     setEditing(true);
-    // Focus textarea after render
     setTimeout(() => editTextareaRef.current?.focus(), 50);
   }, [selected]);
 
@@ -360,7 +378,6 @@ export default function ExplorePage() {
     const trimmedTitle = editTitle.trim();
     if (!trimmedContent) { toast.error("Content can't be empty"); return; }
 
-    // Check if anything actually changed
     const contentChanged = trimmedContent !== selected.content;
     const titleChanged = trimmedTitle !== (selected.sourceTitle || '');
     if (!contentChanged && !titleChanged) { setEditing(false); return; }
@@ -381,12 +398,7 @@ export default function ExplorePage() {
         throw new Error(e.error || 'Update failed');
       }
 
-      // Update local state
-      const updatedMemory = {
-        ...selected,
-        content: trimmedContent,
-        sourceTitle: trimmedTitle,
-      };
+      const updatedMemory = { ...selected, content: trimmedContent, sourceTitle: trimmedTitle };
       setSelected(updatedMemory);
       setMemories(prev => prev.map(m => m.id === selected.id ? updatedMemory : m));
       setEditing(false);
@@ -404,6 +416,7 @@ export default function ExplorePage() {
   const [relatedMemories, setRelatedMemories] = useState<Array<{ id: string; title: string; type: string; score: number; preview: string }>>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const relatedAbortRef = useRef<AbortController | null>(null);
+
   const togglePin = useCallback(async (memory: Memory) => {
     if (pinning) return;
     setPinning(true);
@@ -415,7 +428,6 @@ export default function ExplorePage() {
         body: JSON.stringify({ id: memory.id, pinned: newPinned }),
       });
       if (!res.ok) throw new Error('Failed to update');
-      // Update local state
       const updatedMemory = { ...memory, pinned: newPinned, metadata: { ...memory.metadata, pinned: newPinned || undefined } };
       if (!newPinned) delete updatedMemory.metadata.pinned;
       setMemories(prev => prev.map(m => m.id === memory.id ? { ...m, pinned: newPinned } : m));
@@ -437,7 +449,6 @@ export default function ExplorePage() {
       return;
     }
 
-    // Abort previous request
     if (relatedAbortRef.current) relatedAbortRef.current.abort();
     const controller = new AbortController();
     relatedAbortRef.current = controller;
@@ -445,7 +456,6 @@ export default function ExplorePage() {
     setRelatedLoading(true);
     setRelatedMemories([]);
 
-    // Use first 200 chars of content + title as search query for semantic similarity
     const searchQuery = (selected.sourceTitle ? selected.sourceTitle + " " : "") +
       selected.content.slice(0, 200).replace(/\n/g, " ");
 
@@ -454,7 +464,6 @@ export default function ExplorePage() {
       .then(data => {
         if (controller.signal.aborted) return;
         const results = (data.results || [])
-          // Filter out the current memory itself
           .filter((r: any) => r.id !== selected.id)
           .slice(0, 4)
           .map((r: any) => ({
@@ -485,7 +494,6 @@ export default function ExplorePage() {
   const openRelatedMemory = useCallback((relatedId: string) => {
     const mem = memories.find(m => m.id === relatedId);
     if (mem) {
-      // Memory is already loaded in the list — select it directly
       const idx = memories.indexOf(mem);
       setSelected(mem);
       setSelectedIndex(idx);
@@ -495,7 +503,6 @@ export default function ExplorePage() {
       setEditContent("");
       setEditTitle("");
     } else {
-      // Memory isn't in the current filtered list — fetch all memories and search
       fetch(`/api/v1/memories?limit=2000`)
         .then(r => r.json())
         .then(data => {
@@ -541,19 +548,16 @@ export default function ExplorePage() {
           }
           return;
         }
-        // "e" to start editing (when not already editing and not in an input)
         if (e.key === "e" && !editing && !isInput) {
           e.preventDefault();
           startEditing();
           return;
         }
-        // "p" to toggle pin (when not editing and not in an input)
         if (e.key === "p" && !editing && !isInput) {
           e.preventDefault();
           togglePin(selected);
           return;
         }
-        // j/↓ = next memory, k/↑ = prev memory in detail view (only when not editing)
         if ((e.key === "j" || e.key === "ArrowDown") && !isInput && !editing) {
           e.preventDefault();
           navigateMemory('next');
@@ -568,35 +572,43 @@ export default function ExplorePage() {
       }
 
       // ─── List view ───
-      // "/" focuses search input (like GitHub, Slack)
       if (e.key === "/" && !isInput) {
         e.preventDefault();
         searchInputRef.current?.focus();
         return;
       }
 
-      // Escape exits select mode
+      // Cmd/Ctrl+K focuses search (like Linear, Raycast)
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
       if (e.key === "Escape" && selectMode) {
         e.preventDefault();
         exitSelectMode();
         return;
       }
 
-      // "s" toggles select mode (like Gmail)
+      // Escape blurs search input
+      if (e.key === "Escape" && isInput) {
+        (document.activeElement as HTMLElement)?.blur();
+        return;
+      }
+
       if (e.key === "s" && !isInput && !selectMode) {
         e.preventDefault();
         setSelectMode(true);
         return;
       }
 
-      // Space toggles selection of focused item in select mode
       if (e.key === " " && !isInput && selectMode && focusedIndex >= 0 && memories[focusedIndex]) {
         e.preventDefault();
         toggleSelect(memories[focusedIndex].id);
         return;
       }
 
-      // "a" selects all in select mode
       if (e.key === "a" && !isInput && selectMode && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         if (selectedIds.size === memories.length) deselectAll();
@@ -604,12 +616,10 @@ export default function ExplorePage() {
         return;
       }
 
-      // j/↓ = move focus down, k/↑ = move focus up
       if ((e.key === "j" || e.key === "ArrowDown") && !isInput) {
         e.preventDefault();
         setFocusedIndex(prev => {
           const next = Math.min(prev + 1, memories.length - 1);
-          // Scroll the focused item into view
           const el = listRef.current?.children[next] as HTMLElement;
           el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           return next;
@@ -627,7 +637,6 @@ export default function ExplorePage() {
         return;
       }
 
-      // Enter = open focused memory
       if (e.key === "Enter" && !isInput && focusedIndex >= 0 && memories[focusedIndex]) {
         e.preventDefault();
         setSelected(memories[focusedIndex]);
@@ -645,7 +654,7 @@ export default function ExplorePage() {
     setFocusedIndex(-1);
   }, [search, filter, sortBy, tagFilter]);
 
-  // Sync search query to URL (shallow, no navigation)
+  // Sync search query to URL
   useEffect(() => {
     const url = new URL(window.location.href);
     if (search.trim()) {
@@ -653,7 +662,6 @@ export default function ExplorePage() {
     } else {
       url.searchParams.delete("q");
     }
-    // Only update if different to avoid unnecessary history entries
     if (url.toString() !== window.location.href) {
       window.history.replaceState(null, "", url.toString());
     }
@@ -705,7 +713,6 @@ export default function ExplorePage() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (search) {
-        // Use BM25 full-text search for queries (better relevance than ILIKE)
         const p = new URLSearchParams({ q: search, limit: '100' });
         if (filter && filter !== 'pinned') p.set('source', filter);
         fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
@@ -726,11 +733,9 @@ export default function ExplorePage() {
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
           setSearchLayers(d.layers || null);
-          // Track search in history
           addSearchToHistory(search, results.length);
         }).catch(() => {});
       } else {
-        // No search query — list all memories
         setSearchLayers(null);
         const p = new URLSearchParams({ limit: '100', sort: sortBy });
         if (filter && filter !== 'pinned') p.set('source', filter);
@@ -745,7 +750,7 @@ export default function ExplorePage() {
     return () => clearTimeout(t);
   }, [search, filter, sortBy, tagFilter]);
 
-  // ── Infinite scroll with Intersection Observer ──────────────────
+  // ── Infinite scroll ──────────────────
   const loadMore = useCallback(async () => {
     if (loadingMore || memories.length >= totalMemories || search) return;
     setLoadingMore(true);
@@ -771,7 +776,7 @@ export default function ExplorePage() {
           loadMore();
         }
       },
-      { rootMargin: '200px' } // trigger 200px before the sentinel is visible
+      { rootMargin: '200px' }
     );
 
     observer.observe(sentinel);
@@ -820,7 +825,6 @@ export default function ExplorePage() {
       });
       const data = await res.json();
       if (data.ok) {
-        // Update local state — add tag to affected memories
         const tag = allTags.find(t => t.id === tagId);
         if (tag) {
           setMemories(prev => prev.map(m =>
@@ -848,7 +852,6 @@ export default function ExplorePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'unassign', tagId, memoryIds }),
       });
-      // Update local state
       setMemories(prev => prev.map(m =>
         memoryIds.includes(m.id)
           ? { ...m, tags: (m.tags || []).filter(t => t.id !== tagId) }
@@ -870,7 +873,6 @@ export default function ExplorePage() {
     if (!confirm(`Delete tag "${tag?.name}"? It will be removed from all memories.`)) return;
     try {
       await fetch(`/api/v1/tags?id=${tagId}`, { method: 'DELETE' });
-      // Remove from local state
       setMemories(prev => prev.map(m => ({
         ...m,
         tags: (m.tags || []).filter(t => t.id !== tagId),
@@ -893,50 +895,31 @@ export default function ExplorePage() {
     setBatchTagMenuOpen(false);
   }, [selectedIds, assignTag]);
 
+  // ─── Determine if we should show the discovery state ───
+  const showDiscovery = !loading && !search.trim() && !filter && !tagFilter && totalMemories > 0 && memories.length > 0;
+
   return (
-    <PageTransition className="space-y-4 md:space-y-6">
-      {/* Header */}
+    <PageTransition className="space-y-6">
+      {/* ═══ Header ═══ */}
       <Stagger>
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
             <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Explore</h1>
-            <p className="text-[13px] text-zinc-500 mt-0.5">{totalMemories.toLocaleString()} memories · {sources.length} sources</p>
-            {/* Source distribution mini-bar */}
-            {totalMemories > 0 && activeSourceTypes.length > 1 && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <div className="flex h-[4px] rounded-full overflow-hidden bg-white/[0.04] w-32 sm:w-48">
-                  {activeSourceTypes.map(([type, count]) => {
-                    const pct = (count / totalMemories) * 100;
-                    const colorMap: Record<string, string> = {
-                      chatgpt: "bg-green-500/70", text: "bg-teal-500/70", file: "bg-blue-500/70",
-                      url: "bg-orange-500/70", kindle: "bg-amber-500/70", document: "bg-blue-500/70",
-                      youtube: "bg-red-500/70", bookmark: "bg-sky-500/70", obsidian: "bg-teal-500/70",
-                      reddit: "bg-orange-500/70", audio: "bg-teal-500/70", image: "bg-sky-500/70",
-                      notion: "bg-zinc-400/70", twitter: "bg-sky-500/70", telegram: "bg-teal-500/70",
-                      pocket: "bg-emerald-500/70", instapaper: "bg-emerald-500/70",
-                      spotify: "bg-emerald-500/70", readwise: "bg-amber-500/70",
-                    };
-                    return (
-                      <div
-                        key={type}
-                        className={`h-full ${colorMap[type] || "bg-zinc-500/70"}`}
-                        style={{ width: `${Math.max(pct, 2)}%` }}
-                        title={`${type}: ${count} (${Math.round(pct)}%)`}
-                      />
-                    );
-                  })}
-                </div>
-                <span className="text-[9px] text-zinc-700">{activeSourceTypes.length} types</span>
-              </div>
-            )}
+            <p className="text-[13px] text-zinc-500 mt-1">
+              {loading ? (
+                <span className="inline-block w-32 h-4 bg-white/[0.04] rounded animate-pulse" />
+              ) : (
+                <>{totalMemories.toLocaleString()} memories · {sources.length} source{sources.length !== 1 ? 's' : ''}</>
+              )}
+            </p>
           </div>
           {memories.length > 0 && (
             <button
               onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-              className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium transition-all active:scale-[0.96] ${
+              className={`flex items-center gap-1.5 h-8 px-3 rounded-xl text-[12px] font-medium transition-all active:scale-[0.96] ${
                 selectMode
-                  ? "text-teal-300 bg-teal-500/10"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                  ? "text-teal-300 bg-teal-500/10 border border-teal-500/20"
+                  : "text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:bg-white/[0.04]"
               }`}
               title={selectMode ? "Exit select mode (Esc)" : "Select memories (s)"}
             >
@@ -947,20 +930,20 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
-      {/* Search */}
+      {/* ═══ Search ═══ */}
       <Stagger>
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+        <div className="relative group/search">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-zinc-600 transition-colors group-focus-within/search:text-teal-400" />
           <input
             ref={searchInputRef}
             placeholder="Search your knowledge…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
             onFocus={() => setSearchFocused(true)}
-            onBlur={() => { /* delay so click events on history items fire first */ setTimeout(() => setSearchFocused(false), 200); }}
-            className="w-full h-10 pl-10 pr-24 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 transition-all"
+            onBlur={() => { setTimeout(() => setSearchFocused(false), 200); }}
+            className="w-full h-11 pl-11 pr-28 sm:pr-32 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 focus:bg-white/[0.04] transition-all"
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {/* Saved searches toggle */}
             {savedSearches.length > 0 && (
               <button
@@ -986,11 +969,13 @@ export default function ExplorePage() {
               </button>
             )}
             {search ? (
-              <button onClick={() => { setSearch(""); setActiveSavedSearchId(null); }} className="p-0.5">
+              <button onClick={() => { setSearch(""); setActiveSavedSearchId(null); }} className="p-1 rounded-md hover:bg-white/[0.06] transition-colors">
                 <X className="w-3.5 h-3.5 text-zinc-500" />
               </button>
             ) : (
-              <kbd className="text-[10px] font-mono text-zinc-700 bg-white/[0.04] border border-white/[0.08] rounded px-1.5 py-[2px] hidden sm:block">/</kbd>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[11px] font-mono text-zinc-600 bg-white/[0.04] border border-white/[0.08] rounded-md px-1.5 py-[2px]">
+                <Command className="w-2.5 h-2.5" />K
+              </kbd>
             )}
           </div>
         </div>
@@ -999,8 +984,8 @@ export default function ExplorePage() {
         {savedSearchMenuOpen && (
           <>
             <div className="fixed inset-0 z-20" onClick={() => setSavedSearchMenuOpen(false)} />
-            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <div className="relative z-30 mt-2 rounded-2xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
                 <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">Saved Searches</span>
                 <span className="text-[10px] text-zinc-600">{savedSearches.length} saved</span>
               </div>
@@ -1013,12 +998,12 @@ export default function ExplorePage() {
                   return (
                     <div
                       key={ss.id}
-                      className={`group flex items-center gap-2 px-3 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer ${
+                      className={`group flex items-center gap-2.5 px-4 py-2.5 hover:bg-white/[0.04] transition-colors cursor-pointer ${
                         activeSavedSearchId === ss.id ? 'bg-teal-500/[0.06]' : ''
                       }`}
                       onClick={() => handleApplySavedSearch(ss)}
                     >
-                      <Star className={`w-3 h-3 shrink-0 ${ss.pinned ? 'fill-current' : ''} ${colors[ss.color] || colors.teal}`} />
+                      <Star className={`w-3.5 h-3.5 shrink-0 ${ss.pinned ? 'fill-current' : ''} ${colors[ss.color] || colors.teal}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-zinc-200 truncate">{ss.name}</p>
                         <p className="text-[10px] text-zinc-600 truncate">{describeSavedSearch(ss)}</p>
@@ -1054,7 +1039,7 @@ export default function ExplorePage() {
         {saveSearchDialogOpen && (
           <>
             <div className="fixed inset-0 z-20" onClick={() => setSaveSearchDialogOpen(false)} />
-            <div className="relative z-30 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 p-4">
+            <div className="relative z-30 mt-2 rounded-2xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 p-4">
               <h3 className="text-[13px] font-medium text-zinc-200 mb-3">Save this search</h3>
               <div className="space-y-3">
                 <input
@@ -1063,7 +1048,7 @@ export default function ExplorePage() {
                   onChange={(e) => setSaveSearchName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSearch(); if (e.key === 'Escape') setSaveSearchDialogOpen(false); }}
                   placeholder="Search name..."
-                  className="w-full h-8 px-3 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[12px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                  className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
                   autoFocus
                 />
                 <div className="flex items-center gap-1.5">
@@ -1086,7 +1071,7 @@ export default function ExplorePage() {
                   ))}
                 </div>
                 <div className="text-[10px] text-zinc-600 space-y-0.5">
-                  {search && <p>Query: "{search}"</p>}
+                  {search && <p>Query: &ldquo;{search}&rdquo;</p>}
                   {filter && <p>Source: {filter}</p>}
                   {tagFilter && <p>Tag: {tagFilter}</p>}
                   {sortBy !== 'newest' && <p>Sort: {sortBy}</p>}
@@ -1094,14 +1079,14 @@ export default function ExplorePage() {
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setSaveSearchDialogOpen(false)}
-                    className="h-7 px-3 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
+                    className="h-8 px-3 rounded-xl text-[12px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveSearch}
                     disabled={!saveSearchName.trim()}
-                    className="h-7 px-3 rounded-lg text-[11px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all disabled:opacity-50 active:scale-[0.97]"
+                    className="h-8 px-4 rounded-xl text-[12px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all disabled:opacity-50 active:scale-[0.97]"
                   >
                     Save
                   </button>
@@ -1124,7 +1109,7 @@ export default function ExplorePage() {
             blue: 'border-blue-500/20 bg-blue-500/[0.06] text-blue-400',
           };
           return (
-            <div className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colors[active.color] || colors.teal}`}>
+            <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-xl border ${colors[active.color] || colors.teal}`}>
               <Star className="w-3 h-3 fill-current" />
               <span className="text-[11px] font-medium">{active.name}</span>
               <button
@@ -1141,8 +1126,8 @@ export default function ExplorePage() {
         {searchFocused && !search && searchHistory.length > 0 && !savedSearchMenuOpen && !saveSearchDialogOpen && (
           <>
             <div className="fixed inset-0 z-[15]" onClick={() => setSearchFocused(false)} />
-            <div className="relative z-20 mt-2 rounded-xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <div className="relative z-20 mt-2 rounded-2xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
                 <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="w-3 h-3" />
                   Recent Searches
@@ -1158,7 +1143,7 @@ export default function ExplorePage() {
                 {searchHistory.slice(0, 8).map((item) => (
                   <div
                     key={item.query}
-                    className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    className="group flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
                     onClick={() => { setSearch(item.query); setSearchFocused(false); }}
                   >
                     <Search className="w-3 h-3 text-zinc-700 shrink-0" />
@@ -1184,45 +1169,50 @@ export default function ExplorePage() {
         )}
       </Stagger>
 
-      {/* Filters + View + Sort */}
+      {/* ═══ Filters + View + Sort ═══ */}
       <Stagger>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5 min-w-0">
-            <FilterPill active={filter === null} onClick={() => setFilter(null)} label="All" />
-            <FilterPill
-              active={filter === "pinned"}
-              onClick={() => setFilter(filter === "pinned" ? null : "pinned")}
-              label="Pinned"
-              icon={<Pin className="w-3 h-3" />}
-            />
-            {activeSourceTypes.map(([type, count]) => {
-              const cfg = getSourceType(type);
-              const Icon = cfg.icon;
-              return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
-            })}
-            {/* Tag filter pills */}
-            {allTags.length > 0 && (
-              <>
-                <div className="w-px h-4 bg-white/[0.08] shrink-0 mx-0.5" />
-                {allTags.map(tag => (
-                  <FilterPill
-                    key={`tag-${tag.id}`}
-                    active={tagFilter === tag.id}
-                    onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
-                    label={tag.name}
-                    count={tag.memory_count}
-                    icon={<Tag className="w-3 h-3" />}
-                    tagColor={tag.color}
-                  />
-                ))}
-              </>
-            )}
+        <div className="flex items-center justify-between gap-3">
+          {/* Filter pills with overflow fade */}
+          <div className="relative flex-1 min-w-0">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
+              <FilterPill active={filter === null && !tagFilter} onClick={() => { setFilter(null); setTagFilter(null); }} label="All" />
+              <FilterPill
+                active={filter === "pinned"}
+                onClick={() => setFilter(filter === "pinned" ? null : "pinned")}
+                label="Pinned"
+                icon={<Pin className="w-3 h-3" />}
+              />
+              {activeSourceTypes.map(([type, count]) => {
+                const cfg = getSourceType(type);
+                const Icon = cfg.icon;
+                return <FilterPill key={type} active={filter === type} onClick={() => setFilter(filter === type ? null : type)} label={type} count={count} icon={<Icon className="w-3 h-3" />} />;
+              })}
+              {/* Tag filter pills */}
+              {allTags.length > 0 && (
+                <>
+                  <div className="w-px h-5 bg-white/[0.08] shrink-0 my-auto" />
+                  {allTags.map(tag => (
+                    <FilterPill
+                      key={`tag-${tag.id}`}
+                      active={tagFilter === tag.id}
+                      onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
+                      label={tag.name}
+                      count={tag.memory_count}
+                      icon={<Tag className="w-3 h-3" />}
+                      tagColor={tag.color}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+            {/* Right fade for overflow indication */}
+            <div className="absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-[#0a0a0b] to-transparent pointer-events-none sm:hidden" />
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* View Mode Toggle */}
             {memories.length > 0 && (
-              <div className="hidden sm:flex items-center bg-white/[0.03] border border-white/[0.06] rounded-lg overflow-hidden">
+              <div className="hidden sm:flex items-center bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setViewMode("list")}
                   className={`p-1.5 transition-all ${
@@ -1250,56 +1240,56 @@ export default function ExplorePage() {
 
             {/* Sort Dropdown */}
             {!search.trim() && memories.length > 0 && (
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setSortMenuOpen(!sortMenuOpen)}
-                className={`flex items-center gap-1.5 h-[30px] px-2.5 rounded-full text-[11px] font-medium transition-all active:scale-[0.95] ${
-                  sortMenuOpen
-                    ? "bg-teal-500/15 text-teal-300 border border-teal-500/25"
-                    : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
-                }`}
-              >
-                <ArrowUpDown className="w-3 h-3" />
-                <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.id === sortBy)?.label || 'Sort'}</span>
-              </button>
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setSortMenuOpen(!sortMenuOpen)}
+                  className={`flex items-center gap-1.5 h-8 px-3 rounded-xl text-[11px] font-medium transition-all active:scale-[0.95] ${
+                    sortMenuOpen
+                      ? "bg-teal-500/15 text-teal-300 border border-teal-500/25"
+                      : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
+                  }`}
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.id === sortBy)?.label || 'Sort'}</span>
+                </button>
 
-              {sortMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1.5 z-40 w-44 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                    <div className="py-1">
-                      {SORT_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.id}
-                          onClick={() => { setSortBy(opt.id); setSortMenuOpen(false); }}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors ${
-                            sortBy === opt.id
-                              ? "text-teal-300 bg-teal-500/10"
-                              : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
-                          }`}
-                        >
-                          <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-teal-400" : "text-zinc-600"}`} />
-                          <span className="flex-1">{opt.label}</span>
-                          {sortBy === opt.id && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
-                          )}
-                        </button>
-                      ))}
+                {sortMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-40 w-48 bg-[#131315] border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                      <div className="py-1">
+                        {SORT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => { setSortBy(opt.id); setSortMenuOpen(false); }}
+                            className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[12px] transition-colors ${
+                              sortBy === opt.id
+                                ? "text-teal-300 bg-teal-500/10"
+                                : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
+                            }`}
+                          >
+                            <opt.icon className={`w-3.5 h-3.5 shrink-0 ${sortBy === opt.id ? "text-teal-400" : "text-zinc-600"}`} />
+                            <span className="flex-1">{opt.label}</span>
+                            {sortBy === opt.id && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Stagger>
 
-      {/* Search Intelligence Indicators */}
+      {/* ═══ Search Intelligence Indicators ═══ */}
       {search.trim() && !loading && (
         <Stagger>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-teal-400/80 font-semibold tabular-nums">
+            <span className="text-[11px] text-teal-400/80 font-semibold tabular-nums">
               {memories.length} result{memories.length !== 1 ? "s" : ""}
             </span>
             {searchLayers && (
@@ -1308,23 +1298,23 @@ export default function ExplorePage() {
                 <span className="text-[10px] text-zinc-600 font-medium">via</span>
                 <div className="flex items-center gap-1.5">
                   {searchLayers.bm25 > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">
-                      <Type className="w-2.5 h-2.5" /> Keyword <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-blue-500/10 text-blue-400 border border-blue-500/10">
+                      <Type className="w-2.5 h-2.5" /> Keyword <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
                     </span>
                   )}
                   {searchLayers.vector > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-teal-500/10 text-teal-400 border border-teal-500/15">
-                      <Brain className="w-2.5 h-2.5" /> Semantic <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.vector}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-teal-500/10 text-teal-400 border border-teal-500/10">
+                      <Brain className="w-2.5 h-2.5" /> Semantic <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.vector}</span>
                     </span>
                   )}
                   {searchLayers.tree > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[9px] px-2 py-[3px] rounded-lg font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
-                      <GitBranch className="w-2.5 h-2.5" /> Structure <span className="text-[8px] opacity-60 ml-0.5">{searchLayers.tree}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
+                      <GitBranch className="w-2.5 h-2.5" /> Structure <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.tree}</span>
                     </span>
                   )}
                 </div>
                 {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
-                  <Link href="/app/settings" className="text-[9px] text-zinc-600 hover:text-teal-400 transition-colors italic">
+                  <Link href="/app/settings" className="text-[10px] text-zinc-600 hover:text-teal-400 transition-colors italic">
                     Connect AI for semantic search →
                   </Link>
                 )}
@@ -1336,12 +1326,12 @@ export default function ExplorePage() {
 
       {/* ═══ Selection Toolbar ═══ */}
       {selectMode && (
-        <div className="sticky top-12 md:top-0 z-20 -mx-4 px-4 py-2 bg-[#0a0a0b]/90 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="sticky top-12 md:top-0 z-20 -mx-4 px-4 py-2.5 bg-[#0a0a0b]/90 backdrop-blur-xl border-b border-white/[0.06]">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <button
                 onClick={() => selectedIds.size === memories.length ? deselectAll() : selectAll()}
-                className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96] shrink-0"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96] shrink-0"
               >
                 {selectedIds.size === memories.length ? (
                   <CheckSquare className="w-3.5 h-3.5 text-teal-400" />
@@ -1362,7 +1352,7 @@ export default function ExplorePage() {
                 <div className="relative">
                   <button
                     onClick={() => setBatchTagMenuOpen(!batchTagMenuOpen)}
-                    className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 transition-all active:scale-[0.96]"
+                    className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-[11px] font-medium text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 transition-all active:scale-[0.96]"
                     title="Tag selected memories"
                   >
                     <Tag className="w-3 h-3" />
@@ -1371,25 +1361,21 @@ export default function ExplorePage() {
                   {batchTagMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-30" onClick={() => setBatchTagMenuOpen(false)} />
-                      <div className="absolute right-0 top-full mt-1.5 z-40 w-48 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                        <div className="p-2 border-b border-white/[0.06]">
-                          <div className="flex gap-1.5">
-                            <input
-                              placeholder="New tag…"
-                              value={newTagName}
-                              onChange={(e) => setNewTagName(e.target.value)}
-                              onKeyDown={async (e) => {
-                                if (e.key === 'Enter' && newTagName.trim()) {
-                                  const tag = await createTag(newTagName);
-                                  if (tag) {
-                                    await handleBatchTag(tag.id);
-                                  }
-                                }
-                              }}
-                              className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
-                              autoFocus
-                            />
-                          </div>
+                      <div className="absolute right-0 top-full mt-2 z-40 w-48 bg-[#131315] border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                        <div className="p-2.5 border-b border-white/[0.06]">
+                          <input
+                            placeholder="New tag…"
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            onKeyDown={async (e) => {
+                              if (e.key === 'Enter' && newTagName.trim()) {
+                                const tag = await createTag(newTagName);
+                                if (tag) await handleBatchTag(tag.id);
+                              }
+                            }}
+                            className="w-full h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[12px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                            autoFocus
+                          />
                         </div>
                         {allTags.length > 0 ? (
                           <div className="py-1 max-h-40 overflow-y-auto">
@@ -1397,7 +1383,7 @@ export default function ExplorePage() {
                               <button
                                 key={tag.id}
                                 onClick={() => handleBatchTag(tag.id)}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                                className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/[0.04] transition-colors"
                               >
                                 <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
                                 <span className="text-[12px] text-zinc-300">{tag.name}</span>
@@ -1405,7 +1391,7 @@ export default function ExplorePage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="px-3 py-2 text-[11px] text-zinc-600 italic">Type to create a tag</p>
+                          <p className="px-4 py-3 text-[11px] text-zinc-600 italic">Type to create a tag</p>
                         )}
                       </div>
                     </>
@@ -1419,7 +1405,7 @@ export default function ExplorePage() {
                     <button
                       onClick={() => handleBatchPin(!allPinned)}
                       disabled={batchPinning}
-                      className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
+                      className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-[11px] font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
                       title={allPinned ? "Unpin selected" : "Pin selected"}
                     >
                       {batchPinning ? (
@@ -1435,7 +1421,7 @@ export default function ExplorePage() {
                 })()}
                 <button
                   onClick={handleBatchCopy}
-                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
                   title="Copy selected"
                 >
                   <Copy className="w-3 h-3" />
@@ -1443,7 +1429,7 @@ export default function ExplorePage() {
                 </button>
                 <button
                   onClick={handleBatchExport}
-                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.96]"
                   title="Export selected as Markdown"
                 >
                   <Download className="w-3 h-3" />
@@ -1452,7 +1438,7 @@ export default function ExplorePage() {
                 <button
                   onClick={handleBatchDelete}
                   disabled={batchDeleting}
-                  className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all active:scale-[0.96] disabled:opacity-50"
                   title="Delete selected"
                 >
                   {batchDeleting ? (
@@ -1468,8 +1454,8 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {/* Memory Cards */}
-      <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-1.5"}>
+      {/* ═══ Memory Cards ═══ */}
+      <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-2"}>
         {memories.map((m, idx) => {
           const cfg = getSourceType(m.source);
           const Icon = cfg.icon;
@@ -1478,7 +1464,6 @@ export default function ExplorePage() {
           const scorePercent = m.score ? Math.round(m.score * 100) : 0;
 
           if (viewMode === "compact") {
-            // ═══ Compact View — dense rows for power users ═══
             return (
               <button
                 key={m.id}
@@ -1486,25 +1471,25 @@ export default function ExplorePage() {
                   if (selectMode) { toggleSelect(m.id); }
                   else { setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false); }
                 }}
-                className={`w-full text-left flex items-center gap-2.5 px-3 py-2 transition-all ${
+                className={`w-full text-left flex items-center gap-3 px-4 py-2.5 transition-all ${
                   isSelected
                     ? "bg-teal-500/[0.08] ring-1 ring-teal-500/20"
                     : isFocused
-                    ? "bg-teal-500/[0.06]"
-                    : "hover:bg-white/[0.04]"
-                } ${idx === 0 ? "rounded-t-xl" : ""} ${idx === memories.length - 1 ? "rounded-b-xl" : ""}`}
+                    ? "bg-teal-500/[0.04]"
+                    : "hover:bg-white/[0.03]"
+                } ${idx === 0 ? "rounded-t-2xl" : ""} ${idx === memories.length - 1 ? "rounded-b-2xl" : ""}`}
               >
                 {selectMode && (
-                  <div className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all ${
+                  <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
                     isSelected ? "bg-teal-500 border-teal-500" : "border-white/[0.15] bg-white/[0.02]"
                   }`}>
-                    {isSelected && <Check className="w-2 h-2 text-white" />}
+                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                 )}
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
-                  <Icon className={`w-2.5 h-2.5 ${cfg.textColor}`} />
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
+                  <Icon className={`w-3 h-3 ${cfg.textColor}`} />
                 </div>
-                <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0">{m.sourceTitle || "Untitled"}</span>
+                <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0 font-medium">{m.sourceTitle || "Untitled"}</span>
                 <span className="text-[12px] text-zinc-500 truncate flex-1">{m.content.replace(/\n/g, " ").slice(0, 120)}</span>
                 {search.trim() && scorePercent > 0 && (
                   <div className="flex items-center gap-1 shrink-0">
@@ -1539,7 +1524,7 @@ export default function ExplorePage() {
             );
           }
 
-          // ═══ List View — rich cards (default) ═══
+          // ═══ List View — rich cards ═══
           return (
             <button
               key={m.id}
@@ -1550,15 +1535,15 @@ export default function ExplorePage() {
                   setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false);
                 }
               }}
-              className={`w-full text-left p-3.5 rounded-2xl border transition-all active:scale-[0.99] ${
+              className={`w-full text-left p-4 rounded-2xl border transition-all active:scale-[0.995] ${
                 isSelected
-                  ? "border-teal-500/30 bg-teal-500/[0.08] ring-1 ring-teal-500/20"
+                  ? "border-teal-500/30 bg-teal-500/[0.06] ring-1 ring-teal-500/15"
                   : isFocused
-                  ? "border-teal-500/30 bg-teal-500/[0.06] ring-1 ring-teal-500/20"
-                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
+                  ? "border-teal-500/20 bg-teal-500/[0.04] ring-1 ring-teal-500/10"
+                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.08]"
               }`}
             >
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-2">
                 {selectMode && (
                   <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
                     isSelected
@@ -1568,7 +1553,7 @@ export default function ExplorePage() {
                     {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                 )}
-                <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${cfg.badgeClasses}`}>
+                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-semibold uppercase tracking-wide ${cfg.badgeClasses}`}>
                   <Icon className="w-2.5 h-2.5" />
                   {m.source}
                 </span>
@@ -1595,7 +1580,7 @@ export default function ExplorePage() {
                 {m.pinned && (
                   <Pin className="w-3 h-3 text-amber-400 shrink-0 fill-amber-400/30" />
                 )}
-                {/* Layer indicators per result (when searching) */}
+                {/* Layer indicators per result */}
                 {search.trim() && m.layers && (
                   <span className="flex items-center gap-[3px] shrink-0 ml-0.5" title={
                     [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
@@ -1607,27 +1592,29 @@ export default function ExplorePage() {
                 )}
               </div>
               <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
-              {/* Tags + Word count hint in list view */}
-              <div className={`flex items-center gap-2 mt-1.5 flex-wrap ${selectMode ? 'pl-6' : ''}`}>
-                {m.tags && m.tags.length > 0 && m.tags.map(tag => (
-                  <span key={tag.id} className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold ${tagColorClasses(tag.color)}`}>
-                    <Tag className="w-2 h-2" />
-                    {tag.name}
-                  </span>
-                ))}
-                {!search.trim() && (
-                  <span className="text-[10px] text-zinc-700">
-                    {m.content.trim().split(/\s+/).length} words
-                  </span>
-                )}
-              </div>
+              {/* Tags + Word count */}
+              {((m.tags && m.tags.length > 0) || !search.trim()) && (
+                <div className={`flex items-center gap-2 mt-2 flex-wrap ${selectMode ? 'pl-6' : ''}`}>
+                  {m.tags && m.tags.length > 0 && m.tags.map(tag => (
+                    <span key={tag.id} className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold ${tagColorClasses(tag.color)}`}>
+                      <Tag className="w-2 h-2" />
+                      {tag.name}
+                    </span>
+                  ))}
+                  {!search.trim() && (
+                    <span className="text-[10px] text-zinc-700">
+                      {m.content.trim().split(/\s+/).length} words
+                    </span>
+                  )}
+                </div>
+              )}
             </button>
           );
         })}
 
         {/* Infinite scroll sentinel */}
         {totalMemories > memories.length && !search && (
-          <div ref={sentinelRef} className="flex items-center justify-center py-4">
+          <div ref={sentinelRef} className="flex items-center justify-center py-6">
             {loadingMore ? (
               <div className="flex items-center gap-2 text-[12px] text-zinc-500">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-400" />
@@ -1642,6 +1629,7 @@ export default function ExplorePage() {
           </div>
         )}
 
+        {/* ═══ Empty States ═══ */}
         {memories.length === 0 && !loading && (
           <>
             {totalMemories === 0 ? (
@@ -1654,14 +1642,29 @@ export default function ExplorePage() {
                 color="teal"
               />
             ) : search.trim() ? (
-              <EmptyState
-                icon={Search}
-                title={`No results for "${search}"`}
-                description="Try a different query, check your spelling, or remove some filters."
-                action={{ label: "Clear search", href: "/app/explore" }}
-                color="sky"
-                compact
-              />
+              <div className="flex flex-col items-center justify-center text-center py-16">
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-4">
+                  <Search className="w-5 h-5 text-sky-400" />
+                </div>
+                <h2 className="text-[15px] font-semibold mb-1">No results for &ldquo;{search}&rdquo;</h2>
+                <p className="text-[13px] text-zinc-500 max-w-sm mb-6">Try a different query, check your spelling, or remove some filters.</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSearch("")}
+                    className="h-8 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-[12px] font-medium text-white transition-all active:scale-[0.97]"
+                  >
+                    Clear search
+                  </button>
+                  {filter && (
+                    <button
+                      onClick={() => setFilter(null)}
+                      className="h-8 px-4 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-[12px] text-zinc-400 font-medium transition-all active:scale-[0.97]"
+                    >
+                      Remove filter
+                    </button>
+                  )}
+                </div>
+              </div>
             ) : (
               <EmptyState
                 icon={Search}
@@ -1675,54 +1678,35 @@ export default function ExplorePage() {
           </>
         )}
 
-        {/* Keyboard hints (desktop only) */}
+        {/* ═══ Keyboard Hints (desktop) ═══ */}
         {!loading && memories.length > 0 && (
-          <div className="hidden md:flex items-center justify-center gap-4 pt-3 pb-1">
-            <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">j</kbd>
-              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">k</kbd>
-              navigate
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd>
-              open
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">/</kbd>
-              search
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-              <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">s</kbd>
-              {selectMode ? "select mode" : "select"}
-            </span>
+          <div className="hidden md:flex items-center justify-center gap-4 pt-4 pb-2">
+            <KbdHint keys={["j", "k"]} label="navigate" />
+            <KbdHint keys={["↵"]} label="open" />
+            <KbdHint keys={["/"]} label="search" />
+            <KbdHint keys={["s"]} label={selectMode ? "select mode" : "select"} />
             {selectMode && (
               <>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                  <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">␣</kbd>
-                  toggle
-                </span>
-                <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                  <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">a</kbd>
-                  all
-                </span>
+                <KbdHint keys={["␣"]} label="toggle" />
+                <KbdHint keys={["a"]} label="all" />
               </>
             )}
           </div>
         )}
 
-        {/* Loading skeleton */}
+        {/* ═══ Loading Skeleton ═══ */}
         {loading && memories.length === 0 && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="p-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] animate-pulse">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <div className="w-14 h-4 rounded-md bg-white/[0.06]" />
-                  <div className="flex-1 h-3.5 rounded-md bg-white/[0.04]" />
-                  <div className="w-10 h-3 rounded-md bg-white/[0.03]" />
+              <div key={i} className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]" style={{ animationDelay: `${i * 80}ms` }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-14 h-5 rounded-lg bg-white/[0.06] animate-pulse" />
+                  <div className="flex-1 h-4 rounded-lg bg-white/[0.04] animate-pulse" />
+                  <div className="w-12 h-3.5 rounded-lg bg-white/[0.03] animate-pulse" />
                 </div>
-                <div className="space-y-1.5">
-                  <div className="h-3.5 rounded-md bg-white/[0.04] w-full" />
-                  <div className="h-3.5 rounded-md bg-white/[0.04] w-3/4" />
+                <div className="space-y-2">
+                  <div className="h-4 rounded-lg bg-white/[0.04] animate-pulse w-full" />
+                  <div className="h-4 rounded-lg bg-white/[0.03] animate-pulse w-3/4" />
                 </div>
               </div>
             ))}
@@ -1730,17 +1714,23 @@ export default function ExplorePage() {
         )}
       </div>
 
-      {/* Detail Bottom Sheet */}
+      {/* ═══ Detail Bottom Sheet / Modal ═══ */}
       {selected && (
-        <div className="fixed inset-0 z-[60]" onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); } }}>
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+        <div
+          className="fixed inset-0 z-[60]"
+          onClick={() => { if (!editing) { setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); } }}
+        >
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-in fade-in duration-200" />
           <div
-            className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom shadow-2xl shadow-black/60"
+            className="absolute bottom-0 inset-x-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-[#111113] border-t md:border border-white/[0.08] rounded-t-3xl md:rounded-3xl overflow-hidden animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-2 md:fade-in duration-200 shadow-2xl shadow-black/60"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="md:hidden flex justify-center pt-2.5 pb-1">
-              <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
+            {/* Mobile drag handle */}
+            <div className="md:hidden flex justify-center pt-3 pb-1">
+              <div className="w-8 h-1 rounded-full bg-white/[0.15]" />
             </div>
+
+            {/* Header */}
             <div className="px-5 py-3 flex items-start justify-between border-b border-white/[0.06]">
               <div className="min-w-0 pr-3 flex-1">
                 {editing ? (
@@ -1759,7 +1749,7 @@ export default function ExplorePage() {
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] px-1.5 py-[2px] rounded-md font-semibold uppercase tracking-wide ${getSourceType(selected.source).badgeClasses}`}>
+                  <span className={`text-[10px] px-2 py-[3px] rounded-lg font-semibold uppercase tracking-wide ${getSourceType(selected.source).badgeClasses}`}>
                     {selected.source}
                   </span>
                   <span className="text-[11px] text-zinc-500">{new Date(selected.timestamp).toLocaleDateString()}</span>
@@ -1768,8 +1758,7 @@ export default function ExplorePage() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {/* Prev / Next navigation (hidden during edit) */}
+              <div className="flex items-center gap-0.5 shrink-0">
                 {!editing && (
                   <>
                     <button
@@ -1781,7 +1770,7 @@ export default function ExplorePage() {
                       <ChevronUp className="w-4 h-4 text-zinc-500" />
                     </button>
                     <span className="text-[10px] text-zinc-600 tabular-nums min-w-[2.5rem] text-center">
-                      {selectedIndex + 1}/{memories.length}
+                      {selectedIndex >= 0 ? `${selectedIndex + 1}/${memories.length}` : '—'}
                     </span>
                     <button
                       onClick={() => navigateMemory('next')}
@@ -1793,7 +1782,7 @@ export default function ExplorePage() {
                     </button>
                   </>
                 )}
-                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg">
+                <button onClick={() => { if (editing) cancelEditing(); setSelected(null); setCopied(false); setEditing(false); setTagAssignOpen(false); }} className="p-1.5 -mr-1 hover:bg-white/[0.06] rounded-lg transition-colors">
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
               </div>
@@ -1808,23 +1797,21 @@ export default function ExplorePage() {
                   const readMins = Math.max(1, Math.round(words / 225));
                   return (
                     <>
-                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${words.toLocaleString()} words`}>
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600">
                         <Hash className="w-2.5 h-2.5 text-zinc-700" />
                         {words.toLocaleString()} words
                       </span>
                       <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
-                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`${chars.toLocaleString()} characters`}>
-                        {chars.toLocaleString()} chars
-                      </span>
+                      <span className="text-[10px] text-zinc-600">{chars.toLocaleString()} chars</span>
                       <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
-                      <span className="flex items-center gap-1 text-[10px] text-zinc-600" title="Estimated reading time at 225 wpm">
+                      <span className="flex items-center gap-1 text-[10px] text-zinc-600">
                         <BookOpen className="w-2.5 h-2.5 text-zinc-700" />
                         {readMins} min read
                       </span>
                       {selected.importedAt && selected.importedAt !== selected.timestamp && (
                         <>
                           <span className="w-[3px] h-[3px] rounded-full bg-zinc-800" />
-                          <span className="flex items-center gap-1 text-[10px] text-zinc-600" title={`Imported ${new Date(selected.importedAt).toLocaleString()}`}>
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-600">
                             <Clock className="w-2.5 h-2.5 text-zinc-700" />
                             Imported {new Date(selected.importedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
@@ -1836,22 +1823,20 @@ export default function ExplorePage() {
               </div>
             )}
 
-            {/* Content area — view or edit */}
+            {/* Content area */}
             <div className="px-5 py-4 overflow-y-auto max-h-[55dvh] md:max-h-[50vh]">
               {editing ? (
                 <textarea
                   ref={editTextareaRef}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/30 resize-y transition-all placeholder:text-zinc-600 font-mono"
+                  className="w-full min-h-[200px] text-[13px] text-zinc-300 leading-[1.7] bg-white/[0.02] border border-white/[0.08] rounded-2xl p-4 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 resize-y transition-all placeholder:text-zinc-600 font-mono"
                   placeholder="Memory content…"
                   onKeyDown={(e) => {
-                    // Cmd/Ctrl+Enter to save
                     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                       e.preventDefault();
                       saveEdit();
                     }
-                    // Escape to cancel
                     if (e.key === 'Escape') {
                       e.preventDefault();
                       cancelEditing();
@@ -1865,7 +1850,7 @@ export default function ExplorePage() {
               )}
             </div>
 
-            {/* Related Memories — semantic connections */}
+            {/* Related Memories */}
             {!editing && (relatedLoading || relatedMemories.length > 0) && (
               <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
                 <div className="flex items-center gap-1.5 mb-2">
@@ -1881,16 +1866,16 @@ export default function ExplorePage() {
                   <div className="space-y-1">
                     {relatedMemories.map((rel) => {
                       const relSt = getSourceType(rel.type);
-                      const Icon = relSt.icon;
-                      const scorePercent = Math.round(rel.score * 100);
+                      const RelIcon = relSt.icon;
+                      const relScorePercent = Math.round(rel.score * 100);
                       return (
                         <button
                           key={rel.id}
                           onClick={() => openRelatedMemory(rel.id)}
-                          className="w-full text-left flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
+                          className="w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08] transition-all group/rel active:scale-[0.99]"
                         >
                           <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${relSt.bgColor}`}>
-                            <Icon className={`w-3 h-3 ${relSt.textColor}`} />
+                            <RelIcon className={`w-3 h-3 ${relSt.textColor}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] text-zinc-300 font-medium truncate group-hover/rel:text-white transition-colors">
@@ -1904,11 +1889,11 @@ export default function ExplorePage() {
                             <div className="w-8 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
                               <div
                                 className="h-full rounded-full bg-teal-500/50"
-                                style={{ width: `${Math.max(scorePercent, 10)}%` }}
+                                style={{ width: `${Math.max(relScorePercent, 10)}%` }}
                               />
                             </div>
                             <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-5 text-right">
-                              {scorePercent}%
+                              {relScorePercent}%
                             </span>
                             <ExternalLink className="w-2.5 h-2.5 text-zinc-700 group-hover/rel:text-teal-400 transition-colors" />
                           </div>
@@ -1917,7 +1902,7 @@ export default function ExplorePage() {
                     })}
                   </div>
                 ) : relatedLoading ? (
-                  <div className="flex items-center gap-2 py-2 px-2.5">
+                  <div className="flex items-center gap-2 py-2 px-3">
                     <div className="w-6 h-6 rounded-lg bg-white/[0.04] animate-pulse" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-2/3 bg-white/[0.04] rounded animate-pulse" />
@@ -1928,7 +1913,7 @@ export default function ExplorePage() {
               </div>
             )}
 
-            {/* Tags — view & manage tags on this memory */}
+            {/* Tags section */}
             {!editing && (
               <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01]">
                 <div className="flex items-center gap-1.5 mb-2">
@@ -1938,7 +1923,6 @@ export default function ExplorePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Existing tags on this memory */}
                   {(selected.tags || []).map(tag => (
                     <span key={tag.id} className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-semibold border ${tagColorClasses(tag.color)} group/tag`}>
                       <Tag className="w-2.5 h-2.5" />
@@ -1952,7 +1936,6 @@ export default function ExplorePage() {
                       </button>
                     </span>
                   ))}
-                  {/* Add tag button */}
                   <div className="relative">
                     <button
                       onClick={() => setTagAssignOpen(!tagAssignOpen)}
@@ -1961,12 +1944,11 @@ export default function ExplorePage() {
                       <Plus className="w-2.5 h-2.5" />
                       Add tag
                     </button>
-                    {/* Tag assign dropdown */}
                     {tagAssignOpen && (
                       <>
                         <div className="fixed inset-0 z-[70]" onClick={() => setTagAssignOpen(false)} />
-                        <div className="absolute bottom-full mb-1.5 left-0 z-[80] w-52 bg-[#151517] border border-white/[0.1] rounded-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                          <div className="p-2 border-b border-white/[0.06]">
+                        <div className="absolute bottom-full mb-1.5 left-0 z-[80] w-52 bg-[#131315] border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                          <div className="p-2.5 border-b border-white/[0.06]">
                             <div className="flex gap-1.5">
                               <input
                                 placeholder="New tag…"
@@ -1981,7 +1963,7 @@ export default function ExplorePage() {
                                     }
                                   }
                                 }}
-                                className="flex-1 h-7 px-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
+                                className="flex-1 h-8 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[11px] placeholder:text-zinc-600 focus:outline-none focus:border-teal-500/30 transition-all"
                                 autoFocus
                               />
                               {newTagName.trim() && (
@@ -1994,7 +1976,7 @@ export default function ExplorePage() {
                                     }
                                   }}
                                   disabled={creatingTag}
-                                  className="h-7 px-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-[11px] font-medium text-white shrink-0 transition-all disabled:opacity-50"
+                                  className="h-8 px-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-[11px] font-medium text-white shrink-0 transition-all disabled:opacity-50"
                                 >
                                   {creatingTag ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                                 </button>
@@ -2012,7 +1994,7 @@ export default function ExplorePage() {
                                       await assignTag(tag.id, [selected.id]);
                                       setTagAssignOpen(false);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-white/[0.06] transition-colors"
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/[0.04] transition-colors"
                                   >
                                     <div className={`w-2 h-2 rounded-full ${tagDotColor(tag.color)}`} />
                                     <span className="text-[12px] text-zinc-300">{tag.name}</span>
@@ -2020,7 +2002,7 @@ export default function ExplorePage() {
                                   </button>
                                 ))}
                               {allTags.filter(tag => !selected.tags?.some(t => t.id === tag.id)).length === 0 && (
-                                <p className="px-3 py-2 text-[11px] text-zinc-600 italic">All tags assigned</p>
+                                <p className="px-4 py-3 text-[11px] text-zinc-600 italic">All tags assigned</p>
                               )}
                             </div>
                           )}
@@ -2032,25 +2014,25 @@ export default function ExplorePage() {
               </div>
             )}
 
-            {/* Footer — different buttons for view vs edit mode */}
+            {/* Footer actions */}
             <div className="px-5 py-3 border-t border-white/[0.06]">
               {editing ? (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={cancelEditing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
                     >
                       Cancel
                     </button>
                     <span className="text-[10px] text-zinc-700 hidden sm:inline">
-                      <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘</kbd>+<kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd> save · <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">Esc</kbd> cancel
+                      <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘</kbd>+<kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd> save
                     </span>
                   </div>
                   <button
                     onClick={saveEdit}
                     disabled={saving || !editContent.trim()}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-teal-600 hover:bg-teal-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
+                    className="flex items-center gap-1.5 h-8 px-4 rounded-xl text-[12px] font-medium bg-teal-600 hover:bg-teal-500 text-white transition-all active:scale-[0.97] disabled:opacity-50"
                   >
                     {saving ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2062,21 +2044,19 @@ export default function ExplorePage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-2">
-                  {/* Primary action — most useful on mobile */}
                   <button
                     onClick={() => askAboutMemory(selected)}
-                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-[12px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all active:scale-[0.97] shrink-0"
+                    className="flex items-center gap-1.5 h-8 px-4 rounded-xl text-[12px] font-medium text-black bg-teal-500 hover:bg-teal-400 transition-all active:scale-[0.97] shrink-0"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Ask about this</span>
                     <span className="sm:hidden">Ask</span>
                   </button>
-                  {/* Secondary actions — icon-only on mobile */}
                   <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => togglePin(selected)}
                       disabled={pinning}
-                      className={`flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-xl text-[12px] font-medium transition-colors ${
                         selected.pinned
                           ? "text-amber-400 hover:bg-amber-500/10"
                           : "text-zinc-400 hover:bg-white/[0.06]"
@@ -2094,19 +2074,19 @@ export default function ExplorePage() {
                     </button>
                     <button
                       onClick={() => handleCopy(selected.content)}
-                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-xl text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
                       title="Copy content"
                     >
                       {copied ? (
-                        <Check className="w-3.5 h-3.5 text-green-400" />
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
-                      <span className="hidden sm:inline">{copied ? <span className="text-green-400">Copied</span> : "Copy"}</span>
+                      <span className="hidden sm:inline">{copied ? <span className="text-emerald-400">Copied</span> : "Copy"}</span>
                     </button>
                     <button
                       onClick={startEditing}
-                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-xl text-[12px] font-medium text-zinc-400 hover:bg-white/[0.06] transition-colors"
                       title="Edit memory (e)"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -2115,7 +2095,7 @@ export default function ExplorePage() {
                     <button
                       onClick={() => deleteMemory(selected.id)}
                       disabled={deleting}
-                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-xl text-[12px] font-medium text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                       title="Delete memory"
                     >
                       {deleting ? (
@@ -2129,38 +2109,20 @@ export default function ExplorePage() {
                 </div>
               )}
             </div>
-            {/* Keyboard hint */}
-            <div className="hidden md:flex items-center justify-center gap-3 px-5 py-2 border-t border-white/[0.04] bg-white/[0.01]">
+
+            {/* Keyboard hints in modal */}
+            <div className="hidden md:flex items-center justify-center gap-4 px-5 py-2 border-t border-white/[0.04] bg-white/[0.01]">
               {editing ? (
                 <>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">⌘</kbd><kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↵</kbd>
-                    save
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
-                    cancel edit
-                  </span>
+                  <KbdHint keys={["⌘", "↵"]} label="save" />
+                  <KbdHint keys={["esc"]} label="cancel" />
                 </>
               ) : (
                 <>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↑</kbd>
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">↓</kbd>
-                    navigate
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">p</kbd>
-                    pin
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">e</kbd>
-                    edit
-                  </span>
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                    <kbd className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1 py-[1px] text-[9px]">esc</kbd>
-                    close
-                  </span>
+                  <KbdHint keys={["↑", "↓"]} label="navigate" />
+                  <KbdHint keys={["p"]} label="pin" />
+                  <KbdHint keys={["e"]} label="edit" />
+                  <KbdHint keys={["esc"]} label="close" />
                 </>
               )}
             </div>
@@ -2171,23 +2133,37 @@ export default function ExplorePage() {
   );
 }
 
+/* ═══ Sub-components ═══ */
+
 function FilterPill({ active, onClick, label, count, icon, tagColor }: {
   active: boolean; onClick: () => void; label: string; count?: number; icon?: React.ReactNode; tagColor?: string;
 }) {
-  // For tag pills, use their color when active
   const activeStyle = tagColor
     ? `${tagColorClasses(tagColor).replace('border-', 'border border-')} shadow-sm`
     : "bg-teal-500/15 text-teal-300 border border-teal-500/25 shadow-sm shadow-teal-500/10";
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 flex items-center gap-1.5 px-3 py-[6px] rounded-full text-[12px] font-medium transition-all active:scale-[0.95] ${
-        active ? activeStyle : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04]"
+      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all active:scale-[0.95] ${
+        active ? activeStyle : "text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-300"
       }`}
     >
       {icon}
       {label}
-      {count !== undefined && count > 0 && <span className="text-[10px] opacity-60">{count}</span>}
+      {count !== undefined && count > 0 && <span className="text-[10px] opacity-60 tabular-nums">{count}</span>}
     </button>
+  );
+}
+
+function KbdHint({ keys, label }: { keys: string[]; label: string }) {
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+      {keys.map((key, i) => (
+        <kbd key={i} className="font-mono bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-[1px] text-[9px] min-w-[18px] text-center">
+          {key}
+        </kbd>
+      ))}
+      {label}
+    </span>
   );
 }
