@@ -167,30 +167,40 @@ export default function DashboardPage() {
 
   if (!loaded) return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Title skeleton */}
+      {/* Title + subtitle skeleton */}
       <div className="space-y-2">
-        <div className="h-7 w-32 rounded-xl bg-white/[0.04] animate-pulse" />
-        <div className="h-4 w-56 rounded-lg bg-white/[0.03] animate-pulse" />
+        <div className="h-7 w-32 rounded-lg bg-white/[0.04] animate-pulse" />
+        <div className="h-4 w-56 rounded-md bg-white/[0.03] animate-pulse" />
       </div>
-      {/* Stat cards skeleton */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-            <div className="w-4 h-4 rounded-md bg-white/[0.06] animate-pulse" />
-            <div className="h-7 w-16 rounded-lg bg-white/[0.05] animate-pulse" />
-            <div className="h-3 w-12 rounded bg-white/[0.03] animate-pulse" />
-          </div>
-        ))}
+      {/* Search bar skeleton */}
+      <div className="h-11 w-full rounded-2xl bg-white/[0.03] animate-pulse" />
+      {/* Activity chart skeleton */}
+      <div className="space-y-3 px-1">
+        <div className="h-3 w-24 rounded bg-white/[0.04] animate-pulse" />
+        <div className="flex items-end gap-0.5 h-14">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-sm bg-white/[0.04] animate-pulse"
+              style={{ height: `${Math.max(8, Math.random() * 100)}%`, animationDelay: `${i * 50}ms` }}
+            />
+          ))}
+        </div>
       </div>
-      {/* Actions skeleton */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-            <div className="w-5 h-5 rounded-lg bg-white/[0.05] animate-pulse" />
-            <div className="h-3.5 w-16 rounded bg-white/[0.04] animate-pulse" />
-            <div className="h-3 w-24 rounded bg-white/[0.03] animate-pulse" />
-          </div>
-        ))}
+      {/* List skeleton */}
+      <div className="space-y-3">
+        <div className="h-3 w-20 rounded bg-white/[0.04] animate-pulse" />
+        <div className="space-y-1">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+              <div className="w-7 h-7 rounded-lg bg-white/[0.05] animate-pulse shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-32 rounded bg-white/[0.04] animate-pulse" />
+                <div className="h-3 w-48 rounded bg-white/[0.03] animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
