@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Search, MessageCircle, FileText, Globe, Type, ChevronDown, ChevronUp, X, Trash2,
+  Search, Type, ChevronDown, ChevronUp, X, Trash2,
   Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save,
   MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ,
   ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles,
-  ExternalLink, PlayCircle, Bookmark, Gem, Mic, Camera, StickyNote, AtSign, Send,
-  BookmarkCheck, Music, Highlighter, LayoutList, LayoutGrid, Tag, Plus, Palette,
-  Star, Heart, Compass, Brain, GitBranch, Command, Lightbulb, Zap,
+  ExternalLink, Bookmark, LayoutList, LayoutGrid, Tag, Plus,
+  Star, Compass, Brain, GitBranch, Command, Lightbulb, Zap,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -895,9 +894,6 @@ export default function ExplorePage() {
     setBatchTagMenuOpen(false);
   }, [selectedIds, assignTag]);
 
-  // ─── Determine if we should show the discovery state ───
-  const showDiscovery = !loading && !search.trim() && !filter && !tagFilter && totalMemories > 0 && memories.length > 0;
-
   return (
     <PageTransition className="space-y-6">
       {/* ═══ Header ═══ */}
@@ -1122,48 +1118,80 @@ export default function ExplorePage() {
           );
         })()}
 
-        {/* Search History — shown when search is focused and empty */}
-        {searchFocused && !search && searchHistory.length > 0 && !savedSearchMenuOpen && !saveSearchDialogOpen && (
+        {/* Search History + Suggestions — shown when search is focused and empty */}
+        {searchFocused && !search && !savedSearchMenuOpen && !saveSearchDialogOpen && (
           <>
             <div className="fixed inset-0 z-[15]" onClick={() => setSearchFocused(false)} />
             <div className="relative z-20 mt-2 rounded-2xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
-                <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="w-3 h-3" />
-                  Recent Searches
-                </span>
-                <button
-                  onClick={() => { clearSearchHistory(); setSearchHistory([]); }}
-                  className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
-                >
-                  Clear all
-                </button>
-              </div>
-              <div className="py-1 max-h-48 overflow-y-auto">
-                {searchHistory.slice(0, 8).map((item) => (
-                  <div
-                    key={item.query}
-                    className="group flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                    onClick={() => { setSearch(item.query); setSearchFocused(false); }}
-                  >
-                    <Search className="w-3 h-3 text-zinc-700 shrink-0" />
-                    <span className="text-[12px] text-zinc-300 truncate flex-1">{item.query}</span>
-                    {item.resultCount !== undefined && (
-                      <span className="text-[10px] text-zinc-600 tabular-nums shrink-0">{item.resultCount} results</span>
-                    )}
+              {/* Recent searches */}
+              {searchHistory.length > 0 && (
+                <>
+                  <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      Recent Searches
+                    </span>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeSearchFromHistory(item.query);
-                        setSearchHistory(getSearchHistory());
-                      }}
-                      className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
+                      onClick={() => { clearSearchHistory(); setSearchHistory([]); }}
+                      className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
                     >
-                      <X className="w-2.5 h-2.5 text-zinc-600" />
+                      Clear all
                     </button>
                   </div>
-                ))}
-              </div>
+                  <div className="py-1 max-h-36 overflow-y-auto">
+                    {searchHistory.slice(0, 6).map((item) => (
+                      <div
+                        key={item.query}
+                        className="group flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        onClick={() => { setSearch(item.query); setSearchFocused(false); }}
+                      >
+                        <Search className="w-3 h-3 text-zinc-700 shrink-0" />
+                        <span className="text-[12px] text-zinc-300 truncate flex-1">{item.query}</span>
+                        {item.resultCount !== undefined && (
+                          <span className="text-[10px] text-zinc-600 tabular-nums shrink-0">{item.resultCount} results</span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSearchFromHistory(item.query);
+                            setSearchHistory(getSearchHistory());
+                          }}
+                          className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
+                        >
+                          <X className="w-2.5 h-2.5 text-zinc-600" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+              {/* Suggested searches — always visible as discovery prompts */}
+              {totalMemories > 0 && (
+                <>
+                  {searchHistory.length > 0 && <div className="border-t border-white/[0.06]" />}
+                  <div className="px-4 py-2.5 border-b border-white/[0.04]">
+                    <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Compass className="w-3 h-3" />
+                      Try searching
+                    </span>
+                  </div>
+                  <div className="py-1">
+                    {SEARCH_SUGGESTIONS.map((s) => {
+                      const SugIcon = s.icon;
+                      return (
+                        <div
+                          key={s.label}
+                          className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                          onClick={() => { if (s.query) setSearch(s.query); else { setFilter(null); setTagFilter(null); setSortBy('newest'); } setSearchFocused(false); }}
+                        >
+                          <SugIcon className="w-3 h-3 text-zinc-600 shrink-0" />
+                          <span className="text-[12px] text-zinc-400">{s.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
