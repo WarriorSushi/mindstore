@@ -237,26 +237,27 @@ export default function DuplicatesPage() {
       {/* Empty state */}
       {!loading && duplicates.length === 0 && (
         <Stagger>
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-emerald-400" />
+          {resolvedCount > 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-emerald-400" />
+              </div>
+              <h2 className="text-[15px] font-semibold text-zinc-300">All duplicates resolved!</h2>
+              <p className="text-[13px] text-zinc-500 text-center max-w-sm">
+                {`You cleaned up ${resolvedCount} pair${resolvedCount !== 1 ? 's' : ''}. Your knowledge base is spotless.`}
+              </p>
             </div>
-            <h2 className="text-[15px] font-semibold text-zinc-300">No duplicates found</h2>
-            <p className="text-[13px] text-zinc-500 text-center max-w-sm">
-              {resolvedCount > 0 
-                ? `All duplicates resolved! You cleaned up ${resolvedCount} pair${resolvedCount !== 1 ? 's' : ''}.`
-                : `Your knowledge base is clean at ${threshold}% similarity threshold. Try lowering it to find looser matches.`
-              }
-            </p>
-            {threshold > 80 && resolvedCount === 0 && (
-              <button
-                onClick={() => { setThreshold(80); }}
-                className="mt-2 text-[12px] text-teal-400 font-medium hover:text-teal-300 transition-colors"
-              >
-                Try 80% threshold →
-              </button>
-            )}
-          </div>
+          ) : (
+            <EmptyFeatureState
+              icon={ScanSearch}
+              title="Find and merge duplicate memories"
+              description="Duplicate Finder scans your library for near-identical content using semantic similarity. Merge, keep the best version, or clean house — your call."
+              ctaText="Import your first data →"
+              ctaHref="/app/import"
+              secondaryText="or explore with demo data"
+              secondaryHref="/app?demo=true"
+            />
+          )}
         </Stagger>
       )}
 

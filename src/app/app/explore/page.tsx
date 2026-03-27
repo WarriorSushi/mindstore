@@ -926,6 +926,18 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
+      {/* ═══ Saved Search Pills ═══ */}
+      {savedSearches.length > 0 && (
+        <Stagger>
+          <SavedSearchPills
+            searches={savedSearches}
+            activeId={activeSavedSearchId}
+            onApply={handleApplySavedSearch}
+            onDelete={handleDeleteSavedSearch}
+          />
+        </Stagger>
+      )}
+
       {/* ═══ Search ═══ */}
       <Stagger>
         <div className="relative group/search">
@@ -934,8 +946,8 @@ export default function ExplorePage() {
             ref={searchInputRef}
             placeholder="Search your knowledge…"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
-            onFocus={() => setSearchFocused(true)}
+            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); setAutocompleteOpen(true); }}
+            onFocus={() => { setSearchFocused(true); setAutocompleteOpen(true); }}
             onBlur={() => { setTimeout(() => setSearchFocused(false), 200); }}
             className="w-full h-11 pl-11 pr-28 sm:pr-32 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 focus:bg-white/[0.04] transition-all"
           />
