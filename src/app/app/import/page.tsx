@@ -815,17 +815,17 @@ export default function ImportPage() {
   const busy = state === "parsing" || state === "uploading";
 
   return (
-    <PageTransition className="space-y-5 md:space-y-6">
+    <PageTransition className="space-y-6 md:space-y-8">
       {/* Header */}
       <Stagger>
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="text-[22px] md:text-[28px] font-semibold tracking-[-0.03em]">Import</h1>
-            <p className="text-[13px] text-zinc-500 mt-0.5">Add knowledge from anywhere</p>
+            <p className="text-[13px] text-zinc-500 mt-1">Bring your knowledge from anywhere</p>
           </div>
           {totalMemories > 0 && (
-            <div className="text-right">
-              <p className="text-[18px] font-semibold text-zinc-300 tabular-nums tracking-tight">{totalMemories.toLocaleString()}</p>
+            <div className="text-right shrink-0">
+              <p className="text-[20px] font-semibold text-zinc-200 tabular-nums tracking-tight">{totalMemories.toLocaleString()}</p>
               <p className="text-[10px] text-zinc-600 uppercase tracking-wider">memories</p>
             </div>
           )}
@@ -835,20 +835,57 @@ export default function ImportPage() {
       {/* Progress */}
       {state !== "idle" && (
         <Stagger>
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
-          <div className="flex items-center gap-2.5">
-            {state === "done" ? <CheckCircle className="w-4 h-4 text-green-400" /> :
-             state === "error" ? <AlertCircle className="w-4 h-4 text-red-400" /> :
-             <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
-            <span className="text-[13px]">{progressText}</span>
+        <div className={`rounded-2xl border p-5 space-y-4 transition-colors duration-300 ${
+          state === "done" ? "border-emerald-500/20 bg-emerald-500/[0.03]" :
+          state === "error" ? "border-red-500/20 bg-red-500/[0.03]" :
+          "border-teal-500/15 bg-teal-500/[0.02]"
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+              state === "done" ? "bg-emerald-500/10" :
+              state === "error" ? "bg-red-500/10" :
+              "bg-teal-500/10"
+            }`}>
+              {state === "done" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> :
+               state === "error" ? <AlertCircle className="w-4 h-4 text-red-400" /> :
+               <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-[13px] font-medium ${
+                state === "done" ? "text-emerald-300" :
+                state === "error" ? "text-red-300" :
+                "text-zinc-200"
+              }`}>
+                {state === "done" ? "Import complete" :
+                 state === "error" ? "Import failed" :
+                 state === "parsing" ? "Preparing..." : "Importing..."}
+              </p>
+              <p className="text-[12px] text-zinc-500 mt-0.5">{progressText}</p>
+            </div>
           </div>
-          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-teal-500 to-sky-500 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
+          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-700 ease-out ${
+              state === "done" ? "bg-emerald-500" :
+              state === "error" ? "bg-red-500" :
+              "bg-gradient-to-r from-teal-500 to-sky-500"
+            }`} style={{ width: `${progress}%` }} />
           </div>
           {(state === "done" || state === "error") && (
-            <button onClick={reset} className="text-[12px] text-teal-400 font-medium hover:text-teal-300 transition-colors">
-              Import more →
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={reset} className={`h-8 px-4 rounded-lg text-[12px] font-medium transition-all active:scale-[0.97] ${
+                state === "done"
+                  ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15"
+                  : "bg-red-500/10 text-red-400 hover:bg-red-500/15"
+              }`}>
+                {state === "done" ? "Import more" : "Try again"}
+              </button>
+              {state === "done" && (
+                <Link href="/app/explore" className="text-[12px] text-zinc-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+                  <Compass className="w-3 h-3" />
+                  View in Explore
+                </Link>
+              )}
+            </div>
           )}
         </div>
         </Stagger>
@@ -856,21 +893,21 @@ export default function ImportPage() {
 
       {/* Source Selector — Categorized */}
       <Stagger>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {SOURCE_CATEGORIES.map((cat) => {
           const tabs = cat.ids.map(id => BASE_TABS.find(t => t.id === id)!).filter(Boolean);
           return (
             <div key={cat.label}>
-              <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-1.5 px-0.5">{cat.label}</p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none md:flex-wrap md:overflow-visible">
+              <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-2 px-0.5">{cat.label}</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none md:flex-wrap md:overflow-visible">
                 {tabs.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => { setTab(t.id); setKindlePreview(null); setDocPreview(null); setYtPreview(null); setRdPreview(null); }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all active:scale-[0.97] whitespace-nowrap shrink-0 ${
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border transition-all duration-150 active:scale-[0.97] whitespace-nowrap shrink-0 ${
                       tab === t.id
                         ? "bg-teal-500/10 border-teal-500/25 shadow-sm shadow-teal-500/10"
-                        : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]"
+                        : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.1]"
                     }`}
                   >
                     <t.icon className={`w-4 h-4 shrink-0 ${tab === t.id ? "text-teal-400" : "text-zinc-500"}`} />
@@ -919,76 +956,88 @@ export default function ImportPage() {
       {/* Tab Content */}
       <Stagger>
       <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
-        <div className="p-4 md:p-5 space-y-4">
+        <div className="p-5 md:p-6 space-y-4">
           {tab === "chatgpt" && (
             <>
-              <div className="text-[12px] text-zinc-500 space-y-1">
-                <p className="text-zinc-300 font-medium">How to export from ChatGPT</p>
-                <p>Profile → Settings → Data Controls → Export data → Download ZIP from email</p>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-[13px] text-zinc-300 font-medium">How to export from ChatGPT</p>
+                <ol className="space-y-1 list-decimal list-inside text-zinc-500">
+                  <li>Go to <span className="text-zinc-400">Profile → Settings → Data Controls</span></li>
+                  <li>Click <span className="text-zinc-400">Export data</span></li>
+                  <li>Download the ZIP from your email</li>
+                </ol>
               </div>
               <DropZone
                 id="chatgpt-file" accept=".json,.zip" disabled={busy}
                 onFile={handleChatGPTImport}
                 title="Drop your ChatGPT export"
-                subtitle=".zip or .json file"
-                icon={<MessageCircle className="w-6 h-6 text-zinc-600" />}
+                subtitle=".zip or .json — all conversations will be imported"
+                icon={<MessageCircle className="w-7 h-7 text-teal-400/60" />}
               />
             </>
           )}
           {tab === "text" && (
-            <>
+            <div className="space-y-3">
               <input
                 placeholder="Title (optional)"
                 value={textTitle}
                 onChange={(e) => setTextTitle(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
+                className="w-full h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 transition-all"
               />
               <textarea
-                placeholder="Paste notes, articles, thoughts…"
+                placeholder="Paste notes, articles, thoughts..."
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
-                rows={7}
-                className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all resize-none"
+                rows={8}
+                className="w-full px-3.5 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] leading-relaxed placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 transition-all resize-none"
               />
-              <button
-                onClick={handleTextImport}
-                disabled={busy || !textContent.trim()}
-                className="h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
-              >
-                {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Import
-              </button>
-            </>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-zinc-600">
+                  {textContent.length > 0 && `${textContent.split(/\s+/).filter(Boolean).length} words`}
+                </p>
+                <button
+                  onClick={handleTextImport}
+                  disabled={busy || !textContent.trim()}
+                  className="h-9 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
+                >
+                  {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Import
+                </button>
+              </div>
+            </div>
           )}
           {tab === "files" && (
             <DropZone
               id="file-upload" accept=".txt,.md,.markdown" multiple disabled={busy}
               onFiles={handleFileImport}
               title="Drop text files"
-              subtitle=".txt or .md — select multiple"
-              icon={<FileText className="w-6 h-6 text-zinc-600" />}
+              subtitle=".txt or .md — select multiple files at once"
+              icon={<FileText className="w-7 h-7 text-teal-400/60" />}
             />
           )}
           {tab === "url" && (
-            <>
-              <p className="text-[12px] text-zinc-500">Extract text from any webpage</p>
+            <div className="space-y-3">
+              <p className="text-[12px] text-zinc-500">Paste any URL to extract and save its content</p>
               <div className="flex gap-2">
-                <input
-                  placeholder="https://…"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
-                  className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition-all"
-                />
+                <div className="relative flex-1">
+                  <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
+                  <input
+                    placeholder="https://..."
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleUrlImport()}
+                    className="w-full h-10 pl-10 pr-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[13px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 transition-all"
+                  />
+                </div>
                 <button
                   onClick={handleUrlImport}
                   disabled={busy || !urlInput.trim()}
-                  className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97]"
+                  className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-[13px] font-medium text-white shrink-0 transition-all active:scale-[0.97] flex items-center gap-2"
                 >
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import"}
                 </button>
               </div>
-            </>
+            </div>
           )}
           {tab === "obsidian" && (
             <>
@@ -1261,8 +1310,8 @@ export default function ImportPage() {
                     title={notionParsing ? "Parsing Notion export..." : "Drop Notion export ZIP"}
                     subtitle={notionParsing ? "Analyzing pages and databases..." : ".zip file — pages + databases supported"}
                     icon={notionParsing
-                      ? <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
-                      : <StickyNote className="w-6 h-6 text-zinc-600" />
+                      ? <Loader2 className="w-7 h-7 text-teal-400 animate-spin" />
+                      : <StickyNote className="w-7 h-7 text-teal-400/60" />
                     }
                   />
                   <div className="text-center">
@@ -1272,8 +1321,8 @@ export default function ImportPage() {
                     id="notion-upload" accept=".md,.markdown" multiple disabled={busy}
                     onFiles={(f) => handleNotionImport(f)}
                     title="Drop individual .md files"
-                    subtitle="For pre-extracted exports"
-                    icon={<StickyNote className="w-6 h-6 text-zinc-600" />}
+                    subtitle="For pre-extracted Notion exports"
+                    icon={<StickyNote className="w-7 h-7 text-zinc-500" />}
                   />
                 </div>
               )}
@@ -2236,12 +2285,12 @@ export default function ImportPage() {
       {/* Empty state — no imports yet */}
       {!historyLoading && importHistory.length === 0 && state === "idle" && (
         <Stagger>
-          <div className="rounded-2xl border border-dashed border-white/[0.06] bg-white/[0.01] p-6 text-center">
-            <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center mx-auto mb-3">
-              <Package className="w-4 h-4 text-zinc-600" />
+          <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/[0.06] border border-teal-500/10 flex items-center justify-center mx-auto mb-4">
+              <Upload className="w-5 h-5 text-teal-400/60" />
             </div>
-            <p className="text-[13px] text-zinc-400 font-medium">No imports yet</p>
-            <p className="text-[11px] text-zinc-600 mt-1">Choose a source above to add your first knowledge</p>
+            <p className="text-[14px] text-zinc-300 font-medium">Your knowledge base is empty</p>
+            <p className="text-[12px] text-zinc-600 mt-1 max-w-[280px] mx-auto">Choose a source above to import your first knowledge. Start with ChatGPT or paste some text.</p>
           </div>
         </Stagger>
       )}
@@ -2274,31 +2323,34 @@ function DropZone({ id, accept, multiple, disabled, onFile, onFiles, title, subt
     <>
       <div
         onClick={() => !disabled && document.getElementById(id)?.click()}
-        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => {
           e.preventDefault(); setOver(false);
+          if (disabled) return;
           if (onFile) onFile(e.dataTransfer.files[0]);
           if (onFiles) onFiles(e.dataTransfer.files);
         }}
-        className={`group relative flex flex-col items-center justify-center py-10 md:py-14 rounded-2xl border-2 border-dashed transition-all cursor-pointer active:scale-[0.99] ${
+        className={`group relative flex flex-col items-center justify-center py-12 md:py-16 rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer active:scale-[0.99] ${
           over
-            ? "border-teal-500/40 bg-teal-500/[0.06] scale-[1.01]"
+            ? "border-teal-500/50 bg-teal-500/[0.08] scale-[1.01] shadow-[inset_0_0_40px_rgba(20,184,166,0.04)]"
             : disabled
             ? "border-white/[0.06] bg-white/[0.01] opacity-60 cursor-not-allowed"
-            : "border-white/[0.08] hover:border-teal-500/20 hover:bg-white/[0.02]"
+            : "border-white/[0.1] hover:border-teal-500/25 hover:bg-white/[0.02]"
         }`}
       >
         {over && (
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-teal-500/[0.04] to-transparent pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-teal-500/[0.06] to-transparent pointer-events-none" />
         )}
-        <div className={`mb-3 transition-transform ${over ? "scale-110 -translate-y-1" : "group-hover:scale-105"}`}>
-          {over ? <Upload className="w-6 h-6 text-teal-400" /> : icon}
+        <div className={`mb-4 transition-all duration-200 ${over ? "scale-125 -translate-y-1.5" : "group-hover:scale-110"}`}>
+          {over ? <Upload className="w-7 h-7 text-teal-400" /> : icon}
         </div>
-        <p className={`text-[13px] font-medium transition-colors ${over ? "text-teal-300" : "text-zinc-400"}`}>{title}</p>
-        <p className="text-[11px] text-zinc-600 mt-0.5">{subtitle}</p>
-        <p className="text-[10px] text-zinc-700 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          Click to browse or drag & drop
+        <p className={`text-[14px] font-medium transition-colors ${over ? "text-teal-300" : "text-zinc-300"}`}>{title}</p>
+        <p className="text-[12px] text-zinc-600 mt-1">{subtitle}</p>
+        <p className={`text-[11px] mt-4 transition-all duration-200 ${
+          over ? "text-teal-400/70 opacity-100" : "text-zinc-700 opacity-0 group-hover:opacity-100"
+        }`}>
+          {over ? "Release to upload" : "Click to browse or drag & drop"}
         </p>
       </div>
       <input
