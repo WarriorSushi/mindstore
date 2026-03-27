@@ -12,6 +12,7 @@ import {
 import { getSourceType } from '@/lib/source-types';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { EmptyState } from '@/components/EmptyState';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { openMemoryDrawer } from '@/components/MemoryDrawer';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -512,13 +513,14 @@ export default function CollectionsPage() {
 
         {/* Empty state */}
         {stats?.insufficientData && (
-          <EmptyState
+          <EmptyFeatureState
             icon={FolderOpen}
-            title="Not enough data for collections"
-            description="Import at least 3 memories with an AI provider connected. MindStore will automatically organize your knowledge into thematic collections."
-            action={{ label: "Import knowledge", href: "/app/import" }}
-            secondaryAction={{ label: "Connect AI provider", href: "/app/settings" }}
-            color="teal"
+            title="Your knowledge, automatically organized"
+            description="Collections groups related memories into thematic clusters — no manual sorting needed. Import notes, conversations, or articles and watch collections form naturally."
+            ctaText="Import your first data →"
+            ctaHref="/app/import"
+            secondaryText="or explore with demo data"
+            secondaryHref="/app?demo=true"
           />
         )}
 

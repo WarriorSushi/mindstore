@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
+import { EmptyFeatureState } from "@/components/EmptyFeatureState";
 import { toast } from "sonner";
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -392,13 +393,15 @@ export default function LearningPathsPage() {
                   ))}
                 </div>
               ) : paths.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="p-4 rounded-2xl bg-teal-500/[0.04] border border-teal-500/10 inline-block mb-4">
-                    <Route className="w-8 h-8 text-teal-400/60" />
-                  </div>
-                  <p className="text-zinc-400 text-sm mb-1">No learning paths yet</p>
-                  <p className="text-zinc-600 text-xs">Enter a topic above or pick a suggestion to get started</p>
-                </div>
+                <EmptyFeatureState
+                  icon={Route}
+                  title="Chart your learning journey"
+                  description="Learning Paths creates structured study plans from your existing knowledge — identifying what you already know and what comes next. Enter a topic above or import data to get started."
+                  ctaText="Import your first data →"
+                  ctaHref="/app/import"
+                  secondaryText="or explore with demo data"
+                  secondaryHref="/app?demo=true"
+                />
               ) : (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-3">

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
 import { PageTransition } from "@/components/PageTransition";
+import { EmptyFeatureState } from "@/components/EmptyFeatureState";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -298,11 +299,15 @@ export default function MultiLanguagePage() {
 
             {/* Language bars */}
             {stats.languages.length === 0 ? (
-              <div className="py-8 text-center">
-                <Globe className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-                <p className="text-sm text-zinc-500">No language data yet</p>
-                <p className="text-xs text-zinc-600 mt-1">Tag your memories to see language distribution</p>
-              </div>
+              <EmptyFeatureState
+                icon={Languages}
+                title="Discover the languages in your knowledge"
+                description="Language analysis detects what languages your memories are written in and enables cross-language search. Import multilingual content to see your language distribution."
+                ctaText="Import your first data →"
+                ctaHref="/app/import"
+                secondaryText="or explore with demo data"
+                secondaryHref="/app?demo=true"
+              />
             ) : (
               <div className="space-y-2">
                 {stats.languages.map((lang, i) => {

@@ -9,6 +9,7 @@ import {
   AlignLeft, CaseSensitive, Quote,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -233,27 +234,19 @@ export default function WritingStylePage() {
             </div>
           </Stagger>
           <Stagger>
-            <div className="flex items-center justify-center min-h-[40vh]">
-              <div className="text-center space-y-4 max-w-sm">
-                <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center mx-auto">
-                  <PenTool className="w-7 h-7 text-teal-400" />
-                </div>
-                <div>
-                  <div className="text-[15px] font-medium text-zinc-200">Discover your writing fingerprint</div>
-                  <div className="text-[12px] text-zinc-500 mt-2 leading-relaxed">
-                    Analyze vocabulary richness, readability scores, tone distribution, and writing patterns across {totalEligible} memories.
-                  </div>
-                </div>
-                <button
-                  onClick={runAnalysis}
-                  disabled={analyzing}
-                  className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-[13px] font-medium transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
-                >
-                  {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Analyze {totalEligible} memories
-                </button>
-              </div>
-            </div>
+            <EmptyFeatureState
+              icon={PenTool}
+              title="Discover your writing fingerprint"
+              description="Writing Style analyzes vocabulary richness, readability scores, tone distribution, and sentence patterns across all your memories. See how you write — and how it's evolving."
+              ctaText="Import your first data →"
+              ctaHref="/app/import"
+              secondaryText="or explore with demo data"
+              secondaryHref="/app?demo=true"
+              onAction={runAnalysis}
+              actionLabel={analyzing ? 'Analyzing…' : `Analyze ${totalEligible} memories`}
+              actionIcon={Zap}
+              actionLoading={analyzing}
+            />
           </Stagger>
         </div>
       </PageTransition>

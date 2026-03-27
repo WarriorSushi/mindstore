@@ -1130,84 +1130,26 @@ export default function ExplorePage() {
           );
         })()}
 
-        {/* Search History + Suggestions — shown when search is focused and empty */}
-        {searchFocused && !search && !savedSearchMenuOpen && !saveSearchDialogOpen && (
-          <>
-            <div className="fixed inset-0 z-[15]" onClick={() => setSearchFocused(false)} />
-            <div className="relative z-20 mt-2 rounded-2xl border border-white/[0.08] bg-[#131315] shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
-              {/* Recent searches */}
-              {searchHistory.length > 0 && (
-                <>
-                  <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Clock className="w-3 h-3" />
-                      Recent Searches
-                    </span>
-                    <button
-                      onClick={() => { clearSearchHistory(); setSearchHistory([]); }}
-                      className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                  <div className="py-1 max-h-36 overflow-y-auto">
-                    {searchHistory.slice(0, 6).map((item) => (
-                      <div
-                        key={item.query}
-                        className="group flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                        onClick={() => { setSearch(item.query); setSearchFocused(false); }}
-                      >
-                        <Search className="w-3 h-3 text-zinc-700 shrink-0" />
-                        <span className="text-[12px] text-zinc-300 truncate flex-1">{item.query}</span>
-                        {item.resultCount !== undefined && (
-                          <span className="text-[10px] text-zinc-600 tabular-nums shrink-0">{item.resultCount} results</span>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeSearchFromHistory(item.query);
-                            setSearchHistory(getSearchHistory());
-                          }}
-                          className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-white/[0.08] transition-all"
-                        >
-                          <X className="w-2.5 h-2.5 text-zinc-600" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              {/* Suggested searches — always visible as discovery prompts */}
-              {totalMemories > 0 && (
-                <>
-                  {searchHistory.length > 0 && <div className="border-t border-white/[0.06]" />}
-                  <div className="px-4 py-2.5 border-b border-white/[0.04]">
-                    <span className="text-[11px] font-medium text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <Compass className="w-3 h-3" />
-                      Try searching
-                    </span>
-                  </div>
-                  <div className="py-1">
-                    {SEARCH_SUGGESTIONS.map((s) => {
-                      const SugIcon = s.icon;
-                      return (
-                        <div
-                          key={s.label}
-                          className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                          onClick={() => { if (s.query) setSearch(s.query); else { setFilter(null); setTagFilter(null); setSortBy('newest'); } setSearchFocused(false); }}
-                        >
-                          <SugIcon className="w-3 h-3 text-zinc-600 shrink-0" />
-                          <span className="text-[12px] text-zinc-400">{s.label}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          </>
-        )}
+        {/* Search Autocomplete — suggestions + history dropdown */}
+        <SearchAutocomplete
+          query={search}
+          isOpen={autocompleteOpen && !savedSearchMenuOpen && !saveSearchDialogOpen}
+          onSelect={(text) => { setSearch(text); setAutocompleteOpen(false); setActiveSavedSearchId(null); }}
+          onClose={() => setAutocompleteOpen(false)}
+          inputRef={searchInputRef}
+        />
       </Stagger>
+
+      {/* ═══ Advanced Filter Bar ═══ */}
+      {search.trim() && (
+        <Stagger>
+          <AdvancedFilterBar
+            filters={advancedFilters}
+            onChange={setAdvancedFilters}
+            availableSourceTypes={activeSourceTypes.map(([type, count]) => ({ type, count }))}
+          />
+        </Stagger>
+      )}
 
       {/* ═══ Filters + View + Sort ═══ */}
       <Stagger>
@@ -1325,42 +1267,24 @@ export default function ExplorePage() {
         </div>
       </Stagger>
 
-      {/* ═══ Search Intelligence Indicators ═══ */}
+      {/* ═══ Search Stats + Did You Mean ═══ */}
       {search.trim() && !loading && (
         <Stagger>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-teal-400/80 font-semibold tabular-nums">
-              {memories.length} result{memories.length !== 1 ? "s" : ""}
-            </span>
-            {searchLayers && (
-              <>
-                <span className="w-[3px] h-[3px] rounded-full bg-zinc-700" />
-                <span className="text-[10px] text-zinc-600 font-medium">via</span>
-                <div className="flex items-center gap-1.5">
-                  {searchLayers.bm25 > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-blue-500/10 text-blue-400 border border-blue-500/10">
-                      <Type className="w-2.5 h-2.5" /> Keyword <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.bm25}</span>
-                    </span>
-                  )}
-                  {searchLayers.vector > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-teal-500/10 text-teal-400 border border-teal-500/10">
-                      <Brain className="w-2.5 h-2.5" /> Semantic <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.vector}</span>
-                    </span>
-                  )}
-                  {searchLayers.tree > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
-                      <GitBranch className="w-2.5 h-2.5" /> Structure <span className="text-[9px] opacity-60 ml-0.5">{searchLayers.tree}</span>
-                    </span>
-                  )}
-                </div>
-                {searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
-                  <Link href="/app/settings" className="text-[10px] text-zinc-600 hover:text-teal-400 transition-colors italic">
-                    Connect AI for semantic search →
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
+          <SearchStats
+            resultCount={memories.length}
+            durationMs={searchDurationMs}
+            layers={searchLayers}
+          />
+          <DidYouMean
+            query={search}
+            resultCount={memories.length}
+            onSuggestionClick={(term: string) => setSearch(term)}
+          />
+          {searchLayers && searchLayers.bm25 > 0 && !searchLayers.vector && !searchLayers.tree && (
+            <Link href="/app/settings" className="text-[10px] text-zinc-600 hover:text-teal-400 transition-colors italic mt-1 block">
+              Connect AI for semantic search →
+            </Link>
+          )}
         </Stagger>
       )}
 
