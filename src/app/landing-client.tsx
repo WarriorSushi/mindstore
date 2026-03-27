@@ -622,9 +622,6 @@ export function LandingClient() {
       <style jsx global>{`
         @keyframes tkL { from{transform:translateX(0)} to{transform:translateX(-33.333%)} }
         @keyframes tkR { from{transform:translateX(-33.333%)} to{transform:translateX(0)} }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes screenFade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes graphRotate { 0%{transform:rotate(0deg) scale(1)} 50%{transform:rotate(3deg) scale(1.02)} 100%{transform:rotate(0deg) scale(1)} }
         @keyframes clickRipple { 0%{transform:scale(0);opacity:1} 100%{transform:scale(2.5);opacity:0} }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
       `}</style>
@@ -660,7 +657,7 @@ export function LandingClient() {
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
           <R>
             <h1 className="text-[clamp(2.6rem,6vw,4.5rem)] font-extrabold leading-[1.02] tracking-[-0.045em] max-w-[800px]">
-              You&apos;ve spent years<br />learning things.<br />
+              You&apos;ve spent years learning things.{" "}
               <span className="font-serif italic text-teal-400">Where did it all go?</span>
             </h1>
           </R>
