@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
+import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
 /**
  * POST /api/v1/chat — streaming chat proxy
@@ -15,10 +16,25 @@ import { sql } from 'drizzle-orm';
  * Body: { messages: [{role, content}], model?: string }
  */
 export async function POST(req: NextRequest) {
+  const limited = applyRateLimit(req, 'chat', RATE_LIMITS.ai);
+  if (limited) return limited;
+
   try {
     const { messages, model } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
+    }
+    if (messages.length > 100) {
+      return NextResponse.json({ error: 'Too many messages (max 100)' }, { status: 400 });
+    }
+    // Validate individual messages
+    for (const msg of messages) {
+      if (!msg.role || !msg.content) {
+        return NextResponse.json({ error: 'Each message needs role and content' }, { status: 400 });
+      }
+      if (typeof msg.content === 'string' && msg.content.length > 100_000) {
+        return NextResponse.json({ error: 'Message content too long (max 100K chars)' }, { status: 400 });
+      }
     }
 
     // Get all configured settings

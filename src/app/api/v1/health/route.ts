@@ -29,7 +29,7 @@ export async function GET() {
         SELECT 
           COUNT(*) as total,
           COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) as with_embeddings,
-          COUNT(CASE WHEN pinned = true THEN 1 END) as pinned,
+          COUNT(CASE WHEN (metadata->>'pinned')::boolean = true THEN 1 END) as pinned,
           MIN(created_at) as oldest,
           MAX(created_at) as newest
         FROM memories WHERE user_id = ${userId}::uuid
@@ -86,8 +86,8 @@ export async function GET() {
 
       // Plugin count
       db.execute(sql`
-        SELECT COUNT(*) as total, COUNT(CASE WHEN enabled = true THEN 1 END) as enabled
-        FROM plugins WHERE user_id = ${userId}::uuid
+        SELECT COUNT(*) as total, COUNT(CASE WHEN status = 'active' THEN 1 END) as enabled
+        FROM plugins
       `).catch(() => [{ total: 0, enabled: 0 }]),
 
       // Connections count

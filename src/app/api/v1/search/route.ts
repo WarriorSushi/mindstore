@@ -4,12 +4,16 @@ import { db, schema } from '@/server/db';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
+import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
 /**
  * GET /api/v1/search?q=query&limit=10&source=chatgpt
  * Triple-layer fusion search
  */
 export async function GET(req: NextRequest) {
+  const limited = applyRateLimit(req, 'search', RATE_LIMITS.standard);
+  if (limited) return limited;
+
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
@@ -18,6 +22,7 @@ export async function GET(req: NextRequest) {
     const userId = await getUserId();
 
     if (!query) return NextResponse.json({ error: 'Missing query parameter ?q=' }, { status: 400 });
+    if (query.length > 2000) return NextResponse.json({ error: 'Query too long (max 2000 chars)' }, { status: 400 });
 
     // Get embedding for the query using available provider
     let embedding: number[] | null = null;

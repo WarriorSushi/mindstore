@@ -183,10 +183,71 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Auto-reindex: if an API key was just saved, embed any memories that don't have embeddings yet
+    // This runs in the background — response returns immediately
+    if (body.apiKey || body.geminiKey || body.ollamaUrl || body.openrouterKey || body.customApiKey) {
+      triggerAutoReindex().catch(() => {}); // fire-and-forget
+    }
+
     return NextResponse.json({ ok: true, message: 'Settings saved' });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+/**
+ * Trigger background reindex of memories without embeddings.
+ * Called after an API key is saved — non-blocking, best-effort.
+ * Uses waitUntil if available (Vercel edge) or fire-and-forget.
+ */
+async function triggerAutoReindex() {
+  try {
+    const { getUserId } = await import('@/server/user');
+    const userId = await getUserId();
+    
+    // Check if there are memories without embeddings
+    const countRes = await db.execute(sql`
+      SELECT COUNT(*)::int as count FROM memories
+      WHERE user_id = ${userId}::uuid AND embedding IS NULL
+    `);
+    const unembedded = (countRes as any[])[0]?.count || 0;
+    if (unembedded === 0) return;
+
+    const { generateEmbeddings } = await import('@/server/embeddings');
+    const { buildTreeIndex } = await import('@/server/retrieval');
+
+    // Process in batches of 50
+    const BATCH = 50;
+    let processed = 0;
+    for (let i = 0; i < Math.min(unembedded, 200); i += BATCH) {
+      const mems = await db.execute(sql`
+        SELECT id, content FROM memories
+        WHERE user_id = ${userId}::uuid AND embedding IS NULL
+        ORDER BY created_at DESC LIMIT ${BATCH}
+      `) as any[];
+
+      if (mems.length === 0) break;
+
+      const embeddings = await generateEmbeddings(mems.map(m => m.content));
+      if (!embeddings) break;
+
+      for (let j = 0; j < mems.length; j++) {
+        const embStr = `[${embeddings[j].join(',')}]`;
+        await db.execute(sql`
+          UPDATE memories SET embedding = ${embStr}::vector WHERE id = ${mems[j].id}::uuid
+        `);
+        processed++;
+      }
+    }
+
+    // Rebuild tree index if we processed anything
+    if (processed > 0) {
+      try { await buildTreeIndex(userId); } catch { /* non-fatal */ }
+      console.log(`[auto-reindex] Embedded ${processed}/${unembedded} memories`);
+    }
+  } catch (e) {
+    console.error('[auto-reindex] failed:', e);
   }
 }
 

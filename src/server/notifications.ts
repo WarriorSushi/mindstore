@@ -6,7 +6,7 @@
 import { db, schema } from '@/server/db';
 import { sql } from 'drizzle-orm';
 
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';
+const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 type NotificationType =
   | 'import_complete'

@@ -4,6 +4,7 @@ import { db, schema } from '@/server/db';
 import { buildTreeIndex } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
+import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 import JSZip from 'jszip';
 
 /**
@@ -102,6 +103,9 @@ function parseChatGPT(json: any): Array<{ title: string; content: string; timest
  * Or JSON: { source_type, documents: [{ title, content }] }
  */
 export async function POST(req: NextRequest) {
+  const limited = applyRateLimit(req, 'import', RATE_LIMITS.write);
+  if (limited) return limited;
+
   try {
     const userId = await getUserId();
     
@@ -168,6 +172,17 @@ export async function POST(req: NextRequest) {
 
     if (documents.length === 0) {
       return NextResponse.json({ error: 'No documents to import' }, { status: 400 });
+    }
+
+    // Limit total import size to prevent abuse
+    const MAX_DOCUMENTS = 10_000;
+    const MAX_TOTAL_CHARS = 50_000_000; // 50MB of text
+    if (documents.length > MAX_DOCUMENTS) {
+      return NextResponse.json({ error: `Too many documents (${documents.length}). Maximum ${MAX_DOCUMENTS} per import.` }, { status: 400 });
+    }
+    const totalChars = documents.reduce((sum, d) => sum + d.content.length, 0);
+    if (totalChars > MAX_TOTAL_CHARS) {
+      return NextResponse.json({ error: `Import too large (${Math.round(totalChars / 1_000_000)}MB). Maximum 50MB per import.` }, { status: 400 });
     }
 
     // Chunk all documents
