@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Brain, RefreshCw, Loader2, Lightbulb, Network, Link2, Layers } from 'lucide-react';
 import { usePageTitle } from "@/lib/use-page-title";
 import { PageTransition } from "@/components/PageTransition";
+import { EmptyFeatureState } from "@/components/EmptyFeatureState";
 
 // Dynamic import reagraph (WebGL, can't SSR)
 const GraphCanvas = dynamic(
@@ -128,21 +129,15 @@ export default function FingerprintPage() {
           )}
 
           {data && graphNodes.length === 0 && !loading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-xs px-6">
-                <Brain className="w-8 h-8 text-zinc-700 mx-auto mb-4" />
-                <p className="text-[15px] font-medium text-zinc-300 mb-1">No knowledge yet</p>
-                <p className="text-[12px] text-zinc-600 leading-relaxed mb-4">
-                  Import some conversations or notes first — your fingerprint maps the connections between your ideas.
-                </p>
-                <Link
-                  href="/app/import"
-                  className="inline-flex h-9 px-5 items-center rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97]"
-                >
-                  Import Knowledge
-                </Link>
-              </div>
-            </div>
+            <EmptyFeatureState
+              icon={Brain}
+              title="See the shape of your thinking"
+              description="Your Knowledge Fingerprint maps every connection between your ideas into a living 3D graph. Import conversations, notes, or articles to watch your mind's topology emerge."
+              ctaText="Import your first data →"
+              ctaHref="/app/import"
+              secondaryText="or explore with demo data"
+              secondaryHref="/app?demo=true"
+            />
           )}
         </div>
       )}

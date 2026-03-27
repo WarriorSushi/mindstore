@@ -1482,164 +1482,43 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {/* ═══ Memory Cards ═══ */}
+      {/* ═══ Memory Cards — Using SearchResultCard ═══ */}
       <div ref={listRef} className={viewMode === "compact" ? "space-y-px" : "space-y-2"}>
-        {memories.map((m, idx) => {
-          const cfg = getSourceType(m.source);
-          const Icon = cfg.icon;
-          const isFocused = focusedIndex === idx;
-          const isSelected = selectedIds.has(m.id);
-          const scorePercent = m.score ? Math.round(m.score * 100) : 0;
+        {memories.map((m, idx) => (
+          <SearchResultCard
+            key={m.id}
+            id={m.id}
+            content={m.content}
+            source={m.source}
+            sourceTitle={m.sourceTitle}
+            timestamp={m.timestamp}
+            score={m.score}
+            pinned={m.pinned}
+            tags={m.tags}
+            layers={m.layers}
+            query={search}
+            isFocused={focusedIndex === idx}
+            isSelected={selectedIds.has(m.id)}
+            selectMode={selectMode}
+            viewMode={viewMode}
+            onClick={() => {
+              if (selectMode) {
+                toggleSelect(m.id);
+              } else {
+                setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false);
+              }
+            }}
+          />
+        ))}
 
-          if (viewMode === "compact") {
-            return (
-              <button
-                key={m.id}
-                onClick={() => {
-                  if (selectMode) { toggleSelect(m.id); }
-                  else { setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false); }
-                }}
-                className={`w-full text-left flex items-center gap-3 px-4 py-2.5 transition-all ${
-                  isSelected
-                    ? "bg-teal-500/[0.08] ring-1 ring-teal-500/20"
-                    : isFocused
-                    ? "bg-teal-500/[0.04]"
-                    : "hover:bg-white/[0.03]"
-                } ${idx === 0 ? "rounded-t-2xl" : ""} ${idx === memories.length - 1 ? "rounded-b-2xl" : ""}`}
-              >
-                {selectMode && (
-                  <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
-                    isSelected ? "bg-teal-500 border-teal-500" : "border-white/[0.15] bg-white/[0.02]"
-                  }`}>
-                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                  </div>
-                )}
-                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${cfg.bgColor}`}>
-                  <Icon className={`w-3 h-3 ${cfg.textColor}`} />
-                </div>
-                <span className="text-[12px] text-zinc-400 truncate w-28 shrink-0 font-medium">{m.sourceTitle || "Untitled"}</span>
-                <span className="text-[12px] text-zinc-500 truncate flex-1">{m.content.replace(/\n/g, " ").slice(0, 120)}</span>
-                {search.trim() && scorePercent > 0 && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <div className="w-10 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
-                      <div className="h-full rounded-full bg-teal-500/60" style={{ width: `${Math.max(scorePercent, 8)}%` }} />
-                    </div>
-                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono w-6 text-right">{scorePercent}%</span>
-                  </div>
-                )}
-                <span className="text-[10px] text-zinc-700 tabular-nums shrink-0 w-10 text-right">
-                  {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </span>
-                {m.tags && m.tags.length > 0 && (
-                  <span className="flex items-center gap-[2px] shrink-0">
-                    {m.tags.slice(0, 3).map(tag => (
-                      <span key={tag.id} className={`w-[5px] h-[5px] rounded-full ${tagDotColor(tag.color)}`} title={tag.name} />
-                    ))}
-                    {m.tags.length > 3 && <span className="text-[8px] text-zinc-600">+{m.tags.length - 3}</span>}
-                  </span>
-                )}
-                {m.pinned && <Pin className="w-2.5 h-2.5 text-amber-400 shrink-0 fill-amber-400/30" />}
-                {search.trim() && m.layers && (
-                  <span className="flex items-center gap-[2px] shrink-0" title={
-                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
-                  }>
-                    {m.layers.bm25 && <span className="w-[4px] h-[4px] rounded-full bg-blue-400/70" />}
-                    {m.layers.vector && <span className="w-[4px] h-[4px] rounded-full bg-teal-400/70" />}
-                    {m.layers.tree && <span className="w-[4px] h-[4px] rounded-full bg-emerald-400/70" />}
-                  </span>
-                )}
-              </button>
-            );
-          }
-
-          // ═══ List View — rich cards ═══
-          return (
-            <button
-              key={m.id}
-              onClick={() => {
-                if (selectMode) {
-                  toggleSelect(m.id);
-                } else {
-                  setSelected(m); setSelectedIndex(idx); setFocusedIndex(idx); setCopied(false);
-                }
-              }}
-              className={`w-full text-left p-4 rounded-2xl border transition-all active:scale-[0.995] ${
-                isSelected
-                  ? "border-teal-500/30 bg-teal-500/[0.06] ring-1 ring-teal-500/15"
-                  : isFocused
-                  ? "border-teal-500/20 bg-teal-500/[0.04] ring-1 ring-teal-500/10"
-                  : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.08]"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {selectMode && (
-                  <div className={`w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all ${
-                    isSelected
-                      ? "bg-teal-500 border-teal-500"
-                      : "border-white/[0.15] bg-white/[0.02]"
-                  }`}>
-                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                  </div>
-                )}
-                <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-[3px] rounded-lg font-semibold uppercase tracking-wide ${cfg.badgeClasses}`}>
-                  <Icon className="w-2.5 h-2.5" />
-                  {m.source}
-                </span>
-                <span className="text-[11px] text-zinc-600 truncate flex-1">{m.sourceTitle}</span>
-                {/* Search relevance score */}
-                {search.trim() && scorePercent > 0 && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="w-12 h-[3px] rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          scorePercent > 70 ? "bg-emerald-500/60" :
-                          scorePercent > 40 ? "bg-teal-500/60" :
-                          "bg-sky-500/60"
-                        }`}
-                        style={{ width: `${Math.max(scorePercent, 8)}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] text-zinc-600 tabular-nums font-mono">{scorePercent}%</span>
-                  </div>
-                )}
-                <span className="text-[10px] text-zinc-700 tabular-nums shrink-0">
-                  {new Date(m.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </span>
-                {m.pinned && (
-                  <Pin className="w-3 h-3 text-amber-400 shrink-0 fill-amber-400/30" />
-                )}
-                {/* Layer indicators per result */}
-                {search.trim() && m.layers && (
-                  <span className="flex items-center gap-[3px] shrink-0 ml-0.5" title={
-                    [m.layers.bm25 && 'Keyword', m.layers.vector && 'Semantic', m.layers.tree && 'Structure'].filter(Boolean).join(' + ')
-                  }>
-                    {m.layers.bm25 && <span className="w-[5px] h-[5px] rounded-full bg-blue-400/70" />}
-                    {m.layers.vector && <span className="w-[5px] h-[5px] rounded-full bg-teal-400/70" />}
-                    {m.layers.tree && <span className="w-[5px] h-[5px] rounded-full bg-emerald-400/70" />}
-                  </span>
-                )}
-              </div>
-              <p className={`text-[13px] text-zinc-300 line-clamp-2 leading-relaxed ${selectMode ? 'pl-6' : ''}`}>{m.content}</p>
-              {/* Tags + Word count */}
-              {((m.tags && m.tags.length > 0) || !search.trim()) && (
-                <div className={`flex items-center gap-2 mt-2 flex-wrap ${selectMode ? 'pl-6' : ''}`}>
-                  {m.tags && m.tags.length > 0 && m.tags.map(tag => (
-                    <span key={tag.id} className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-[2px] rounded-md font-semibold ${tagColorClasses(tag.color)}`}>
-                      <Tag className="w-2 h-2" />
-                      {tag.name}
-                    </span>
-                  ))}
-                  {!search.trim() && (
-                    <span className="text-[10px] text-zinc-700">
-                      {m.content.trim().split(/\s+/).length} words
-                    </span>
-                  )}
-                </div>
-              )}
-            </button>
-          );
-        })}
-
+        {/* DidYouMean — shown when search has few results */}
+        {search.trim() && memories.length > 0 && memories.length <= 3 && !loading && (
+          <DidYouMean
+            query={search}
+            resultCount={memories.length}
+            onSuggestionClick={(term: string) => setSearch(term)}
+          />
+        )}
         {/* Infinite scroll sentinel */}
         {totalMemories > memories.length && !search && (
           <div ref={sentinelRef} className="flex items-center justify-center py-6">
@@ -1675,8 +1554,13 @@ export default function ExplorePage() {
                   <Search className="w-5 h-5 text-sky-400" />
                 </div>
                 <h2 className="text-[15px] font-semibold mb-1">No results for &ldquo;{search}&rdquo;</h2>
-                <p className="text-[13px] text-zinc-500 max-w-sm mb-6">Try a different query, check your spelling, or remove some filters.</p>
-                <div className="flex items-center gap-2">
+                <p className="text-[13px] text-zinc-500 max-w-sm mb-4">Try a different query, check your spelling, or remove some filters.</p>
+                <DidYouMean
+                  query={search}
+                  resultCount={0}
+                  onSuggestionClick={(term: string) => setSearch(term)}
+                />
+                <div className="flex items-center gap-2 mt-4">
                   <button
                     onClick={() => setSearch("")}
                     className="h-8 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-[12px] font-medium text-white transition-all active:scale-[0.97]"

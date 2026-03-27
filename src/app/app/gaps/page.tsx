@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { EmptyState } from '@/components/EmptyState';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -358,13 +359,14 @@ export default function KnowledgeGapsPage() {
     return (
       <PageTransition>
         <div className="py-8">
-          <EmptyState
+          <EmptyFeatureState
             icon={Target}
-            title="Not enough data for gap analysis"
-            description="Import at least 5 memories with an AI provider connected. The more diverse your knowledge, the better the gap analysis."
-            action={{ label: "Import knowledge", href: "/app/import" }}
-            secondaryAction={{ label: "Connect AI provider", href: "/app/settings" }}
-            color="teal"
+            title="Find the blind spots in your knowledge"
+            description="Knowledge Gaps analysis scans your library for thin coverage, stale topics, and missing connections. Import diverse content to reveal where your understanding runs shallow."
+            ctaText="Import your first data →"
+            ctaHref="/app/import"
+            secondaryText="or explore with demo data"
+            secondaryHref="/app?demo=true"
           />
         </div>
       </PageTransition>

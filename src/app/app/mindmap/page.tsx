@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { EmptyState } from '@/components/EmptyState';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { usePageTitle } from "@/lib/use-page-title";
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -926,13 +927,14 @@ export default function MindMapPage() {
             </div>
           ) : data && data.stats.totalMemories === 0 ? (
             <div className="flex items-center justify-center rounded-2xl bg-white/[0.02] border border-white/[0.06]" style={{ height: 'calc(100dvh - 180px)' }}>
-              <EmptyState
+              <EmptyFeatureState
                 icon={Network}
-                title="No memories to map"
-                description="Import some knowledge first — your mind map generates automatically from your memories and their connections."
-                action={{ label: "Import knowledge", href: "/app/import" }}
-                secondaryAction={{ label: "Try demo data", href: "/app?demo=true" }}
-                color="teal"
+                title="Visualize how your ideas connect"
+                description="Your Mind Map clusters related memories into topics and reveals surprising connections. Import notes, conversations, or articles to see your knowledge take shape."
+                ctaText="Import your first data →"
+                ctaHref="/app/import"
+                secondaryText="or explore with demo data"
+                secondaryHref="/app?demo=true"
               />
             </div>
           ) : data ? (

@@ -8,6 +8,7 @@ import {
   MessageSquare, Zap, Sun, Cloud, CloudRain, Info,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
@@ -238,23 +239,19 @@ export default function SentimentPage() {
       {/* Empty State */}
       {!loading && summary && summary.analyzed === 0 && (
         <Stagger>
-          <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-white/[0.08]">
-            <div className="w-14 h-14 rounded-2xl bg-teal-500/10 border border-teal-500/10 flex items-center justify-center mb-4">
-              <Heart className="w-6 h-6 text-teal-400" />
-            </div>
-            <h3 className="text-[16px] font-medium mb-1.5">No sentiment data yet</h3>
-            <p className="text-[13px] text-zinc-500 text-center max-w-sm mb-5">
-              Click "Analyze" to run sentiment analysis on your memories. Uses AI when available, lexicon-based analysis as fallback.
-            </p>
-            <button
-              onClick={runAnalysis}
-              disabled={analyzing}
-              className="flex items-center gap-2 h-10 px-5 rounded-xl bg-teal-600 text-white text-[13px] font-medium hover:bg-teal-500 transition-all active:scale-[0.97] disabled:opacity-50"
-            >
-              {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {analyzing ? 'Analyzing…' : `Analyze ${summary.total} memories`}
-            </button>
-          </div>
+          <EmptyFeatureState
+            icon={Heart}
+            title="Understand the emotional tone of your knowledge"
+            description="Sentiment Timeline reveals the emotional arc across your memories — are your notes optimistic, neutral, or critical? Run an analysis to find out."
+            ctaText="Import your first data →"
+            ctaHref="/app/import"
+            secondaryText="or explore with demo data"
+            secondaryHref="/app?demo=true"
+            onAction={runAnalysis}
+            actionLabel={analyzing ? 'Analyzing…' : `Analyze ${summary.total} memories`}
+            actionIcon={Sparkles}
+            actionLoading={analyzing}
+          />
         </Stagger>
       )}
 

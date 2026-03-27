@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { EmptyState } from '@/components/EmptyState';
+import { EmptyFeatureState } from '@/components/EmptyFeatureState';
 import { useRouter } from 'next/navigation';
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -405,13 +406,14 @@ export default function TopicEvolutionPage() {
             </div>
           </Stagger>
           <div className="mt-8">
-            <EmptyState
+            <EmptyFeatureState
               icon={TrendingUp}
-              title="Not enough data for evolution tracking"
-              description="Import at least 5 memories to see how your interests have evolved over time. The more history you add, the richer the timeline."
-              action={{ label: "Import knowledge", href: "/app/import" }}
-              secondaryAction={{ label: "Try demo data", href: "/app?demo=true" }}
-              color="teal"
+              title="Watch your interests evolve over time"
+              description="Topic Evolution tracks how your focus areas shift week by week. Import memories spanning at least a few weeks to reveal the arc of your intellectual journey."
+              ctaText="Import your first data →"
+              ctaHref="/app/import"
+              secondaryText="or explore with demo data"
+              secondaryHref="/app?demo=true"
             />
           </div>
         </div>
