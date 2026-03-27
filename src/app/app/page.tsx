@@ -637,10 +637,10 @@ export default function DashboardPage() {
                 const Icon = WIDGET_ICONS[w.icon] || Zap;
                 return (
                   <Link key={w.id} href={w.href}>
-                    <div className={`group relative rounded-2xl border ${colors.border} ${colors.bg} p-3 md:p-3.5 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
-                      <div className="flex items-center gap-1 mb-2 md:mb-2.5">
-                        <Icon className={`w-3 h-3 md:w-3.5 md:h-3.5 ${colors.text} shrink-0`} />
-                        <span className="text-[9px] md:text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">{w.title}</span>
+                    <div className={`group relative rounded-2xl border ${colors.border} ${colors.bg} p-3 md:p-4 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
+                      <div className="flex items-center gap-1 mb-2">
+                        <Icon className={`w-3.5 h-3.5 ${colors.text} shrink-0`} />
+                        <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider truncate">{w.title}</span>
                       </div>
                       
                       {/* Widget-specific content */}
