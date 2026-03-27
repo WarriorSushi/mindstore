@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Brain, Upload, MessageSquare, Compass, Database, FileText,
@@ -67,6 +67,7 @@ type SetupTab = "gemini" | "openai" | "ollama";
 
 export default function DashboardPage() {
   usePageTitle("Home");
+  const router = useRouter();
   const [hasKey, setHasKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [testing, setTesting] = useState(false);
@@ -89,7 +90,17 @@ export default function DashboardPage() {
       fetchWidgets().then(setWidgets),
     ]).then(() => setLoaded(true));
     setDemo(isDemoMode());
-  }, []);
+
+    // Check if onboarding wizard needs to be shown
+    fetch('/api/v1/onboarding')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.completed && !data.hasMemories && !data.hasAiProvider) {
+          router.replace('/app/onboarding');
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const searchParams = useSearchParams();
   useEffect(() => {
