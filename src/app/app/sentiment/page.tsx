@@ -871,13 +871,13 @@ function HighlightCard({
 }) {
   const accentMap = {
     emerald: {
-      gradient: 'from-emerald-500/[0.08] to-emerald-500/[0.03]',
+      headerBg: 'bg-emerald-500/[0.04]',
       border: 'border-emerald-500/10',
       iconBg: 'bg-emerald-500/10',
       iconColor: 'text-emerald-400',
     },
     rose: {
-      gradient: 'from-rose-500/[0.08] to-rose-500/[0.03]',
+      headerBg: 'bg-rose-500/[0.04]',
       border: 'border-rose-500/10',
       iconBg: 'bg-rose-500/10',
       iconColor: 'text-rose-400',
@@ -888,7 +888,7 @@ function HighlightCard({
 
   return (
     <div className={`rounded-2xl border ${accent.border} bg-white/[0.02] overflow-hidden`}>
-      <div className={`bg-gradient-to-b ${accent.gradient} px-4 py-3 flex items-center gap-2`}>
+      <div className={`${accent.headerBg} px-4 py-3 flex items-center gap-2`}>
         <div className={`w-7 h-7 rounded-lg ${accent.iconBg} flex items-center justify-center`}>
           <Icon className={`w-3.5 h-3.5 ${accent.iconColor}`} />
         </div>
