@@ -32,12 +32,12 @@ export function ChatMarkdown({
   if (onCitationHover || onCitationClick) {
     return (
       <CitationContext.Provider value={{ onHover: onCitationHover, onClick: onCitationClick }}>
-        <div className="space-y-1.5 break-words [overflow-wrap:anywhere]">{blocks}</div>
+        <div className="space-y-2 break-words [overflow-wrap:anywhere]">{blocks}</div>
       </CitationContext.Provider>
     );
   }
 
-  return <div className="space-y-1.5 break-words [overflow-wrap:anywhere]">{blocks}</div>;
+  return <div className="space-y-2 break-words [overflow-wrap:anywhere]">{blocks}</div>;
 }
 
 /** Parse content into block-level elements */
@@ -101,7 +101,7 @@ function parseBlocks(content: string): React.ReactNode[] {
     const h3Match = line.match(/^###\s+(.+)/);
     if (h3Match) {
       elements.push(
-        <div key={key++} className="font-semibold text-zinc-200 mt-2 mb-0.5 text-[13px]">
+        <div key={key++} className="font-semibold text-zinc-200 mt-3 mb-1 text-[14px]">
           {parseInline(h3Match[1])}
         </div>
       );
@@ -113,7 +113,7 @@ function parseBlocks(content: string): React.ReactNode[] {
     const h2Match = line.match(/^##\s+(.+)/);
     if (h2Match) {
       elements.push(
-        <div key={key++} className="font-semibold text-zinc-100 mt-3 mb-0.5 text-[14px]">
+        <div key={key++} className="font-semibold text-zinc-100 mt-4 mb-1 text-[15px]">
           {parseInline(h2Match[1])}
         </div>
       );
@@ -125,7 +125,7 @@ function parseBlocks(content: string): React.ReactNode[] {
     const h1Match = line.match(/^#\s+(.+)/);
     if (h1Match) {
       elements.push(
-        <div key={key++} className="font-bold text-zinc-100 mt-3 mb-0.5 text-[15px]">
+        <div key={key++} className="font-bold text-zinc-100 mt-4 mb-1 text-[16px]">
           {parseInline(h1Match[1])}
         </div>
       );
@@ -185,7 +185,7 @@ function parseBlocks(content: string): React.ReactNode[] {
       elements.push(
         <blockquote
           key={key++}
-          className="border-l-2 border-teal-500/30 pl-3 py-0.5 text-[13px] text-zinc-400 leading-relaxed"
+          className="border-l-2 border-teal-500/30 pl-3 py-0.5 text-[14px] text-zinc-400 leading-relaxed"
         >
           {quoteLines.map((ql, qi) => (
             <span key={qi}>
@@ -217,7 +217,7 @@ function parseBlocks(content: string): React.ReactNode[] {
     }
     if (paraLines.length > 0) {
       elements.push(
-        <p key={key++} className="text-[13px] leading-[1.65] whitespace-pre-wrap">
+        <p key={key++} className="text-[14px] leading-[1.7] whitespace-pre-wrap">
           {parseInline(paraLines.join("\n"))}
         </p>
       );
@@ -230,7 +230,7 @@ function parseBlocks(content: string): React.ReactNode[] {
 /** Bullet list component */
 function BulletList({ items }: { items: { indent: number; content: string }[] }) {
   return (
-    <ul className="space-y-0.5 text-[13px] leading-[1.6]">
+    <ul className="space-y-1 text-[14px] leading-[1.7]">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2" style={{ paddingLeft: Math.min(item.indent, 8) * 4 }}>
           <span className="w-1 h-1 rounded-full bg-zinc-500 mt-[9px] shrink-0" />
@@ -244,7 +244,7 @@ function BulletList({ items }: { items: { indent: number; content: string }[] })
 /** Numbered list component */
 function NumberedList({ items }: { items: { num: string; content: string }[] }) {
   return (
-    <ol className="space-y-0.5 text-[13px] leading-[1.6]">
+    <ol className="space-y-1 text-[14px] leading-[1.7]">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2">
           <span className="text-[12px] text-zinc-500 font-medium tabular-nums mt-[1px] shrink-0 w-4 text-right">
@@ -391,7 +391,7 @@ function MarkdownTable({ rows }: { rows: string[] }) {
 /** Task list component (- [ ] unchecked / - [x] checked) */
 function TaskList({ items }: { items: { checked: boolean; content: string }[] }) {
   return (
-    <ul className="space-y-0.5 text-[13px] leading-[1.6]">
+    <ul className="space-y-1 text-[14px] leading-[1.7]">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2">
           <span
