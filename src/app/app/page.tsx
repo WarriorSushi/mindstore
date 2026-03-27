@@ -768,7 +768,7 @@ export default function DashboardPage() {
       {/* Pinned Memories */}
       {stats?.pinnedMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5">
                 <Pin className="w-3 h-3 text-amber-400 fill-amber-400/30" />
@@ -819,7 +819,7 @@ export default function DashboardPage() {
 
       {/* Quick Actions — inline text links, not identical cards */}
       <Stagger>
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1 md:pb-0">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-1 md:pb-0">
           {[
             { href: "/app/import", icon: Upload, label: "Import", color: "text-teal-400", hoverColor: "hover:text-teal-300" },
             { href: "/app/chat", icon: MessageSquare, label: "Chat", color: "text-blue-400", hoverColor: "hover:text-blue-300" },
@@ -840,8 +840,8 @@ export default function DashboardPage() {
       {/* Recent Activity */}
       {stats?.recentMemories?.length > 0 && (
         <Stagger>
-          <div className="space-y-1">
-            <div className="flex items-center justify-between px-1 mb-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Recent Activity</p>
               <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
                 View all →
@@ -896,8 +896,8 @@ export default function DashboardPage() {
               { href: "/app/connect", icon: Plug, label: "Connect", desc: "Claude, Cursor, VS Code", tag: "MCP", iconColor: "text-sky-400" },
             ].map((f) => (
               <Link key={f.href} href={f.href}>
-                <div className="bg-[#0a0a0b] px-4 py-3.5 hover:bg-white/[0.03] transition-colors group h-full">
-                  <div className="flex items-center gap-2 mb-1.5">
+                <div className="bg-[#0a0a0b] px-4 py-4 hover:bg-white/[0.03] transition-colors group h-full">
+                  <div className="flex items-center gap-2 mb-2">
                     <f.icon className={`w-4 h-4 ${f.iconColor} shrink-0`} />
                     <p className="text-[13px] font-medium text-zinc-200">{f.label}</p>
                     {f.tag && (
@@ -917,8 +917,8 @@ export default function DashboardPage() {
       {/* Sources */}
       {stats?.topSources?.length > 0 && (
         <Stagger>
-          <div className="space-y-1">
-            <div className="flex items-center justify-between px-1 mb-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Top Sources</p>
               <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-zinc-400 font-medium transition-colors">
                 View all →
