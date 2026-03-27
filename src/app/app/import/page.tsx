@@ -2229,20 +2229,17 @@ export default function ImportPage() {
       {/* Import History */}
       {!historyLoading && importHistory.length > 0 && (
         <Stagger>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-1.5">
-                <Package className="w-3 h-3 text-zinc-500" />
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Import History</p>
-                <span className="text-[10px] text-zinc-600 tabular-nums">{importHistory.length} source{importHistory.length !== 1 ? 's' : ''}</span>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-zinc-600 tabular-nums">{totalMemories.toLocaleString()} total memories</span>
-                <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-teal-400 font-medium transition-colors flex items-center gap-0.5">
-                  <Compass className="w-3 h-3" />
-                  <span className="hidden sm:inline">Explore all</span>
-                </Link>
+                <Package className="w-3.5 h-3.5 text-zinc-600" />
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Recent Imports</p>
+                <span className="text-[10px] text-zinc-700 tabular-nums bg-white/[0.04] px-1.5 py-0.5 rounded-md">{importHistory.length}</span>
               </div>
+              <Link href="/app/explore" className="text-[11px] text-zinc-600 hover:text-teal-400 font-medium transition-colors flex items-center gap-1">
+                <Compass className="w-3 h-3" />
+                <span className="hidden sm:inline">Explore all</span>
+              </Link>
             </div>
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden divide-y divide-white/[0.04]">
               {importHistory.slice(0, 8).map((src, i) => {
@@ -2250,21 +2247,21 @@ export default function ImportPage() {
                 const Icon = st.icon;
                 return (
                   <Link key={src.id || i} href={`/app/explore?q=${encodeURIComponent(src.title)}`}>
-                    <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor}`}>
+                    <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors group">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${st.bgColor} border ${st.borderColor}`}>
                         <Icon className={`w-3.5 h-3.5 ${st.textColor}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] text-zinc-300 font-medium truncate group-hover:text-white transition-colors">{src.title}</p>
+                        <p className="text-[13px] text-zinc-300 font-medium truncate group-hover:text-white transition-colors">{src.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className={`text-[10px] font-semibold uppercase tracking-wide ${st.textColor}`}>{src.type}</span>
                           <span className="text-[10px] text-zinc-700">·</span>
                           <span className="text-[10px] text-zinc-600 tabular-nums">{src.itemCount} chunk{src.itemCount !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Clock className="w-2.5 h-2.5 text-zinc-700" />
-                        <span className="text-[10px] text-zinc-600 whitespace-nowrap">{formatRelativeTime(src.importedAt)}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Clock className="w-3 h-3 text-zinc-700" />
+                        <span className="text-[10px] text-zinc-600 whitespace-nowrap tabular-nums">{formatRelativeTime(src.importedAt)}</span>
                       </div>
                     </div>
                   </Link>
@@ -2272,7 +2269,7 @@ export default function ImportPage() {
               })}
             </div>
             {importHistory.length > 8 && (
-              <div className="text-center">
+              <div className="text-center pt-1">
                 <Link href="/app/explore" className="text-[11px] text-teal-400 hover:text-teal-300 font-medium transition-colors">
                   View all {importHistory.length} sources in Explore →
                 </Link>
