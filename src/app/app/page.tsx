@@ -419,7 +419,7 @@ export default function DashboardPage() {
 
               <div className="space-y-3">
                 <Link href="/app/import">
-                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0">
                         <FileText className="w-3.5 h-3.5 text-sky-400" />
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                   </div>
                 </Link>
                 <Link href="/app/import">
-                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
+                  <div className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.05] transition-all active:scale-[0.97]">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
                         <Globe className="w-3.5 h-3.5 text-amber-400" />
@@ -449,7 +449,7 @@ export default function DashboardPage() {
                 <button
                   onClick={handleStartDemo}
                   disabled={loadingDemo}
-                  className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-all active:scale-[0.97] text-left"
+                  className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.05] transition-all active:scale-[0.97] text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
