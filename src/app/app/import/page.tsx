@@ -1042,9 +1042,9 @@ export default function ImportPage() {
           {tab === "obsidian" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Obsidian Vault</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Obsidian Vault</p>
                 <p>ZIP your vault folder and upload it. Wikilinks, tags, and frontmatter are preserved.</p>
-                <p className="text-zinc-600">Right-click your vault folder → Compress/Send to ZIP</p>
+                <p className="text-zinc-600">Right-click your vault folder → Compress to ZIP</p>
               </div>
 
               {!obPreview ? (
@@ -1233,9 +1233,9 @@ export default function ImportPage() {
           )}
           {tab === "notion" && (
             <>
-              <div className="text-[12px] text-zinc-500 space-y-1">
-                <p className="text-zinc-300 font-medium">Export from Notion</p>
-                <p>Settings → Export → Markdown & CSV → Upload the ZIP file <span className="text-teal-400">(recommended)</span> or extract and select .md files</p>
+              <div className="text-[12px] text-zinc-500 space-y-1.5">
+                <p className="text-[13px] text-zinc-300 font-medium">Export from Notion</p>
+                <p>Settings → Export → Markdown & CSV → Upload the ZIP file <span className="text-teal-400/80 font-medium">(recommended)</span> or extract and select .md files</p>
               </div>
 
               {notionPreview ? (
@@ -1290,7 +1290,7 @@ export default function ImportPage() {
                   <button
                     onClick={handleNotionZipImport}
                     disabled={busy}
-                    className="w-full h-10 rounded-xl text-[13px] font-medium bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    className="w-full h-11 rounded-xl text-[13px] font-semibold bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <StickyNote className="w-4 h-4" />}
                     Import {notionPreview.totalPages} Notion pages
@@ -1331,7 +1331,7 @@ export default function ImportPage() {
           {tab === "kindle" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Kindle Highlights</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Kindle Highlights</p>
                 <p>Find <code className="text-[11px] text-amber-400/80 bg-amber-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">My Clippings.txt</code> on your Kindle:</p>
                 <p className="text-zinc-600">Connect Kindle → Open drive → Documents → My Clippings.txt</p>
               </div>
@@ -1420,7 +1420,7 @@ export default function ImportPage() {
           {tab === "pdf-epub" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import PDF & EPUB Documents</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import PDF & EPUB Documents</p>
                 <p>Smart parsing preserves chapter structure, headings, and section boundaries.</p>
                 <p className="text-zinc-600">Up to 50MB · Scanned PDFs (image-only) not supported</p>
               </div>
@@ -1535,7 +1535,7 @@ export default function ImportPage() {
           {tab === "youtube" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import YouTube Transcripts</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import YouTube Transcripts</p>
                 <p>Paste a YouTube URL to extract the full transcript as searchable knowledge.</p>
                 <p className="text-zinc-600">Supports youtube.com, youtu.be, and shorts links</p>
               </div>
@@ -1688,7 +1688,7 @@ export default function ImportPage() {
           {tab === "bookmarks" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Browser Bookmarks</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Browser Bookmarks</p>
                 <p>Upload your bookmarks HTML export from Chrome, Firefox, Safari, Edge, Brave, or Arc.</p>
                 <p className="text-zinc-600">Folder structure and dates are preserved</p>
               </div>
@@ -1826,7 +1826,7 @@ export default function ImportPage() {
           {tab === "reddit" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Reddit Saved Posts</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Reddit Saved Posts</p>
                 <p>Upload your Reddit data export to import saved posts and comments.</p>
                 <p className="text-zinc-600">
                   <a href="https://www.reddit.com/settings/data-request" target="_blank" rel="noopener noreferrer" className="text-orange-400/70 hover:text-orange-400 transition-colors">
@@ -1953,7 +1953,7 @@ export default function ImportPage() {
           {tab === "twitter" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Twitter/X Bookmarks</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Twitter/X Bookmarks</p>
                 <p>Download your Twitter data archive and upload the <code className="text-[11px] text-sky-400/80 bg-sky-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">bookmarks.js</code> or <code className="text-[11px] text-sky-400/80 bg-sky-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">tweets.js</code> file.</p>
                 <p className="text-zinc-600">Settings → Your Account → Download an archive of your data → Extract ZIP → Find data/bookmarks.js</p>
               </div>
@@ -1990,7 +1990,7 @@ export default function ImportPage() {
           {tab === "telegram" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Telegram Messages</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Telegram Messages</p>
                 <p>Export from Telegram Desktop: Settings → Advanced → Export Telegram Data → Choose <strong className="text-zinc-400">JSON</strong> format.</p>
                 <p className="text-zinc-600">Upload the <code className="text-[11px] text-teal-400/80 bg-teal-500/[0.06] px-1.5 py-0.5 rounded-md font-mono">result.json</code> file from the export folder.</p>
               </div>
@@ -2027,7 +2027,7 @@ export default function ImportPage() {
           {tab === "pocket" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Pocket or Instapaper</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Pocket or Instapaper</p>
                 <p>
                   <strong className="text-zinc-400">Pocket:</strong>{" "}
                   <a href="https://getpocket.com/export" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">getpocket.com/export</a>
@@ -2097,7 +2097,7 @@ export default function ImportPage() {
           {tab === "spotify" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Spotify Listening History</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Spotify Listening History</p>
                 <p>Request your data from{" "}
                   <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener noreferrer" className="text-emerald-400/70 hover:text-emerald-400 transition-colors">
                     spotify.com/account/privacy
@@ -2148,7 +2148,7 @@ export default function ImportPage() {
           {tab === "readwise" && (
             <>
               <div className="text-[12px] text-zinc-500 space-y-1.5">
-                <p className="text-zinc-300 font-medium">Import Readwise Highlights</p>
+                <p className="text-[13px] text-zinc-300 font-medium">Import Readwise Highlights</p>
                 <p>Import all your highlights from books, articles, tweets, and podcasts via the Readwise API.</p>
                 <p className="text-zinc-600">
                   Get your API token at{" "}
