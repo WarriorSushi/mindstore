@@ -68,14 +68,14 @@ const TOPIC_COLORS = [
   '#3b82f6', // blue
   '#10b981', // emerald
   '#f59e0b', // amber
-  '#ef4444', // red
-  '#ef4444', // red
+  '#38bdf8', // sky
   '#06b6d4', // cyan
   '#f97316', // orange
   '#84cc16', // lime
-  '#38bdf8', // sky
-  '#14b8a6', // teal
-  '#e11d48', // rose
+  '#22d3ee', // light cyan
+  '#2dd4bf', // teal-lighter
+  '#60a5fa', // blue-lighter
+  '#fb923c', // orange-lighter
 ];
 
 const SOURCE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
