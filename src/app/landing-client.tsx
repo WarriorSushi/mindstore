@@ -15,17 +15,13 @@ import {
 import { MindStoreLogo } from "@/components/MindStoreLogo";
 
 /* ═══════════════════════════════════════════════════════════════
-   MindStore Landing — v4 "VC-Grade"
+   MindStore Landing — v5 "VC-Grade"
    
-   Audit-driven rewrite. Problems fixed:
-   - Generous spacing with VARIED rhythm (not same py everywhere)
-   - Film grain overlay for texture
-   - Bigger, bolder typography
-   - Full-bleed moments that break the vertical monotony
-   - NO identical card grids — each section has unique layout
-   - Stronger color usage (teal/sky used boldly, not just on labels)
-   - Network particles more visible
-   - Asymmetric layouts, not everything centered
+   Design system: OLED black (#0a0a0b), teal-500 primary, sky secondary.
+   NO violet/purple/fuchsia. Lucide icons only. Clean flat typography.
+   
+   Structure: hero → demo → ticker → importers → AI portability →
+   MCP config → use cases → capabilities → community → CTA
    ═══════════════════════════════════════════════════════════════ */
 
 /* ─── Reveal animation ─── */
@@ -69,14 +65,14 @@ function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
   return <span ref={ref}>{count}{suffix}</span>;
 }
 
-/* ─── Network Particles — more visible ─── */
+/* ─── Network Particles — throttled to 30fps for battery ─── */
 function Particles() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let W: number, H: number, id: number;
+    let W: number, H: number, id: number, lastFrame = 0;
     const ps: { x: number; y: number; vx: number; vy: number; r: number; o: number }[] = [];
     function resize() { W = c!.width = window.innerWidth; H = c!.height = window.innerHeight; }
     resize(); window.addEventListener("resize", resize);
@@ -87,7 +83,10 @@ function Particles() {
       vy: reduced ? 0 : (Math.random() - .5) * .15,
       r: Math.random() * 1.2 + .5, o: Math.random() * .3 + .1,
     });
-    function draw() {
+    function draw(now: number) {
+      id = requestAnimationFrame(draw);
+      if (now - lastFrame < 33) return; // ~30fps cap
+      lastFrame = now;
       ctx!.clearRect(0, 0, W, H);
       for (let i = 0; i < ps.length; i++) {
         const p = ps[i]; p.x += p.vx; p.y += p.vy;
@@ -105,15 +104,12 @@ function Particles() {
         ctx!.fillStyle = `rgba(20,184,166,${p.o})`;
         ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx!.fill();
       }
-      id = requestAnimationFrame(draw);
     }
-    draw();
+    id = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(id); window.removeEventListener("resize", resize); };
   }, []);
   return <canvas ref={ref} className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true" />;
 }
-
-/* ─── Film grain removed — unnecessary visual noise, hurts performance ─── */
 
 /* ─── Dual ticker ─── */
 const ROW1 = ["ChatGPT Exports", "Kindle Highlights", "YouTube Transcripts", "Notion Workspaces", "Obsidian Vaults", "Reddit Saved", "PDFs & EPUBs", "Twitter Bookmarks", "Browser Bookmarks"];
