@@ -1,6 +1,6 @@
 "use client";
 
-import { STEPS, STEP_LABELS, type OnboardingStep } from "./types";
+import { STEPS, type OnboardingStep } from "./types";
 
 /**
  * Progress bar for the onboarding wizard.
