@@ -4,14 +4,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  Send, Loader2, Brain, User, Sparkles, ArrowUp,
-  Plus, History, Trash2, X, MessageSquare, Clock,
-  Copy, Check, ChevronDown, ChevronUp, FileText, Globe, MessageCircle,
-  ChevronsDown, Square, RotateCcw, Search, Lightbulb, TrendingUp, Zap, Pencil,
-  BookmarkPlus, Upload, Key,
-  Pin, PinOff, Download, Hash,
+  Brain, User, Plus, Upload, Key,
+  ChevronsDown, Search, Lightbulb, TrendingUp,
+  MessageSquare, RotateCcw, Copy, Check,
 } from "lucide-react";
-import { getSourceType } from "@/lib/source-types";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
@@ -20,6 +16,16 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
 import {
+  ChatSidebar,
+  ChatInput,
+  AssistantMessageActions,
+  UserMessageActions,
+  SourceCards,
+  ModelSwitcher,
+  ThinkingIndicator,
+  PulsingDots,
+} from "@/components/chat";
+import {
   type ChatMessage,
   type Conversation,
   getConversations,
@@ -27,14 +33,9 @@ import {
   createConversation,
   saveConversation,
   deleteConversation,
-  renameConversation,
-  togglePinConversation,
-  searchConversations,
-  exportConversationMarkdown,
-  getConversationStats,
-  clearAllConversations,
 } from "@/lib/chat-history";
 
+/* ─── Suggestion prompts for empty state ─── */
 const SUGGESTION_GROUPS = [
   {
     icon: Search,
@@ -62,7 +63,7 @@ const SUGGESTION_GROUPS = [
   },
 ];
 
-/** Time-aware greeting */
+/* ─── Greeting based on time ─── */
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 5) return "Late night thinking";
@@ -72,7 +73,7 @@ function getGreeting(): string {
   return "Late night thinking";
 }
 
-/** Generate follow-up question suggestions based on conversation context */
+/* ─── Generate follow-up suggestions after a response ─── */
 async function generateFollowUps(
   query: string,
   answer: string,
@@ -87,7 +88,7 @@ async function generateFollowUps(
           {
             role: "system",
             content:
-              "Generate exactly 3 short follow-up questions a user might ask next, based on the conversation. Each question should be concise (under 10 words), curious, and explore different angles. Return ONLY a JSON array of 3 strings, nothing else. Example: [\"How does this relate to X?\",\"What are the key takeaways?\",\"Any contradictions in my notes?\"]",
+              "Generate exactly 3 short follow-up questions a user might ask next, based on the conversation. Each question should be concise (under 10 words), curious, and explore different angles. Return ONLY a JSON array of 3 strings, nothing else.",
           },
           {
             role: "user",
@@ -99,7 +100,6 @@ async function generateFollowUps(
     });
     if (!res.ok) return [];
 
-    // Read the streamed response fully
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
     let full = "";
@@ -121,21 +121,25 @@ async function generateFollowUps(
       }
     }
 
-    // Extract JSON array from response
     const match = full.match(/\[[\s\S]*?\]/);
     if (!match) return [];
     const parsed = JSON.parse(match[0]);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((q: any) => typeof q === "string" && q.trim().length > 0)
+      .filter((q: unknown) => typeof q === "string" && (q as string).trim().length > 0)
       .slice(0, 3);
   } catch {
     return [];
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+ *  ChatPage — premium chat experience with sidebar + chat
+ * ═══════════════════════════════════════════════════════════ */
 export default function ChatPage() {
   usePageTitle("Chat");
+
+  /* ─── State ─── */
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -144,29 +148,27 @@ export default function ChatPage() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [chatProvider, setChatProvider] = useState<string>("auto");
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchParams = useSearchParams();
   const autoSentRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const followUpAbortRef = useRef<AbortController | null>(null);
+
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const isNearBottomRef = useRef(true);
-  const lastQueryRef = useRef<string>("");
   const [followUps, setFollowUps] = useState<string[]>([]);
   const [followUpsLoading, setFollowUpsLoading] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<"searching" | "found" | "generating" | null>(null);
   const [searchResultCount, setSearchResultCount] = useState(0);
   const [highlightedCitation, setHighlightedCitation] = useState<{ msgIndex: number; sourceIndex: number } | null>(null);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [historySearch, setHistorySearch] = useState("");
-  const historySearchRef = useRef<HTMLInputElement>(null);
+  const [copiedChat, setCopiedChat] = useState(false);
 
-  // Load stats & conversations on mount
+  /* ─── Init: load stats, AI config, history ─── */
   useEffect(() => {
     fetch("/api/v1/stats")
       .then((r) => r.json())
@@ -180,7 +182,7 @@ export default function ChatPage() {
     refreshHistory();
   }, []);
 
-  // Listen for Command Palette events (new-chat, load-chat)
+  /* ─── Listen for Command Palette events ─── */
   useEffect(() => {
     function onNewChat() { handleNewChat(); }
     function onLoadChat(e: Event) {
@@ -193,9 +195,10 @@ export default function ChatPage() {
       window.removeEventListener("mindstore:new-chat", onNewChat);
       window.removeEventListener("mindstore:load-chat", onLoadChat);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-send query from ?q= param (e.g. from Explore "Ask about this")
+  /* ─── Auto-send from ?q= param ─── */
   useEffect(() => {
     const q = searchParams.get("q");
     if (q && !autoSentRef.current && memoryCount > 0) {
@@ -205,9 +208,10 @@ export default function ChatPage() {
       window.history.replaceState(null, "", url.toString());
       setTimeout(() => handleSend(q), 200);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, memoryCount]);
 
-  // Auto-scroll on new messages (only when near bottom)
+  /* ─── Auto-scroll on new messages ─── */
   useEffect(() => {
     if (isNearBottomRef.current) {
       scrollRef.current?.scrollTo({
@@ -217,14 +221,13 @@ export default function ChatPage() {
     }
   }, [messages]);
 
-  // Detect scroll position for "scroll to bottom" button
+  /* ─── Scroll position detection ─── */
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     function onScroll() {
       if (!el) return;
-      const threshold = 120;
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
       isNearBottomRef.current = nearBottom;
       setShowScrollBtn(!nearBottom && messages.length > 0);
     }
@@ -232,23 +235,7 @@ export default function ChatPage() {
     return () => el.removeEventListener("scroll", onScroll);
   }, [messages.length]);
 
-  const scrollToBottom = useCallback(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, []);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-      inputRef.current.style.height =
-        Math.min(inputRef.current.scrollHeight, 160) + "px";
-    }
-  }, [input]);
-
-  // Persist messages whenever they change (debounced)
+  /* ─── Persist messages on change ─── */
   useEffect(() => {
     if (!conversationId || messages.length === 0) return;
     const t = setTimeout(() => {
@@ -258,20 +245,58 @@ export default function ChatPage() {
     return () => clearTimeout(t);
   }, [messages, conversationId]);
 
+  /* ─── Keyboard shortcuts: ⌘+N for new chat, Escape to close mobile sidebar ─── */
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      // ⌘+N or Ctrl+N → new chat
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        handleNewChat();
+      }
+      // Escape → close mobile sidebar
+      if (e.key === "Escape" && mobileSidebarOpen) {
+        setMobileSidebarOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileSidebarOpen]);
+
+  /* ─── Initial sidebar state: collapsed on mobile ─── */
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    if (mq.matches) {
+      setSidebarCollapsed(true);
+    }
+    function onChange(e: MediaQueryListEvent) {
+      if (e.matches) setSidebarCollapsed(true);
+    }
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, []);
+
   function refreshHistory() {
     setConversations(getConversations());
   }
 
+  /* ─── Chat actions ─── */
   function handleNewChat() {
     setMessages([]);
     setConversationId(null);
-    setHistoryOpen(false);
     setFollowUps([]);
     setFollowUpsLoading(false);
     setThinkingStep(null);
     setSearchResultCount(0);
+    setMobileSidebarOpen(false);
     if (followUpAbortRef.current) followUpAbortRef.current.abort();
-    inputRef.current?.focus();
   }
 
   function handleLoadConversation(id: string) {
@@ -279,24 +304,8 @@ export default function ChatPage() {
     if (!convo) return;
     setConversationId(id);
     setMessages(convo.messages);
-    setHistoryOpen(false);
-  }
-
-  function handleDeleteConversation(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    deleteConversation(id);
-    refreshHistory();
-    if (conversationId === id) {
-      handleNewChat();
-    }
-  }
-
-  function handleClearAll() {
-    if (!confirm("Delete all chat history?")) return;
-    clearAllConversations();
-    refreshHistory();
-    handleNewChat();
-    toast.success("Chat history cleared");
+    setMobileSidebarOpen(false);
+    setFollowUps([]);
   }
 
   const handleSend = async (text?: string) => {
@@ -313,7 +322,6 @@ export default function ChatPage() {
       setConversationId(cid);
     }
 
-    lastQueryRef.current = query;
     setInput("");
     setFollowUps([]);
     const newMessages: ChatMessage[] = [
@@ -331,28 +339,27 @@ export default function ChatPage() {
     try {
       const searchRes = await fetch(
         `/api/v1/search?q=${encodeURIComponent(query)}&limit=8`,
-        { signal: abortController.signal }
+        { signal: abortController.signal },
       );
       if (!searchRes.ok) throw new Error("Search failed");
       const { results = [] } = await searchRes.json();
       setSearchResultCount(results.length);
       if (results.length > 0) {
         setThinkingStep("found");
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise((r) => setTimeout(r, 600));
       } else {
         setThinkingStep(null);
       }
 
       if (results.length === 0) {
-        const updated = [
+        setMessages([
           ...newMessages,
           {
-            role: "assistant" as const,
+            role: "assistant",
             content:
               "I couldn't find anything relevant in your knowledge base. Try importing more content or rephrasing your question.",
           },
-        ];
-        setMessages(updated);
+        ]);
         setLoading(false);
         setThinkingStep(null);
         abortRef.current = null;
@@ -363,14 +370,13 @@ export default function ChatPage() {
         const searchResponse = results
           .map(
             (r: any, i: number) =>
-              `[${i + 1}] ${r.sourceTitle || "Untitled"} (${r.sourceType})\n${r.content}`
+              `[${i + 1}] ${r.sourceTitle || "Untitled"} (${r.sourceType})\n${r.content}`,
           )
           .join("\n\n");
-
-        const updated = [
+        setMessages([
           ...newMessages,
           {
-            role: "assistant" as const,
+            role: "assistant",
             content: `Found ${results.length} relevant memories:\n\n${searchResponse}\n\nConnect an AI provider in Settings for synthesized answers.`,
             sources: results.map((r: any) => ({
               title: r.sourceTitle || "",
@@ -381,8 +387,7 @@ export default function ChatPage() {
               content: r.content || "",
             })),
           },
-        ];
-        setMessages(updated);
+        ]);
         setLoading(false);
         setThinkingStep(null);
         abortRef.current = null;
@@ -392,14 +397,15 @@ export default function ChatPage() {
       const context = results
         .map(
           (r: any, i: number) =>
-            `[${i + 1}] "${r.sourceTitle}" (${r.sourceType})\n${r.content}`
+            `[${i + 1}] "${r.sourceTitle}" (${r.sourceType})\n${r.content}`,
         )
         .join("\n\n---\n\n");
 
       const ragMessages = [
         {
           role: "system",
-          content: `You are MindStore, a personal knowledge assistant. Answer based ONLY on the user's stored knowledge. Cite sources as [1], [2]. Be concise. Highlight unexpected connections.`,
+          content:
+            "You are MindStore, a personal knowledge assistant. Answer based ONLY on the user's stored knowledge. Cite sources as [1], [2]. Be concise. Highlight unexpected connections.",
         },
         {
           role: "user",
@@ -441,6 +447,7 @@ export default function ChatPage() {
       }
       setThinking(false);
 
+      // Generate follow-up suggestions
       if (fullResponse.length > 20) {
         setFollowUpsLoading(true);
         if (followUpAbortRef.current) followUpAbortRef.current.abort();
@@ -485,40 +492,52 @@ export default function ChatPage() {
     }
   };
 
-  const handleRegenerateAt = useCallback((messageIndex: number) => {
-    const userMsg = messages.slice(0, messageIndex).reverse().find((m) => m.role === "user");
-    if (!userMsg) return;
-    setMessages((prev) => prev.slice(0, messageIndex));
-    setTimeout(() => handleSend(userMsg.content), 50);
-  }, [messages]);
-
   const handleStop = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    if (abortRef.current) abortRef.current.abort();
   }, []);
+
+  const handleRegenerateAt = useCallback(
+    (messageIndex: number) => {
+      const userMsg = messages
+        .slice(0, messageIndex)
+        .reverse()
+        .find((m) => m.role === "user");
+      if (!userMsg) return;
+      setMessages((prev) => prev.slice(0, messageIndex));
+      setTimeout(() => handleSend(userMsg.content), 50);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [messages],
+  );
 
   const handleRegenerate = useCallback(() => {
     if (loading || messages.length < 2) return;
-    const lastUserIdx = messages.map((m, i) => ({ role: m.role, i })).filter(x => x.role === "user").pop();
+    const lastUserIdx = messages
+      .map((m, i) => ({ role: m.role, i }))
+      .filter((x) => x.role === "user")
+      .pop();
     if (!lastUserIdx) return;
     const query = messages[lastUserIdx.i].content;
-    const trimmed = messages.slice(0, lastUserIdx.i);
-    setMessages(trimmed);
+    setMessages(messages.slice(0, lastUserIdx.i));
     setFollowUps([]);
     setFollowUpsLoading(false);
     if (followUpAbortRef.current) followUpAbortRef.current.abort();
     setTimeout(() => handleSend(query), 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, messages]);
 
-  const [copiedChat, setCopiedChat] = useState(false);
+  const handleDeleteMessage = useCallback(
+    (index: number) => {
+      setMessages((prev) => prev.filter((_, i) => i !== index));
+    },
+    [],
+  );
 
   const handleCopyConversation = useCallback(() => {
     if (messages.length === 0) return;
-    const md = messages.map((m) => {
-      const role = m.role === "user" ? "**You**" : "**MindStore**";
-      return `${role}:\n${m.content}`;
-    }).join("\n\n---\n\n");
+    const md = messages
+      .map((m) => `${m.role === "user" ? "**You**" : "**MindStore**"}:\n${m.content}`)
+      .join("\n\n---\n\n");
     navigator.clipboard.writeText(md).then(() => {
       setCopiedChat(true);
       setTimeout(() => setCopiedChat(false), 1500);
@@ -526,1136 +545,432 @@ export default function ChatPage() {
     });
   }, [messages]);
 
-  const activeConversations = conversations.filter(
-    (c) => c.messages.length > 0
-  );
+  const activeConversations = conversations.filter((c) => c.messages.length > 0);
 
-  const filteredConversations = historySearch.trim()
-    ? activeConversations.filter(c => {
-        const q = historySearch.toLowerCase().trim();
-        if (c.title.toLowerCase().includes(q)) return true;
-        return c.messages.some(m => m.content.toLowerCase().includes(q));
-      })
-    : activeConversations;
-
-  const handlePinConversation = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    togglePinConversation(id);
-    refreshHistory();
-    toast.success("Conversation " + (conversations.find(c => c.id === id)?.pinned ? "unpinned" : "pinned"));
-  }, [conversations]);
-
-  const handleExportConversation = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const convo = getConversation(id);
-    if (!convo) return;
-    const md = exportConversationMarkdown(convo);
-    const blob = new Blob([md], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${convo.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "-").toLowerCase()}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Conversation exported");
-  }, []);
-
+  /* ═══════════════════════════════════════════
+   *  RENDER
+   * ═══════════════════════════════════════════ */
   return (
-    <div className="flex flex-col h-full">
-      {/* ═══ Top Bar ═══ */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0 bg-[#0a0a0b]/80 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleNewChat}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.97]"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">New chat</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-1">
-          {messages.length > 0 && (
-            <button
-              onClick={handleCopyConversation}
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-[13px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all active:scale-[0.97]"
-              title="Copy conversation"
-            >
-              {copiedChat ? <Check className="w-4 h-4 text-teal-400" /> : <Copy className="w-4 h-4" />}
-            </button>
-          )}
-          {activeConversations.length > 0 && (
-            <button
-              onClick={() => setHistoryOpen(!historyOpen)}
-              className={cn(
-                "flex items-center gap-1.5 h-8 px-3 rounded-xl text-[13px] font-medium transition-all active:scale-[0.97]",
-                historyOpen
-                  ? "text-teal-300 bg-teal-500/10"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
-              )}
-            >
-              <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
-              <span className="text-[11px] tabular-nums opacity-60">
-                {activeConversations.length}
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ═══ History Panel (slide-over) ═══ */}
-      {historyOpen && (
+    <div className="flex h-full overflow-hidden">
+      {/* ─── Mobile sidebar overlay ─── */}
+      {mobileSidebarOpen && (
         <div
-          className="absolute inset-0 z-[55]"
-          onClick={() => { setHistoryOpen(false); setHistorySearch(""); }}
+          className="fixed inset-0 z-[60] md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="absolute top-0 right-0 h-full w-[300px] sm:w-[340px] bg-[#0e0e10] border-l border-white/[0.06] shadow-2xl shadow-black/60 animate-in slide-in-from-right flex flex-col"
+            className="absolute top-0 left-0 h-full animate-in slide-in-from-left duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-[14px] font-semibold tracking-[-0.01em]">History</h3>
-                <span className="text-[11px] tabular-nums text-zinc-600 bg-white/[0.04] px-1.5 py-0.5 rounded-md">
-                  {activeConversations.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {activeConversations.length > 0 && (
-                  <button
-                    onClick={handleClearAll}
-                    className="text-[12px] text-zinc-600 hover:text-red-400 px-2 py-1 rounded-lg hover:bg-red-500/5 transition-colors"
-                  >
-                    Clear all
-                  </button>
-                )}
-                <button
-                  onClick={() => { setHistoryOpen(false); setHistorySearch(""); }}
-                  className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors"
-                >
-                  <X className="w-4 h-4 text-zinc-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Search bar */}
-            {activeConversations.length > 2 && (
-              <div className="px-3 py-2 border-b border-white/[0.04] shrink-0">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
-                  <input
-                    ref={historySearchRef}
-                    value={historySearch}
-                    onChange={(e) => setHistorySearch(e.target.value)}
-                    placeholder="Search conversations…"
-                    className="w-full h-8 pl-8 pr-8 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[13px] placeholder:text-zinc-700 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 transition-all"
-                  />
-                  {historySearch && (
-                    <button
-                      onClick={() => setHistorySearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/[0.08]"
-                    >
-                      <X className="w-3 h-3 text-zinc-600" />
-                    </button>
-                  )}
-                </div>
-                {historySearch && (
-                  <p className="text-[11px] text-zinc-600 mt-1 px-0.5">
-                    {filteredConversations.length} result{filteredConversations.length !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Conversation list */}
-            <div className="overflow-y-auto flex-1 py-2 px-2">
-              {activeConversations.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageSquare className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
-                  <p className="text-[13px] text-zinc-600">No conversations yet</p>
-                  <p className="text-[12px] text-zinc-700 mt-0.5">Start chatting to build history</p>
-                </div>
-              ) : filteredConversations.length === 0 ? (
-                <div className="text-center py-12">
-                  <Search className="w-5 h-5 text-zinc-700 mx-auto mb-2" />
-                  <p className="text-[13px] text-zinc-600">No matches for &ldquo;{historySearch}&rdquo;</p>
-                  <button
-                    onClick={() => setHistorySearch("")}
-                    className="text-[12px] text-teal-400 hover:text-teal-300 mt-1 transition-colors"
-                  >
-                    Clear search
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-0.5">
-                  {/* Pinned section label */}
-                  {filteredConversations.some(c => c.pinned) && (
-                    <div className="flex items-center gap-1.5 px-2 py-1">
-                      <Pin className="w-2.5 h-2.5 text-teal-500/60" />
-                      <span className="text-[10px] text-zinc-600 uppercase tracking-[0.08em] font-semibold">Pinned</span>
-                    </div>
-                  )}
-                  {filteredConversations.filter(c => c.pinned).map((c) => {
-                    const stats = getConversationStats(c);
-                    return (
-                      <HistoryCard
-                        key={c.id}
-                        convo={c}
-                        stats={stats}
-                        active={conversationId === c.id}
-                        renaming={renamingId === c.id}
-                        renameValue={renameValue}
-                        onLoad={() => handleLoadConversation(c.id)}
-                        onRename={(id) => { setRenamingId(id); setRenameValue(c.title); }}
-                        onRenameSubmit={(trimmed) => { renameConversation(c.id, trimmed); refreshHistory(); setRenamingId(null); }}
-                        onRenameCancel={() => setRenamingId(null)}
-                        onRenameChange={setRenameValue}
-                        onPin={(e) => handlePinConversation(c.id, e)}
-                        onExport={(e) => handleExportConversation(c.id, e)}
-                        onDelete={(e) => handleDeleteConversation(c.id, e)}
-                      />
-                    );
-                  })}
-                  {/* Unpinned section label */}
-                  {filteredConversations.some(c => c.pinned) && filteredConversations.some(c => !c.pinned) && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 mt-1">
-                      <Clock className="w-2.5 h-2.5 text-zinc-600" />
-                      <span className="text-[10px] text-zinc-600 uppercase tracking-[0.08em] font-semibold">Recent</span>
-                    </div>
-                  )}
-                  {filteredConversations.filter(c => !c.pinned).map((c) => {
-                    const stats = getConversationStats(c);
-                    return (
-                      <HistoryCard
-                        key={c.id}
-                        convo={c}
-                        stats={stats}
-                        active={conversationId === c.id}
-                        renaming={renamingId === c.id}
-                        renameValue={renameValue}
-                        onLoad={() => handleLoadConversation(c.id)}
-                        onRename={(id) => { setRenamingId(id); setRenameValue(c.title); }}
-                        onRenameSubmit={(trimmed) => { renameConversation(c.id, trimmed); refreshHistory(); setRenamingId(null); }}
-                        onRenameCancel={() => setRenamingId(null)}
-                        onRenameChange={setRenameValue}
-                        onPin={(e) => handlePinConversation(c.id, e)}
-                        onExport={(e) => handleExportConversation(c.id, e)}
-                        onDelete={(e) => handleDeleteConversation(c.id, e)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer stats */}
-            {activeConversations.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-white/[0.04] shrink-0">
-                <div className="flex items-center justify-between text-[11px] text-zinc-700">
-                  <span className="flex items-center gap-1">
-                    <Hash className="w-3 h-3" />
-                    {activeConversations.reduce((sum, c) => sum + c.messages.length, 0)} messages
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" />
-                    {activeConversations.length} chats
-                  </span>
-                </div>
-              </div>
-            )}
+            <ChatSidebar
+              conversations={conversations}
+              activeId={conversationId}
+              collapsed={false}
+              onToggle={() => setMobileSidebarOpen(false)}
+              onNewChat={handleNewChat}
+              onLoadConversation={handleLoadConversation}
+              onRefreshHistory={refreshHistory}
+            />
           </div>
         </div>
       )}
 
-      {/* ═══ Messages Area ═══ */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
-        {messages.length === 0 ? (
-          /* Empty State */
-          <div className="flex flex-col items-center justify-center h-full px-6 pb-8">
-            {memoryCount === 0 && !hasAI ? (
-              /* True empty state — no memories, no AI */
-              <>
-                <div className="w-14 h-14 rounded-2xl bg-teal-500/[0.08] flex items-center justify-center mb-4 ring-1 ring-teal-500/10">
-                  <MessageSquare className="w-6 h-6 text-teal-400/80" />
-                </div>
-                <h2 className="text-[18px] font-semibold text-zinc-200 mb-1.5 tracking-[-0.02em]">
-                  Chat with your knowledge
-                </h2>
-                <p className="text-[14px] text-zinc-500 max-w-xs text-center leading-relaxed mb-8">
-                  Import your conversations and connect an AI provider to start asking questions.
-                </p>
-                <div className="flex items-center gap-3">
-                  <Link href="/app/import" className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Import data
-                  </Link>
-                  <Link href="/app/settings" className="h-10 px-5 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-[13px] text-zinc-400 font-medium transition-all active:scale-[0.97] flex items-center gap-2">
-                    <Key className="w-4 h-4" />
-                    Connect AI
-                  </Link>
-                </div>
-              </>
-            ) : (
-              /* Normal empty chat — has data or AI */
-              <>
-                <div className="w-14 h-14 rounded-2xl bg-teal-500/[0.08] flex items-center justify-center mb-4 ring-1 ring-teal-500/10">
-                  <Brain className="w-6 h-6 text-teal-400/80" />
-                </div>
-                <h2 className="text-[18px] font-semibold text-zinc-200 mb-1 tracking-[-0.02em]">
-                  {getGreeting()}
-                </h2>
-                <p className="text-[14px] text-zinc-500 mb-8">
-                  {memoryCount > 0 ? (
-                    `${memoryCount.toLocaleString()} memories ready to explore`
-                  ) : (
+      {/* ─── Desktop sidebar ─── */}
+      <div className="hidden md:block shrink-0">
+        <ChatSidebar
+          conversations={conversations}
+          activeId={conversationId}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((p) => !p)}
+          onNewChat={handleNewChat}
+          onLoadConversation={handleLoadConversation}
+          onRefreshHistory={refreshHistory}
+        />
+      </div>
+
+      {/* ─── Main chat area ─── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* ═══ Header ═══ */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06] shrink-0 bg-[#0a0a0b]/80 backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden flex items-center justify-center w-8 h-8 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleNewChat}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all active:scale-[0.97]"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">New chat</span>
+            </button>
+            {/* Memory count badge */}
+            {memoryCount > 0 && (
+              <div className="hidden sm:flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-[11px] text-zinc-500">
+                <Brain className="w-3 h-3 text-teal-500/70" />
+                <span className="tabular-nums">{memoryCount.toLocaleString()}</span>
+                <span className="text-zinc-600">memories</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <button
+                onClick={handleCopyConversation}
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-[13px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] transition-all active:scale-[0.97]"
+                title="Copy conversation"
+              >
+                {copiedChat ? (
+                  <Check className="w-4 h-4 text-teal-400" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ═══ Messages area ═══ */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
+          {messages.length === 0 ? (
+            /* ─── Empty state ─── */
+            <div className="flex flex-col items-center justify-center h-full px-6 pb-8">
+              {memoryCount === 0 && !hasAI ? (
+                <>
+                  <div className="w-14 h-14 rounded-2xl bg-teal-500/[0.08] flex items-center justify-center mb-4 ring-1 ring-teal-500/10">
+                    <MessageSquare className="w-6 h-6 text-teal-400/80" />
+                  </div>
+                  <h2 className="text-[18px] font-semibold text-zinc-200 mb-1.5 tracking-[-0.02em]">
+                    Chat with your knowledge
+                  </h2>
+                  <p className="text-[14px] text-zinc-500 max-w-xs text-center leading-relaxed mb-8">
+                    Import your conversations and connect an AI provider to start asking questions.
+                  </p>
+                  <div className="flex items-center gap-3">
                     <Link
                       href="/app/import"
-                      className="text-teal-400 hover:text-teal-300 transition-colors"
+                      className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-[13px] font-medium text-white transition-all active:scale-[0.97] flex items-center gap-2"
                     >
-                      Import knowledge to start →
+                      <Upload className="w-4 h-4" />
+                      Import data
                     </Link>
-                  )}
-                </p>
-
-                {/* No AI provider notice */}
-                {!hasAI && memoryCount > 0 && (
-                  <div className="w-full max-w-sm mb-6">
-                    <NoAIBanner />
+                    <Link
+                      href="/app/settings"
+                      className="h-10 px-5 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.06] text-[13px] text-zinc-400 font-medium transition-all active:scale-[0.97] flex items-center gap-2"
+                    >
+                      <Key className="w-4 h-4" />
+                      Connect AI
+                    </Link>
                   </div>
-                )}
-
-                {/* Suggestion prompts */}
-                <div className="w-full max-w-lg grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {SUGGESTION_GROUPS.flatMap((group) =>
-                    group.items.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleSend(s)}
-                        className={cn(
-                          "text-left text-[13px] leading-snug px-4 py-3 rounded-2xl transition-all active:scale-[0.98]",
-                          "flex items-center gap-3",
-                          "border border-white/[0.06]",
-                          "bg-white/[0.02] hover:bg-white/[0.05]",
-                          "text-zinc-400 hover:text-zinc-200",
-                        )}
-                      >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${group.color.split(" ").slice(1).join(" ")}`}>
-                          <group.icon className={`w-4 h-4 ${group.color.split(" ")[0]}`} />
-                        </div>
-                        <span>{s}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-
-                {/* Recent conversations quick-access */}
-                {activeConversations.length > 0 && (
-                  <div className="mt-8 w-full max-w-sm">
-                    <p className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.08em] mb-2 px-1">
-                      {activeConversations.some(c => c.pinned) ? "Pinned & recent" : "Recent conversations"}
-                    </p>
-                    <div className="space-y-1">
-                      {activeConversations.slice(0, 3).map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => handleLoadConversation(c.id)}
-                          className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] transition-all active:scale-[0.98]"
-                        >
-                          {c.pinned ? (
-                            <Pin className="w-3.5 h-3.5 text-teal-500/60 shrink-0" />
-                          ) : (
-                            <MessageSquare className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-                          )}
-                          <span className="text-[13px] text-zinc-400 truncate flex-1">
-                            {c.title}
-                          </span>
-                          <span className="text-[11px] text-zinc-700 shrink-0">
-                            {formatRelativeTime(c.updatedAt)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-14 h-14 rounded-2xl bg-teal-500/[0.08] flex items-center justify-center mb-4 ring-1 ring-teal-500/10">
+                    <Brain className="w-6 h-6 text-teal-400/80" />
                   </div>
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          /* Message List */
-          <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex gap-3 group/msg",
-                  msg.role === "user" ? "justify-end" : "",
-                )}
-              >
-                {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
-                    <Brain className="w-4 h-4 text-teal-400" />
-                  </div>
-                )}
-                <div className="relative max-w-[85%] sm:max-w-[80%] min-w-0">
-                  <div
-                    className={cn(
-                      "overflow-hidden",
-                      msg.role === "user"
-                        ? "rounded-2xl rounded-br-lg bg-teal-600/90 text-white px-4 py-3"
-                        : "rounded-2xl rounded-bl-lg bg-white/[0.03] border border-white/[0.06] px-4 py-3"
-                    )}
-                  >
-                    <div className="text-[14px] leading-[1.7] break-words [overflow-wrap:anywhere]">
-                      {msg.content ? (
-                        <ChatMarkdown
-                          content={msg.content}
-                          {...(msg.role === "assistant" && msg.sources?.length ? {
-                            onCitationHover: (sourceIndex) => {
-                              if (sourceIndex !== null) {
-                                setHighlightedCitation({ msgIndex: i, sourceIndex });
-                              } else {
-                                setHighlightedCitation(null);
-                              }
-                            },
-                            onCitationClick: (sourceIndex) => {
-                              const source = msg.sources?.[sourceIndex];
-                              if (source?.id) {
-                                openMemoryDrawer({
-                                  id: source.id,
-                                  content: source.content || source.preview || "",
-                                  source: source.type,
-                                  sourceId: "",
-                                  sourceTitle: source.title || "Untitled",
-                                  timestamp: "",
-                                  importedAt: "",
-                                  metadata: {},
-                                  pinned: false,
-                                });
-                              }
-                            },
-                          } : {})}
-                        />
-                      ) : loading && i === messages.length - 1 ? (
-                        <PulsingDots />
-                      ) : (
-                        ""
-                      )}
-                    </div>
-                  </div>
-                  {/* Source citations */}
-                  {msg.role === "assistant" && msg.sources &&
-                    msg.sources.length > 0 &&
-                    msg.content && (
-                      <div className="mt-2">
-                        <SourceCards
-                          sources={msg.sources}
-                          highlightedIndex={highlightedCitation?.msgIndex === i ? highlightedCitation.sourceIndex : null}
-                        />
-                      </div>
-                    )}
-                  {/* Action buttons */}
-                  {msg.content && (
-                    msg.role === "assistant" ? (
-                      <MessageActions
-                        content={msg.content}
-                        question={
-                          messages.slice(0, i).reverse().find((m) => m.role === "user")?.content || ""
-                        }
-                        onRegenerate={!loading ? () => handleRegenerateAt(i) : undefined}
-                      />
+                  <h2 className="text-[18px] font-semibold text-zinc-200 mb-1 tracking-[-0.02em]">
+                    {getGreeting()}
+                  </h2>
+                  <p className="text-[14px] text-zinc-500 mb-8">
+                    {memoryCount > 0 ? (
+                      `${memoryCount.toLocaleString()} memories ready to explore`
                     ) : (
-                      <MessageCopyButton content={msg.content} side="left" />
-                    )
-                  )}
-                </div>
-                {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-xl bg-teal-600/20 flex items-center justify-center shrink-0 mt-0.5">
-                    <User className="w-4 h-4 text-teal-300" />
-                  </div>
-                )}
-              </div>
-            ))}
+                      <Link
+                        href="/app/import"
+                        className="text-teal-400 hover:text-teal-300 transition-colors"
+                      >
+                        Import knowledge to start →
+                      </Link>
+                    )}
+                  </p>
 
-            {/* Thinking indicator */}
-            {loading && messages.length > 0 && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
-                  <Brain className="w-4 h-4 text-teal-400" />
-                </div>
-                <div className="rounded-2xl rounded-bl-lg bg-white/[0.03] border border-white/[0.06] px-4 py-3">
-                  <div className="flex flex-col gap-2">
-                    {/* Step 1: Searching */}
-                    <span className="flex items-center gap-2">
-                      {thinkingStep === "searching" ? (
-                        <PulsingDots />
-                      ) : (thinkingStep === "found" || thinkingStep === "generating") ? (
-                        <Check className="w-3.5 h-3.5 text-teal-400/70" />
-                      ) : null}
-                      <span className={cn(
-                        "text-[12px]",
-                        thinkingStep === "searching" ? "text-zinc-400" : "text-zinc-600"
-                      )}>
-                        {thinkingStep === "searching"
-                          ? "Searching memories…"
-                          : searchResultCount > 0
-                            ? `Found ${searchResultCount} relevant ${searchResultCount === 1 ? "memory" : "memories"}`
-                            : "Searching memories…"}
-                      </span>
-                    </span>
-                    {/* Step 2: Generating */}
-                    {(thinkingStep === "found" || thinkingStep === "generating") && (
-                      <span className="flex items-center gap-2">
-                        {thinkingStep === "generating" ? (
+                  {!hasAI && memoryCount > 0 && (
+                    <div className="w-full max-w-sm mb-6">
+                      <NoAIBanner />
+                    </div>
+                  )}
+
+                  {/* Suggestion prompts */}
+                  <div className="w-full max-w-lg grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {SUGGESTION_GROUPS.flatMap((group) =>
+                      group.items.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleSend(s)}
+                          className={cn(
+                            "text-left text-[13px] leading-snug px-4 py-3 rounded-2xl transition-all active:scale-[0.98]",
+                            "flex items-center gap-3",
+                            "border border-white/[0.06]",
+                            "bg-white/[0.02] hover:bg-white/[0.05]",
+                            "text-zinc-400 hover:text-zinc-200",
+                          )}
+                        >
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${group.color.split(" ").slice(1).join(" ")}`}
+                          >
+                            <group.icon className={`w-4 h-4 ${group.color.split(" ")[0]}`} />
+                          </div>
+                          <span>{s}</span>
+                        </button>
+                      )),
+                    )}
+                  </div>
+
+                  {/* Recent conversations quick-access */}
+                  {activeConversations.length > 0 && (
+                    <div className="mt-8 w-full max-w-sm">
+                      <p className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.08em] mb-2 px-1">
+                        {activeConversations.some((c) => c.pinned)
+                          ? "Pinned & recent"
+                          : "Recent conversations"}
+                      </p>
+                      <div className="space-y-1">
+                        {activeConversations.slice(0, 3).map((c) => (
+                          <button
+                            key={c.id}
+                            onClick={() => handleLoadConversation(c.id)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] transition-all active:scale-[0.98]"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                            <span className="text-[13px] text-zinc-400 truncate flex-1">
+                              {c.title}
+                            </span>
+                            <span className="text-[11px] text-zinc-700 shrink-0">
+                              {formatRelativeTime(c.updatedAt)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            /* ─── Message list ─── */
+            <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex gap-3 group/msg animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    msg.role === "user" ? "justify-end" : "",
+                  )}
+                  style={{ animationDelay: `${Math.min(i * 30, 150)}ms`, animationFillMode: "backwards" }}
+                >
+                  {/* AI avatar */}
+                  {msg.role === "assistant" && (
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
+                      <Brain className="w-4 h-4 text-teal-400" />
+                    </div>
+                  )}
+
+                  <div className="relative max-w-[85%] sm:max-w-[80%] min-w-0">
+                    {/* Message bubble */}
+                    <div
+                      className={cn(
+                        "overflow-hidden",
+                        msg.role === "user"
+                          ? "rounded-2xl rounded-br-lg bg-teal-900/10 border border-teal-500/10 text-zinc-100 px-4 py-3"
+                          : "rounded-2xl rounded-bl-lg bg-zinc-900 border border-white/[0.06] px-4 py-3",
+                      )}
+                    >
+                      <div className="text-[14px] leading-[1.7] break-words [overflow-wrap:anywhere]">
+                        {msg.content ? (
+                          <ChatMarkdown
+                            content={msg.content}
+                            {...(msg.role === "assistant" && msg.sources?.length
+                              ? {
+                                  onCitationHover: (sourceIndex) => {
+                                    if (sourceIndex !== null) {
+                                      setHighlightedCitation({ msgIndex: i, sourceIndex });
+                                    } else {
+                                      setHighlightedCitation(null);
+                                    }
+                                  },
+                                  onCitationClick: (sourceIndex) => {
+                                    const source = msg.sources?.[sourceIndex];
+                                    if (source?.id) {
+                                      openMemoryDrawer({
+                                        id: source.id,
+                                        content: source.content || source.preview || "",
+                                        source: source.type,
+                                        sourceId: "",
+                                        sourceTitle: source.title || "Untitled",
+                                        timestamp: "",
+                                        importedAt: "",
+                                        metadata: {},
+                                        pinned: false,
+                                      });
+                                    }
+                                  },
+                                }
+                              : {})}
+                          />
+                        ) : loading && i === messages.length - 1 ? (
                           <PulsingDots />
                         ) : (
-                          <Loader2 className="w-3.5 h-3.5 text-teal-400/60 animate-spin" />
+                          ""
                         )}
-                        <span className="text-[12px] text-zinc-400">Generating response…</span>
-                      </span>
-                    )}
+                      </div>
+                    </div>
+
+                    {/* Source citations */}
+                    {msg.role === "assistant" &&
+                      msg.sources &&
+                      msg.sources.length > 0 &&
+                      msg.content && (
+                        <div className="mt-2">
+                          <SourceCards
+                            sources={msg.sources}
+                            highlightedIndex={
+                              highlightedCitation?.msgIndex === i
+                                ? highlightedCitation.sourceIndex
+                                : null
+                            }
+                          />
+                        </div>
+                      )}
+
+                    {/* Action buttons */}
+                    {msg.content &&
+                      (msg.role === "assistant" ? (
+                        <AssistantMessageActions
+                          content={msg.content}
+                          question={
+                            messages
+                              .slice(0, i)
+                              .reverse()
+                              .find((m) => m.role === "user")?.content || ""
+                          }
+                          onRegenerate={!loading ? () => handleRegenerateAt(i) : undefined}
+                          onDelete={() => handleDeleteMessage(i)}
+                        />
+                      ) : (
+                        <UserMessageActions
+                          content={msg.content}
+                          onDelete={() => handleDeleteMessage(i)}
+                        />
+                      ))}
                   </div>
+
+                  {/* User avatar */}
+                  {msg.role === "user" && (
+                    <div className="w-8 h-8 rounded-xl bg-teal-600/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-4 h-4 text-teal-300" />
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Follow-up suggestions */}
-            {!loading && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
-              <div className="flex gap-2 flex-wrap pl-11">
-                {followUpsLoading ? (
-                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
-                    <Loader2 className="w-3.5 h-3.5 text-zinc-600 animate-spin" />
-                    <span className="text-[12px] text-zinc-600">Thinking of follow-ups…</span>
-                  </div>
-                ) : followUps.length > 0 ? (
-                  followUps.map((fu, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setFollowUps([]);
-                        handleSend(fu);
-                      }}
-                      className="text-left text-[13px] leading-snug px-4 py-2 rounded-full border border-teal-500/15 bg-teal-500/[0.06] text-teal-300 hover:bg-teal-500/[0.12] hover:border-teal-500/25 transition-all active:scale-[0.97] max-w-[280px] truncate"
-                    >
-                      {fu}
-                    </button>
-                  ))
-                ) : null}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ═══ Scroll to Bottom FAB ═══ */}
-      {showScrollBtn && (
-        <div className="relative">
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
-            <button
-              onClick={scrollToBottom}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#18181b] border border-white/[0.1] shadow-xl shadow-black/50 text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-[#222225] hover:border-white/[0.15] transition-all active:scale-[0.95] backdrop-blur-sm"
-            >
-              <ChevronsDown className="w-4 h-4" />
-              <span className="hidden sm:inline">New messages</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ Input Bar ═══ */}
-      <div className="border-t border-white/[0.06] bg-[#0a0a0b] px-4 py-3 shrink-0">
-        <div className="max-w-2xl mx-auto">
-          {/* Regenerate button */}
-          {!loading && messages.length >= 2 && messages[messages.length - 1]?.role === "assistant" && (
-            <div className="flex justify-center mb-2">
-              <button
-                onClick={handleRegenerate}
-                className="flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-medium text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:bg-white/[0.06] transition-all active:scale-[0.95]"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                Regenerate
-              </button>
-            </div>
-          )}
-          <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Ask about your knowledge…"
-                rows={1}
-                className="w-full resize-none rounded-2xl bg-white/[0.04] border border-white/[0.08] px-4 py-3 text-[14px] leading-relaxed placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500/30 transition-all max-h-[160px]"
-              />
-            </div>
-            {loading ? (
-              <button
-                onClick={handleStop}
-                className="w-10 h-10 rounded-xl bg-zinc-700 hover:bg-zinc-600 flex items-center justify-center transition-all shrink-0 active:scale-90 ring-1 ring-white/[0.1]"
-                title="Stop generating"
-              >
-                <Square className="w-3.5 h-3.5 text-white fill-white" />
-              </button>
-            ) : (
-              <button
-                onClick={() => handleSend()}
-                disabled={!input.trim()}
-                className="w-10 h-10 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-20 disabled:hover:bg-teal-600 flex items-center justify-center transition-all shrink-0 active:scale-90"
-              >
-                <ArrowUp className="w-4.5 h-4.5 text-white" />
-              </button>
-            )}
-          </div>
-          {/* Model selector & hint */}
-          <div className="flex items-center justify-between mt-2 px-1">
-            <ModelSelector
-              provider={chatProvider}
-              selectedModel={selectedModel}
-              onModelChange={(m) => setSelectedModel(m)}
-            />
-            <span className="text-[11px] text-zinc-700 hidden sm:block">
-              <kbd className="font-mono text-[10px] bg-white/[0.04] border border-white/[0.08] rounded px-1 py-[1px]">Enter</kbd> to send · <kbd className="font-mono text-[10px] bg-white/[0.04] border border-white/[0.08] rounded px-1 py-[1px]">Shift+Enter</kbd> for newline
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Model picker — compact dropdown below chat input */
-const MODEL_OPTIONS: Record<string, { label: string; models: { id: string; name: string; tag?: string }[] }> = {
-  gemini: {
-    label: "Gemini",
-    models: [
-      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", tag: "default" },
-      { id: "gemini-2.0-flash-lite", name: "Gemini 2.0 Flash Lite", tag: "fast" },
-      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash" },
-      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", tag: "smart" },
-    ],
-  },
-  openai: {
-    label: "OpenAI",
-    models: [
-      { id: "gpt-4o-mini", name: "GPT-4o Mini", tag: "default" },
-      { id: "gpt-4o", name: "GPT-4o", tag: "smart" },
-      { id: "gpt-4.1-mini", name: "GPT-4.1 Mini", tag: "new" },
-      { id: "gpt-4.1", name: "GPT-4.1", tag: "new" },
-      { id: "o4-mini", name: "o4-mini", tag: "reasoning" },
-    ],
-  },
-  openrouter: {
-    label: "OpenRouter",
-    models: [
-      { id: "anthropic/claude-3.5-haiku", name: "Claude 3.5 Haiku", tag: "default" },
-      { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", tag: "smart" },
-      { id: "anthropic/claude-opus-4", name: "Claude Opus 4", tag: "best" },
-      { id: "meta-llama/llama-3.3-70b-instruct", name: "Llama 3.3 70B", tag: "free" },
-      { id: "google/gemini-2.0-flash-001", name: "Gemini 2.0 Flash" },
-      { id: "mistralai/mistral-large-latest", name: "Mistral Large" },
-      { id: "deepseek/deepseek-chat-v3", name: "DeepSeek V3", tag: "cheap" },
-      { id: "qwen/qwen-2.5-72b-instruct", name: "Qwen 2.5 72B" },
-    ],
-  },
-  ollama: {
-    label: "Ollama",
-    models: [
-      { id: "llama3.2", name: "Llama 3.2", tag: "default" },
-      { id: "llama3.1", name: "Llama 3.1" },
-      { id: "mistral", name: "Mistral" },
-      { id: "gemma2", name: "Gemma 2" },
-      { id: "phi3", name: "Phi-3" },
-      { id: "qwen2.5", name: "Qwen 2.5" },
-    ],
-  },
-  custom: {
-    label: "Custom",
-    models: [],
-  },
-};
-
-function ModelSelector({ provider, selectedModel, onModelChange }: {
-  provider: string;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const providerKey = provider === "auto" ? null : provider;
-  const sections = providerKey
-    ? { [providerKey]: MODEL_OPTIONS[providerKey] }
-    : MODEL_OPTIONS;
-
-  const currentName = (() => {
-    for (const section of Object.values(MODEL_OPTIONS)) {
-      const found = section.models.find((m) => m.id === selectedModel);
-      if (found) return found.name;
-    }
-    return selectedModel || "Default";
-  })();
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[12px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-all"
-      >
-        <Sparkles className="w-3.5 h-3.5" />
-        <span>{currentName}</span>
-        <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-60 rounded-xl bg-[#111113]/95 backdrop-blur-xl border border-white/[0.08] shadow-2xl shadow-black/60 overflow-hidden z-50">
-          {Object.entries(sections).filter(([, s]) => s).map(([key, section]) => (
-            <div key={key}>
-              <div className="px-3 pt-2.5 pb-1">
-                <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">{section!.label}</span>
-              </div>
-              {section!.models.map((model) => (
-                <button
-                  key={model.id}
-                  onClick={() => { onModelChange(model.id); setOpen(false); }}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors",
-                    selectedModel === model.id
-                      ? "text-teal-300 bg-teal-500/10"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"
-                  )}
-                >
-                  <span className="flex-1">{model.name}</span>
-                  {model.tag && (
-                    <span className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-                      model.tag === "default" && "text-zinc-500 bg-zinc-500/10",
-                      model.tag === "fast" && "text-sky-400 bg-sky-500/10",
-                      model.tag === "smart" && "text-teal-400 bg-teal-500/10",
-                      model.tag === "new" && "text-sky-300 bg-sky-400/10",
-                      model.tag === "reasoning" && "text-teal-300 bg-teal-400/10",
-                      model.tag === "best" && "text-teal-300 bg-teal-400/10",
-                      model.tag === "free" && "text-zinc-400 bg-zinc-500/10",
-                      model.tag === "cheap" && "text-zinc-400 bg-zinc-500/10",
-                    )}>{model.tag}</span>
-                  )}
-                  {selectedModel === model.id && <Check className="w-3.5 h-3.5 text-teal-400 shrink-0" />}
-                </button>
               ))}
-            </div>
-          ))}
-          {selectedModel && (
-            <button
-              onClick={() => { onModelChange(""); setOpen(false); }}
-              className="w-full px-3 py-2 text-left text-[12px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border-t border-white/[0.06]"
-            >
-              Reset to default
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
-/** Reusable pulsing dots indicator */
-function PulsingDots({ label }: { label?: string }) {
-  return (
-    <span className="flex items-center gap-2 text-zinc-500">
-      <span className="flex gap-[3px] items-center">
-        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "0ms" }} />
-        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "200ms" }} />
-        <span className="w-[5px] h-[5px] rounded-full bg-teal-400/60" style={{ animation: "ms-pulse 1.4s ease-in-out infinite", animationDelay: "400ms" }} />
-      </span>
-      {label && <span className="text-[12px] text-zinc-600">{label}</span>}
-    </span>
-  );
-}
-
-/** Copy button that appears on message hover */
-function MessageCopyButton({ content, side }: { content: string; side: "left" | "right" }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(content).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
-      }}
-      className={cn(
-        "absolute -bottom-1 opacity-0 group-hover/msg:opacity-100 touch-visible transition-all",
-        "w-7 h-7 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center",
-        "hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30",
-        side === "right" ? "right-0" : "left-0",
-      )}
-      title="Copy message"
-    >
-      {copied ? (
-        <Check className="w-3.5 h-3.5 text-teal-400" />
-      ) : (
-        <Copy className="w-3.5 h-3.5 text-zinc-500" />
-      )}
-    </button>
-  );
-}
-
-/** Action buttons for assistant messages */
-function MessageActions({ content, question, onRegenerate }: { content: string; question: string; onRegenerate?: () => void }) {
-  const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const handleSaveToMemory = async () => {
-    if (saving || saved) return;
-    setSaving(true);
-    try {
-      const title = question
-        ? (question.length > 80 ? question.slice(0, 77) + "…" : question)
-        : "Chat Insight";
-
-      const res = await fetch("/api/v1/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          documents: [
-            {
-              title,
-              content: content,
-              sourceType: "text",
-            },
-          ],
-        }),
-      });
-
-      if (!res.ok) throw new Error("Save failed");
-      const data = await res.json();
-      setSaved(true);
-      toast.success(`Saved to memory`, {
-        description: `${data.imported || 1} chunk${(data.imported || 1) > 1 ? "s" : ""} — find it in Explore`,
-      });
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="absolute -bottom-1 left-0 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 touch-visible transition-all">
-      {/* Copy */}
-      <button
-        onClick={() => {
-          navigator.clipboard.writeText(content).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          });
-        }}
-        className="w-7 h-7 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30 transition-all"
-        title="Copy message"
-      >
-        {copied ? (
-          <Check className="w-3.5 h-3.5 text-teal-400" />
-        ) : (
-          <Copy className="w-3.5 h-3.5 text-zinc-500" />
-        )}
-      </button>
-
-      {/* Save to Memory */}
-      <button
-        onClick={handleSaveToMemory}
-        disabled={saving || saved}
-        className={cn(
-          "h-7 rounded-lg border flex items-center justify-center gap-1 px-2",
-          "shadow-lg shadow-black/30 active:scale-90 transition-all",
-          saved
-            ? "bg-teal-500/10 border-teal-500/20 text-teal-400 cursor-default"
-            : saving
-              ? "bg-[#111113] border-white/[0.08] text-zinc-500 cursor-wait"
-              : "bg-[#111113] border-white/[0.08] text-zinc-500 hover:bg-teal-500/10 hover:border-teal-500/20 hover:text-teal-400",
-        )}
-        title={saved ? "Saved to memory" : "Save to memory"}
-      >
-        {saving ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : saved ? (
-          <Check className="w-3.5 h-3.5" />
-        ) : (
-          <BookmarkPlus className="w-3.5 h-3.5" />
-        )}
-        <span className="text-[11px] font-medium leading-none hidden sm:inline">
-          {saved ? "Saved" : saving ? "Saving…" : "Save"}
-        </span>
-      </button>
-
-      {/* Regenerate */}
-      {onRegenerate && (
-        <button
-          onClick={onRegenerate}
-          className="w-7 h-7 rounded-lg bg-[#111113] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.08] active:scale-90 shadow-lg shadow-black/30 transition-all"
-          title="Regenerate response"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-zinc-500" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** Source citations — Perplexity-style */
-function SourceCards({
-  sources,
-  highlightedIndex,
-}: {
-  sources: Array<{ title: string; type: string; score?: number; id?: string; preview?: string; content?: string }>;
-  highlightedIndex?: number | null;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  const displayed = expanded ? sources : sources.slice(0, 3);
-
-  const handleOpenMemory = (s: typeof sources[0], e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (s.id) {
-      openMemoryDrawer({
-        id: s.id,
-        content: s.content || s.preview || "",
-        source: s.type,
-        sourceId: "",
-        sourceTitle: s.title || "Untitled",
-        timestamp: "",
-        importedAt: "",
-        metadata: {},
-        pinned: false,
-      });
-    }
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.08em]">
-          Sources · {sources.length}
-        </span>
-        {sources.length > 3 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-0.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            {expanded ? "Less" : `+${sources.length - 3} more`}
-            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        )}
-      </div>
-      <div className="space-y-1.5">
-        {displayed.map((s, j) => {
-          const st = getSourceType(s.type);
-          const Icon = st.icon;
-          const scorePercent = s.score != null ? Math.round(s.score * 100) : null;
-          const isClickable = !!s.id;
-          const isHighlighted = highlightedIndex != null && j === highlightedIndex;
-
-          return (
-            <div
-              key={j}
-              data-source-index={j}
-              onClick={isClickable ? (e) => handleOpenMemory(s, e) : undefined}
-              className={cn(
-                "flex flex-col gap-1.5 px-3 py-2.5 rounded-xl border transition-all duration-200",
-                isHighlighted
-                  ? "bg-teal-500/[0.08] border-teal-500/20 ring-1 ring-teal-500/15"
-                  : isClickable
-                    ? "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] cursor-pointer"
-                    : "bg-white/[0.02] border-white/[0.06]",
-              )}
-            >
-              {/* Header row */}
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-[10px] font-bold rounded-md w-5 h-5 flex items-center justify-center shrink-0 tabular-nums transition-colors",
-                  isHighlighted
-                    ? "bg-teal-500/20 text-teal-300"
-                    : "bg-white/[0.06] text-zinc-500"
-                )}>
-                  {j + 1}
-                </span>
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${st.bgColor}`}>
-                  <Icon className={`w-3 h-3 ${st.textColor}`} />
-                </div>
-                <span className={cn(
-                  "text-[12px] truncate flex-1 min-w-0 font-medium transition-colors",
-                  isHighlighted ? "text-zinc-200" : "text-zinc-400"
-                )}>
-                  {s.title || "Untitled"}
-                </span>
-                {scorePercent != null && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="w-10 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-teal-500/60 transition-all"
-                        style={{ width: `${Math.max(scorePercent, 8)}%` }}
+              {/* Thinking indicator */}
+              {loading &&
+                messages.length > 0 &&
+                messages[messages.length - 1]?.role === "user" && (
+                  <div className="flex gap-3 animate-in fade-in duration-300">
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
+                      <Brain className="w-4 h-4 text-teal-400" />
+                    </div>
+                    <div className="rounded-2xl rounded-bl-lg bg-zinc-900 border border-white/[0.06] px-4 py-3">
+                      <ThinkingIndicator
+                        step={thinkingStep}
+                        searchResultCount={searchResultCount}
                       />
                     </div>
-                    <span className="text-[10px] text-zinc-600 tabular-nums font-mono w-6 text-right">
-                      {scorePercent}%
-                    </span>
                   </div>
                 )}
-              </div>
-              {/* Content preview */}
-              {s.preview && (
-                <p className="text-[11px] text-zinc-600 leading-relaxed line-clamp-2 pl-7">
-                  {s.preview}{s.preview.length >= 118 ? "…" : ""}
-                </p>
-              )}
+
+              {/* Follow-up suggestions */}
+              {!loading &&
+                messages.length >= 2 &&
+                messages[messages.length - 1]?.role === "assistant" && (
+                  <div className="flex gap-2 flex-wrap pl-11">
+                    {followUpsLoading ? (
+                      <div className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/[0.06] bg-white/[0.02]">
+                        <PulsingDots label="Thinking of follow-ups…" />
+                      </div>
+                    ) : followUps.length > 0 ? (
+                      followUps.map((fu, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setFollowUps([]);
+                            handleSend(fu);
+                          }}
+                          className="text-left text-[13px] leading-snug px-4 py-2 rounded-full border border-teal-500/15 bg-teal-500/[0.06] text-teal-300 hover:bg-teal-500/[0.12] hover:border-teal-500/25 transition-all active:scale-[0.97] max-w-[280px] truncate"
+                        >
+                          {fu}
+                        </button>
+                      ))
+                    ) : null}
+                  </div>
+                )}
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+          )}
+        </div>
 
-/** History card */
-function HistoryCard({
-  convo, stats, active, renaming, renameValue,
-  onLoad, onRename, onRenameSubmit, onRenameCancel, onRenameChange,
-  onPin, onExport, onDelete,
-}: {
-  convo: Conversation;
-  stats: { messageCount: number; wordCount: number; userMessages: number; aiMessages: number };
-  active: boolean;
-  renaming: boolean;
-  renameValue: string;
-  onLoad: () => void;
-  onRename: (id: string) => void;
-  onRenameSubmit: (trimmed: string) => void;
-  onRenameCancel: () => void;
-  onRenameChange: (v: string) => void;
-  onPin: (e: React.MouseEvent) => void;
-  onExport: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <div
-      onClick={() => { if (!renaming) onLoad(); }}
-      className={cn(
-        "w-full text-left px-3 py-2.5 rounded-xl transition-all group flex items-start gap-2.5 cursor-pointer relative",
-        active
-          ? "bg-teal-500/10 border border-teal-500/20"
-          : "hover:bg-white/[0.04] border border-transparent"
-      )}
-    >
-      <div className="relative shrink-0 mt-0.5">
-        {convo.pinned ? (
-          <Pin className={cn("w-3.5 h-3.5", active ? "text-teal-400" : "text-teal-500/60")} />
-        ) : (
-          <MessageSquare className={cn("w-3.5 h-3.5", active ? "text-teal-400" : "text-zinc-600")} />
+        {/* ═══ Scroll to bottom FAB ═══ */}
+        {showScrollBtn && (
+          <div className="relative">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+              <button
+                onClick={scrollToBottom}
+                className="flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#18181b] border border-white/[0.1] shadow-xl shadow-black/50 text-[13px] font-medium text-zinc-400 hover:text-white hover:bg-[#222225] hover:border-white/[0.15] transition-all active:scale-[0.95] backdrop-blur-sm"
+              >
+                <ChevronsDown className="w-4 h-4" />
+                <span className="hidden sm:inline">New messages</span>
+              </button>
+            </div>
+          </div>
         )}
-      </div>
 
-      <div className="flex-1 min-w-0">
-        {renaming ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const trimmed = renameValue.trim();
-              if (trimmed) onRenameSubmit(trimmed);
-              else onRenameCancel();
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={(e) => onRenameChange(e.target.value)}
-              onBlur={() => {
-                const trimmed = renameValue.trim();
-                if (trimmed) onRenameSubmit(trimmed);
-                else onRenameCancel();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { e.stopPropagation(); onRenameCancel(); }
-              }}
-              className="w-full text-[13px] bg-white/[0.06] border border-teal-500/30 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500/40 text-white"
+        {/* ═══ Input area ═══ */}
+        <div className="border-t border-white/[0.06] bg-[#0a0a0b] px-4 py-3 shrink-0">
+          <div className="max-w-2xl mx-auto">
+            {/* Regenerate button */}
+            {!loading &&
+              messages.length >= 2 &&
+              messages[messages.length - 1]?.role === "assistant" && (
+                <div className="flex justify-center mb-2">
+                  <button
+                    onClick={handleRegenerate}
+                    className="flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-medium text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:bg-white/[0.06] transition-all active:scale-[0.95]"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Regenerate
+                  </button>
+                </div>
+              )}
+
+            <ChatInput
+              value={input}
+              onChange={setInput}
+              onSend={handleSend}
+              onStop={handleStop}
+              loading={loading}
+              disabled={memoryCount === 0 && !hasAI}
             />
-          </form>
-        ) : (
-          <p
-            className={cn(
-              "text-[13px] truncate",
-              active ? "text-white font-medium" : "text-zinc-400"
-            )}
-            onDoubleClick={(e) => { e.stopPropagation(); onRename(convo.id); }}
-          >
-            {convo.title}
-          </p>
-        )}
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <Clock className="w-2.5 h-2.5 text-zinc-700" />
-          <span className="text-[11px] text-zinc-600">{formatRelativeTime(convo.updatedAt)}</span>
-          <span className="text-[11px] text-zinc-700">· {stats.messageCount} msg</span>
+
+            {/* Model switcher */}
+            <div className="flex items-center justify-between mt-1 px-1">
+              <ModelSwitcher
+                provider={chatProvider}
+                selectedModel={selectedModel}
+                onModelChange={(m) => setSelectedModel(m)}
+              />
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Action buttons (hover-reveal) */}
-      {!renaming && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-          <button
-            onClick={onPin}
-            className="p-1.5 rounded-lg hover:bg-teal-500/10 transition-all"
-            title={convo.pinned ? "Unpin" : "Pin"}
-          >
-            {convo.pinned ? (
-              <PinOff className="w-3 h-3 text-teal-400 hover:text-teal-300" />
-            ) : (
-              <Pin className="w-3 h-3 text-zinc-600 hover:text-teal-400" />
-            )}
-          </button>
-          <button
-            onClick={onExport}
-            className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
-            title="Export as markdown"
-          >
-            <Download className="w-3 h-3 text-zinc-600 hover:text-zinc-400" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onRename(convo.id); }}
-            className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-all"
-            title="Rename"
-          >
-            <Pencil className="w-3 h-3 text-zinc-600 hover:text-zinc-400" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 rounded-lg hover:bg-red-500/10 transition-all"
-            title="Delete"
-          >
-            <Trash2 className="w-3 h-3 text-zinc-600 hover:text-red-400" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
 
-/** Format a timestamp to relative time */
+/* ─── Utility ─── */
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
