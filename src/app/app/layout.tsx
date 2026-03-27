@@ -443,13 +443,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}>
         <div className={cn(
           "mx-auto",
-          isChat ? "h-[calc(100dvh-3rem-52px)] md:h-[100dvh]" : "max-w-3xl px-4 py-5 md:px-8 md:py-8",
+          isChat ? "h-[calc(100dvh-3rem-52px)] md:h-[100dvh]" : "max-w-3xl px-4 py-6 md:px-8 md:py-8",
         )}>
           <ErrorBoundary>
             {showAiBanner && (
               <div className="mb-4">
                 <Link href="/app/settings">
-                  <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-amber-500/[0.02] border border-amber-500/15 px-4 py-3 hover:from-amber-500/[0.1] hover:to-amber-500/[0.04] transition-all group">
+                  <div className="flex items-center justify-between rounded-2xl bg-amber-500/[0.06] border border-amber-500/15 px-4 py-3 hover:bg-amber-500/[0.1] transition-all group">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
                         <Settings className="w-4 h-4 text-amber-400" />
