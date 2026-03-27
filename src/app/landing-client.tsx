@@ -143,8 +143,8 @@ const AI_MODELS = [
   { name: "Ollama", by: "Local", color: "#f97316" },
   { name: "Copilot", by: "GitHub", color: "#60a5fa" },
   { name: "Perplexity", by: "Search", color: "#22d3ee" },
-  { name: "OpenRouter", by: "200+ models", color: "#f97316" },
-  { name: "Windsurf", by: "Codeium", color: "#22d3ee" },
+  { name: "OpenRouter", by: "200+ models", color: "#ef4444" },
+  { name: "Windsurf", by: "Codeium", color: "#10b981" },
   { name: "Any MCP Client", by: "Open protocol", color: "#71717a" },
 ];
 
@@ -316,7 +316,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
             { x: 155, y: 210, r: 12, c: "#f59e0b", l: "Books" },
             { x: 75, y: 185, r: 10, c: "#71717a", l: "Philosophy" },
             { x: 345, y: 185, r: 11, c: "#10b981", l: "Finance" },
-            { x: 275, y: 230, r: 9, c: "#f59e0b", l: "Health" },
+            { x: 275, y: 230, r: 9, c: "#10b981", l: "Health" },
             { x: 55, y: 140, r: 8, c: "#f97316", l: "Music" },
             { x: 365, y: 55, r: 7, c: "#22d3ee", l: "Travel" },
             { x: 200, y: 270, r: 10, c: "#ef4444", l: "Cooking" },
