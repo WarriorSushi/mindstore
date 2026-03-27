@@ -174,11 +174,11 @@ export default function StatsPage() {
     const H = rect.height;
 
     const buckets = [
-      { key: "brief", label: "<50w", color: "rgba(56, 189, 248, 0.6)" },
-      { key: "medium", label: "50–200w", color: "rgba(20, 184, 166, 0.6)" },
-      { key: "detailed", label: "200–500w", color: "rgba(52, 211, 153, 0.6)" },
-      { key: "deep", label: "500–1Kw", color: "rgba(251, 191, 36, 0.6)" },
-      { key: "extensive", label: "1K+w", color: "rgba(248, 113, 113, 0.5)" },
+      { key: "brief", label: "<50w", color: "rgba(113, 113, 122, 0.5)" },
+      { key: "medium", label: "50–200w", color: "rgba(56, 189, 248, 0.5)" },
+      { key: "detailed", label: "200–500w", color: "rgba(20, 184, 166, 0.55)" },
+      { key: "deep", label: "500–1Kw", color: "rgba(20, 184, 166, 0.7)" },
+      { key: "extensive", label: "1K+w", color: "rgba(56, 189, 248, 0.7)" },
     ];
 
     const maxCount = Math.max(...buckets.map((b) => data.contentDepth[b.key] || 0), 1);
@@ -407,19 +407,19 @@ export default function StatsPage() {
               />
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 <span className="text-[9px] text-zinc-600">
-                  <span className="text-sky-400/60">■</span> Brief
+                  <span className="text-zinc-400/60">■</span> Brief
                 </span>
                 <span className="text-[9px] text-zinc-600">
-                  <span className="text-teal-400/60">■</span> Medium
+                  <span className="text-sky-400/60">■</span> Medium
                 </span>
                 <span className="text-[9px] text-zinc-600">
-                  <span className="text-emerald-400/60">■</span> Detailed
+                  <span className="text-teal-400/60">■</span> Detailed
                 </span>
                 <span className="text-[9px] text-zinc-600">
-                  <span className="text-amber-400/60">■</span> Deep
+                  <span className="text-teal-400/70">■</span> Deep
                 </span>
                 <span className="text-[9px] text-zinc-600">
-                  <span className="text-red-400/50">■</span> Extensive
+                  <span className="text-sky-400/70">■</span> Extensive
                 </span>
               </div>
             </div>
