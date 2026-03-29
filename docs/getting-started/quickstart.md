@@ -18,6 +18,7 @@ This quickstart is optimized for first value, not maximum configuration.
 - If you are deploying a public instance, do not rely on the single-user fallback.
 - Configure Google OAuth and set `ALLOW_SINGLE_USER_MODE=false`.
 - A public instance without auth behaves like a shared workspace.
+- See [Public Deployment Auth Guide](../auth/public-deployments.md) before going live.
 
 ## First Success
 

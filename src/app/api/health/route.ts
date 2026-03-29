@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
 import { dbHealthy } from '@/server/db';
 import { getIdentityMode, isGoogleAuthConfigured, isSingleUserModeEnabled } from '@/server/identity';
+import { getDatabaseConnectionDiagnostics } from '@/server/postgres-client';
 
 /**
  * GET /api/health — production health check
  */
 export async function GET() {
   const dbOk = await dbHealthy();
-  const hasDbUrl = !!process.env.DATABASE_URL;
+  const dbDiagnostics = getDatabaseConnectionDiagnostics(process.env.DATABASE_URL);
 
   const status = {
     status: dbOk ? 'healthy' : 'unhealthy',
     database: {
-      configured: hasDbUrl,
+      configured: dbDiagnostics.configured,
       connected: dbOk,
+      connection: dbDiagnostics,
     },
     providers: {
       openai: !!(process.env.OPENAI_API_KEY),

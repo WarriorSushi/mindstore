@@ -37,7 +37,18 @@ interface HealthData {
   activity: { day: string; count: number }[];
   plugins: { total: number; enabled: number };
   connections: number;
-  database: { version: string; serverTime: string; healthy: boolean };
+  database: {
+    version: string;
+    serverTime: string;
+    healthy: boolean;
+    connection?: {
+      configured: boolean;
+      hostKind: string;
+      sslRequired: boolean;
+      port: number | null;
+      preparedStatements: string;
+    };
+  };
 }
 
 type TabId = "providers" | "health" | "data";
@@ -269,6 +280,33 @@ export default function SettingsPage() {
             <span className="text-[12px] text-zinc-400">
               Embeddings: <span className="text-teal-300 font-medium">{settings.embeddingProvider}</span>
             </span>
+          </div>
+        </Stagger>
+      )}
+
+      {activeTab === "providers" && settings?.authStatus && (
+        <Stagger>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Identity mode</p>
+                <p className="mt-2 text-[15px] font-medium text-zinc-200">
+                  {settings.authStatus.identityMode === "google-oauth" ? "Google OAuth" :
+                    settings.authStatus.identityMode === "single-user" ? "Single-user fallback" : "Unconfigured"}
+                </p>
+                <p className="mt-1 text-[12px] leading-6 text-zinc-500">
+                  {settings.authStatus.googleConfigured
+                    ? "This deployment can issue real user sessions."
+                    : "Public deployments should configure Google OAuth before inviting users in."}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-right">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-zinc-600">Single-user fallback</p>
+                <p className={`mt-1 text-[12px] font-medium ${settings.authStatus.singleUserMode ? "text-amber-300" : "text-emerald-300"}`}>
+                  {settings.authStatus.singleUserMode ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+            </div>
           </div>
         </Stagger>
       )}
@@ -506,6 +544,13 @@ export default function SettingsPage() {
                     <p className="text-[11px] text-zinc-500 mt-0.5">
                       {health.database?.version || "Unknown DB"} · {health.memories.total.toLocaleString()} memories · {health.storage.totalSize}
                     </p>
+                    {health.database?.connection && (
+                      <p className="text-[10px] text-zinc-600 mt-1">
+                        {health.database.connection.hostKind} · port {health.database.connection.port ?? "?"} ·
+                        SSL {health.database.connection.sslRequired ? "required" : "unspecified"} ·
+                        prepared statements {health.database.connection.preparedStatements}
+                      </p>
+                    )}
                   </div>
                 </div>
 

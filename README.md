@@ -86,7 +86,7 @@ npm run migrate
 npm run dev
 ```
 
-For a public multi-user deployment, configure Google OAuth and set `ALLOW_SINGLE_USER_MODE=false`.
+For a public multi-user deployment, configure Google OAuth, set `ALLOW_SINGLE_USER_MODE=false`, and verify `/api/health` reports `identityMode: "google-oauth"`.
 
 ### Requirements
 

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getIdentityMode, isSingleUserModeEnabled } from '@/server/identity';
+import { getDatabaseConnectionDiagnostics } from '@/server/postgres-client';
 
 /**
  * GET /api/v1/health
@@ -13,6 +14,7 @@ import { getIdentityMode, isSingleUserModeEnabled } from '@/server/identity';
 export async function GET() {
   try {
     const userId = await getUserId();
+    const dbDiagnostics = getDatabaseConnectionDiagnostics(process.env.DATABASE_URL);
 
     // Run all checks in parallel
     const [
@@ -183,6 +185,7 @@ export async function GET() {
         version: dbInfo?.version?.split(' ').slice(0, 2).join(' ') || 'Unknown',
         serverTime: dbInfo?.server_time,
         healthy: dbHealth.status === 'fulfilled',
+        connection: dbDiagnostics,
       },
     });
   } catch (error: unknown) {

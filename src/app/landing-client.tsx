@@ -945,13 +945,13 @@ export function LandingClient() {
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10 grid lg:grid-cols-[1.5fr_1fr] gap-6 items-center">
           <div>
             <R>
-              <h2 className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-extrabold tracking-[-0.03em]">
-                MIT licensed. Self-hosted. Your data, your keys.
-              </h2>
+                <h2 className="text-[clamp(1.2rem,2.2vw,1.6rem)] font-extrabold tracking-[-0.03em]">
+                Self-hosted. Extensible. Your data, your keys.
+                </h2>
             </R>
             <R delay={0.06}>
               <p className="text-[14px] mt-2 leading-[1.7] text-zinc-500 max-w-[500px]">
-                Zero vendor lock-in. Zero AI costs for MindStore — you bring your own keys.
+                Zero vendor lock-in. Bring your own AI keys. Run it privately or enable Google sign-in for public multi-user deployments.
                 Plugin SDK for extending. Community-driven development.
               </p>
             </R>
@@ -984,13 +984,18 @@ export function LandingClient() {
             </h2>
           </R>
           <R delay={0.14}>
-            <p className="text-[14px] mt-4 text-zinc-500">Free · Self-hosted · MIT open source · No sign-up required</p>
+            <p className="text-[14px] mt-4 text-zinc-500">Free · Self-hosted · Open source · Public deployments should enable auth</p>
           </R>
           <R delay={0.2}>
             <div className="flex gap-3 justify-center mt-8 flex-wrap">
               <Link href="/app">
                 <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
                   Open MindStore <ArrowRight className="w-4 h-4 inline ml-1.5" />
+                </button>
+              </Link>
+              <Link href="/login">
+                <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
+                  Sign In
                 </button>
               </Link>
               <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer">
@@ -1006,7 +1011,7 @@ export function LandingClient() {
       {/* FOOTER */}
       <footer className="relative z-10 py-5 px-6 lg:px-10 flex flex-wrap items-center justify-between gap-3 text-[11px] text-zinc-700 max-w-[1200px] mx-auto"
         style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
-        <span>MindStore · MIT License</span>
+        <span>MindStore · open source memory infrastructure</span>
         <div className="flex gap-5">
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-500 transition">GitHub</a>
           <Link href="/docs" className="hover:text-zinc-500 transition">Docs</Link>

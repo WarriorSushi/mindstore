@@ -8,6 +8,8 @@ import {
   PROVIDER_CATALOG,
   RUNTIME_REQUIREMENTS,
 } from '@/server/runtime-requirements';
+import { getIdentityMode, isGoogleAuthConfigured, isSingleUserModeEnabled } from '@/server/identity';
+import { getDatabaseConnectionDiagnostics } from '@/server/postgres-client';
 
 interface SettingRow {
   key: string;
@@ -71,6 +73,12 @@ export async function GET() {
       runtimeRequirements: RUNTIME_REQUIREMENTS,
       providerCatalog: PROVIDER_CATALOG,
       providerAuthRoadmap: PROVIDER_AUTH_ROADMAP,
+      authStatus: {
+        googleConfigured: isGoogleAuthConfigured(),
+        singleUserMode: isSingleUserModeEnabled(),
+        identityMode: getIdentityMode(),
+      },
+      databaseConnection: getDatabaseConnectionDiagnostics(process.env.DATABASE_URL),
     });
   } catch (error: unknown) {
     console.error('[settings GET]', error);
@@ -90,6 +98,12 @@ export async function GET() {
       runtimeRequirements: RUNTIME_REQUIREMENTS,
       providerCatalog: PROVIDER_CATALOG,
       providerAuthRoadmap: PROVIDER_AUTH_ROADMAP,
+      authStatus: {
+        googleConfigured: isGoogleAuthConfigured(),
+        singleUserMode: isSingleUserModeEnabled(),
+        identityMode: getIdentityMode(),
+      },
+      databaseConnection: getDatabaseConnectionDiagnostics(process.env.DATABASE_URL),
       dbError: true,
     });
   }

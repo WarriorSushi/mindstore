@@ -64,6 +64,29 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 - `npm run build`
 - `npm run test:e2e`
 
+### 2026-03-30: Auth + Diagnostics Hardening
+
+#### Scope
+
+Follow-up to the trust slice. Convert the app from “auth exists somewhere in the backend” to “public deployments have an explicit login boundary”, and expose safe runtime diagnostics so Supabase/Vercel issues can be diagnosed without reading source.
+
+#### Changes Completed
+
+- Moved the large client-only `/app` shell into `src/components/AppShell.tsx`
+- Added a server `src/app/app/layout.tsx` wrapper that:
+  - allows private single-user installs to keep working
+  - redirects unauthenticated public users to `/login`
+  - shows a configuration redirect when single-user fallback is disabled but OAuth is still missing
+- Added `src/app/login/page.tsx` and `src/components/LoginButton.tsx`
+- Changed NextAuth sign-in page from `/app` to `/login`
+- Added sanitized DB connection diagnostics to `/api/health`, `/api/v1/health`, and `/api/v1/settings`
+- Updated Settings UI to show current identity mode
+- Updated landing/README/docs copy to stop implying that public no-auth mode is acceptable
+
+#### Why this slice matters
+
+This is the first product-level enforcement of multi-user boundaries. Public deployments now have a real path toward “each user gets their own workspace” rather than relying on hidden assumptions.
+
 All of the above passed on the topic branch.
 
 #### Production / Infra Outcome

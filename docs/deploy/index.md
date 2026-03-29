@@ -22,3 +22,4 @@ See [Deployment Modes](./deployment-modes.md) for the current target model.
 
 - [Deployment Modes](./deployment-modes.md)
 - [Deployment Checklist](./checklist.md)
+- [Public Deployment Auth Guide](../auth/public-deployments.md)
