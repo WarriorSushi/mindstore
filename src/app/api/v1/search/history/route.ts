@@ -3,6 +3,18 @@ import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getUserId } from '@/server/user';
 
+interface SearchHistoryRow extends Record<string, unknown> {
+  query: string;
+  result_count: number | string | null;
+  searched_at: Date | string | null;
+  times_searched: number | string | null;
+}
+
+interface SaveSearchHistoryBody {
+  query?: unknown;
+  resultCount?: unknown;
+}
+
 /**
  * GET /api/v1/search/history — recent searches
  * POST /api/v1/search/history — save a search query
@@ -36,19 +48,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
 
-    const results = await db.execute(sql`
+    const results = (await db.execute(sql`
       SELECT query, result_count, searched_at,
         COUNT(*) OVER (PARTITION BY query) as times_searched
       FROM search_history
       WHERE user_id = ${userId}::uuid
       ORDER BY searched_at DESC
       LIMIT ${limit}
-    `);
+    `)) as SearchHistoryRow[];
 
     // Deduplicate — show most recent of each unique query
     const seen = new Set<string>();
-    const unique = (results as any[]).filter(r => {
-      const q = r.query.toLowerCase();
+    const unique = results.filter((record) => {
+      if (!record.query) {
+        return false;
+      }
+      const q = record.query.toLowerCase();
       if (seen.has(q)) return false;
       seen.add(q);
       return true;
@@ -57,12 +72,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       searches: unique.map(r => ({
         query: r.query,
-        resultCount: r.result_count,
+        resultCount: Number.parseInt(String(r.result_count ?? 0), 10) || 0,
         searchedAt: r.searched_at,
-        timesSearched: parseInt(r.times_searched),
+        timesSearched: Number.parseInt(String(r.times_searched ?? 0), 10) || 0,
       })),
     });
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ searches: [] });
   }
 }
@@ -70,7 +85,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
-    const body = await req.json();
+    const body = (await req.json()) as SaveSearchHistoryBody;
     const { query, resultCount } = body;
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -81,7 +96,11 @@ export async function POST(req: NextRequest) {
 
     await db.execute(sql`
       INSERT INTO search_history (user_id, query, result_count)
-      VALUES (${userId}::uuid, ${query.trim()}, ${resultCount || 0})
+      VALUES (
+        ${userId}::uuid,
+        ${query.trim()},
+        ${typeof resultCount === 'number' && Number.isFinite(resultCount) ? resultCount : 0}
+      )
     `);
 
     // Keep only last 200 searches per user
@@ -97,18 +116,18 @@ export async function POST(req: NextRequest) {
     `);
 
     return NextResponse.json({ ok: true });
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ ok: false });
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE() {
   try {
     const userId = await getUserId();
     await ensureTable();
     await db.execute(sql`DELETE FROM search_history WHERE user_id = ${userId}::uuid`);
     return NextResponse.json({ ok: true });
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ ok: false });
   }
 }

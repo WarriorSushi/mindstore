@@ -3,6 +3,31 @@ import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getUserId } from '@/server/user';
 
+type FuzzySuggestionKind = 'title' | 'tag' | 'word';
+
+interface SimilaritySuggestionRow extends Record<string, unknown> {
+  term: string | null;
+  sim: number | string | null;
+  kind: Exclude<FuzzySuggestionKind, 'word'>;
+}
+
+interface DistanceSuggestionRow extends Record<string, unknown> {
+  term: string | null;
+  dist: number | string | null;
+  kind: 'word';
+}
+
+interface RankedSuggestion {
+  term: string;
+  kind: FuzzySuggestionKind;
+  score: number;
+}
+
+function toSuggestionScore(value: number | string | null | undefined, fallback: number): number {
+  const numeric = typeof value === 'number' ? value : Number.parseFloat(value ?? '');
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 /**
  * GET /api/v1/search/fuzzy?q=query
  * Returns "did you mean?" suggestions using trigram similarity
@@ -29,7 +54,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Strategy 1: Trigram similarity on source titles
-    let titleSuggestions: any[] = [];
+    let titleSuggestions: SimilaritySuggestionRow[] = [];
     try {
       titleSuggestions = (await db.execute(sql`
         SELECT DISTINCT source_title AS term,
@@ -42,7 +67,7 @@ export async function GET(req: NextRequest) {
           AND similarity(source_title, ${q}) > 0.15
         ORDER BY sim DESC
         LIMIT 5
-      `)) as any[];
+      `)) as SimilaritySuggestionRow[];
     } catch {
       // pg_trgm may not be available — fallback to ILIKE
       titleSuggestions = (await db.execute(sql`
@@ -52,11 +77,11 @@ export async function GET(req: NextRequest) {
           AND source_title IS NOT NULL
           AND source_title ILIKE ${'%' + q.slice(0, Math.max(3, q.length - 1)) + '%'}
         LIMIT 5
-      `)) as any[];
+      `)) as SimilaritySuggestionRow[];
     }
 
     // Strategy 2: Trigram similarity on tag names
-    let tagSuggestions: any[] = [];
+    let tagSuggestions: SimilaritySuggestionRow[] = [];
     try {
       tagSuggestions = (await db.execute(sql`
         SELECT name AS term,
@@ -67,14 +92,14 @@ export async function GET(req: NextRequest) {
           AND similarity(name, ${q}) > 0.15
         ORDER BY sim DESC
         LIMIT 3
-      `)) as any[];
+      `)) as SimilaritySuggestionRow[];
     } catch {
       // tags table or pg_trgm not available
     }
 
     // Strategy 3: Extract frequent words from content and find close matches
     // We sample words from recent memories and compute Levenshtein distance
-    let wordSuggestions: any[] = [];
+    let wordSuggestions: DistanceSuggestionRow[] = [];
     try {
       wordSuggestions = (await db.execute(sql`
         WITH words AS (
@@ -101,7 +126,7 @@ export async function GET(req: NextRequest) {
         FROM candidates
         ORDER BY dist ASC, length(word) ASC
         LIMIT 5
-      `)) as any[];
+      `)) as DistanceSuggestionRow[];
     } catch {
       // levenshtein requires fuzzystrmatch extension
       try {
@@ -132,7 +157,7 @@ export async function GET(req: NextRequest) {
           FROM candidates
           ORDER BY dist ASC, length(word) ASC
           LIMIT 5
-        `)) as any[];
+        `)) as DistanceSuggestionRow[];
       } catch {
         // Give up on word suggestions
       }
@@ -140,16 +165,22 @@ export async function GET(req: NextRequest) {
 
     // Merge and deduplicate
     const seen = new Set<string>();
-    const suggestions: Array<{ term: string; kind: string; score: number }> = [];
+    const suggestions: RankedSuggestion[] = [];
 
-    const all = [
-      ...titleSuggestions.map((r: any) => ({ term: r.term, kind: r.kind, score: parseFloat(r.sim) || 0.3 })),
-      ...tagSuggestions.map((r: any) => ({ term: r.term, kind: r.kind, score: parseFloat(r.sim) || 0.3 })),
-      ...wordSuggestions.map((r: any) => ({
-        term: r.term,
-        kind: r.kind,
-        score: 1 / (1 + (parseInt(r.dist) || 1)),
-      })),
+    const all: RankedSuggestion[] = [
+      ...titleSuggestions
+        .filter((row): row is SimilaritySuggestionRow & { term: string } => typeof row.term === 'string' && row.term.length > 0)
+        .map((row) => ({ term: row.term, kind: row.kind, score: toSuggestionScore(row.sim, 0.3) })),
+      ...tagSuggestions
+        .filter((row): row is SimilaritySuggestionRow & { term: string } => typeof row.term === 'string' && row.term.length > 0)
+        .map((row) => ({ term: row.term, kind: row.kind, score: toSuggestionScore(row.sim, 0.3) })),
+      ...wordSuggestions
+        .filter((row): row is DistanceSuggestionRow & { term: string } => typeof row.term === 'string' && row.term.length > 0)
+        .map((row) => ({
+          term: row.term,
+          kind: row.kind,
+          score: 1 / (1 + toSuggestionScore(row.dist, 1)),
+        })),
     ];
 
     all.sort((a, b) => b.score - a.score);

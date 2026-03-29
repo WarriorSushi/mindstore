@@ -24,8 +24,8 @@
  * This beats any single retrieval method. Period.
  */
 
-import { db, schema } from './db';
-import { sql, desc, eq, and, ilike } from 'drizzle-orm';
+import { db } from './db';
+import { sql } from 'drizzle-orm';
 
 export interface RetrievalResult {
   memoryId: string;
@@ -49,6 +49,53 @@ interface RetrievalOptions {
   dateFrom?: Date;
   dateTo?: Date;
   contentTypes?: string[];
+}
+
+type RetrievalMetadata = Record<string, unknown>;
+
+interface SearchRow {
+  memory_id: string;
+  content: string;
+  source_type: string;
+  source_title: string | null;
+  metadata: RetrievalMetadata | null;
+  created_at: Date | string | null;
+  rank_score?: number | string | null;
+  similarity?: number | string | null;
+  tree_path?: string | null;
+}
+
+interface TreeNodeRow {
+  id: string;
+  title: string;
+  summary: string | null;
+  memory_ids: string[] | null;
+  level: number;
+  similarity: number | string | null;
+}
+
+interface TreeIndexMemoryRow {
+  id: string;
+  content: string;
+  source_type: string;
+  source_title: string | null;
+  embedding: string | null;
+  tree_path: string | null;
+}
+
+interface RankedMemoryResult {
+  memoryId: string;
+  rank: number;
+  score: number;
+  content: string;
+  sourceType: string;
+  sourceTitle: string | null;
+  metadata: RetrievalMetadata;
+  createdAt: Date | null;
+}
+
+interface RankedTreeMemoryResult extends RankedMemoryResult {
+  treePath: string;
 }
 
 const RRF_K = 60; // Standard RRF constant
@@ -85,7 +132,7 @@ async function searchBM25(
   sourceTypes?: string[],
   dateFrom?: Date,
   dateTo?: Date,
-): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>> {
+): Promise<RankedMemoryResult[]> {
   // Convert query to tsquery format
   // Use OR between terms for broader recall — RRF ranking will sort quality
   const tsQuery = query
@@ -129,15 +176,15 @@ async function searchBM25(
     LIMIT ${limit}
   `);
 
-  return (results as any[]).map((r, i) => ({
+  return (results as unknown as SearchRow[]).map((r, i) => ({
     memoryId: r.memory_id,
     rank: i + 1,
-    score: r.rank_score,
+    score: Number(r.rank_score ?? 0),
     content: r.content,
     sourceType: r.source_type,
     sourceTitle: r.source_title,
-    metadata: r.metadata || {},
-    createdAt: r.created_at,
+    metadata: r.metadata ?? {},
+    createdAt: r.created_at instanceof Date || r.created_at === null ? r.created_at : new Date(r.created_at),
   }));
 }
 
@@ -152,7 +199,7 @@ async function searchVector(
   sourceTypes?: string[],
   dateFrom?: Date,
   dateTo?: Date,
-): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>> {
+): Promise<RankedMemoryResult[]> {
   const embeddingStr = `[${queryEmbedding.join(',')}]`;
   const embDim = queryEmbedding.length;
 
@@ -189,15 +236,15 @@ async function searchVector(
     LIMIT ${limit}
   `);
 
-  return (results as any[]).map((r, i) => ({
+  return (results as unknown as SearchRow[]).map((r, i) => ({
     memoryId: r.memory_id,
     rank: i + 1,
-    score: r.similarity,
+    score: Number(r.similarity ?? 0),
     content: r.content,
     sourceType: r.source_type,
     sourceTitle: r.source_title,
-    metadata: r.metadata || {},
-    createdAt: r.created_at,
+    metadata: r.metadata ?? {},
+    createdAt: r.created_at instanceof Date || r.created_at === null ? r.created_at : new Date(r.created_at),
   }));
 }
 
@@ -210,7 +257,7 @@ async function searchTree(
   queryEmbedding: number[],
   userId: string,
   limit: number,
-): Promise<Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null; treePath: string }>> {
+): Promise<RankedTreeMemoryResult[]> {
   const embeddingStr = `[${queryEmbedding.join(',')}]`;
   const embDim = queryEmbedding.length;
 
@@ -230,11 +277,12 @@ async function searchTree(
     LIMIT 5
   `);
 
-  if (!treeNodes?.length) return [];
+  const typedTreeNodes = treeNodes as unknown as TreeNodeRow[];
+  if (!typedTreeNodes.length) return [];
 
   // Step 2: Get memories from those tree nodes
-  const allMemoryIds = (treeNodes as any[])
-    .flatMap(n => n.memory_ids || [])
+  const allMemoryIds = typedTreeNodes
+    .flatMap((n) => n.memory_ids ?? [])
     .slice(0, limit * 2);
 
   if (!allMemoryIds.length) return [];
@@ -256,15 +304,15 @@ async function searchTree(
     LIMIT ${limit}
   `);
 
-  return (results as any[]).map((r, i) => ({
+  return (results as unknown as SearchRow[]).map((r, i) => ({
     memoryId: r.memory_id,
     rank: i + 1,
-    score: r.similarity,
+    score: Number(r.similarity ?? 0),
     content: r.content,
     sourceType: r.source_type,
     sourceTitle: r.source_title,
-    metadata: r.metadata || {},
-    createdAt: r.created_at,
+    metadata: r.metadata ?? {},
+    createdAt: r.created_at instanceof Date || r.created_at === null ? r.created_at : new Date(r.created_at),
     treePath: r.tree_path || '',
   }));
 }
@@ -277,9 +325,9 @@ async function searchTree(
  * k = 60 (standard)
  */
 function fuseResults(
-  bm25: Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>,
-  vector: Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }>,
-  tree: Array<{ memoryId: string; rank: number; score: number; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null; treePath?: string }>,
+  bm25: RankedMemoryResult[],
+  vector: RankedMemoryResult[],
+  tree: RankedTreeMemoryResult[],
   limit: number,
 ): RetrievalResult[] {
   const fusedMap = new Map<string, RetrievalResult>();
@@ -304,7 +352,7 @@ function fuseResults(
   for (const r of tree) {
     const existing = fusedMap.get(r.memoryId) || createEmptyResult(r);
     existing.score += 1.2 / (RRF_K + r.rank); // 20% weight boost for tree results
-    existing.layers.tree = { rank: r.rank, score: r.score, path: (r as any).treePath || '' };
+    existing.layers.tree = { rank: r.rank, score: r.score, path: r.treePath };
     fusedMap.set(r.memoryId, existing);
   }
 
@@ -313,7 +361,7 @@ function fuseResults(
     .slice(0, limit);
 }
 
-function createEmptyResult(r: { memoryId: string; content: string; sourceType: string; sourceTitle: string | null; metadata: any; createdAt: Date | null }): RetrievalResult {
+function createEmptyResult(r: RankedMemoryResult): RetrievalResult {
   return {
     memoryId: r.memoryId,
     content: r.content,
@@ -342,11 +390,12 @@ export async function buildTreeIndex(userId: string): Promise<void> {
     ORDER BY source_type, created_at
   `);
 
-  if (!allMemories?.length) return;
+  const typedMemories = allMemories as unknown as TreeIndexMemoryRow[];
+  if (!typedMemories.length) return;
 
   // Group by source type (Level 1 nodes)
-  const bySource = new Map<string, any[]>();
-  for (const mem of allMemories as any[]) {
+  const bySource = new Map<string, TreeIndexMemoryRow[]>();
+  for (const mem of typedMemories) {
     const key = mem.source_type;
     if (!bySource.has(key)) bySource.set(key, []);
     bySource.get(key)!.push(mem);
@@ -362,7 +411,9 @@ export async function buildTreeIndex(userId: string): Promise<void> {
     
     // Average embedding for this source cluster
     const avgEmbedding = averageEmbeddings(
-      memories.filter((m: any) => m.embedding).map((m: any) => JSON.parse(m.embedding))
+      memories
+        .map((memory) => parseEmbedding(memory.embedding))
+        .filter((embedding): embedding is number[] => embedding.length > 0)
     );
 
     await db.execute(sql`
@@ -371,13 +422,13 @@ export async function buildTreeIndex(userId: string): Promise<void> {
         ${sourceNodeId}, ${userId}, ${sourceType},
         ${`${memories.length} memories from ${sourceType}`},
         1,
-        ${memories.map((m: any) => m.id)}::uuid[],
+        ${memories.map((memory) => memory.id)}::uuid[],
         ${avgEmbedding ? `[${avgEmbedding.join(',')}]` : null}::vector
       )
     `);
 
     // Level 2: Group by source_title within each source type
-    const byTitle = new Map<string, any[]>();
+    const byTitle = new Map<string, TreeIndexMemoryRow[]>();
     for (const mem of memories) {
       const title = mem.source_title || 'Untitled';
       if (!byTitle.has(title)) byTitle.set(title, []);
@@ -388,7 +439,9 @@ export async function buildTreeIndex(userId: string): Promise<void> {
       if (titleMemories.length < 2) continue; // skip tiny groups
       
       const titleAvgEmb = averageEmbeddings(
-        titleMemories.filter((m: any) => m.embedding).map((m: any) => JSON.parse(m.embedding))
+        titleMemories
+          .map((memory) => parseEmbedding(memory.embedding))
+          .filter((embedding): embedding is number[] => embedding.length > 0)
       );
 
       await db.execute(sql`
@@ -397,7 +450,7 @@ export async function buildTreeIndex(userId: string): Promise<void> {
           ${crypto.randomUUID()}, ${userId}, ${title},
           ${`${titleMemories.length} memories about "${title}"`},
           2, ${sourceNodeId},
-          ${titleMemories.map((m: any) => m.id)}::uuid[],
+          ${titleMemories.map((memory) => memory.id)}::uuid[],
           ${titleAvgEmb ? `[${titleAvgEmb.join(',')}]` : null}::vector
         )
       `);
@@ -418,4 +471,21 @@ function averageEmbeddings(embeddings: number[][]): number[] | null {
     avg[i] /= embeddings.length;
   }
   return avg;
+}
+
+function parseEmbedding(value: string | null): number[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((entry): entry is number => typeof entry === 'number');
+  } catch {
+    return [];
+  }
 }

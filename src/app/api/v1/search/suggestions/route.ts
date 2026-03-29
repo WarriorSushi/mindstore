@@ -3,6 +3,36 @@ import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
 import { getUserId } from '@/server/user';
 
+type SuggestionType = 'source' | 'tag' | 'type' | 'topic';
+
+interface SearchSuggestionRow extends Record<string, unknown> {
+  text: string | null;
+  type: SuggestionType;
+  count?: number | string | null;
+}
+
+interface PopularTopicRow extends Record<string, unknown> {
+  text: string | null;
+  type: string | null;
+  count?: number | string | null;
+}
+
+interface SearchSuggestion {
+  type: SuggestionType;
+  text: string;
+  count?: number;
+  sourceType?: string | null;
+}
+
+function normalizeCount(value: number | string | null | undefined): number | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  const numeric = typeof value === 'number' ? value : Number.parseInt(value, 10);
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
 /**
  * GET /api/v1/search/suggestions?q=partial
  * Returns search suggestions based on:
@@ -80,25 +110,25 @@ export async function GET(req: NextRequest) {
 
     // Merge and deduplicate
     const seen = new Set<string>();
-    const suggestions: Array<{ type: string; text: string; count?: number }> = [];
+    const suggestions: SearchSuggestion[] = [];
 
-    const addResult = (r: any) => {
-      const key = (r.text || '').toLowerCase();
+    const addResult = (row: SearchSuggestionRow) => {
+      const key = (row.text || '').toLowerCase();
       if (key && !seen.has(key)) {
         seen.add(key);
         suggestions.push({
-          type: r.type,
-          text: r.text,
-          count: r.count ? parseInt(r.count) : undefined,
+          type: row.type,
+          text: row.text ?? '',
+          count: normalizeCount(row.count),
         });
       }
     };
 
     // Prioritize: source titles > tags > source types > topics
-    for (const r of titleResults as any[]) addResult(r);
-    for (const r of tagResults as any[]) addResult({ ...r, text: r.text });
-    for (const r of sourceTypeResults as any[]) addResult(r);
-    for (const r of topicResults as any[]) addResult(r);
+    for (const row of titleResults as SearchSuggestionRow[]) addResult(row);
+    for (const row of tagResults as SearchSuggestionRow[]) addResult(row);
+    for (const row of sourceTypeResults as SearchSuggestionRow[]) addResult(row);
+    for (const row of topicResults as SearchSuggestionRow[]) addResult(row);
 
     return NextResponse.json({ suggestions: suggestions.slice(0, 8) });
   } catch (error) {
@@ -110,9 +140,9 @@ export async function GET(req: NextRequest) {
 /**
  * Get popular topics from user's data when no query is typed
  */
-async function getPopularTopics(userId: string) {
+async function getPopularTopics(userId: string): Promise<SearchSuggestion[]> {
   try {
-    const results = await db.execute(sql`
+    const results = (await db.execute(sql`
       SELECT source_title AS text, source_type AS type,
         COUNT(*)::int AS count
       FROM memories
@@ -122,13 +152,15 @@ async function getPopularTopics(userId: string) {
       GROUP BY source_title, source_type
       ORDER BY count DESC
       LIMIT 6
-    `);
+    `)) as PopularTopicRow[];
 
-    return (results as any[]).map(r => ({
+    return results
+      .filter((row): row is PopularTopicRow & { text: string } => typeof row.text === 'string' && row.text.length > 0)
+      .map((row) => ({
       type: 'topic',
-      text: r.text,
-      sourceType: r.type,
-      count: r.count,
+      text: row.text,
+      sourceType: row.type,
+      count: normalizeCount(row.count),
     }));
   } catch {
     return [];

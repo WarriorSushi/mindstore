@@ -4,6 +4,36 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-29
 
+### 2026-03-29 22:05 IST: Search and Retrieval Stabilization Slice
+
+#### Scope
+
+- Take the next trunk-only stabilization batch from `main`.
+- Clean up the search/discovery API path and the shared retrieval engine.
+- Ratchet `lint:ci` forward to include the stabilized search slice.
+
+#### Changes Completed
+
+- Typed and cleaned the search endpoints:
+  - `src/app/api/v1/search/route.ts`
+  - `src/app/api/v1/search/fuzzy/route.ts`
+  - `src/app/api/v1/search/history/route.ts`
+  - `src/app/api/v1/search/suggestions/route.ts`
+- Removed broad `any` casts in `src/server/retrieval.ts` and replaced them with narrow row/result types for BM25, vector, and tree retrieval.
+- Added safer local parsing helpers for numeric result fields and stored embeddings.
+- Removed stale unused imports and request/error variables in the search slice.
+- Expanded `npm run lint:ci` in `package.json` so it now includes the stabilized search/retrieval files in addition to the earlier docs/UI slice.
+
+#### Verification
+
+- `npm run lint:ci`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+- `npm run test:e2e`
+
+All of the above passed on the topic branch before merge.
+
 ### 2026-03-29 20:40 IST: Trunk Takeover + Mirror Branch Rules
 
 #### Scope

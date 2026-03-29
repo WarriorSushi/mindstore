@@ -31,7 +31,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/proxy.ts src/app/app/collections/page.tsx src/app/app/duplicates/page.tsx src/app/app/explore/page.tsx src/app/app/languages/page.tsx src/app/app/paths/page.tsx src/app/app/writing/page.tsx src/components/DidYouMean.tsx src/components/EmptyFeatureState.tsx src/components/SavedSearchPills.tsx src/components/SearchResultCard.tsx src/components/SearchStats.tsx",
+    "lint:ci": "eslint mindstore.config.ts src/app/docs src/lib/docs.ts src/proxy.ts src/app/app/collections/page.tsx src/app/app/duplicates/page.tsx src/app/app/explore/page.tsx src/app/app/languages/page.tsx src/app/app/paths/page.tsx src/app/app/writing/page.tsx src/components/DidYouMean.tsx src/components/EmptyFeatureState.tsx src/components/SavedSearchPills.tsx src/components/SearchResultCard.tsx src/components/SearchStats.tsx src/app/api/v1/search/route.ts src/app/api/v1/search/fuzzy/route.ts src/app/api/v1/search/history/route.ts src/app/api/v1/search/suggestions/route.ts src/server/retrieval.ts",
     "lint:backlog": "eslint src/server src/app/api src/app/app src/components packages tests extensions",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "test": "vitest run",

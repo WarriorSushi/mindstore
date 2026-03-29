@@ -1,10 +1,8 @@
 import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
-import { db, schema } from '@/server/db';
 import { retrieve } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { processQuery } from '@/server/query-processor';
-import { sql } from 'drizzle-orm';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 
 /**
