@@ -195,7 +195,14 @@ export default function SettingsPage() {
         });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
         const data = await res.json();
-        remaining = data.remaining;
+        if (data?.job?.status === "blocked" || data?.job?.status === "failed") {
+          throw new Error(data.message || "Embedding backfill could not continue");
+        }
+        const nextRemaining = typeof data.remaining === "number" ? data.remaining : remaining;
+        if (nextRemaining >= remaining && (!data.processed || data.processed === 0) && data?.job?.status !== "completed") {
+          throw new Error(data.message || "Embedding backfill made no progress");
+        }
+        remaining = nextRemaining;
         if (remaining > 0) toast(`${data.processed} done, ${remaining} remaining…`);
       }
       toast.success("All memories now have embeddings!");

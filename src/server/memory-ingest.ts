@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { generateEmbeddings } from "@/server/embeddings";
+import { scheduleEmbeddingBackfill } from "@/server/indexing-jobs";
 
 export interface MemoryCreateInput {
   userId: string;
@@ -59,8 +60,23 @@ export async function createMemory(input: MemoryCreateInput) {
     `);
   }
 
+  const indexingJob = !embStr
+    ? await scheduleEmbeddingBackfill({
+        userId: input.userId,
+        requestedCount: 1,
+        reason: "single-memory-created-without-embedding",
+        metadata: {
+          sourceType: input.sourceType || "text",
+          sourceTitle: input.sourceTitle || null,
+          surface: "memory-ingest",
+        },
+      })
+    : null;
+
   return {
     id,
     embedded: !!embStr,
+    indexingQueued: !!indexingJob,
+    indexingJobId: indexingJob?.id ?? null,
   };
 }

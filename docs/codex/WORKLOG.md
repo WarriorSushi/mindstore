@@ -23,6 +23,36 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 The login flow is the trust boundary for public deployments. Breaking it makes the rest of the multi-user work irrelevant. This also resets the repo around a concrete completion program instead of a drifting feature list.
 
+### 2026-03-30 03:45 IST: Import and Indexing Durability
+
+#### Scope
+
+- Make imports tell the truth when embeddings are skipped.
+- Add a durable backfill path instead of leaving large imports permanently half-indexed.
+- Surface backfill state through the reindex API and operator docs.
+
+#### Changes Completed
+
+- Added `indexing_jobs` to the canonical schema and migration.
+- Added `src/server/indexing-jobs.ts` for:
+  - indexing snapshot/status
+  - embedding backfill scheduling
+  - batch processing
+- Added `src/server/run-indexing-jobs.ts` and `npm run jobs:run-indexing`.
+- Updated `src/server/import-service.ts` so plugin/capture imports queue backfill jobs when vectors are skipped.
+- Updated `src/app/api/v1/import/route.ts` so the core import route also queues and reports indexing work.
+- Updated `src/server/memory-ingest.ts` so single-memory creation can queue backfill when embeddings are unavailable.
+- Reworked `src/app/api/v1/reindex/route.ts` to expose the latest job state and run or queue batches through the shared indexing service.
+- Updated `src/app/app/settings/page.tsx` to stop infinite reindex loops when a job is blocked or fails.
+- Added:
+  - `tests/unit/indexing-jobs.test.ts`
+  - `docs/api-reference/reindex.md`
+  - `docs/releases/2026-03-30-import-indexing-durability.md`
+
+#### Why this slice matters
+
+The old behavior was functional for demos but misleading for real users. This slice makes indexing recoverable and visible, which is necessary before claiming imports are production-ready.
+
 ### 2026-03-30 02:25 IST: Phase 0 + Phase 1 Trust Slice
 
 #### Scope

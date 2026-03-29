@@ -368,3 +368,25 @@ export const imageAnalyses = pgTable('image_analyses', {
 }, (table) => [
   index('idx_image_analyses_user').on(table.userId, table.createdAt),
 ]);
+
+export const indexingJobs = pgTable('indexing_jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  jobType: text('job_type').notNull(),
+  status: text('status').notNull().default('pending'),
+  reason: text('reason'),
+  provider: text('provider'),
+  requestedCount: integer('requested_count').default(0).notNull(),
+  processedCount: integer('processed_count').default(0).notNull(),
+  remainingCount: integer('remaining_count').default(0).notNull(),
+  lastError: text('last_error'),
+  metadata: jsonb('metadata').default({}).notNull(),
+  scheduledAt: timestamp('scheduled_at').defaultNow(),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_indexing_jobs_user').on(table.userId, table.scheduledAt),
+  index('idx_indexing_jobs_status').on(table.status, table.scheduledAt),
+  index('idx_indexing_jobs_user_type').on(table.userId, table.jobType, table.status),
+]);

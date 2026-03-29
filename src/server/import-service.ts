@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
 import { generateEmbeddings } from "@/server/embeddings";
 import { buildTreeIndex } from "@/server/retrieval";
+import { scheduleEmbeddingBackfill } from "@/server/indexing-jobs";
 
 export type MemoryContentType =
   | "text"
@@ -39,6 +40,11 @@ export interface ImportSummary {
   chunks: number;
   embedded: number;
   embeddingsSkipped: boolean;
+  indexing: {
+    queued: boolean;
+    jobId: string | null;
+    pendingEmbeddings: number;
+  };
 }
 
 export function sanitizeImportDocuments(documents: ImportDocument[]): ImportDocument[] {
@@ -123,6 +129,8 @@ export async function importDocuments({
     }
   }
 
+  let insertedWithoutEmbeddings = 0;
+
   const BATCH_SIZE = 50;
 
   for (let batchStart = 0; batchStart < allChunks.length; batchStart += BATCH_SIZE) {
@@ -167,6 +175,7 @@ export async function importDocuments({
           )
         `);
       } else {
+        insertedWithoutEmbeddings += 1;
         await db.execute(sql`
           INSERT INTO memories (
             id,
@@ -203,11 +212,33 @@ export async function importDocuments({
     console.error("Tree index build failed (non-fatal):", error);
   }
 
+  const indexingJob =
+    insertedWithoutEmbeddings > 0
+      ? await scheduleEmbeddingBackfill({
+          userId,
+          requestedCount: insertedWithoutEmbeddings,
+          reason:
+            allChunks.length > MAX_EMBED_CHUNKS
+              ? "import-too-large-for-inline-embedding"
+              : "embedding-provider-unavailable-during-import",
+          metadata: {
+            surface: "import-service",
+            documents: sanitizedDocuments.length,
+            sourceTypes: [...new Set(sanitizedDocuments.map((document) => document.sourceType))],
+          },
+        })
+      : null;
+
   return {
     documents: sanitizedDocuments.length,
     chunks: allChunks.length,
     embedded: embeddings ? embeddings.length : 0,
     embeddingsSkipped: allChunks.length > MAX_EMBED_CHUNKS,
+    indexing: {
+      queued: !!indexingJob,
+      jobId: indexingJob?.id ?? null,
+      pendingEmbeddings: insertedWithoutEmbeddings,
+    },
   };
 }
 

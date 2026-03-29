@@ -420,6 +420,39 @@ async function migrate() {
     ON image_analyses (user_id, created_at DESC)
   `);
 
+  // Indexing/backfill jobs
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS indexing_jobs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      job_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      reason TEXT,
+      provider TEXT,
+      requested_count INT NOT NULL DEFAULT 0,
+      processed_count INT NOT NULL DEFAULT 0,
+      remaining_count INT NOT NULL DEFAULT 0,
+      last_error TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      scheduled_at TIMESTAMPTZ DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_indexing_jobs_user
+    ON indexing_jobs (user_id, scheduled_at DESC)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_indexing_jobs_status
+    ON indexing_jobs (status, scheduled_at DESC)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_indexing_jobs_user_type
+    ON indexing_jobs (user_id, job_type, status)
+  `);
+
   // Indexes for performance
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(user_id, source_type)`);

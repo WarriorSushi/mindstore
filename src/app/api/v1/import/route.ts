@@ -6,6 +6,7 @@ import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
 import JSZip from 'jszip';
+import { scheduleEmbeddingBackfill } from '@/server/indexing-jobs';
 
 /**
  * Clean a filename into a readable title.
@@ -315,6 +316,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const actuallyImported = totalChunks - skippedDuplicates;
+    const pendingEmbeddings = Math.max(actuallyImported - (embeddings?.length || 0), 0);
+    const indexingJob = pendingEmbeddings > 0
+      ? await scheduleEmbeddingBackfill({
+          userId,
+          requestedCount: pendingEmbeddings,
+          reason: allChunks.length > MAX_EMBED_CHUNKS
+            ? 'import-too-large-for-inline-embedding'
+            : 'embedding-provider-unavailable-during-import',
+          metadata: {
+            surface: 'api:v1:import',
+            documents: documents.length,
+            sourceTypes: [...new Set(documents.map(d => d.sourceType))],
+          },
+        })
+      : null;
+
     // Rebuild tree index after import
     try {
       await buildTreeIndex(userId);
@@ -341,7 +359,12 @@ export async function POST(req: NextRequest) {
         embedded: embeddings ? embeddings.length : 0,
         embeddingsSkipped: allChunks.length > MAX_EMBED_CHUNKS,
         duplicatesSkipped: skippedDuplicates,
-        actuallyImported: totalChunks - skippedDuplicates,
+        actuallyImported,
+        indexing: {
+          queued: !!indexingJob,
+          jobId: indexingJob?.id ?? null,
+          pendingEmbeddings,
+        },
       },
     });
   } catch (error: unknown) {
