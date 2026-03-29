@@ -106,6 +106,26 @@ Remove the split-brain provider logic between `/api/v1/chat` and `src/server/ai-
 
 Chat is part of the core product loop. It should not carry a separate provider-selection and decryption stack from the plugins. This slice makes provider fixes apply to both chat and plugin features at once.
 
+### 2026-03-30: Supabase SSL Hardening
+
+#### Scope
+
+Remove the remaining production footgun around Supabase connection strings on Vercel.
+
+#### Changes Completed
+
+- Auto-force SSL for Supabase pooler and direct hosts in `src/server/postgres-client.ts`
+- Kept prepared statements disabled for Supabase transaction poolers
+- Added unit coverage for:
+  - pooler detection
+  - forced SSL
+  - diagnostics output
+- Verified locally against the real project’s pooler URL shape **without** `sslmode=require`
+
+#### Why this slice matters
+
+The live health route showed that production had the correct Supabase pooler host but `sslRequired=false`. That meant the environment variable format, not the database itself, was the blocker. This change makes MindStore tolerant of that common Vercel/Supabase misconfiguration.
+
 All of the above passed on the topic branch.
 
 #### Production / Infra Outcome

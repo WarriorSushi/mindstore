@@ -106,6 +106,7 @@ export const DOC_FILES = [
   "releases/2026-03-30-auth-and-diagnostics-hardening.md",
   "releases/2026-03-30-chat-provider-unification.md",
   "releases/2026-03-30-phase0-phase1-hardening.md",
+  "releases/2026-03-30-supabase-ssl-hardening.md",
   "search-and-chat/index.md",
   "troubleshooting/index.md",
 ] as const;

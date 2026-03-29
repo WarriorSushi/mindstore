@@ -1,10 +1,34 @@
-export function usesSupabaseTransactionPooler(connectionString: string): boolean {
+function getConnectionHostKind(connectionString: string): DatabaseConnectionDiagnostics["hostKind"] {
   try {
     const url = new URL(connectionString);
-    return url.hostname.includes("pooler.supabase.com") && url.port === "6543";
+    const hostname = url.hostname.toLowerCase();
+    if (hostname.includes("pooler.supabase.com")) {
+      return "supabase-pooler";
+    }
+    if (hostname.includes(".supabase.co")) {
+      return "supabase-direct";
+    }
+    return "other";
   } catch {
-    return /pooler\.supabase\.com:6543/i.test(connectionString);
+    if (/pooler\.supabase\.com/i.test(connectionString)) {
+      return "supabase-pooler";
+    }
+    if (/\.supabase\.co/i.test(connectionString)) {
+      return "supabase-direct";
+    }
+    return "invalid";
   }
+}
+
+export function usesSupabaseTransactionPooler(connectionString: string): boolean {
+  return getConnectionHostKind(connectionString) === "supabase-pooler" &&
+    (() => {
+      try {
+        return new URL(connectionString).port === "6543";
+      } catch {
+        return /pooler\.supabase\.com:6543/i.test(connectionString);
+      }
+    })();
 }
 
 export interface DatabaseConnectionDiagnostics {
@@ -28,16 +52,9 @@ export function getDatabaseConnectionDiagnostics(connectionString?: string): Dat
 
   try {
     const url = new URL(connectionString);
-    const hostname = url.hostname.toLowerCase();
-    const sslRequired = url.searchParams.get("sslmode") === "require";
+    const hostKind = getConnectionHostKind(connectionString);
+    const sslRequired = url.searchParams.get("sslmode") === "require" || hostKind !== "other";
     const port = url.port ? Number(url.port) : null;
-
-    let hostKind: DatabaseConnectionDiagnostics["hostKind"] = "other";
-    if (hostname.includes("pooler.supabase.com")) {
-      hostKind = "supabase-pooler";
-    } else if (hostname.includes(".supabase.co")) {
-      hostKind = "supabase-direct";
-    }
 
     return {
       configured: true,
@@ -49,7 +66,7 @@ export function getDatabaseConnectionDiagnostics(connectionString?: string): Dat
   } catch {
     return {
       configured: true,
-      hostKind: "invalid",
+      hostKind: getConnectionHostKind(connectionString),
       sslRequired: false,
       port: null,
       preparedStatements: "enabled",
@@ -60,9 +77,13 @@ export function getDatabaseConnectionDiagnostics(connectionString?: string): Dat
 export function getPostgresClientOptions<T extends Record<string, unknown>>(
   connectionString: string,
   options: T,
-): T & { prepare: boolean } {
+): T & { prepare: boolean; ssl?: "require" } {
+  const hostKind = getConnectionHostKind(connectionString);
   return {
     ...options,
     prepare: usesSupabaseTransactionPooler(connectionString) ? false : true,
+    ...(hostKind === "supabase-pooler" || hostKind === "supabase-direct"
+      ? { ssl: "require" as const }
+      : {}),
   };
 }
