@@ -2,6 +2,50 @@
 
 This file is the durable engineering log for Codex work in `codex/*` branches.
 
+## Session: 2026-03-29
+
+### 2026-03-29 14:45 UTC: Production Hotfix + Codex Resync
+
+#### Scope
+
+- Repair the `main` deployment failure on Vercel.
+- Bring `codex/local-dev` back onto the real mainline after it fell behind the public `main` branch.
+- Remove the highest-signal Next 16 build warnings on the converged codex branch.
+
+#### Changes Completed
+
+- Fixed the production build blocker on `main`:
+  - restored the missing `EmptyFeatureState` import on `src/app/app/duplicates/page.tsx`
+  - repaired partially landed Explore UI by adding:
+    - `src/components/SavedSearchPills.tsx`
+    - `src/components/SearchStats.tsx`
+    - `src/components/DidYouMean.tsx`
+    - `src/components/SearchResultCard.tsx`
+  - removed dangling references in `src/app/app/explore/page.tsx` to unshipped autocomplete and advanced-filter surfaces
+
+- Merged the hotfix to `main` and verified Vercel production recovered successfully.
+
+- Fast-forwarded `codex/local-dev` from stale commit `54bce70` to current `main`, making codex inherit the entire public mainline again.
+
+- Cleaned up two Next 16 warnings on codex:
+  - renamed `src/middleware.ts` to `src/proxy.ts` and updated the exported function from `middleware` to `proxy`
+  - removed the custom `/_next/static/:path*` cache-control override from `next.config.ts`
+
+- Tightened docs filesystem scoping in `src/lib/docs.ts` to a statically scoped `docs/` root. The Turbopack NFT warning still remains, but it is now explicitly documented as non-blocking.
+
+#### Verification
+
+- `npx tsc --noEmit`
+- `npm run build`
+- Vercel production deployment for `main` reached `READY`
+
+#### Convergence Status
+
+- `main` is now the public source of truth.
+- `codex/local-dev` has been fast-forwarded onto `main`.
+- The public `origin/frain/improve` ref is still behind the effective product state visible on `main`.
+- Going forward, codex should branch from current `main`, and frain should pull from `main` instead of continuing from the older public ref.
+
 ## Session: 2026-03-26
 
 ### 2026-03-26 05:30 UTC: Shared Utility Test Coverage + Gap Audit (Frain)

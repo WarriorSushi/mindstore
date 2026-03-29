@@ -4,6 +4,11 @@ Date: March 25, 2026
 
 This document turns codex/frain convergence into an explicit program instead of a sequence of isolated ports.
 
+> Update on March 29, 2026:
+> `main` now contains the live production hotfix plus the public feature superset that had previously outpaced `origin/codex/local-dev`.
+> `codex/local-dev` has been fast-forwarded onto `main`, so codex is re-anchored to the current public mainline again.
+> The remaining convergence task is no longer “port codex up to main”; it is “keep codex and frain rebased on main so divergence stops reopening.”
+
 ## Current State
 
 ### Codex Strengths
