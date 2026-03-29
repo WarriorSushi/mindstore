@@ -20,30 +20,12 @@ interface SaveSearchHistoryBody {
  * POST /api/v1/search/history — save a search query
  * DELETE /api/v1/search/history — clear search history
  * 
- * Auto-creates the search_history table if it doesn't exist.
+ * Requires the `search_history` table from the main migration.
  */
-
-async function ensureTable() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS search_history (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL,
-      query TEXT NOT NULL,
-      result_count INT DEFAULT 0,
-      searched_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-  // Index for fast lookup
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_search_history_user 
-    ON search_history (user_id, searched_at DESC)
-  `).catch(() => {});
-}
 
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId();
-    await ensureTable();
 
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
@@ -92,8 +74,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'query required' }, { status: 400 });
     }
 
-    await ensureTable();
-
     await db.execute(sql`
       INSERT INTO search_history (user_id, query, result_count)
       VALUES (
@@ -124,7 +104,6 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   try {
     const userId = await getUserId();
-    await ensureTable();
     await db.execute(sql`DELETE FROM search_history WHERE user_id = ${userId}::uuid`);
     return NextResponse.json({ ok: true });
   } catch {

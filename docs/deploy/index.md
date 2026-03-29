@@ -17,3 +17,8 @@ See [Deployment Modes](./deployment-modes.md) for the current target model.
 - Which services are optional.
 - How to migrate and verify the database.
 - How to troubleshoot provider and auth issues.
+
+## Recommended Reading
+
+- [Deployment Modes](./deployment-modes.md)
+- [Deployment Checklist](./checklist.md)

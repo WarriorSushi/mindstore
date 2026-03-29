@@ -2,6 +2,7 @@ import { getUserId } from '@/server/user';
 import { NextResponse } from 'next/server';
 import { db } from '@/server/db';
 import { sql } from 'drizzle-orm';
+import { getIdentityMode, isSingleUserModeEnabled } from '@/server/identity';
 
 /**
  * GET /api/v1/health
@@ -169,6 +170,11 @@ export async function GET() {
       plugins: {
         total: parseInt(plugins?.total || '0'),
         enabled: parseInt(plugins?.enabled || '0'),
+      },
+
+      auth: {
+        identityMode: getIdentityMode(),
+        singleUserMode: isSingleUserModeEnabled(),
       },
 
       connections: parseInt(connections?.count || '0'),

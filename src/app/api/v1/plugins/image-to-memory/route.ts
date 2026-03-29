@@ -18,7 +18,6 @@ import {
   getVisionConfig,
   analyzeImage,
   ensureInstalled,
-  ensureImageTable,
   listImages,
   getImageStats,
   storeAnalysis,
@@ -34,9 +33,7 @@ import {
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await ensureInstalled();
-    await ensureImageTable();
     const action = req.nextUrl.searchParams.get("action") || "images";
 
     if (action === "images") {
@@ -65,9 +62,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await ensureInstalled();
-    await ensureImageTable();
     const contentType = req.headers.get("content-type") || "";
 
     // ─── Analyze: multipart upload ─────────────────────────────

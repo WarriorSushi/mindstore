@@ -11,35 +11,14 @@ import { getUserId } from '@/server/user';
  * GET /api/v1/chat/history/[id] — get a specific conversation
  * DELETE /api/v1/chat/history — delete conversations
  * 
- * Auto-creates the chat_conversations table.
+ * Requires the `chat_conversations` table from the main migration.
  */
-
-async function ensureTable() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS chat_conversations (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL,
-      title TEXT NOT NULL DEFAULT 'New conversation',
-      messages JSONB NOT NULL DEFAULT '[]'::jsonb,
-      model TEXT,
-      memory_count INT DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_chat_convos_user 
-    ON chat_conversations (user_id, updated_at DESC)
-  `).catch(() => {});
-}
 
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const conversationId = searchParams.get('id');
-    
-    await ensureTable();
 
     // Get specific conversation
     if (conversationId) {
@@ -89,8 +68,6 @@ export async function POST(req: NextRequest) {
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
-
-    await ensureTable();
 
     const msgJson = JSON.stringify(messages);
 
@@ -142,8 +119,6 @@ export async function DELETE(req: NextRequest) {
     const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-
-    await ensureTable();
 
     if (id) {
       await db.execute(sql`

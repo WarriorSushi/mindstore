@@ -308,3 +308,63 @@ export const notifications = pgTable('notifications', {
   index('idx_notifications_user_read').on(table.userId, table.read),
   index('idx_notifications_created').on(table.createdAt),
 ]);
+
+export const searchHistory = pgTable('search_history', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  query: text('query').notNull(),
+  resultCount: integer('result_count').default(0),
+  searchedAt: timestamp('searched_at').defaultNow(),
+}, (table) => [
+  index('idx_search_history_user').on(table.userId, table.searchedAt),
+]);
+
+export const chatConversations = pgTable('chat_conversations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title').notNull().default('New conversation'),
+  messages: jsonb('messages').default([]).notNull(),
+  model: text('model'),
+  memoryCount: integer('memory_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  index('idx_chat_convos_user').on(table.userId, table.updatedAt),
+]);
+
+export const memoryReviews = pgTable('memory_reviews', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  memoryId: uuid('memory_id').references(() => memories.id, { onDelete: 'cascade' }).notNull(),
+  reviewCount: integer('review_count').default(0),
+  nextReviewAt: timestamp('next_review_at').notNull(),
+  lastReviewedAt: timestamp('last_reviewed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('idx_memory_reviews_unique').on(table.userId, table.memoryId),
+  index('idx_memory_reviews_due').on(table.userId, table.nextReviewAt),
+]);
+
+export const imageAnalyses = pgTable('image_analyses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  title: text('title'),
+  description: text('description'),
+  imageData: text('image_data'),
+  imageSize: integer('image_size'),
+  imageFormat: text('image_format').default('png'),
+  imageWidth: integer('image_width'),
+  imageHeight: integer('image_height'),
+  tags: text('tags').array().default(sql`'{}'::text[]`),
+  contextType: text('context_type').default('general'),
+  provider: text('provider'),
+  model: text('model'),
+  wordCount: integer('word_count'),
+  savedAsMemory: integer('saved_as_memory').default(0).notNull(),
+  memoryId: uuid('memory_id').references(() => memories.id),
+  customPrompt: text('custom_prompt'),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+  index('idx_image_analyses_user').on(table.userId, table.createdAt),
+]);

@@ -17,12 +17,14 @@ Use this when one person wants a personal memory layer with the least operationa
 - Default fallback user flow
 - Simple database and provider setup
 - Good fit for homelabs and VPS installs
+- Not appropriate for a public multi-user URL
 
 ## Self-Hosted Small Team
 
 Use this when a small group needs shared infrastructure with stronger auth expectations.
 
 - Session-backed auth matters more
+- Disable single-user fallback with `ALLOW_SINGLE_USER_MODE=false`
 - Deployment docs must call out secret handling and backups
 - Plugin and MCP access should be documented clearly per environment
 
@@ -33,3 +35,4 @@ This mode is the architecture target for future managed hosting.
 - Stronger secret isolation
 - Better job processing and observability
 - More explicit tenant and plugin safety boundaries
+- No anonymous fallback to the shared default user

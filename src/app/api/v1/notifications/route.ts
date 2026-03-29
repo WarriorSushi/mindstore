@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, schema } from '@/server/db';
-import { eq, desc, and, sql, count } from 'drizzle-orm';
-
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';
+import { eq, desc, and, count } from 'drizzle-orm';
+import { getUserId } from '@/server/user';
 
 /**
  * GET /api/v1/notifications
@@ -16,35 +15,7 @@ const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Ensure table exists
-    await db.execute(sql`
-      DO $$ BEGIN
-        CREATE TYPE notification_type AS ENUM (
-          'import_complete', 'analysis_ready', 'review_due', 'plugin_event',
-          'system', 'export_ready', 'connection_found', 'milestone'
-        );
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$;
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL,
-        type notification_type NOT NULL,
-        title TEXT NOT NULL,
-        body TEXT,
-        icon TEXT,
-        color TEXT DEFAULT 'teal',
-        href TEXT,
-        plugin_slug TEXT,
-        metadata JSONB DEFAULT '{}',
-        read INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)`);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at)`);
+    const userId = await getUserId();
 
     const url = new URL(req.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
@@ -52,7 +23,7 @@ export async function GET(req: NextRequest) {
     const unreadOnly = url.searchParams.get('unread') === 'true';
 
     // Build conditions
-    const conditions = [eq(schema.notifications.userId, DEFAULT_USER_ID)];
+    const conditions = [eq(schema.notifications.userId, userId)];
     if (unreadOnly) {
       conditions.push(eq(schema.notifications.read, 0));
     }
@@ -68,10 +39,10 @@ export async function GET(req: NextRequest) {
 
     // Unread count
     const [unreadResult] = await db
-      .select({ count: count() })
-      .from(schema.notifications)
-      .where(and(
-        eq(schema.notifications.userId, DEFAULT_USER_ID),
+        .select({ count: count() })
+        .from(schema.notifications)
+        .where(and(
+        eq(schema.notifications.userId, userId),
         eq(schema.notifications.read, 0),
       ));
 
@@ -79,7 +50,7 @@ export async function GET(req: NextRequest) {
     const [totalResult] = await db
       .select({ count: count() })
       .from(schema.notifications)
-      .where(eq(schema.notifications.userId, DEFAULT_USER_ID));
+      .where(eq(schema.notifications.userId, userId));
 
     return NextResponse.json({
       notifications: items.map((n) => ({
@@ -118,6 +89,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserId();
     const body = await req.json();
 
     // Handle special actions
@@ -127,7 +99,7 @@ export async function POST(req: NextRequest) {
         .set({ read: 1 })
         .where(and(
           eq(schema.notifications.id, body.id),
-          eq(schema.notifications.userId, DEFAULT_USER_ID),
+          eq(schema.notifications.userId, userId),
         ));
       return NextResponse.json({ ok: true });
     }
@@ -137,7 +109,7 @@ export async function POST(req: NextRequest) {
         .update(schema.notifications)
         .set({ read: 1 })
         .where(and(
-          eq(schema.notifications.userId, DEFAULT_USER_ID),
+          eq(schema.notifications.userId, userId),
           eq(schema.notifications.read, 0),
         ));
       return NextResponse.json({ ok: true });
@@ -147,7 +119,7 @@ export async function POST(req: NextRequest) {
       await db
         .delete(schema.notifications)
         .where(and(
-          eq(schema.notifications.userId, DEFAULT_USER_ID),
+          eq(schema.notifications.userId, userId),
           eq(schema.notifications.read, 1),
         ));
       return NextResponse.json({ ok: true });
@@ -158,7 +130,7 @@ export async function POST(req: NextRequest) {
         .delete(schema.notifications)
         .where(and(
           eq(schema.notifications.id, body.id),
-          eq(schema.notifications.userId, DEFAULT_USER_ID),
+          eq(schema.notifications.userId, userId),
         ));
       return NextResponse.json({ ok: true });
     }
@@ -181,7 +153,7 @@ export async function POST(req: NextRequest) {
     const [notification] = await db
       .insert(schema.notifications)
       .values({
-        userId: DEFAULT_USER_ID,
+        userId,
         type,
         title,
         body: notifBody || null,

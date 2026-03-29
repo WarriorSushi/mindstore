@@ -32,7 +32,7 @@ Every AI starts from zero. Your ChatGPT doesn't know what you told Claude. Your 
 
 MindStore imports everything into one searchable knowledge base — then connects it to **any AI** through [MCP](https://modelcontextprotocol.io), the open protocol.
 
-**No AI costs.** You bring your own keys. MindStore is the infrastructure.
+**You bring the AI access.** MindStore stores, retrieves, and exposes your knowledge; you can use your own provider keys or local models.
 
 <br />
 
@@ -80,18 +80,20 @@ ChatGPT exports, Kindle highlights, YouTube transcripts, Obsidian vaults, Notion
 ```bash
 git clone https://github.com/WarriorSushi/mindstore.git
 cd mindstore
-cp .env.example .env.local    # Add your database URL
+cp .env.example .env.local
 npm install
-npm run db:migrate
-npm run build
-npm start
+npm run migrate
+npm run dev
 ```
+
+For a public multi-user deployment, configure Google OAuth and set `ALLOW_SINGLE_USER_MODE=false`.
 
 ### Requirements
 
 - **Node.js** 20+
 - **PostgreSQL** with [pgvector](https://github.com/pgvector/pgvector) extension
-- **AI Provider Key** — at least one of: OpenAI, Gemini (free), Ollama (free/local), OpenRouter, or any OpenAI-compatible API
+- **Supabase is optional** — any managed or self-hosted Postgres works
+- **AI provider access** for semantic search, chat, and AI-heavy plugins
 
 <br />
 
@@ -123,7 +125,7 @@ Works with **Claude Desktop**, **Cursor**, **Windsurf**, **GitHub Copilot**, and
 
 ## Plugins
 
-All 35 plugins are free. Install from the built-in plugin store.
+MindStore ships a broad plugin catalog across import, analysis, action, sync, and AI enhancement workflows. Plugin maturity still varies by feature and deployment mode.
 
 | Category | Plugins |
 |----------|---------|
@@ -160,13 +162,13 @@ All 35 plugins are free. Install from the built-in plugin store.
 - **No AI costs for MindStore** — users bring their own keys
 - **Embeddings** — multi-provider (Gemini, OpenAI, Ollama)
 - **Search** — hybrid BM25 + cosine similarity with HyDE
-- **Auth** — Google OAuth via NextAuth, single-user fallback
+- **Auth** — Google OAuth via NextAuth for multi-user installs, optional single-user fallback for private/self-hosted setups
 
 <br />
 
 ## Roadmap
 
-- [x] 35 plugins — all production-grade
+- [x] Broad plugin catalog spanning import, analysis, action, sync, and AI enhancement
 - [x] MCP server — connect any AI
 - [x] 12+ importers — ChatGPT, Kindle, YouTube, Obsidian, etc.
 - [x] Hybrid semantic search — BM25 + vector
@@ -176,8 +178,8 @@ All 35 plugins are free. Install from the built-in plugin store.
 - [x] PWA support
 - [ ] `.mind` file format — portable knowledge files
 - [ ] Community knowledge bases — share, browse, import, merge
-- [ ] Onboarding wizard
-- [ ] Demo mode with sample data
+- [x] Onboarding wizard
+- [x] Demo mode with sample data
 - [ ] Team workspaces
 
 <br />
@@ -188,11 +190,13 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
 # Development
-npm run dev          # Start dev server on port 3300
-npm run test         # Run 336 tests
+npm run dev          # Start dev server on the default Next.js port (3000)
+npm run migrate      # Apply database migrations
+npm run test         # Run unit tests
 npm run build        # Production build
 npm run typecheck    # Type checking
-npm run lint         # Linting
+npm run lint:ci      # Stabilized CI lint slice
+npm run lint:backlog # Wider repo lint backlog
 ```
 
 All commits require [DCO sign-off](https://developercertificate.org/):

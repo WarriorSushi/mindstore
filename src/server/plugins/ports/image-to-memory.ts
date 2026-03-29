@@ -264,34 +264,6 @@ export async function analyzeImage(
   return extractTagsFromResponse(data.choices?.[0]?.message?.content || "");
 }
 
-// ─── Image Table Bootstrap ───────────────────────────────────
-
-export async function ensureImageTable(): Promise<void> {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS image_analyses (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL,
-      title TEXT,
-      description TEXT,
-      image_data TEXT,
-      image_size INTEGER,
-      image_format TEXT DEFAULT 'png',
-      image_width INTEGER,
-      image_height INTEGER,
-      tags TEXT[] DEFAULT '{}',
-      context_type TEXT DEFAULT 'general',
-      provider TEXT,
-      model TEXT,
-      word_count INTEGER,
-      saved_as_memory BOOLEAN DEFAULT false,
-      memory_id UUID,
-      custom_prompt TEXT,
-      metadata JSONB DEFAULT '{}',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}
-
 // ─── DB Operations ───────────────────────────────────────────
 
 export async function listImages(userId: string, limit: number, offset: number) {

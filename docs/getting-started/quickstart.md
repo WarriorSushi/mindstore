@@ -5,10 +5,19 @@ This quickstart is optimized for first value, not maximum configuration.
 ## Install
 
 1. Clone the repo.
-2. Install dependencies.
-3. Configure environment variables.
-4. Run the database migration.
-5. Start the app.
+2. Install dependencies with `npm install`.
+3. Copy `.env.example` to `.env.local`.
+4. Set `DATABASE_URL` to a PostgreSQL database with `pgvector` enabled.
+5. If you are using Supabase on Vercel, prefer the transaction pooler URI.
+6. Optionally add one AI provider so semantic search and chat work on day one.
+7. Run `npm run migrate`.
+8. Start the app with `npm run dev`.
+
+## Public Deployment Warning
+
+- If you are deploying a public instance, do not rely on the single-user fallback.
+- Configure Google OAuth and set `ALLOW_SINGLE_USER_MODE=false`.
+- A public instance without auth behaves like a shared workspace.
 
 ## First Success
 
@@ -26,3 +35,10 @@ The fastest path to value is:
 - Chat can cite your content.
 - MCP exposes the same knowledge to external clients.
 
+## Canonical Commands
+
+```bash
+npm install
+npm run migrate
+npm run dev
+```

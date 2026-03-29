@@ -4,6 +4,79 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-29
 
+### 2026-03-30 02:25 IST: Phase 0 + Phase 1 Trust Slice
+
+#### Scope
+
+- Fix setup and deployment truth drift before more feature work.
+- Move request-time schema creation into the canonical migration.
+- Unify the shared-user identity contract so routes stop hardcoding their own defaults.
+- Prepare the codebase for the new Supabase-backed production database.
+
+#### Changes Completed
+
+- Added `src/server/identity.ts` as the shared source of truth for:
+  - default user constants
+  - Google OAuth configuration checks
+  - single-user fallback mode checks
+- Updated `src/server/user.ts` to use that shared identity contract.
+- Updated `src/server/auth.ts` so providers are conditional instead of assuming Google env vars are always present.
+- Moved the following runtime-created tables into `src/server/migrate.ts`:
+  - `search_history`
+  - `chat_conversations`
+  - `memory_reviews`
+  - `tags`
+  - `memory_tags`
+  - `notifications`
+  - `image_analyses`
+- Added matching schema definitions to `src/server/schema.ts` for the missing runtime tables.
+- Removed request-time table bootstrap logic from:
+  - `src/app/api/v1/search/history/route.ts`
+  - `src/app/api/v1/chat/history/route.ts`
+  - `src/app/api/v1/review/route.ts`
+  - `src/app/api/v1/tags/route.ts`
+  - `src/app/api/v1/notifications/route.ts`
+  - `src/server/plugins/ports/image-to-memory.ts`
+- Fixed the notifications user mismatch by replacing the `...0001` hardcoded default with request-scoped `getUserId()`.
+- Updated `src/server/notifications.ts` so server-side notifications can be user-scoped instead of assuming one global user.
+- Added Supabase transaction-pooler compatibility in:
+  - `src/server/postgres-client.ts`
+  - `src/server/db.ts`
+  - `src/server/migrate.ts`
+  This disables prepared statements automatically for Supabase pooler URLs.
+- Fixed setup/deployment truth in:
+  - `README.md`
+  - `.env.example`
+  - `docs/getting-started/quickstart.md`
+  - `docs/getting-started/index.md`
+  - `docs/deploy/index.md`
+  - `docs/deploy/deployment-modes.md`
+- Added operator checklists:
+  - `docs/getting-started/first-run-checklist.md`
+  - `docs/deploy/checklist.md`
+- Added release note `docs/releases/2026-03-30-phase0-phase1-hardening.md`.
+
+#### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint:ci`
+- `npm run build`
+- `npm run test:e2e`
+
+All of the above passed on the topic branch.
+
+#### Production / Infra Outcome
+
+- Ran `npm run migrate` successfully against the Supabase database configured for the deployment.
+- The hosted database now has the new tables and indexes before the next app deploy uses them.
+
+#### Decisions
+
+- Public deployments must be documented as unsafe unless real auth is configured and single-user fallback is disabled.
+- Pooler compatibility is a production requirement, not a deployment note, so it belongs in the DB client code.
+- This slice intentionally favors trust and structural correctness over shipping new feature surfaces.
+
 ### 2026-03-29 22:05 IST: Search and Retrieval Stabilization Slice
 
 #### Scope

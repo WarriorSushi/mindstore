@@ -5,8 +5,7 @@
 
 import { db, schema } from '@/server/db';
 import { sql } from 'drizzle-orm';
-
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
+import { DEFAULT_USER_ID } from '@/server/identity';
 
 type NotificationType =
   | 'import_complete'
@@ -19,6 +18,7 @@ type NotificationType =
   | 'milestone';
 
 interface CreateNotificationOptions {
+  userId?: string;
   type: NotificationType;
   title: string;
   body?: string;
@@ -30,40 +30,13 @@ interface CreateNotificationOptions {
 }
 
 /**
- * Create a notification. Auto-creates the table if it doesn't exist.
+ * Create a notification.
  * Non-throwing — notifications are best-effort, never break the main flow.
  */
 export async function createNotification(opts: CreateNotificationOptions): Promise<void> {
   try {
-    // Ensure table exists (lightweight, no-op after first run)
-    await db.execute(sql`
-      DO $$ BEGIN
-        CREATE TYPE notification_type AS ENUM (
-          'import_complete', 'analysis_ready', 'review_due', 'plugin_event',
-          'system', 'export_ready', 'connection_found', 'milestone'
-        );
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$;
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL,
-        type notification_type NOT NULL,
-        title TEXT NOT NULL,
-        body TEXT,
-        icon TEXT,
-        color TEXT DEFAULT 'teal',
-        href TEXT,
-        plugin_slug TEXT,
-        metadata JSONB DEFAULT '{}',
-        read INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
     await db.insert(schema.notifications).values({
-      userId: DEFAULT_USER_ID,
+      userId: opts.userId ?? DEFAULT_USER_ID,
       type: opts.type,
       title: opts.title,
       body: opts.body || null,
@@ -83,8 +56,15 @@ export async function createNotification(opts: CreateNotificationOptions): Promi
 /**
  * Helper: notify import completion
  */
-export function notifyImportComplete(pluginSlug: string, pluginName: string, count: number, href?: string) {
+export function notifyImportComplete(
+  pluginSlug: string,
+  pluginName: string,
+  count: number,
+  href?: string,
+  userId?: string,
+) {
   return createNotification({
+    userId,
     type: 'import_complete',
     title: `${count} items imported from ${pluginName}`,
     body: `Your ${pluginName.toLowerCase()} import is complete and ready to search.`,
@@ -98,8 +78,9 @@ export function notifyImportComplete(pluginSlug: string, pluginName: string, cou
 /**
  * Helper: notify analysis result
  */
-export function notifyAnalysisReady(pluginSlug: string, title: string, body?: string, href?: string) {
+export function notifyAnalysisReady(pluginSlug: string, title: string, body?: string, href?: string, userId?: string) {
   return createNotification({
+    userId,
     type: 'analysis_ready',
     title,
     body,
@@ -113,8 +94,9 @@ export function notifyAnalysisReady(pluginSlug: string, title: string, body?: st
 /**
  * Helper: milestone notification
  */
-export function notifyMilestone(title: string, body?: string) {
+export function notifyMilestone(title: string, body?: string, userId?: string) {
   return createNotification({
+    userId,
     type: 'milestone',
     title,
     body,
@@ -127,8 +109,9 @@ export function notifyMilestone(title: string, body?: string) {
 /**
  * Helper: export ready
  */
-export function notifyExportReady(pluginSlug: string, title: string, href?: string) {
+export function notifyExportReady(pluginSlug: string, title: string, href?: string, userId?: string) {
   return createNotification({
+    userId,
     type: 'export_ready',
     title,
     icon: 'Download',
@@ -144,16 +127,17 @@ export function notifyExportReady(pluginSlug: string, title: string, href?: stri
  */
 const MILESTONES = [100, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
 
-export async function checkMilestones(totalMemories: number): Promise<void> {
+export async function checkMilestones(totalMemories: number, userId = DEFAULT_USER_ID): Promise<void> {
   try {
     for (const milestone of MILESTONES) {
       if (totalMemories >= milestone) {
         // Check if we already notified for this milestone
         const existing = await db.execute(
-          sql`SELECT id FROM notifications WHERE user_id = ${DEFAULT_USER_ID}::uuid AND type = 'milestone' AND metadata->>'milestone' = ${String(milestone)} LIMIT 1`
+          sql`SELECT id FROM notifications WHERE user_id = ${userId}::uuid AND type = 'milestone' AND metadata->>'milestone' = ${String(milestone)} LIMIT 1`
         );
         if ((existing as any).length === 0) {
           await createNotification({
+            userId,
             type: 'milestone',
             title: `🎉 ${milestone.toLocaleString()} memories!`,
             body: `You've reached ${milestone.toLocaleString()} memories in your knowledge base. Your mind keeps growing.`,

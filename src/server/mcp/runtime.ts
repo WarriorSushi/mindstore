@@ -8,8 +8,6 @@ import { getUserId } from "@/server/user";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const MINDSTORE_MCP_SERVER_INFO = {
   name: "mindstore",
   version: "0.2.0",
@@ -111,11 +109,7 @@ export const CORE_MCP_RESOURCES = [
 ];
 
 export async function getMcpUserId(): Promise<string> {
-  try {
-    return await getUserId();
-  } catch {
-    return DEFAULT_USER_ID;
-  }
+  return await getUserId();
 }
 
 export async function getMcpBindings() {

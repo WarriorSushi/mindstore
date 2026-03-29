@@ -6,50 +6,11 @@ import { sql } from 'drizzle-orm';
 const TAG_COLORS = ['teal', 'sky', 'emerald', 'amber', 'red', 'blue', 'orange', 'zinc'] as const;
 
 /**
- * Ensure tags tables exist (auto-migrate)
- */
-async function ensureTables() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS tags (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL REFERENCES users(id),
-      name TEXT NOT NULL,
-      color TEXT DEFAULT 'teal',
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_user_name ON tags(user_id, name)
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_tags_user ON tags(user_id)
-  `);
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS memory_tags (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      memory_id UUID NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-      tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-      created_at TIMESTAMP DEFAULT NOW()
-    )
-  `);
-  await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_tags_unique ON memory_tags(memory_id, tag_id)
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_memory_tags_memory ON memory_tags(memory_id)
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_memory_tags_tag ON memory_tags(tag_id)
-  `);
-}
-
-/**
  * GET /api/v1/tags — list all tags with memory counts
  */
 export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId();
-    await ensureTables();
 
     const { searchParams } = new URL(req.url);
     const memoryId = searchParams.get('memoryId');
@@ -95,7 +56,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = await getUserId();
-    await ensureTables();
     const body = await req.json();
 
     // ── Assign tag to memories ──
@@ -221,7 +181,6 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const userId = await getUserId();
-    await ensureTables();
 
     const { searchParams } = new URL(req.url);
     const tagId = searchParams.get('id');

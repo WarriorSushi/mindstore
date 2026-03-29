@@ -5,6 +5,7 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 ## Start Here
 
 - [Getting Started](./getting-started/index.md)
+- [First-Run Checklist](./getting-started/first-run-checklist.md)
 - [MindStore Everywhere](./getting-started/mindstore-everywhere.md)
 - [Concepts](./concepts/index.md)
 - [Import Guides](./import-guides/index.md)
@@ -12,6 +13,7 @@ MindStore is a personal knowledge layer for AI. These docs are organized to be s
 - [Plugins](./plugins/index.md)
 - [MCP](./mcp/index.md)
 - [Deploy](./deploy/index.md)
+- [Deployment Checklist](./deploy/checklist.md)
 
 ## Build With MindStore
 

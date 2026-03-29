@@ -1,16 +1,19 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { sql } from 'drizzle-orm';
+import { DEFAULT_USER_EMAIL, DEFAULT_USER_ID, DEFAULT_USER_NAME } from './identity';
+import { getPostgresClientOptions } from './postgres-client';
 
 const connectionString = process.env.DATABASE_URL || 'postgres://mindstore:password@localhost:5432/mindstore';
 
 async function migrate() {
-  const client = postgres(connectionString);
+  const client = postgres(connectionString, getPostgresClientOptions(connectionString, {}));
   const db = drizzle(client);
 
   console.log('Running MindStore database migrations...');
 
   // Enable extensions
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
   await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
 
@@ -268,6 +271,155 @@ async function migrate() {
     )
   `);
 
+  // Search history
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS search_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      query TEXT NOT NULL,
+      result_count INT DEFAULT 0,
+      searched_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_search_history_user
+    ON search_history (user_id, searched_at DESC)
+  `);
+
+  // Chat conversation history
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      title TEXT NOT NULL DEFAULT 'New conversation',
+      messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+      model TEXT,
+      memory_count INT DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_chat_convos_user
+    ON chat_conversations (user_id, updated_at DESC)
+  `);
+
+  // Review queue
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS memory_reviews (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      memory_id UUID REFERENCES memories(id) ON DELETE CASCADE NOT NULL,
+      review_count INT DEFAULT 0,
+      next_review_at TIMESTAMPTZ NOT NULL,
+      last_reviewed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, memory_id)
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_memory_reviews_due
+    ON memory_reviews (user_id, next_review_at)
+  `);
+
+  // Tags
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS tags (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      name TEXT NOT NULL,
+      color TEXT DEFAULT 'teal',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_user_name
+    ON tags (user_id, name)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_tags_user
+    ON tags (user_id)
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS memory_tags (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      memory_id UUID REFERENCES memories(id) ON DELETE CASCADE NOT NULL,
+      tag_id UUID REFERENCES tags(id) ON DELETE CASCADE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_tags_unique
+    ON memory_tags (memory_id, tag_id)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_memory_tags_memory
+    ON memory_tags (memory_id)
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_memory_tags_tag
+    ON memory_tags (tag_id)
+  `);
+
+  // Notifications
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE notification_type AS ENUM (
+        'import_complete', 'analysis_ready', 'review_due', 'plugin_event',
+        'system', 'export_ready', 'connection_found', 'milestone'
+      );
+    EXCEPTION WHEN duplicate_object THEN null;
+    END $$
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      type notification_type NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT,
+      icon TEXT,
+      color TEXT DEFAULT 'teal',
+      href TEXT,
+      plugin_slug TEXT,
+      metadata JSONB DEFAULT '{}',
+      read INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at)`);
+
+  // Image analyses
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS image_analyses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) NOT NULL,
+      title TEXT,
+      description TEXT,
+      image_data TEXT,
+      image_size INTEGER,
+      image_format TEXT DEFAULT 'png',
+      image_width INTEGER,
+      image_height INTEGER,
+      tags TEXT[] DEFAULT '{}',
+      context_type TEXT DEFAULT 'general',
+      provider TEXT,
+      model TEXT,
+      word_count INTEGER,
+      saved_as_memory BOOLEAN DEFAULT false,
+      memory_id UUID REFERENCES memories(id),
+      custom_prompt TEXT,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_image_analyses_user
+    ON image_analyses (user_id, created_at DESC)
+  `);
+
   // Indexes for performance
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(user_id, source_type)`);
@@ -329,7 +481,7 @@ async function migrate() {
   // Create default user
   await db.execute(sql`
     INSERT INTO users (id, email, name) 
-    VALUES ('00000000-0000-0000-0000-000000000000'::uuid, 'default@mindstore.local', 'Default User')
+    VALUES (${DEFAULT_USER_ID}::uuid, ${DEFAULT_USER_EMAIL}, ${DEFAULT_USER_NAME})
     ON CONFLICT (email) DO NOTHING
   `);
 

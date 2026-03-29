@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { dbHealthy } from '@/server/db';
+import { getIdentityMode, isGoogleAuthConfigured, isSingleUserModeEnabled } from '@/server/identity';
 
 /**
  * GET /api/health — production health check
@@ -20,8 +21,10 @@ export async function GET() {
       ollama: !!(process.env.OLLAMA_URL),
     },
     auth: {
-      google: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      google: isGoogleAuthConfigured(),
       secret: !!(process.env.AUTH_SECRET),
+      singleUserMode: isSingleUserModeEnabled(),
+      identityMode: getIdentityMode(),
     },
     timestamp: new Date().toISOString(),
   };

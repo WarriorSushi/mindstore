@@ -329,7 +329,8 @@ export async function POST(req: NextRequest) {
       await notifyImportComplete(
         'chatgpt-importer', sourceLabel,
         totalChunks,
-        '/app/explore'
+        '/app/explore',
+        userId,
       );
     } catch (e) { /* non-fatal */ }
 

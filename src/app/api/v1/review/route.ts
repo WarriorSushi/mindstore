@@ -16,27 +16,8 @@ import { getUserId } from '@/server/user';
  * Fourth: 14 days
  * Fifth+: 30 days
  * 
- * Auto-creates the memory_reviews table.
+ * Requires the `memory_reviews` table from the main migration.
  */
-
-async function ensureTable() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS memory_reviews (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL,
-      memory_id UUID NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-      review_count INT DEFAULT 0,
-      next_review_at TIMESTAMPTZ NOT NULL,
-      last_reviewed_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(user_id, memory_id)
-    )
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS idx_memory_reviews_due 
-    ON memory_reviews (user_id, next_review_at)
-  `).catch(() => {});
-}
 
 const INTERVALS = [1, 3, 7, 14, 30]; // days
 
@@ -45,8 +26,6 @@ export async function GET(req: NextRequest) {
     const userId = await getUserId();
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50);
-
-    await ensureTable();
 
     // Get memories due for review
     const due = await db.execute(sql`
@@ -101,8 +80,6 @@ export async function POST(req: NextRequest) {
     if (!memoryId) {
       return NextResponse.json({ error: 'memoryId required' }, { status: 400 });
     }
-
-    await ensureTable();
 
     if (action === 'add') {
       // Add a memory to the review queue

@@ -1,8 +1,7 @@
 import { auth } from '@/server/auth';
 import { headers } from 'next/headers';
 import { getApiKeyFromHeaders, resolveApiKeyUserId } from '@/server/api-keys';
-
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
+import { DEFAULT_USER_ID, isSingleUserModeEnabled } from '@/server/identity';
 
 /**
  * Get the current user ID from NextAuth session or fallback to default.
@@ -13,7 +12,7 @@ const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
  * 3. x-user-id header (for MCP and trusted internal clients)
  * 4. Default UUID (single-user / self-hosted mode)
  */
-export async function getUserId(): Promise<string> {
+export async function getUserId(options?: { allowDefaultFallback?: boolean }): Promise<string> {
   try {
     const session = await auth();
     if ((session as any)?.userId) {
@@ -35,6 +34,10 @@ export async function getUserId(): Promise<string> {
     if (headerUserId) return headerUserId;
   } catch {
     // headers() not available in some contexts
+  }
+
+  if (options?.allowDefaultFallback === false || !isSingleUserModeEnabled()) {
+    throw new Error('Authentication required');
   }
 
   return DEFAULT_USER_ID;

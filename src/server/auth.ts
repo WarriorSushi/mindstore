@@ -2,14 +2,19 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { db } from "@/server/db";
 import { sql } from "drizzle-orm";
+import { isGoogleAuthConfigured } from "@/server/identity";
+
+const providers = isGoogleAuthConfigured()
+  ? [
+      Google({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      }),
+    ]
+  : [];
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
+  providers,
   callbacks: {
     async signIn({ user, account }) {
       if (!user.email) return false;
