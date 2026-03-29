@@ -87,6 +87,25 @@ Follow-up to the trust slice. Convert the app from “auth exists somewhere in t
 
 This is the first product-level enforcement of multi-user boundaries. Public deployments now have a real path toward “each user gets their own workspace” rather than relying on hidden assumptions.
 
+### 2026-03-30: Chat Provider Unification
+
+#### Scope
+
+Remove the split-brain provider logic between `/api/v1/chat` and `src/server/ai-client.ts`.
+
+#### Changes Completed
+
+- Added encrypted-setting decoding to the shared AI client
+- Added shared streaming helpers for OpenAI-compatible providers, Gemini, and Ollama
+- Refactored `/api/v1/chat` to use `getStreamingTextGenerationConfig()` and `streamTextGeneration()`
+- Added unit coverage for:
+  - encrypted setting decoding
+  - request-scoped model overrides
+
+#### Why this slice matters
+
+Chat is part of the core product loop. It should not carry a separate provider-selection and decryption stack from the plugins. This slice makes provider fixes apply to both chat and plugin features at once.
+
 All of the above passed on the topic branch.
 
 #### Production / Infra Outcome

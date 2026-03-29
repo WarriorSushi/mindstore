@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/server/db";
+import { decrypt } from "@/server/encryption";
 
 const TEXT_SETTING_KEYS = [
   "openai_api_key",
@@ -49,6 +50,13 @@ export interface AITextRequest {
   maxTokens?: number;
 }
 
+export class AIClientError extends Error {
+  constructor(message: string, readonly status: number = 500) {
+    super(message);
+    this.name = "AIClientError";
+  }
+}
+
 export interface AITextDefaults {
   openai?: string;
   openrouter?: string;
@@ -72,6 +80,21 @@ export interface AITranscriptionResult {
   model: string;
 }
 
+const SENSITIVE_SETTING_KEYS = new Set([
+  "openai_api_key",
+  "gemini_api_key",
+  "openrouter_api_key",
+  "custom_api_key",
+]);
+
+export function decodeAISettingValue(key: string, value: string): string {
+  if (!SENSITIVE_SETTING_KEYS.has(key)) {
+    return value;
+  }
+
+  return decrypt(value);
+}
+
 export async function loadAISettings(
   keys: readonly string[] = TEXT_SETTING_KEYS,
 ): Promise<Record<string, string>> {
@@ -83,7 +106,7 @@ export async function loadAISettings(
 
   const settings: Record<string, string> = {};
   for (const row of rows as unknown as Array<{ key: string; value: string }>) {
-    settings[row.key] = row.value;
+    settings[row.key] = decodeAISettingValue(row.key, row.value);
   }
   return settings;
 }
@@ -91,9 +114,10 @@ export async function loadAISettings(
 export function resolveTextGenerationConfigFromSettings(
   settings: Record<string, string>,
   defaults: AITextDefaults = {},
+  modelOverride?: string,
 ): AITextConfig | null {
   const preferred = settings.chat_provider;
-  const selectedModel = settings.chat_model;
+  const selectedModel = modelOverride || settings.chat_model;
   const openaiKey = settings.openai_api_key || process.env.OPENAI_API_KEY;
   const geminiKey = settings.gemini_api_key || process.env.GEMINI_API_KEY;
   const ollamaUrl = settings.ollama_url || process.env.OLLAMA_URL;
@@ -212,7 +236,18 @@ export function resolveTextGenerationConfigFromSettings(
 }
 
 export async function getTextGenerationConfig(defaults: AITextDefaults = {}) {
-  return resolveTextGenerationConfigFromSettings(await loadAISettings(TEXT_SETTING_KEYS), defaults);
+  return resolveTextGenerationConfigFromSettings(
+    await loadAISettings(TEXT_SETTING_KEYS),
+    defaults,
+  );
+}
+
+export async function getStreamingTextGenerationConfig(modelOverride?: string) {
+  return resolveTextGenerationConfigFromSettings(
+    await loadAISettings(TEXT_SETTING_KEYS),
+    {},
+    modelOverride,
+  );
 }
 
 export async function callTextGeneration(
@@ -232,6 +267,21 @@ export async function callTextGeneration(
   } catch {
     return null;
   }
+}
+
+export async function streamTextGeneration(
+  config: AITextConfig,
+  request: AITextRequest,
+): Promise<Response> {
+  if (config.type === "gemini") {
+    return streamGeminiText(config, request);
+  }
+
+  if (config.type === "ollama") {
+    return streamOllamaText(config, request);
+  }
+
+  return streamOpenAICompatibleText(config, request);
 }
 
 export async function callTextPrompt(
@@ -332,6 +382,38 @@ async function callOpenAICompatibleText(
   return data.choices?.[0]?.message?.content || null;
 }
 
+async function streamOpenAICompatibleText(
+  config: AITextConfig,
+  request: AITextRequest,
+): Promise<Response> {
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.key}`,
+      ...(config.extraHeaders || {}),
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: request.messages,
+      stream: true,
+      temperature: request.temperature ?? 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw await buildAIClientError(response, `Chat failed (${response.status})`);
+  }
+
+  return new Response(response.body, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 async function callGeminiText(
   config: AITextConfig,
   request: AITextRequest,
@@ -374,6 +456,97 @@ async function callGeminiText(
   return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
 }
 
+async function streamGeminiText(
+  config: AITextConfig,
+  request: AITextRequest,
+): Promise<Response> {
+  const systemMessage = request.messages.find((message) => message.role === "system");
+  const contents = request.messages
+    .filter((message) => message.role !== "system")
+    .map((message) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:streamGenerateContent?alt=sse&key=${config.key}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: systemMessage
+          ? { parts: [{ text: systemMessage.content }] }
+          : undefined,
+        generationConfig: {
+          temperature: request.temperature ?? 0.7,
+          maxOutputTokens: request.maxTokens ?? 4096,
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw await buildAIClientError(response, "Gemini chat failed");
+  }
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  if (!reader) {
+    throw new AIClientError("Gemini response body was empty", 502);
+  }
+
+  void (async () => {
+    let buffer = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6)) as {
+              candidates?: Array<{
+                content?: { parts?: Array<{ text?: string | null }> };
+              }>;
+            };
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) continue;
+
+            const chunk = JSON.stringify({
+              choices: [{ delta: { content: text } }],
+            });
+            await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+          } catch {
+            // Skip malformed chunks instead of killing the full stream.
+          }
+        }
+      }
+
+      await writer.write(encoder.encode("data: [DONE]\n\n"));
+    } finally {
+      await writer.close();
+    }
+  })();
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 async function callOllamaText(
   config: AITextConfig,
   request: AITextRequest,
@@ -399,6 +572,116 @@ async function callOllamaText(
     message?: { content?: string | null };
   };
   return data.message?.content || null;
+}
+
+async function streamOllamaText(
+  config: AITextConfig,
+  request: AITextRequest,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(`${config.url}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.model,
+        messages: request.messages,
+        stream: true,
+        options: {
+          temperature: request.temperature ?? 0.7,
+        },
+      }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown connection error";
+    throw new AIClientError(`Cannot connect to Ollama at ${config.url}. Is it running? Error: ${message}`, 502);
+  }
+
+  if (!response.ok) {
+    throw await buildAIClientError(response, "Ollama chat failed");
+  }
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  if (!reader) {
+    throw new AIClientError("Ollama response body was empty", 502);
+  }
+
+  void (async () => {
+    let buffer = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const data = JSON.parse(trimmed) as {
+              done?: boolean;
+              message?: { content?: string | null };
+            };
+            if (data.done) continue;
+            const text = data.message?.content;
+            if (!text) continue;
+
+            const chunk = JSON.stringify({
+              choices: [{ delta: { content: text } }],
+            });
+            await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+          } catch {
+            // Skip malformed chunks instead of killing the full stream.
+          }
+        }
+      }
+
+      await writer.write(encoder.encode("data: [DONE]\n\n"));
+    } finally {
+      await writer.close();
+    }
+  })();
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+async function buildAIClientError(response: Response, fallbackMessage: string) {
+  let message = fallbackMessage;
+  try {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await response.json() as {
+        error?: { message?: string } | string;
+      };
+      message =
+        typeof data.error === "string"
+          ? data.error
+          : data.error?.message || fallbackMessage;
+    } else {
+      const text = await response.text();
+      if (text) {
+        message = text;
+      }
+    }
+  } catch {
+    // Fall back to the default message.
+  }
+
+  return new AIClientError(message, response.status);
 }
 
 async function transcribeWithWhisper(

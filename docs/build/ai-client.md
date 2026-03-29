@@ -5,10 +5,12 @@ MindStore now has a shared AI client at `src/server/ai-client.ts`.
 ## What It Handles
 
 - loads provider settings from the database
+- decrypts sensitive provider keys stored in the database
 - resolves the active text-generation provider
 - resolves the active transcription provider
 - calls OpenAI-compatible, Gemini, and Ollama text models
 - calls OpenAI Whisper and Gemini for audio transcription
+- streams chat responses for OpenAI-compatible, Gemini, and Ollama providers
 
 ## Why It Exists
 
@@ -26,6 +28,7 @@ That was risky for convergence because every new plugin port would duplicate:
 
 - Flashcard Maker
 - Voice-to-Memory
+- Chat
 
 ## Next Users
 
@@ -37,7 +40,7 @@ That was risky for convergence because every new plugin port would duplicate:
 
 ## Design Rule
 
-Plugin routes should not own provider-resolution logic anymore.
+Plugin routes and chat routes should not own provider-resolution logic anymore.
 
 They should call:
 
