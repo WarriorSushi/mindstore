@@ -51,6 +51,17 @@ All of the above passed after the docs manifest/root-slug fix landed.
 - Controlled lint ratchets are more valuable than attempting a repo-wide lint cleanup in one pass.
 - The docs-loader warning should be solved by reducing dynamic filesystem discovery, not by suppressing the warning in config.
 
+#### Branch Sync Outcome
+
+- Verified topic-branch preview for commit `03432cb` via the GitHub `Vercel` commit status.
+- Fast-forwarded local `main` from `origin/main`, then fast-forwarded `main` to the verified topic-branch commit.
+- Pushed the same commit to:
+  - `origin/main`
+  - `origin/codex/local-dev`
+  - `origin/frain/improve`
+- Confirmed all three public refs now resolve to `03432cb55e47d427a103986e3c6bcf40896422a6`.
+- Deleted the short-lived `codex/trunk-takeover` branch after merge to keep the trunk workflow clean.
+
 ### 2026-03-29 14:45 UTC: Production Hotfix + Codex Resync
 
 #### Scope
