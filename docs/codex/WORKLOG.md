@@ -4,6 +4,25 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-29
 
+### 2026-03-30 03:15 IST: Auth Proxy Regression + Product Completion Program
+
+#### Scope
+
+- Fix the live Google sign-in regression on public deployments.
+- Record the repo-level completion program so future work stays tied to product trust, not feature count.
+
+#### Changes Completed
+
+- Fixed `src/proxy.ts` so NextAuth form-encoded posts to `/api/auth/*` are allowed instead of being rejected with `415 Unsupported Media Type`.
+- Added `tests/unit/proxy.test.ts` to lock the regression:
+  - auth form posts are allowed
+  - unsupported non-auth API content types are still rejected
+- Added `docs/codex/PRODUCT_COMPLETION_PLAN.md` as the durable product-completion program for trunk work.
+
+#### Why this slice matters
+
+The login flow is the trust boundary for public deployments. Breaking it makes the rest of the multi-user work irrelevant. This also resets the repo around a concrete completion program instead of a drifting feature list.
+
 ### 2026-03-30 02:25 IST: Phase 0 + Phase 1 Trust Slice
 
 #### Scope

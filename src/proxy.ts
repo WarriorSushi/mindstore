@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export function proxy(req: NextRequest) {
   const res = NextResponse.next();
   const { pathname } = req.nextUrl;
+  const isAuthRoute = pathname === '/api/auth' || pathname.startsWith('/api/auth/');
 
   // === Security Headers ===
   res.headers.set('X-Content-Type-Options', 'nosniff');
@@ -23,7 +24,8 @@ export function proxy(req: NextRequest) {
     const method = req.method;
     if (['POST', 'PATCH', 'PUT'].includes(method)) {
       const ct = req.headers.get('content-type') || '';
-      if (!ct.includes('application/json') && !ct.includes('multipart/form-data') && !ct.includes('text/')) {
+      const allowsFormEncoding = isAuthRoute && ct.includes('application/x-www-form-urlencoded');
+      if (!ct.includes('application/json') && !ct.includes('multipart/form-data') && !ct.includes('text/') && !allowsFormEncoding) {
         // Allow requests with no content-type (some clients omit it for empty bodies)
         if (ct && ct !== '') {
           return NextResponse.json(
