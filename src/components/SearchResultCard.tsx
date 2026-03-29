@@ -18,7 +18,7 @@ interface SearchResultCardProps {
   score?: number;
   pinned?: boolean;
   tags?: SearchTag[];
-  layers?: Record<string, any>;
+  layers?: Record<string, unknown>;
   query: string;
   isFocused: boolean;
   isSelected: boolean;

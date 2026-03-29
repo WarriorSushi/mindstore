@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Languages, Globe, Search, Loader2, AlertTriangle,
-  Check, BarChart3, Tag, RefreshCw, Sparkles, ChevronDown,
-  ArrowRightLeft, Zap, Info, Settings2,
+  Check, BarChart3, Tag, RefreshCw, Sparkles,
+  ArrowRightLeft, Zap, Info,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -88,7 +88,6 @@ export default function MultiLanguagePage() {
   const [detecting, setDetecting] = useState(false);
   const [detectedLang, setDetectedLang] = useState<{ code: string; name: string; confidence: number; method: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "search" | "detect">("overview");
-  const [configOpen, setConfigOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -516,7 +515,7 @@ export default function MultiLanguagePage() {
                           <p className="text-xs text-zinc-400 line-clamp-2">{r.content}</p>
                           {r.matchedLanguage !== searchResults.queryLanguage && (
                             <p className="text-[10px] text-amber-500/70 mt-1">
-                              Matched via {LANG_FLAGS[r.matchedLanguage]} translation: "{r.matchedQuery}"
+                              Matched via {LANG_FLAGS[r.matchedLanguage]} translation: &ldquo;{r.matchedQuery}&rdquo;
                             </p>
                           )}
                         </div>

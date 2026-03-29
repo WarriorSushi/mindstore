@@ -54,6 +54,17 @@ Prefix your commit message:
 5. Write a clear PR description
 6. Submit!
 
+## Branch Workflow
+
+MindStore now uses `main` as trunk.
+
+- Start all new work from current `main`
+- Use a short-lived topic branch for the change
+- Land verified work on `main`
+- Mirror branches like `codex/local-dev` and `frain/improve` are sync branches, not independent long-lived feature lines
+
+If you are continuing work from an older agent branch, rebase or fast-forward it to `main` before making new changes.
+
 ## Building Plugins
 
 MindStore has a plugin system for adding importers, analysis tools, and actions. See [`docs/build/plugin-porting-guide.md`](docs/build/plugin-porting-guide.md) for the full guide.

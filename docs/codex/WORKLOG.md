@@ -4,6 +4,53 @@ This file is the durable engineering log for Codex work in `codex/*` branches.
 
 ## Session: 2026-03-29
 
+### 2026-03-29 20:40 IST: Trunk Takeover + Mirror Branch Rules
+
+#### Scope
+
+- Turn the earlier codex/frain convergence plan into a trunk-based branch program.
+- Clean up the docs loader so Turbopack stops tracing the whole repository during docs builds.
+- Start a controlled lint-hardening slice for the recently drifting UI/search surfaces before more feature work resumes.
+
+#### Changes Completed
+
+- Rewrote `docs/codex/CONVERGENCE_PROGRAM.md` so it now reflects the real branch strategy:
+  - `main` is trunk
+  - `codex/local-dev` and `frain/improve` are mirrors
+  - new work must land on short-lived topic branches from `main`
+- Updated `CONTRIBUTING.md` to describe the same trunk-based workflow for contributors.
+- Replaced the recursive docs filesystem walk with a checked-in `src/lib/docs-manifest.ts` and static slug generation in `src/app/docs/[...slug]/page.tsx`.
+- Changed `src/lib/docs.ts` to use the manifest as the source of truth for doc discovery and root-slug resolution.
+- Began the first controlled lint-hardening slice on the recent drift surfaces:
+  - `src/app/app/explore/page.tsx`
+  - `src/app/app/duplicates/page.tsx`
+  - `src/app/app/collections/page.tsx`
+  - `src/app/app/languages/page.tsx`
+  - `src/app/app/paths/page.tsx`
+  - `src/app/app/writing/page.tsx`
+  - `src/components/EmptyFeatureState.tsx`
+  - `src/components/SearchResultCard.tsx`
+- Removed several stale unused imports/state holders and replaced a set of `any`-typed request/response shapes with explicit local types in the drift slice.
+- Split linting into two explicit tracks in `package.json`:
+  - `npm run lint:ci` for the stabilized controlled slice
+  - `npm run lint:backlog` for the broader repo-wide debt queue
+
+#### Verification
+
+- `npm run build`
+- `npm run typecheck`
+- `npm run lint:ci`
+- `npm run test`
+- `npm run test:e2e`
+
+All of the above passed after the docs manifest/root-slug fix landed.
+
+#### Decisions
+
+- The public branch problem is now operational, not architectural: mirrors must track trunk exactly.
+- Controlled lint ratchets are more valuable than attempting a repo-wide lint cleanup in one pass.
+- The docs-loader warning should be solved by reducing dynamic filesystem discovery, not by suppressing the warning in config.
+
 ### 2026-03-29 14:45 UTC: Production Hotfix + Codex Resync
 
 #### Scope

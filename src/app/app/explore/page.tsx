@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Search, Type, ChevronDown, ChevronUp, X, Trash2,
+  Search, ChevronDown, ChevronUp, X, Trash2,
   Copy, Check, Loader2, MessageSquare, CheckSquare, Square, Download, Pencil, Save,
   MoreHorizontal, ArrowUpDown, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowDownAZ,
   ArrowUpAZ, AlignLeft, AlignRight, Clock, Hash, BookOpen, Pin, PinOff, Sparkles,
   ExternalLink, Bookmark, LayoutList, LayoutGrid, Tag, Plus,
-  Star, Compass, Brain, GitBranch, Command, Lightbulb, Zap,
+  Star, Compass, Command,
+  type LucideIcon,
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -33,10 +34,6 @@ import {
 import { usePageTitle } from "@/lib/use-page-title";
 import {
   addSearchToHistory,
-  getSearchHistory,
-  clearSearchHistory,
-  removeSearchFromHistory,
-  type SearchHistoryItem,
 } from "@/lib/search-history";
 
 interface TagData {
@@ -54,11 +51,50 @@ interface Memory {
   sourceTitle: string;
   timestamp: string;
   importedAt: string;
-  metadata: Record<string, any>;
-  layers?: Record<string, any>;
+  metadata: Record<string, unknown> & { pinned?: boolean };
+  layers?: Record<string, unknown>;
   score?: number;
   pinned?: boolean;
   tags?: TagData[];
+}
+
+interface SearchResultRecord {
+  id?: string;
+  memoryId?: string;
+  content?: string;
+  sourceType?: string;
+  sourceTitle?: string;
+  createdAt?: string;
+  metadata?: (Record<string, unknown> & { pinned?: boolean }) | undefined;
+  layers?: Record<string, unknown>;
+  score?: number;
+  tags?: TagData[];
+}
+
+interface SearchResponse {
+  results?: SearchResultRecord[];
+  totalResults?: number;
+  layers?: { bm25: number; vector: number; tree: number } | null;
+}
+
+interface MemoryRecord {
+  id: string;
+  content: string;
+  source?: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  timestamp?: string;
+  importedAt?: string;
+  metadata?: Record<string, unknown>;
+  layers?: Record<string, unknown>;
+  score?: number;
+  pinned?: boolean;
+  tags?: TagData[];
+}
+
+interface MemoryListResponse {
+  memories?: MemoryRecord[];
+  total?: number;
 }
 
 interface Source {
@@ -93,7 +129,7 @@ function tagDotColor(color: string): string {
   return m[color] || m.teal;
 }
 
-const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
+const SORT_OPTIONS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "newest", label: "Newest first", icon: ArrowDownNarrowWide },
   { id: "oldest", label: "Oldest first", icon: ArrowUpNarrowWide },
   { id: "alpha-asc", label: "Title A → Z", icon: ArrowDownAZ },
@@ -102,13 +138,45 @@ const SORT_OPTIONS: { id: string; label: string; icon: any }[] = [
   { id: "shortest", label: "Shortest first", icon: AlignRight },
 ];
 
-// Suggested search queries for discovery
-const SEARCH_SUGGESTIONS = [
-  { label: "Recent conversations", query: "", icon: Clock },
-  { label: "Ideas & brainstorms", query: "ideas brainstorm", icon: Lightbulb },
-  { label: "Code & technical", query: "code programming", icon: Zap },
-  { label: "Learning & insights", query: "learned insight", icon: BookOpen },
-];
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function toMemory(record: SearchResultRecord | MemoryRecord): Memory {
+  const id: string = (("memoryId" in record ? record.memoryId : record.id) ?? record.id ?? "");
+  const metadata = ("metadata" in record && record.metadata ? record.metadata : {}) as Record<string, unknown> & {
+    pinned?: boolean;
+  };
+  const source =
+    ("sourceType" in record && typeof record.sourceType === "string")
+      ? record.sourceType
+      : (("source" in record && typeof record.source === "string") ? record.source : "text");
+  const timestamp =
+    ("createdAt" in record && typeof record.createdAt === "string")
+      ? record.createdAt
+      : (("timestamp" in record && typeof record.timestamp === "string") ? record.timestamp : new Date().toISOString());
+  const importedAt =
+    (("importedAt" in record && typeof record.importedAt === "string") ? record.importedAt : undefined) ??
+    (("createdAt" in record && typeof record.createdAt === "string")
+      ? record.createdAt
+      : (("timestamp" in record && typeof record.timestamp === "string") ? record.timestamp : undefined)) ??
+    timestamp;
+
+  return {
+    id,
+    content: record.content ?? "",
+    source,
+    sourceId: "sourceId" in record ? (record.sourceId ?? "") : "",
+    sourceTitle: record.sourceTitle ?? "",
+    timestamp,
+    importedAt,
+    metadata,
+    layers: record.layers ?? {},
+    score: record.score ?? 0,
+    pinned: "pinned" in record ? Boolean(record.pinned) : metadata.pinned === true,
+    tags: record.tags ?? [],
+  };
+}
 
 export default function ExplorePage() {
   usePageTitle("Explore");
@@ -156,7 +224,6 @@ export default function ExplorePage() {
   // ── Tags state ──────────────────
   const [allTags, setAllTags] = useState<TagData[]>([]);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
-  const [tagMenuOpen, setTagMenuOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [creatingTag, setCreatingTag] = useState(false);
   const [tagAssignOpen, setTagAssignOpen] = useState(false);
@@ -170,14 +237,9 @@ export default function ExplorePage() {
   const [saveSearchColor, setSaveSearchColor] = useState<SavedSearch['color']>('teal');
   const [activeSavedSearchId, setActiveSavedSearchId] = useState<string | null>(null);
 
-  // Search history
-  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-  const [searchFocused, setSearchFocused] = useState(false);
-
-  // Load saved searches and search history on mount
+  // Load saved searches on mount
   useEffect(() => {
     setSavedSearches(getSavedSearches());
-    setSearchHistory(getSearchHistory());
   }, []);
 
   const handleSaveSearch = useCallback(() => {
@@ -235,8 +297,8 @@ export default function ExplorePage() {
 
   const activeSourceTypes = useMemo(() => {
     return Object.entries(sourceTypeCounts)
-      .filter(([_, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1]);
+      .filter(([, count]) => count > 0)
+      .sort(([, leftCount], [, rightCount]) => rightCount - leftCount);
   }, [sourceTypeCounts]);
 
   // Navigate to adjacent memory in detail view
@@ -388,7 +450,7 @@ export default function ExplorePage() {
 
     setSaving(true);
     try {
-      const body: any = { id: selected.id };
+      const body: { id: string; content?: string; title?: string } = { id: selected.id };
       if (contentChanged) body.content = trimmedContent;
       if (titleChanged) body.title = trimmedTitle;
 
@@ -407,8 +469,8 @@ export default function ExplorePage() {
       setMemories(prev => prev.map(m => m.id === selected.id ? updatedMemory : m));
       setEditing(false);
       toast.success("Memory updated" + (contentChanged ? " · embedding refreshed" : ""));
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to save"));
     }
     setSaving(false);
   }, [selected, editContent, editTitle, saving]);
@@ -439,8 +501,8 @@ export default function ExplorePage() {
         setSelected({ ...selected, pinned: newPinned });
       }
       toast.success(newPinned ? "Pinned to top" : "Unpinned");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to pin");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, "Failed to pin"));
     }
     setPinning(false);
   }, [pinning, selected]);
@@ -465,17 +527,17 @@ export default function ExplorePage() {
 
     fetch(`/api/v1/search?q=${encodeURIComponent(searchQuery)}&limit=6`, { signal: controller.signal })
       .then(r => r.json())
-      .then(data => {
+      .then((data: SearchResponse) => {
         if (controller.signal.aborted) return;
         const results = (data.results || [])
-          .filter((r: any) => r.id !== selected.id)
+          .filter((result) => (result.id ?? result.memoryId) !== selected.id)
           .slice(0, 4)
-          .map((r: any) => ({
-            id: r.id,
-            title: r.sourceTitle || "Untitled",
-            type: r.sourceType || "text",
-            score: r.score || 0,
-            preview: (r.content || "").slice(0, 100).replace(/\n/g, " ").trim(),
+          .map((result) => ({
+            id: result.id ?? result.memoryId ?? "",
+            title: result.sourceTitle || "Untitled",
+            type: result.sourceType || "text",
+            score: result.score || 0,
+            preview: (result.content || "").slice(0, 100).replace(/\n/g, " ").trim(),
           }));
         setRelatedMemories(results);
         setRelatedLoading(false);
@@ -487,7 +549,7 @@ export default function ExplorePage() {
       });
 
     return () => controller.abort();
-  }, [selected?.id]);
+  }, [selected]);
 
   // Close tag dropdowns when selected memory changes
   useEffect(() => {
@@ -509,20 +571,10 @@ export default function ExplorePage() {
     } else {
       fetch(`/api/v1/memories?limit=2000`)
         .then(r => r.json())
-        .then(data => {
-          const found = (data.memories || []).find((m: any) => m.id === relatedId);
+        .then((data: MemoryListResponse) => {
+          const found = (data.memories || []).find((memory) => memory.id === relatedId);
           if (found) {
-            const m: Memory = {
-              id: found.id,
-              content: found.content,
-              source: found.source,
-              sourceId: found.sourceId,
-              sourceTitle: found.sourceTitle || "Untitled",
-              timestamp: found.timestamp,
-              importedAt: found.importedAt,
-              metadata: found.metadata || {},
-              pinned: found.pinned || false,
-            };
+            const m = toMemory(found);
             setSelected(m);
             setSelectedIndex(-1);
             setCopied(false);
@@ -703,7 +755,7 @@ export default function ExplorePage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/v1/sources').then(r => r.json()),
-      fetch(`/api/v1/memories?limit=100&sort=${sortBy}`).then(r => r.json()),
+      fetch('/api/v1/memories?limit=100&sort=newest').then(r => r.json()),
       fetch('/api/v1/tags').then(r => r.json()).catch(() => ({ tags: [] })),
     ]).then(([srcData, memData, tagData]) => {
       setSources(srcData.sources || []);
@@ -720,21 +772,8 @@ export default function ExplorePage() {
         const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
         const p = new URLSearchParams({ q: search, limit: '100' });
         if (filter && filter !== 'pinned') p.set('source', filter);
-        fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
-          const results = (d.results || []).map((r: any) => ({
-            id: r.memoryId,
-            content: r.content,
-            source: r.sourceType,
-            sourceId: '',
-            sourceTitle: r.sourceTitle || '',
-            timestamp: r.createdAt,
-            importedAt: r.createdAt,
-            metadata: r.metadata || {},
-            layers: r.layers || {},
-            score: r.score || 0,
-            pinned: r.metadata?.pinned === true,
-            tags: r.tags || [],
-          }));
+        fetch(`/api/v1/search?${p}`).then(r => r.json()).then((d: SearchResponse) => {
+          const results = (d.results || []).map(toMemory);
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
           setSearchLayers(d.layers || null);
@@ -876,27 +915,6 @@ export default function ExplorePage() {
     } catch { toast.error('Failed to remove tag'); }
   }, [selected, refreshTags]);
 
-  const deleteTag = useCallback(async (tagId: string) => {
-    const tag = allTags.find(t => t.id === tagId);
-    if (!confirm(`Delete tag "${tag?.name}"? It will be removed from all memories.`)) return;
-    try {
-      await fetch(`/api/v1/tags?id=${tagId}`, { method: 'DELETE' });
-      setMemories(prev => prev.map(m => ({
-        ...m,
-        tags: (m.tags || []).filter(t => t.id !== tagId),
-      })));
-      if (selected) {
-        setSelected(prev => prev ? {
-          ...prev,
-          tags: (prev.tags || []).filter(t => t.id !== tagId),
-        } : null);
-      }
-      if (tagFilter === tagId) setTagFilter(null);
-      await refreshTags();
-      toast.success(`Tag "${tag?.name}" deleted`);
-    } catch { toast.error('Failed to delete tag'); }
-  }, [allTags, selected, tagFilter, refreshTags]);
-
   const handleBatchTag = useCallback(async (tagId: string) => {
     if (selectedIds.size === 0) return;
     await assignTag(tagId, Array.from(selectedIds));
@@ -956,8 +974,6 @@ export default function ExplorePage() {
             placeholder="Search your knowledge…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
-            onFocus={() => { setSearchFocused(true); }}
-            onBlur={() => { setTimeout(() => setSearchFocused(false), 200); }}
             className="w-full h-11 pl-11 pr-28 sm:pr-32 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 focus:bg-white/[0.04] transition-all"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">

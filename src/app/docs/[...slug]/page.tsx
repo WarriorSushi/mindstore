@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getDocBySlug } from "@/lib/docs";
+import { getAllDocSlugs, getDocBySlug } from "@/lib/docs";
 
 export const dynamic = "force-static";
+
+export function generateStaticParams() {
+  return getAllDocSlugs().map((slug) => ({ slug }));
+}
 
 export async function generateMetadata({
   params,

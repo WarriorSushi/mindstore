@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type LucideIcon, ArrowRight } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 
 interface EmptyFeatureStateProps {
   icon: LucideIcon;

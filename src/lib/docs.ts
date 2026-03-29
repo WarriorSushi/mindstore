@@ -4,8 +4,16 @@ import { promises as fs } from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import { DOC_FILES } from "@/lib/docs-manifest";
 
-const DOCS_ROOT = path.join(/* turbopackIgnore: true */ process.cwd(), "docs");
+const DOCS_ROOT = path.join(process.cwd(), "docs");
+const DOC_FILE_SET = new Set<string>(DOC_FILES);
+const DOC_SLUG_MAP = new Map<string, string>(
+  DOC_FILES.map((relativePath) => {
+    const slug = filePathToSlug(relativePath);
+    return [slug.join("/"), relativePath];
+  })
+);
 
 export interface DocPage {
   slug: string[];
@@ -87,12 +95,12 @@ export async function getDocBySlug(slug: string[]): Promise<DocPage | null> {
 }
 
 export async function getAllDocs(): Promise<DocPage[]> {
-  const files = await walkDocs(DOCS_ROOT);
   const docs = await Promise.all(
-    files.map(async (filePath) => {
+    DOC_FILES.map(async (relativePath) => {
+      const filePath = path.join(DOCS_ROOT, relativePath);
       const raw = await fs.readFile(filePath, "utf8");
       const parsed = matter(raw);
-      const slug = filePathToSlug(filePath);
+      const slug = filePathToSlug(relativePath);
       const body = parsed.content.trim();
 
       return {
@@ -109,6 +117,10 @@ export async function getAllDocs(): Promise<DocPage[]> {
   );
 
   return docs.sort((left, right) => left.url.localeCompare(right.url));
+}
+
+export function getAllDocSlugs(): string[][] {
+  return DOC_FILES.map((relativePath) => filePathToSlug(relativePath));
 }
 
 export async function getDocsNavigation(): Promise<DocNavGroup[]> {
@@ -136,46 +148,20 @@ export async function getDocsNavigation(): Promise<DocNavGroup[]> {
 
 async function resolveDocFilePath(slug: string[]): Promise<string | null> {
   const normalized = slug.filter(Boolean);
-  const candidates = normalized.length
-    ? [
-        path.join(DOCS_ROOT, ...normalized) + ".md",
-        path.join(DOCS_ROOT, ...normalized, "index.md"),
-      ]
-    : [path.join(DOCS_ROOT, "index.md")];
+  const candidates = normalized.length ? [normalized.join("/"), `${normalized.join("/")}/index`] : [""];
 
   for (const candidate of candidates) {
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      continue;
+    const relativePath = DOC_SLUG_MAP.get(candidate);
+    if (relativePath && DOC_FILE_SET.has(relativePath)) {
+      return path.join(DOCS_ROOT, relativePath);
     }
   }
 
   return null;
 }
 
-async function walkDocs(directory: string): Promise<string[]> {
-  const entries = await fs.readdir(directory, { withFileTypes: true });
-  const files: string[] = [];
-
-  for (const entry of entries) {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await walkDocs(fullPath)));
-      continue;
-    }
-
-    if (entry.isFile() && entry.name.endsWith(".md")) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
-}
-
 function filePathToSlug(filePath: string): string[] {
-  const relativePath = path.relative(DOCS_ROOT, filePath).replace(/\\/g, "/");
+  const relativePath = filePath.replace(/\\/g, "/");
   if (relativePath === "index.md") {
     return [];
   }

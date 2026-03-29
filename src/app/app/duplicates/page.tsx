@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Copy, Trash2, Loader2, AlertTriangle, Check, X,
-  ChevronRight, ArrowRight, Merge, ScanSearch, Shield,
-  Clock, FileText, Globe, MessageCircle, Type,
+  Copy, Trash2, Loader2, Check,
+  ChevronRight, Merge, ScanSearch, Shield,
+  Clock,
   SlidersHorizontal,
 } from 'lucide-react';
 import { getSourceType } from '@/lib/source-types';
@@ -20,7 +20,7 @@ interface MemoryInfo {
   sourceTitle: string;
   sourceId: string;
   createdAt: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   contentLength: number;
 }
 
@@ -31,6 +31,17 @@ interface DuplicatePair {
 }
 
 type MergeAction = 'keep_a' | 'keep_b' | 'merge' | 'delete_both';
+
+interface DuplicateActionRequest {
+  action: MergeAction;
+  idA: string;
+  idB: string;
+  mergedContent?: string;
+}
+
+interface DuplicateActionResponse {
+  error?: string;
+}
 
 export default function DuplicatesPage() {
   usePageTitle("Duplicates");
@@ -55,13 +66,15 @@ export default function DuplicatesPage() {
     setLoading(false);
   }, [threshold]);
 
-  useEffect(() => { fetchDuplicates(); }, [fetchDuplicates]);
+  useEffect(() => {
+    void Promise.resolve().then(fetchDuplicates);
+  }, [fetchDuplicates]);
 
   const handleAction = async (pair: DuplicatePair, action: MergeAction, mergedContent?: string) => {
     const pairKey = `${pair.memoryA.id}-${pair.memoryB.id}`;
     setProcessing(pairKey);
     try {
-      const body: any = {
+      const body: DuplicateActionRequest = {
         action,
         idA: pair.memoryA.id,
         idB: pair.memoryB.id,
@@ -90,11 +103,11 @@ export default function DuplicatesPage() {
         };
         toast.success(labels[action]);
       } else {
-        const data = await res.json();
+        const data = (await res.json()) as DuplicateActionResponse;
         toast.error(data.error || 'Action failed');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Action failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Action failed');
     }
     setProcessing(null);
   };

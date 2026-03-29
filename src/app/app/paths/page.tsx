@@ -5,8 +5,8 @@ import {
   Route, Plus, Loader2, ArrowLeft, Trash2, ChevronRight,
   CheckCircle2, Circle, BookOpen, Code, Rocket, FileText,
   Trophy, Clock, Sparkles, ChevronDown, ChevronUp,
-  StickyNote, ExternalLink, Brain, Target, Zap, Layers,
-  GraduationCap, ArrowRight, MessageSquare, X,
+  StickyNote, ExternalLink, Brain,
+  GraduationCap, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";

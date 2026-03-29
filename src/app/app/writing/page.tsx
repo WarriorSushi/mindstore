@@ -4,13 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   PenTool, Loader2, RefreshCw, BarChart3, BookOpen, Hash,
   MessageCircle, FileText, Globe, Type, BookOpenCheck, Gem,
-  MessageSquare, Zap, TrendingUp, TrendingDown, Minus,
-  ChevronRight, ArrowRight, Brain, AlertTriangle, Percent,
+  MessageSquare, Zap, TrendingUp,
+  AlertTriangle,
   AlignLeft, CaseSensitive, Quote,
+  type LucideIcon,
 } from 'lucide-react';
 import { PageTransition, Stagger } from '@/components/PageTransition';
 import { EmptyFeatureState } from '@/components/EmptyFeatureState';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { usePageTitle } from "@/lib/use-page-title";
 
@@ -83,7 +83,7 @@ interface Profile {
 
 // ─── Config ─────────────────────────────────────────────────────
 
-const sourceConfig: Record<string, { icon: any; color: string; label: string }> = {
+const sourceConfig: Record<string, { icon: LucideIcon; color: string; label: string }> = {
   chatgpt: { icon: MessageCircle, color: 'text-green-400', label: 'ChatGPT' },
   text: { icon: Type, color: 'text-teal-400', label: 'Text' },
   file: { icon: FileText, color: 'text-blue-400', label: 'File' },
@@ -106,7 +106,6 @@ const toneConfig: Record<string, { color: string; bg: string; border: string; la
 
 export default function WritingStylePage() {
   usePageTitle("Writing Style");
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,8 +127,8 @@ export default function WritingStylePage() {
       setProfile(data.profile);
       setAnalyzed(data.analyzed);
       setTotalEligible(data.totalEligible);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load writing style data');
     } finally {
       setLoading(false);
     }
@@ -145,8 +144,10 @@ export default function WritingStylePage() {
       const data = await res.json();
       toast.success(`Analyzed ${data.analyzed} memories`, { description: data.message });
       await fetchProfile();
-    } catch (err: any) {
-      toast.error('Analysis failed', { description: err.message });
+    } catch (err: unknown) {
+      toast.error('Analysis failed', {
+        description: err instanceof Error ? err.message : 'Failed to analyze writing style',
+      });
     } finally {
       setAnalyzing(false);
     }

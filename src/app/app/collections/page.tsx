@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  FolderOpen, Loader2, Search, X, ChevronRight, Clock,
+  FolderOpen, Loader2, Search, X, ChevronRight,
   FileText, Globe, MessageCircle, Type, BookOpen, Gem,
   MessageSquare, Play, AtSign, Send, Music, BookmarkCheck,
   Highlighter, StickyNote, Mic, Image, Bookmark, FileStack,
   Hash, BarChart3, ArrowRight, Sparkles, TrendingUp,
-  LayoutGrid, LayoutList, RefreshCw, ExternalLink,
+  LayoutGrid, LayoutList, RefreshCw,
 } from 'lucide-react';
 import { getSourceType } from '@/lib/source-types';
 import { PageTransition, Stagger } from '@/components/PageTransition';
@@ -351,7 +351,7 @@ export default function CollectionsPage() {
               </span>
             </div>
 
-            {selectedCollection.memories?.map((memory, idx) => {
+            {selectedCollection.memories?.map((memory) => {
               const src = getSourceType(memory.sourceType);
               return (
                 <Stagger key={memory.id}>
@@ -538,7 +538,7 @@ export default function CollectionsPage() {
         {/* Collections Grid */}
         {viewMode === 'grid' && filtered.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((collection, idx) => (
+            {filtered.map((collection) => (
               <Stagger key={collection.id}>
                 <button
                   onClick={() => openCollection(collection)}
@@ -634,7 +634,7 @@ export default function CollectionsPage() {
         {/* Collections List */}
         {viewMode === 'list' && filtered.length > 0 && (
           <div className="space-y-2">
-            {filtered.map((collection, idx) => (
+            {filtered.map((collection) => (
               <Stagger key={collection.id}>
                 <button
                   onClick={() => openCollection(collection)}
