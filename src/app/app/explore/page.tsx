@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 import { getSourceType } from "@/lib/source-types";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
+import { DidYouMean } from "@/components/DidYouMean";
 import { EmptyState } from "@/components/EmptyState";
+import { SavedSearchPills } from "@/components/SavedSearchPills";
+import { SearchResultCard } from "@/components/SearchResultCard";
+import { SearchStats } from "@/components/SearchStats";
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import {
@@ -146,6 +150,7 @@ export default function ExplorePage() {
   // Infinite scroll state
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchLayers, setSearchLayers] = useState<{ bm25: number; vector: number; tree: number } | null>(null);
+  const [searchDurationMs, setSearchDurationMs] = useState<number | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Tags state ──────────────────
@@ -712,6 +717,7 @@ export default function ExplorePage() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (search) {
+        const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
         const p = new URLSearchParams({ q: search, limit: '100' });
         if (filter && filter !== 'pinned') p.set('source', filter);
         fetch(`/api/v1/search?${p}`).then(r => r.json()).then(d => {
@@ -732,10 +738,13 @@ export default function ExplorePage() {
           setMemories(results);
           setTotalMemories(d.totalResults || results.length);
           setSearchLayers(d.layers || null);
+          const endedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+          setSearchDurationMs(Math.max(1, endedAt - startedAt));
           addSearchToHistory(search, results.length);
         }).catch(() => {});
       } else {
         setSearchLayers(null);
+        setSearchDurationMs(null);
         const p = new URLSearchParams({ limit: '100', sort: sortBy });
         if (filter && filter !== 'pinned') p.set('source', filter);
         if (filter === 'pinned') p.set('pinned', 'true');
@@ -946,8 +955,8 @@ export default function ExplorePage() {
             ref={searchInputRef}
             placeholder="Search your knowledge…"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); setAutocompleteOpen(true); }}
-            onFocus={() => { setSearchFocused(true); setAutocompleteOpen(true); }}
+            onChange={(e) => { setSearch(e.target.value); setActiveSavedSearchId(null); }}
+            onFocus={() => { setSearchFocused(true); }}
             onBlur={() => { setTimeout(() => setSearchFocused(false), 200); }}
             className="w-full h-11 pl-11 pr-28 sm:pr-32 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-[14px] placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500/30 focus:border-teal-500/20 focus:bg-white/[0.04] transition-all"
           />
@@ -1129,27 +1138,7 @@ export default function ExplorePage() {
             </div>
           );
         })()}
-
-        {/* Search Autocomplete — suggestions + history dropdown */}
-        <SearchAutocomplete
-          query={search}
-          isOpen={autocompleteOpen && !savedSearchMenuOpen && !saveSearchDialogOpen}
-          onSelect={(text) => { setSearch(text); setAutocompleteOpen(false); setActiveSavedSearchId(null); }}
-          onClose={() => setAutocompleteOpen(false)}
-          inputRef={searchInputRef}
-        />
       </Stagger>
-
-      {/* ═══ Advanced Filter Bar ═══ */}
-      {search.trim() && (
-        <Stagger>
-          <AdvancedFilterBar
-            filters={advancedFilters}
-            onChange={setAdvancedFilters}
-            availableSourceTypes={activeSourceTypes.map(([type, count]) => ({ type, count }))}
-          />
-        </Stagger>
-      )}
 
       {/* ═══ Filters + View + Sort ═══ */}
       <Stagger>
