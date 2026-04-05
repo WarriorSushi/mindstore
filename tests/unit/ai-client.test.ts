@@ -14,7 +14,7 @@ describe("ai client config resolution", () => {
     });
 
     expect(config?.providerLabel).toBe("openrouter");
-    expect(config?.model).toBe("anthropic/claude-3.5-haiku");
+    expect(config?.model).toBe("google/gemini-2.0-flash-lite:free");
   });
 
   it("falls back to gemini text generation when available", () => {
