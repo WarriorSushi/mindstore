@@ -779,6 +779,104 @@ export function LandingClient() {
         </div>
       </section>
 
+      {/* ═══════ KNOWLEDGE GRAPH — visual centerpiece ═══════ */}
+      <section className="relative z-10 py-[clamp(80px,12vh,120px)]" style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Graph visual */}
+            <R delay={0.04}>
+              <div className="relative rounded-2xl overflow-hidden order-last lg:order-first"
+                style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(20,184,166,0.08)" }}>
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: "rgba(20,184,166,0.6)" }} />
+                  <span className="text-[10px] font-mono text-zinc-700">Knowledge Fingerprint — live graph</span>
+                </div>
+                <div className="p-2">
+                  <svg viewBox="0 0 400 300" className="w-full h-auto">
+                    {[60,120,180,240].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+                    {[80,160,240,320].map(x => <line key={x} x1={x} y1="0" x2={x} y2="300" stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+                    {[
+                      [120,70,200,140],[200,140,310,90],[200,140,155,210],[155,210,75,185],
+                      [310,90,345,185],[345,185,275,230],[275,230,200,140],[75,185,120,70],
+                      [155,210,275,230],[120,70,55,140],[55,140,75,185],[310,90,365,55],
+                      [345,185,365,55],[275,230,200,270],[200,270,120,250],[120,250,75,185],
+                      [200,140,200,270],[55,140,120,250],[310,90,275,230],
+                    ].map(([x1,y1,x2,y2], i) => (
+                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,184,166,0.15)" strokeWidth="0.8">
+                        <animate attributeName="opacity" values="0.06;0.22;0.06" dur={`${3 + i * 0.3}s`} repeatCount="indefinite" />
+                      </line>
+                    ))}
+                    {[
+                      { x: 120, y: 70, r: 16, c: "#14b8a6", l: "AI/ML" },
+                      { x: 200, y: 140, r: 22, c: "#14b8a6", l: "Core" },
+                      { x: 310, y: 90, r: 14, c: "#38bdf8", l: "Code" },
+                      { x: 155, y: 210, r: 12, c: "#f59e0b", l: "Books" },
+                      { x: 75, y: 185, r: 10, c: "#71717a", l: "Philosophy" },
+                      { x: 345, y: 185, r: 11, c: "#10b981", l: "Finance" },
+                      { x: 275, y: 230, r: 9, c: "#10b981", l: "Health" },
+                      { x: 55, y: 140, r: 8, c: "#f97316", l: "Music" },
+                      { x: 365, y: 55, r: 7, c: "#22d3ee", l: "Travel" },
+                      { x: 200, y: 270, r: 10, c: "#ef4444", l: "Cooking" },
+                      { x: 120, y: 250, r: 8, c: "#71717a", l: "Design" },
+                    ].map((n, i) => (
+                      <g key={i}>
+                        <circle cx={n.x} cy={n.y} r={n.r * 1.5} fill={n.c} opacity="0.07">
+                          <animate attributeName="r" values={`${n.r * 1.2};${n.r * 1.9};${n.r * 1.2}`} dur={`${2.5 + i * 0.4}s`} repeatCount="indefinite" />
+                        </circle>
+                        <circle cx={n.x} cy={n.y} r={n.r * 0.7} fill={n.c} opacity="0.65" />
+                        <circle cx={n.x} cy={n.y} r={n.r * 0.3} fill="white" opacity="0.3" />
+                        <text x={n.x} y={n.y + n.r + 11} textAnchor="middle" fontSize="7.5" fill="rgba(161,161,170,0.55)" fontFamily="system-ui">{n.l}</text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                {/* Stat overlays */}
+                <div className="absolute top-10 left-4 px-2.5 py-1.5 rounded-lg text-[10px] font-mono"
+                  style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.12)" }}>
+                  <span className="text-teal-400">11 clusters</span>
+                </div>
+                <div className="absolute bottom-8 right-4 px-2.5 py-1.5 rounded-lg text-[10px] font-mono"
+                  style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.1)" }}>
+                  <span className="text-sky-400">19 bridges</span>
+                </div>
+              </div>
+            </R>
+            {/* Copy */}
+            <div>
+              <R>
+                <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-teal-400 mb-4">Knowledge Fingerprint</p>
+                <h2 className="text-[clamp(1.6rem,3.2vw,2.8rem)] font-extrabold tracking-[-0.04em] leading-[1.08]">
+                  Your mind,<br />rendered in 3D.
+                </h2>
+              </R>
+              <R delay={0.08}>
+                <p className="text-[16px] mt-5 leading-[1.8] text-zinc-400 max-w-[440px]">
+                  Every memory you import becomes a node. Every connection a bridge.
+                  Watch your knowledge topology emerge — clusters you expect, links you&apos;d never have drawn yourself.
+                </p>
+              </R>
+              <R delay={0.14}>
+                <div className="mt-8 space-y-4">
+                  {[
+                    { label: "Clusters", desc: "Topic groups that formed organically from your writing", color: "text-teal-400" },
+                    { label: "Bridges", desc: "Ideas connecting domains you never knew were related", color: "text-sky-400" },
+                    { label: "Orphans", desc: "Isolated knowledge — gaps in your thinking made visible", color: "text-amber-400" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-start gap-3">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-current mt-2 shrink-0 opacity-70 ${item.color}`} />
+                      <div>
+                        <span className={`text-[13px] font-semibold ${item.color}`}>{item.label}</span>
+                        <span className="text-[13px] text-zinc-500"> — {item.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </R>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══════ IMPORT — asymmetric two-col ═══════ */}
       <section className="relative z-10 py-[clamp(80px,12vh,120px)]">
         <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
