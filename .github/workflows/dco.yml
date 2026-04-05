@@ -16,5 +16,3 @@ jobs:
     steps:
       - name: Check Developer Certificate of Origin sign-offs
         uses: tim-actions/dco@v1.1.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
