@@ -8,6 +8,7 @@ import {
   Search, Keyboard, Puzzle, TrendingUp, Heart, Target, PenTool, Layers,
   FileEdit, Users, Route, FileUser, Mail, Mic, Camera, SlidersHorizontal, Globe, Dna,
   Download, FolderDown, FileStack, Gem, ChevronDown, Zap, BarChart3, Copy, FolderOpen,
+  GitCompare,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,7 @@ const navSections: NavSection[] = [
     collapsible: true,
     items: [
       { href: "/app/evolution", icon: TrendingUp, label: "Evolution" },
+      { href: "/app/diff", icon: GitCompare, label: "Mind Diff" },
       { href: "/app/sentiment", icon: Heart, label: "Sentiment" },
       { href: "/app/gaps", icon: Target, label: "Gaps" },
       { href: "/app/duplicates", icon: Copy, label: "Duplicates" },
