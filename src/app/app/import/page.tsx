@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
+import { track } from "@/lib/analytics";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit" | "twitter" | "telegram" | "pocket" | "spotify" | "readwise";
@@ -178,6 +179,7 @@ export default function ImportPage() {
         setPendingEmbeddings(r.indexing.pendingEmbeddings);
       }
       toast.success(`Imported ${r.imported.chunks} memories`);
+      track.import(tab, r.imported.chunks);
       refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
@@ -194,6 +196,7 @@ export default function ImportPage() {
         setPendingEmbeddings(r.indexing.pendingEmbeddings);
       }
       toast.success(`Imported ${r.imported.chunks} memories`);
+      track.import(tab, r.imported.chunks);
       refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };

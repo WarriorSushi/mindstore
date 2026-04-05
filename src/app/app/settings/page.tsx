@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
+import { track } from "@/lib/analytics";
 
 /* ─── Data fetchers ─── */
 async function fetchSettings() {
@@ -123,6 +124,22 @@ export default function SettingsPage() {
     toast.success("All API keys removed");
     fetchSettings().then(setSettings);
     try { const { invalidateAiStatus } = await import("@/lib/use-ai-status"); invalidateAiStatus(); } catch {}
+  }, []);
+
+  const handleExportMind = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/export/mind");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `mindstore-${new Date().toISOString().split("T")[0]}.mind`;
+      a.click();
+      toast.success(".mind file downloaded");
+      track.mindFileExport();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   }, []);
 
   const handleExport = useCallback(async () => {
@@ -753,6 +770,12 @@ export default function SettingsPage() {
                   label="Restore Backup"
                   description="Import from JSON file"
                   onClick={handleRestore}
+                />
+                <DataActionButton
+                  icon={<Download className="w-4 h-4" />}
+                  label="Export .mind"
+                  description="Portable knowledge file"
+                  onClick={handleExportMind}
                 />
               </div>
             </div>

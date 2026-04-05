@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { openMemoryDrawer } from "@/components/MemoryDrawer";
 import { usePageTitle } from "@/lib/use-page-title";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { TIERS, isNearLimit, isAtLimit } from "@/lib/tiers";
 
 async function fetchStats() {
   try {
@@ -391,6 +393,18 @@ export default function DashboardPage() {
               <ChevronRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             </div>
           </Link>
+        </Stagger>
+      )}
+
+      {/* ═══════ UPGRADE NUDGE — near or at free tier memory limit ═══════ */}
+      {!demo && isNearLimit(total, 'free', 'maxMemories') && (
+        <Stagger>
+          <UpgradeBanner
+            resource="memories"
+            used={total}
+            limit={TIERS.free.maxMemories}
+            atLimit={isAtLimit(total, 'free', 'maxMemories')}
+          />
         </Stagger>
       )}
 

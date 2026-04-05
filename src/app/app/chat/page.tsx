@@ -15,6 +15,7 @@ import { NoAIBanner } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
+import { track } from "@/lib/analytics";
 import {
   ChatSidebar,
   ChatInput,
@@ -315,6 +316,7 @@ export default function ChatPage() {
       toast.error("Import some knowledge first");
       return;
     }
+    track.aiQuery(chatProvider || 'auto');
 
     let cid = conversationId;
     if (!cid) {
