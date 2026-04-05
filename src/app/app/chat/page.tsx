@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Brain, User, Plus, Upload, Key,
   ChevronsDown, Search, Lightbulb, TrendingUp,
-  MessageSquare, RotateCcw, Copy, Check,
+  MessageSquare, RotateCcw, Copy, Check, Swords,
 } from "lucide-react";
 import { streamChat, checkApiKey } from "@/lib/openai";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -168,6 +168,7 @@ export default function ChatPage() {
   const [searchResultCount, setSearchResultCount] = useState(0);
   const [highlightedCitation, setHighlightedCitation] = useState<{ msgIndex: number; sourceIndex: number } | null>(null);
   const [copiedChat, setCopiedChat] = useState(false);
+  const [devilMode, setDevilMode] = useState(false);
 
   /* ─── Init: load stats, AI config, history ─── */
   useEffect(() => {
@@ -317,6 +318,7 @@ export default function ChatPage() {
       return;
     }
     track.aiQuery(chatProvider || 'auto');
+    if (devilMode) track.devilAdvocate();
 
     let cid = conversationId;
     if (!cid) {
@@ -406,12 +408,25 @@ export default function ChatPage() {
       const ragMessages = [
         {
           role: "system",
-          content:
-            "You are MindStore, a personal knowledge assistant. Answer based ONLY on the user's stored knowledge. Cite sources as [1], [2]. Be concise. Highlight unexpected connections.",
+          content: devilMode
+            ? `You are the Devil's Advocate for MindStore. Your job is to challenge the user's stated beliefs, assumptions, and conclusions using ONLY evidence found in their own knowledge base.
+
+Rules:
+- Find contradictions, counterevidence, and overlooked nuances in the provided context
+- Point out where the user's sources disagree with each other
+- Highlight evidence that challenges the user's premise
+- Do NOT make up facts — work only from the provided context
+- Be direct but not dismissive — this is steel-manning the opposition
+- Use citations [1], [2] etc. for each challenge
+- Open with the strongest counterpoint first
+- End with a genuine question that the user should sit with`
+            : "You are MindStore, a personal knowledge assistant. Answer based ONLY on the user's stored knowledge. Cite sources as [1], [2]. Be concise. Highlight unexpected connections.",
         },
         {
           role: "user",
-          content: `Context from my knowledge base:\n\n${context}\n\n---\n\nQuestion: ${query}`,
+          content: devilMode
+            ? `Context from my knowledge base:\n\n${context}\n\n---\n\nChallenge my assumption or belief in this statement/question: ${query}`
+            : `Context from my knowledge base:\n\n${context}\n\n---\n\nQuestion: ${query}`,
         },
       ];
 
@@ -620,6 +635,24 @@ export default function ChatPage() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Devil's Advocate toggle */}
+            {hasAI && memoryCount > 0 && (
+              <button
+                onClick={() => setDevilMode((p) => !p)}
+                title={devilMode ? "Devil's Advocate mode ON — click to disable" : "Enable Devil's Advocate mode — challenge your own beliefs"}
+                className={cn(
+                  "flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-[13px] font-medium transition-all active:scale-[0.97]",
+                  devilMode
+                    ? "bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]",
+                )}
+              >
+                <Swords className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {devilMode ? "Devil's Advocate" : "Devil's Advocate"}
+                </span>
+              </button>
+            )}
             {messages.length > 0 && (
               <button
                 onClick={handleCopyConversation}
@@ -635,6 +668,16 @@ export default function ChatPage() {
             )}
           </div>
         </div>
+
+        {/* ═══ Devil's Advocate active banner ═══ */}
+        {devilMode && (
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-amber-500/20 bg-amber-500/[0.05] shrink-0">
+            <Swords className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-[12px] text-amber-400/80 leading-snug">
+              <strong className="text-amber-300">Devil&apos;s Advocate</strong> — I&apos;ll challenge your beliefs using your own knowledge. Ask a statement, assumption, or claim.
+            </span>
+          </div>
+        )}
 
         {/* ═══ Messages area ═══ */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth">
@@ -766,8 +809,15 @@ export default function ChatPage() {
                 >
                   {/* AI avatar */}
                   {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
-                      <Brain className="w-4 h-4 text-teal-400" />
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ring-1 transition-colors",
+                      devilMode
+                        ? "bg-amber-500/[0.10] ring-amber-500/15"
+                        : "bg-teal-500/[0.08] ring-teal-500/10",
+                    )}>
+                      {devilMode
+                        ? <Swords className="w-4 h-4 text-amber-400" />
+                        : <Brain className="w-4 h-4 text-teal-400" />}
                     </div>
                   )}
 
@@ -874,8 +924,15 @@ export default function ChatPage() {
                 messages.length > 0 &&
                 messages[messages.length - 1]?.role === "user" && (
                   <div className="flex gap-3 animate-in fade-in duration-300">
-                    <div className="w-8 h-8 rounded-xl bg-teal-500/[0.08] flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-teal-500/10">
-                      <Brain className="w-4 h-4 text-teal-400" />
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ring-1 transition-colors",
+                      devilMode
+                        ? "bg-amber-500/[0.10] ring-amber-500/15"
+                        : "bg-teal-500/[0.08] ring-teal-500/10",
+                    )}>
+                      {devilMode
+                        ? <Swords className="w-4 h-4 text-amber-400" />
+                        : <Brain className="w-4 h-4 text-teal-400" />}
                     </div>
                     <div className="rounded-2xl rounded-bl-lg bg-zinc-900 border border-white/[0.06] px-4 py-3">
                       <ThinkingIndicator

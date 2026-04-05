@@ -46,11 +46,20 @@ export const metadata: Metadata = {
     url: "https://mindstore.org",
     siteName: "MindStore",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "MindStore — Your AI-Powered Second Brain",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "MindStore — Your AI-Powered Second Brain",
     description: "Import from 12+ sources. Chat with your own mind. 35 plugins. Free & open source.",
+    images: ["/opengraph-image"],
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://mindstore.org"),
   alternates: {

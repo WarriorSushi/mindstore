@@ -19,6 +19,7 @@ export function trackEvent(event: string, props?: Record<string, string | number
 export const track = {
   import: (source: string, count: number) => trackEvent('Import', { source, count }),
   aiQuery: (provider: string) => trackEvent('AI Query', { provider }),
+  devilAdvocate: () => trackEvent('Devil Advocate Query'),
   signup: () => trackEvent('Signup'),
   onboardingComplete: () => trackEvent('Onboarding Complete'),
   connectionDiscover: () => trackEvent('Connection Discover'),
