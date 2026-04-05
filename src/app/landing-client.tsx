@@ -166,11 +166,11 @@ const CAPS: { icon: LucideIcon; title: string; desc: string; accent: string }[] 
 
 /* ─── Use Cases ─── */
 const CASES = [
-  { icon: FileText, title: "Import 5 years of ChatGPT and search it in seconds", desc: "Export your data, drop the ZIP. Every conversation indexed. Ask \"what did I discuss about React hooks in 2024?\" — get the exact thread." },
-  { icon: BookOpen, title: "Turn 200 Kindle highlights into a connected knowledge graph", desc: "Import from every book. See which ideas connect across authors. Find that Taleb quote that relates to your Kahneman notes." },
-  { icon: Lightbulb, title: "Give Claude access to YOUR knowledge — not just the internet", desc: "Connect via MCP. Claude searches your notes, meeting prep, domain knowledge before answering. Context no foundation model has." },
   { icon: BarChart3, title: "Watch your beliefs contradict each other over time", desc: "You wrote \"always use TypeScript\" in March and \"plain JS is fine for scripts\" in November. AI finds these. Track how your thinking evolved." },
   { icon: Network, title: "See your entire mind rendered as a 3D graph", desc: "Knowledge Fingerprint: WebGL visualization. Clusters of related ideas. Orphaned concepts. Bridge ideas connecting domains you never realized were linked." },
+  { icon: Lightbulb, title: "Give Claude access to YOUR knowledge — not just the internet", desc: "Connect via MCP. Claude searches your notes, meeting prep, domain knowledge before answering. Context no foundation model has." },
+  { icon: FileText, title: "Import 5 years of ChatGPT and search it in seconds", desc: "Export your data, drop the ZIP. Every conversation indexed. Ask \"what did I discuss about React hooks in 2024?\" — get the exact thread." },
+  { icon: BookOpen, title: "Turn 200 Kindle highlights into a connected knowledge graph", desc: "Import from every book. See which ideas connect across authors. Find that Taleb quote that relates to your Kahneman notes." },
   { icon: Newspaper, title: "Auto-generate a newsletter from what you actually learned this week", desc: "Newsletter plugin scans recent memories, groups by topic, generates a digest. You edit, they read. Thought leadership from real knowledge." },
 ];
 
@@ -193,7 +193,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
   0: () => (
     <div className="p-4 sm:p-5 space-y-3">
       <div className="text-[13px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind</div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
           { v: "2,847", l: "Memories", c: "rgba(20,184,166,0.12)" },
           { v: "1,423", l: "ChatGPT", c: "rgba(16,185,129,0.12)" },
@@ -394,7 +394,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
           </div>
         ))}
       </div>
-      <div className="flex justify-between mt-1.5 text-[7px] text-zinc-700 pl-[85px]">
+      <div className="flex justify-between mt-1.5 text-[7px] text-zinc-700 pl-[40px] sm:pl-[85px]">
         <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span>
       </div>
     </div>
@@ -668,6 +668,19 @@ export function LandingClient() {
               <strong className="text-zinc-100 font-semibold">any AI model</strong> you use.
             </p>
           </R>
+          <R delay={0.16}>
+            <div className="flex flex-wrap gap-2 mt-5 text-[12px]">
+              {[
+                { label: "Search by meaning", color: "text-teal-400" },
+                { label: "Chat with your notes", color: "text-sky-400" },
+                { label: "Find contradictions", color: "text-amber-400" },
+                { label: "Track how you've changed", color: "text-emerald-400" },
+                { label: "Connect to any AI", color: "text-teal-400" },
+              ].map(tag => (
+                <span key={tag.label} className={`px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] ${tag.color}/80`}>{tag.label}</span>
+              ))}
+            </div>
+          </R>
           <R delay={0.18}>
             <div className="flex gap-3 mt-8 flex-wrap">
               <Link href="/app">
@@ -702,6 +715,167 @@ export function LandingClient() {
 
       {/* ═══════ TICKER ═══════ */}
       <Ticker />
+
+      {/* ═══════ ANALYSIS SUITE — what you do with your knowledge ═══════ */}
+      <section className="relative z-10 py-[clamp(80px,12vh,120px)]" style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
+          <R>
+            <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-sky-400 mb-4">Knowledge intelligence</p>
+            <h2 className="text-[clamp(1.6rem,3.2vw,2.8rem)] font-extrabold tracking-[-0.04em] leading-[1.08] max-w-[600px]">
+              Not just storage.<br />A second brain that thinks.
+            </h2>
+          </R>
+          <R delay={0.08}>
+            <p className="text-[16px] mt-5 leading-[1.8] text-zinc-400 max-w-[520px]">
+              MindStore doesn&apos;t just hold your knowledge — it analyzes it. Finds contradictions
+              you wrote years apart. Tracks how your thinking evolved. Surfaces gaps in what you know.
+            </p>
+          </R>
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              {
+                icon: AlertTriangle,
+                label: "Contradiction Finder",
+                desc: "You wrote \"always TypeScript\" in March, \"JS is fine\" in November. AI finds these.",
+                color: "text-red-400",
+                bg: "rgba(239,68,68,0.05)",
+                border: "rgba(239,68,68,0.1)",
+              },
+              {
+                icon: Route,
+                label: "Topic Evolution",
+                desc: "Timeline of how your interests shifted. Which ideas grew, which faded. Your intellectual arc.",
+                color: "text-amber-400",
+                bg: "rgba(245,158,11,0.05)",
+                border: "rgba(245,158,11,0.1)",
+              },
+              {
+                icon: Target,
+                label: "Knowledge Gaps",
+                desc: "AI identifies blind spots and generates targeted reading lists for what you should know.",
+                color: "text-emerald-400",
+                bg: "rgba(16,185,129,0.05)",
+                border: "rgba(16,185,129,0.1)",
+              },
+              {
+                icon: Brain,
+                label: "Knowledge Fingerprint",
+                desc: "3D WebGL graph of your mind's topology. Clusters, bridges, and orphaned ideas — rendered live.",
+                color: "text-teal-400",
+                bg: "rgba(20,184,166,0.05)",
+                border: "rgba(20,184,166,0.1)",
+              },
+            ].map((item, i) => (
+              <R key={item.label} delay={0.06 * i}>
+                <div className="p-5 rounded-2xl h-full transition-all hover:-translate-y-0.5 hover:bg-white/[0.02]"
+                  style={{ background: item.bg, border: `1px solid ${item.border}` }}>
+                  <item.icon className={`w-5 h-5 ${item.color} mb-4`} />
+                  <h3 className="text-[14px] font-bold text-zinc-200 mb-2">{item.label}</h3>
+                  <p className="text-[12px] text-zinc-500 leading-[1.65]">{item.desc}</p>
+                </div>
+              </R>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ KNOWLEDGE GRAPH — visual centerpiece ═══════ */}
+      <section className="relative z-10 py-[clamp(80px,12vh,120px)]" style={{ borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Graph visual */}
+            <R delay={0.04}>
+              <div className="relative rounded-2xl overflow-hidden order-last lg:order-first"
+                style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(20,184,166,0.08)" }}>
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: "rgba(20,184,166,0.6)" }} />
+                  <span className="text-[10px] font-mono text-zinc-700">Knowledge Fingerprint — live graph</span>
+                </div>
+                <div className="p-2">
+                  <svg viewBox="0 0 400 300" className="w-full h-auto">
+                    {[60,120,180,240].map(y => <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+                    {[80,160,240,320].map(x => <line key={x} x1={x} y1="0" x2={x} y2="300" stroke="rgba(20,184,166,0.03)" strokeWidth="0.5" />)}
+                    {[
+                      [120,70,200,140],[200,140,310,90],[200,140,155,210],[155,210,75,185],
+                      [310,90,345,185],[345,185,275,230],[275,230,200,140],[75,185,120,70],
+                      [155,210,275,230],[120,70,55,140],[55,140,75,185],[310,90,365,55],
+                      [345,185,365,55],[275,230,200,270],[200,270,120,250],[120,250,75,185],
+                      [200,140,200,270],[55,140,120,250],[310,90,275,230],
+                    ].map(([x1,y1,x2,y2], i) => (
+                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(20,184,166,0.15)" strokeWidth="0.8">
+                        <animate attributeName="opacity" values="0.06;0.22;0.06" dur={`${3 + i * 0.3}s`} repeatCount="indefinite" />
+                      </line>
+                    ))}
+                    {[
+                      { x: 120, y: 70, r: 16, c: "#14b8a6", l: "AI/ML" },
+                      { x: 200, y: 140, r: 22, c: "#14b8a6", l: "Core" },
+                      { x: 310, y: 90, r: 14, c: "#38bdf8", l: "Code" },
+                      { x: 155, y: 210, r: 12, c: "#f59e0b", l: "Books" },
+                      { x: 75, y: 185, r: 10, c: "#71717a", l: "Philosophy" },
+                      { x: 345, y: 185, r: 11, c: "#10b981", l: "Finance" },
+                      { x: 275, y: 230, r: 9, c: "#10b981", l: "Health" },
+                      { x: 55, y: 140, r: 8, c: "#f97316", l: "Music" },
+                      { x: 365, y: 55, r: 7, c: "#22d3ee", l: "Travel" },
+                      { x: 200, y: 270, r: 10, c: "#ef4444", l: "Cooking" },
+                      { x: 120, y: 250, r: 8, c: "#71717a", l: "Design" },
+                    ].map((n, i) => (
+                      <g key={i}>
+                        <circle cx={n.x} cy={n.y} r={n.r * 1.5} fill={n.c} opacity="0.07">
+                          <animate attributeName="r" values={`${n.r * 1.2};${n.r * 1.9};${n.r * 1.2}`} dur={`${2.5 + i * 0.4}s`} repeatCount="indefinite" />
+                        </circle>
+                        <circle cx={n.x} cy={n.y} r={n.r * 0.7} fill={n.c} opacity="0.65" />
+                        <circle cx={n.x} cy={n.y} r={n.r * 0.3} fill="white" opacity="0.3" />
+                        <text x={n.x} y={n.y + n.r + 11} textAnchor="middle" fontSize="7.5" fill="rgba(161,161,170,0.55)" fontFamily="system-ui">{n.l}</text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+                {/* Stat overlays */}
+                <div className="absolute top-10 left-4 px-2.5 py-1.5 rounded-lg text-[10px] font-mono"
+                  style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.12)" }}>
+                  <span className="text-teal-400">11 clusters</span>
+                </div>
+                <div className="absolute bottom-8 right-4 px-2.5 py-1.5 rounded-lg text-[10px] font-mono"
+                  style={{ background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.1)" }}>
+                  <span className="text-sky-400">19 bridges</span>
+                </div>
+              </div>
+            </R>
+            {/* Copy */}
+            <div>
+              <R>
+                <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-teal-400 mb-4">Knowledge Fingerprint</p>
+                <h2 className="text-[clamp(1.6rem,3.2vw,2.8rem)] font-extrabold tracking-[-0.04em] leading-[1.08]">
+                  Your mind,<br />rendered in 3D.
+                </h2>
+              </R>
+              <R delay={0.08}>
+                <p className="text-[16px] mt-5 leading-[1.8] text-zinc-400 max-w-[440px]">
+                  Every memory you import becomes a node. Every connection a bridge.
+                  Watch your knowledge topology emerge — clusters you expect, links you&apos;d never have drawn yourself.
+                </p>
+              </R>
+              <R delay={0.14}>
+                <div className="mt-8 space-y-4">
+                  {[
+                    { label: "Clusters", desc: "Topic groups that formed organically from your writing", color: "text-teal-400" },
+                    { label: "Bridges", desc: "Ideas connecting domains you never knew were related", color: "text-sky-400" },
+                    { label: "Orphans", desc: "Isolated knowledge — gaps in your thinking made visible", color: "text-amber-400" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-start gap-3">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-current mt-2 shrink-0 opacity-70 ${item.color}`} />
+                      <div>
+                        <span className={`text-[13px] font-semibold ${item.color}`}>{item.label}</span>
+                        <span className="text-[13px] text-zinc-500"> — {item.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </R>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ═══════ IMPORT — asymmetric two-col ═══════ */}
       <section className="relative z-10 py-[clamp(80px,12vh,120px)]">
@@ -844,7 +1018,7 @@ export function LandingClient() {
           <R>
             <p className="text-[11px] font-bold tracking-[0.15em] uppercase text-teal-500 mb-4">Real power</p>
             <h2 className="text-[clamp(1.6rem,3.2vw,2.8rem)] font-extrabold tracking-[-0.04em] leading-[1.08] max-w-[500px]">
-              Not another notes app.
+              Six things you can do<br />that no other app does.
             </h2>
           </R>
           <div className="mt-10 space-y-0">

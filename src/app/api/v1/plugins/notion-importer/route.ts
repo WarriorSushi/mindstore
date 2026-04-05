@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/server/user";
 import {
@@ -27,6 +26,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    const JSZip = (await import("jszip")).default;
     const zip = await JSZip.loadAsync(Buffer.from(await file.arrayBuffer()));
     const rawPaths = Object.keys(zip.files).filter((path) => !zip.files[path].dir && !path.startsWith("__MACOSX/") && !path.startsWith("."));
     const { stripped } = stripCommonRoot(rawPaths);

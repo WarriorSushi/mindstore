@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { usePageTitle } from "@/lib/use-page-title";
+import { track } from "@/lib/analytics";
 
 type ImportState = "idle" | "parsing" | "uploading" | "done" | "error";
 type Tab = "chatgpt" | "text" | "files" | "url" | "obsidian" | "notion" | "kindle" | "pdf-epub" | "youtube" | "bookmarks" | "reddit" | "twitter" | "telegram" | "pocket" | "spotify" | "readwise";
@@ -71,7 +72,8 @@ export default function ImportPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [totalMemories, setTotalMemories] = useState(0);
   const [pluginTabs, setPluginTabs] = useState<PluginTab[]>([]);
-  
+  const [pendingEmbeddings, setPendingEmbeddings] = useState(0);
+
   // ─── Kindle-specific state ───────────────────────────────
   const [kindlePreview, setKindlePreview] = useState<any>(null);
   const [kindleParsing, setKindleParsing] = useState(false);
@@ -173,7 +175,11 @@ export default function ImportPage() {
       const r = await res.json();
       setState("done"); setProgress(100);
       setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
+      if (r.indexing?.pendingEmbeddings > 0) {
+        setPendingEmbeddings(r.indexing.pendingEmbeddings);
+      }
       toast.success(`Imported ${r.imported.chunks} memories`);
+      track.import(tab, r.imported.chunks);
       refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
@@ -186,7 +192,11 @@ export default function ImportPage() {
       const r = await res.json();
       setState("done"); setProgress(100);
       setProgressText(`${r.imported.chunks} memories from ${r.imported.documents} source(s)`);
+      if (r.indexing?.pendingEmbeddings > 0) {
+        setPendingEmbeddings(r.indexing.pendingEmbeddings);
+      }
       toast.success(`Imported ${r.imported.chunks} memories`);
+      track.import(tab, r.imported.chunks);
       refreshHistory(); // Refresh import history after successful import
     } catch (err: any) { toast.error(err.message); setState("error"); setProgressText(err.message); }
   };
@@ -811,7 +821,7 @@ export default function ImportPage() {
     await importJsonViaApi(docs);
   };
 
-  const reset = () => { setState("idle"); setProgress(0); setProgressText(""); };
+  const reset = () => { setState("idle"); setProgress(0); setProgressText(""); setPendingEmbeddings(0); };
   const busy = state === "parsing" || state === "uploading";
 
   return (
@@ -885,6 +895,14 @@ export default function ImportPage() {
                   View in Explore
                 </Link>
               )}
+            </div>
+          )}
+          {state === "done" && pendingEmbeddings > 0 && (
+            <div className="flex items-center gap-2 text-[11px] text-sky-400/80 bg-sky-500/[0.06] border border-sky-500/15 rounded-xl px-3 py-2">
+              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              <span>
+                Indexing {pendingEmbeddings} memories for semantic search — this runs in the background and will be ready in a minute.
+              </span>
             </div>
           )}
         </div>

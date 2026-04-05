@@ -95,14 +95,15 @@ export default function OnboardingPage() {
   }, [step, goTo, router]);
 
   const handleSkip = useCallback(async () => {
-    // Mark as completed and go to dashboard
+    // Mark as completed and go to appropriate page
     await fetch("/api/v1/onboarding", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: true }),
     }).catch(() => {});
-    router.push("/app");
-  }, [router]);
+    // Send to explore if they have memories, otherwise dashboard
+    router.push(state.hasMemories && state.memoryCount > 0 ? "/app/explore" : "/app");
+  }, [router, state.hasMemories, state.memoryCount]);
 
   if (!loaded) {
     return (
@@ -159,7 +160,7 @@ export default function OnboardingPage() {
       {/* Subtle background gradient */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-[0.03]"
+          className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-full md:w-[800px] h-[600px] rounded-full opacity-[0.03]"
           style={{
             background: "radial-gradient(ellipse, #14b8a6 0%, transparent 70%)",
           }}

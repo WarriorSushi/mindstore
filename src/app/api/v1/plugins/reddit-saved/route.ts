@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/server/user";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/server/plugins/ports/reddit-saved";
 
 async function processZipExport(buffer: ArrayBuffer): Promise<{ posts: RedditPost[]; comments: RedditPost[] }> {
+  const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(buffer);
   let posts: RedditPost[] = [];
   let comments: RedditPost[] = [];

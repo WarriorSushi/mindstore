@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Keep heavy server-only packages out of the client bundle
+  serverExternalPackages: ["jszip", "pdf-parse", "epub2", "youtube-transcript", "mammoth"],
+
   // Security + caching headers
   async headers() {
     return [

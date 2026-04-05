@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -6,6 +5,7 @@ import { buildExtensionConnection, EXTENSION_FILES, EXTENSION_ROOT } from "@/ser
 
 export async function GET(req: NextRequest) {
   try {
+    const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
     const origin = req.nextUrl.origin;
     const connection = buildExtensionConnection(origin);
