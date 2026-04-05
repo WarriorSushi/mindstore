@@ -5,12 +5,13 @@ import {
   Layers, Plus, Play, Brain, Loader2, Sparkles, Trash2,
   ChevronRight, RotateCcw, Check, X, Eye, EyeOff,
   Zap, Clock, Award, BarChart3, ArrowLeft,
-  BookOpen, Flame, AlertCircle, ChevronDown,
+  BookOpen, Flame, AlertCircle, ChevronDown, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageTransition, Stagger } from "@/components/PageTransition";
 import { toast } from "sonner";
 import { usePageTitle } from "@/lib/use-page-title";
+import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -108,6 +109,13 @@ export default function FlashcardsPage() {
   const [savingCards, setSavingCards] = useState(false);
   const [reviewGrading, setReviewGrading] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [hasAI, setHasAI] = useState(true); // optimistic default
+
+  useEffect(() => {
+    fetch("/api/v1/settings").then(r => r.ok ? r.json() : null).then(data => {
+      if (data) setHasAI(!!data.hasApiKey);
+    }).catch(() => {});
+  }, []);
 
   // ─── Fetch data ──────────────────────────────────────────
 
@@ -626,6 +634,22 @@ export default function FlashcardsPage() {
           </Stagger>
 
           <Stagger>
+            {/* No AI provider banner */}
+            {!hasAI && (
+              <Link href="/app/settings">
+                <div className="flex items-center gap-3 rounded-2xl bg-amber-500/[0.06] border border-amber-500/15 px-4 py-3 mb-5 hover:bg-amber-500/[0.1] transition-colors">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-amber-300">AI provider required</p>
+                    <p className="text-[11px] text-amber-400/60 mt-0.5">Connect Gemini (free) or OpenAI in Settings to generate flashcards.</p>
+                  </div>
+                  <Settings className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                </div>
+              </Link>
+            )}
+          </Stagger>
+
+          <Stagger>
             {/* Topic input */}
             <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-5 mb-6">
               <label className="text-[13px] text-zinc-400 font-medium block mb-2">
@@ -642,8 +666,8 @@ export default function FlashcardsPage() {
                 />
                 <button
                   onClick={handleGenerate}
-                  disabled={generating}
-                  className="h-11 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-medium text-[14px] transition-colors flex items-center gap-2 disabled:opacity-50"
+                  disabled={generating || !hasAI}
+                  className="h-11 px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-medium text-[14px] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                   {generating ? "Generating…" : "Generate"}

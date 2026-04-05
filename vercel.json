@@ -7,5 +7,15 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/indexing",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/jobs",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

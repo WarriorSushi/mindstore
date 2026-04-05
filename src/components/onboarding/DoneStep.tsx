@@ -108,8 +108,13 @@ export function DoneStep({ onNext, state }: StepProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: true }),
     });
-    onNext();
-  }, [onNext]);
+    // Redirect to Explore if user has memories (better first-run experience than empty dashboard)
+    if (state.hasMemories && state.memoryCount > 0) {
+      window.location.href = "/app/explore";
+    } else {
+      onNext();
+    }
+  }, [onNext, state.hasMemories, state.memoryCount]);
 
   const greeting = state.userName
     ? `You're all set, ${state.userName}!`
@@ -179,7 +184,7 @@ export function DoneStep({ onNext, state }: StepProps) {
             className="w-full max-w-xs mx-auto h-[52px] rounded-2xl bg-gradient-to-r from-teal-600 to-sky-600 hover:from-teal-500 hover:to-sky-500 text-white font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-all active:scale-[0.97] shadow-lg shadow-teal-500/20"
           >
             <Zap className="w-4.5 h-4.5" />
-            Open MindStore
+            {state.hasMemories ? "Explore your mind" : "Open MindStore"}
           </button>
         </div>
       </div>

@@ -633,6 +633,34 @@ export default function DashboardPage() {
         </Stagger>
       )}
 
+      {/* ─── First import success — feature discovery ─── */}
+      {widgets.length === 0 && total > 0 && !demo && (
+        <Stagger>
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 px-1">
+              <Sparkles className="w-3 h-3 text-teal-400" />
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Start exploring</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { href: "/app/chat", icon: MessageSquare, label: "Chat", desc: "Ask anything about your knowledge", color: "text-blue-400", bg: "bg-blue-500/[0.05]", border: "border-blue-500/15" },
+                { href: "/app/flashcards", icon: Layers, label: "Flashcards", desc: "AI-generated spaced repetition", color: "text-teal-400", bg: "bg-teal-500/[0.05]", border: "border-teal-500/15" },
+                { href: "/app/insights", icon: Lightbulb, label: "Insights", desc: "Connections across your ideas", color: "text-amber-400", bg: "bg-amber-500/[0.05]", border: "border-amber-500/15" },
+                { href: "/app/explore", icon: Compass, label: "Explore", desc: "Semantic search your memories", color: "text-emerald-400", bg: "bg-emerald-500/[0.05]", border: "border-emerald-500/15" },
+              ].map((f) => (
+                <Link key={f.href} href={f.href}>
+                  <div className={`group rounded-2xl border ${f.border} ${f.bg} p-4 hover:bg-white/[0.04] transition-all active:scale-[0.97] h-full`}>
+                    <f.icon className={`w-4 h-4 ${f.color} mb-2`} />
+                    <p className="text-[13px] font-medium text-zinc-200">{f.label}</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug">{f.desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </Stagger>
+      )}
+
       {/* ─── Dashboard Widgets — Plugin Insights ─── */}
       {widgets.length > 0 && total > 0 && (
         <Stagger>
