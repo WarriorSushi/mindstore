@@ -131,9 +131,9 @@ export function resolveTextGenerationConfigFromSettings(
       type: "openai-compatible",
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: openrouterKey,
-      model: selectedModel || defaults.openrouter || "anthropic/claude-3.5-haiku",
+      model: selectedModel || defaults.openrouter || "google/gemini-2.0-flash-lite:free",
       extraHeaders: {
-        "HTTP-Referer": "https://mindstore.app",
+        "HTTP-Referer": "https://mindstore.org",
         "X-Title": "MindStore",
       },
       providerLabel: "openrouter",
@@ -179,6 +179,25 @@ export function resolveTextGenerationConfigFromSettings(
     };
   }
 
+  // Server-key fallback priority:
+  // 1. OpenRouter — preferred server key (spend controls, model swaps)
+  // 2. Gemini — free tier fallback
+  // 3. OpenAI — if configured
+  // 4. Custom / Ollama
+  if (openrouterKey) {
+    return {
+      type: "openai-compatible",
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: openrouterKey,
+      model: selectedModel || defaults.openrouter || "google/gemini-2.0-flash-lite:free",
+      extraHeaders: {
+        "HTTP-Referer": "https://mindstore.org",
+        "X-Title": "MindStore",
+      },
+      providerLabel: "openrouter",
+    };
+  }
+
   if (geminiKey) {
     return {
       type: "gemini",
@@ -196,20 +215,6 @@ export function resolveTextGenerationConfigFromSettings(
       key: openaiKey,
       model: selectedModel || defaults.openai || "gpt-4o-mini",
       providerLabel: "openai",
-    };
-  }
-
-  if (openrouterKey) {
-    return {
-      type: "openai-compatible",
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      key: openrouterKey,
-      model: selectedModel || defaults.openrouter || "anthropic/claude-3.5-haiku",
-      extraHeaders: {
-        "HTTP-Referer": "https://mindstore.app",
-        "X-Title": "MindStore",
-      },
-      providerLabel: "openrouter",
     };
   }
 

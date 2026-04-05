@@ -58,6 +58,8 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
   }
 
   // Check env vars as fallback
+  // NOTE: OpenRouter does not support embeddings — always use Gemini/OpenAI/Ollama for this.
+  // Even if OPENROUTER_API_KEY is set, we use GEMINI_API_KEY for embeddings.
   if (process.env.GEMINI_API_KEY) {
     return { provider: 'gemini', apiKey: process.env.GEMINI_API_KEY, model: 'text-embedding-004' };
   }
