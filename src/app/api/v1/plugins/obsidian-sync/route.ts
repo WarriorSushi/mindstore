@@ -9,7 +9,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/server/user';
-import JSZip from 'jszip';
 import {
   ensureInstalled,
   getObsidianConfig,
@@ -82,6 +81,7 @@ export async function POST(req: NextRequest) {
       }
 
       const fileMap = buildVaultFileMap(memories, connections, config);
+      const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
       const vaultFolder = zip.folder(config.vaultName || 'MindStore')!;
 

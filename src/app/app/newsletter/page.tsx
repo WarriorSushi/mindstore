@@ -697,7 +697,7 @@ export default function NewsletterPage() {
               {/* Timeframe */}
               <div>
                 <label className="text-xs font-medium text-zinc-400 mb-2 block">Timeframe</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {TIMEFRAMES.map((tf) => (
                     <button
                       key={tf.id}

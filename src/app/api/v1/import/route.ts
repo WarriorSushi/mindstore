@@ -5,7 +5,6 @@ import { buildTreeIndex } from '@/server/retrieval';
 import { generateEmbeddings } from '@/server/embeddings';
 import { sql } from 'drizzle-orm';
 import { applyRateLimit, RATE_LIMITS } from '@/server/api-rate-limit';
-import JSZip from 'jszip';
 import { scheduleEmbeddingBackfill } from '@/server/indexing-jobs';
 
 /**
@@ -178,6 +177,7 @@ export async function POST(req: NextRequest) {
         if (isZip) {
           // Handle ZIP files (ChatGPT exports come as ZIP containing conversations.json)
           const buffer = await file.arrayBuffer();
+          const JSZip = (await import("jszip")).default;
           const zip = await JSZip.loadAsync(buffer);
           
           for (const [filename, zipEntry] of Object.entries(zip.files)) {

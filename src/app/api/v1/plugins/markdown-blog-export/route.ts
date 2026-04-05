@@ -9,7 +9,6 @@
 
 import { getUserId } from '@/server/user';
 import { NextRequest, NextResponse } from 'next/server';
-import JSZip from 'jszip';
 import {
   ensureInstalled,
   fetchMemories,
@@ -83,6 +82,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No memories to export' }, { status: 400 });
       }
 
+      const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
       let totalWords = 0;
 

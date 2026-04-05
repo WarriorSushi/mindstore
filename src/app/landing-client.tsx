@@ -193,7 +193,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
   0: () => (
     <div className="p-4 sm:p-5 space-y-3">
       <div className="text-[13px] font-semibold text-zinc-200 tracking-[-0.02em]">Your Mind</div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
           { v: "2,847", l: "Memories", c: "rgba(20,184,166,0.12)" },
           { v: "1,423", l: "ChatGPT", c: "rgba(16,185,129,0.12)" },
@@ -394,7 +394,7 @@ const SCREEN_CONTENT: Record<number, () => ReactNode> = {
           </div>
         ))}
       </div>
-      <div className="flex justify-between mt-1.5 text-[7px] text-zinc-700 pl-[85px]">
+      <div className="flex justify-between mt-1.5 text-[7px] text-zinc-700 pl-[40px] sm:pl-[85px]">
         <span>Jan</span><span>Apr</span><span>Jul</span><span>Oct</span>
       </div>
     </div>
