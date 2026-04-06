@@ -134,6 +134,15 @@ export function resolveTextGenerationConfigFromSettings(
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: openrouterKey,
       model: selectedModel || defaults.openrouter || "google/gemini-2.5-flash-lite",
+      extraHeaders: {
+        "HTTP-Referer": "https://mindstore.org",
+        "X-Title": "MindStore",
+      },
+      providerLabel: "openrouter",
+    };
+  }
+
+  if (preferred === "custom" && customKey && customUrl) {
     return {
       type: "openai-compatible",
       url: customUrl,
