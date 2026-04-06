@@ -317,7 +317,7 @@ export function resolveTranscriptionConfigFromSettings(
   const geminiKey = settings.gemini_api_key || process.env.GEMINI_API_KEY;
 
   if (preferred === "gemini" && geminiKey) {
-    return { type: "gemini", key: geminiKey, model: "gemini-2.0-flash" };
+    return { type: "gemini", key: geminiKey, model: "gemini-2.0-flash-lite" };
   }
 
   if (preferred === "openai" && openaiKey) {
@@ -329,7 +329,7 @@ export function resolveTranscriptionConfigFromSettings(
   }
 
   if (geminiKey) {
-    return { type: "gemini", key: geminiKey, model: "gemini-2.0-flash" };
+    return { type: "gemini", key: geminiKey, model: "gemini-2.0-flash-lite" };
   }
 
   return null;
