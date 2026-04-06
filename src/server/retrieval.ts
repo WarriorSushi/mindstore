@@ -150,7 +150,8 @@ async function searchBM25(
   ];
 
   if (sourceTypes?.length) {
-    conditions.push(sql`m.source_type = ANY(${sourceTypes})`);
+    const sourceConds = sourceTypes.map(s => sql`m.source_type = ${s}`);
+    conditions.push(sourceConds.reduce((a, b) => sql`${a} OR ${b}`));
   }
   if (dateFrom) {
     conditions.push(sql`m.created_at >= ${dateFrom}`);
@@ -210,7 +211,8 @@ async function searchVector(
   ];
 
   if (sourceTypes?.length) {
-    conditions.push(sql`m.source_type = ANY(${sourceTypes})`);
+    const sourceConds = sourceTypes.map(s => sql`m.source_type = ${s}`);
+    conditions.push(sourceConds.reduce((a, b) => sql`${a} OR ${b}`));
   }
   if (dateFrom) {
     conditions.push(sql`m.created_at >= ${dateFrom}`);

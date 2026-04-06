@@ -98,10 +98,12 @@ export function decodeAISettingValue(key: string, value: string): string {
 export async function loadAISettings(
   keys: readonly string[] = TEXT_SETTING_KEYS,
 ): Promise<Record<string, string>> {
+  const conditions = (keys as string[]).map(k => sql`key = ${k}`);
+  const combined = conditions.reduce((acc, cond) => sql`${acc} OR ${cond}`);
   const rows = await db.execute(sql`
     SELECT key, value
     FROM settings
-    WHERE key = ANY(${keys}::text[])
+    WHERE ${combined}
   `);
 
   const settings: Record<string, string> = {};
