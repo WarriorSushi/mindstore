@@ -1190,6 +1190,8 @@ export function LandingClient() {
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-500 transition">GitHub</a>
           <Link href="/docs" className="hover:text-zinc-500 transition">Docs</Link>
           <Link href="/app/plugins" className="hover:text-zinc-500 transition">Plugins</Link>
+          <Link href="/privacy" className="hover:text-zinc-500 transition">Privacy</Link>
+          <Link href="/terms" className="hover:text-zinc-500 transition">Terms</Link>
         </div>
       </footer>
     </div>

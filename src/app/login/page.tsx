@@ -133,6 +133,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </aside>
         </div>
       </div>
+      <footer className="py-5 px-6 text-center text-[12px] text-zinc-700 border-t border-white/[0.04]">
+        <Link href="/privacy" className="hover:text-zinc-500 transition-colors">Privacy Policy</Link>
+        <span className="mx-3 text-zinc-800">·</span>
+        <Link href="/terms" className="hover:text-zinc-500 transition-colors">Terms of Service</Link>
+      </footer>
     </main>
   );
 }
