@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
 import { LandingClient } from "./landing-client";
 
 export const metadata: Metadata = {
@@ -22,5 +23,9 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
-  return <LandingClient />;
+  return (
+    <SessionProvider>
+      <LandingClient />
+    </SessionProvider>
+  );
 }

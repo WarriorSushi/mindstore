@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, type ReactNode, type CSSProperties } from "react";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight, Brain, Search, MessageSquare, Layers,
   FileText, BookOpen, Globe, Mic, Image, Bookmark,
@@ -617,6 +618,9 @@ function Demo() {
 /* ═══════════════════════════════════════════════════════════════ */
 
 export function LandingClient() {
+  const { data: session } = useSession();
+  const isLoggedIn = !!(session as any)?.userId;
+
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-zinc-100 selection:bg-teal-500/20 overflow-x-hidden relative">
       <style jsx global>{`
@@ -646,7 +650,7 @@ export function LandingClient() {
           <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer" className="text-[13px] text-zinc-500 hover:text-zinc-200 transition hidden sm:block">GitHub</a>
           <Link href="/app">
             <button className="h-8 px-4 rounded-lg text-[13px] font-bold bg-teal-500 text-white border-none cursor-pointer hover:bg-teal-400 transition-all hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
-              Open App
+              {isLoggedIn ? "Dashboard" : "Open App"}
             </button>
           </Link>
         </div>
@@ -685,14 +689,16 @@ export function LandingClient() {
             <div className="flex gap-3 mt-8 flex-wrap">
               <Link href="/app">
                 <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
-                  Get Started Free <ArrowRight className="w-4 h-4 inline ml-1.5" />
+                  {isLoggedIn ? <>Go to Dashboard <ArrowRight className="w-4 h-4 inline ml-1.5" /></> : <>Get Started Free <ArrowRight className="w-4 h-4 inline ml-1.5" /></>}
                 </button>
               </Link>
-              <Link href="/app?demo=true">
-                <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
-                  Try Demo
-                </button>
-              </Link>
+              {!isLoggedIn && (
+                <Link href="/app?demo=true">
+                  <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
+                    Try Demo
+                  </button>
+                </Link>
+              )}
             </div>
           </R>
           <R delay={0.24}>
@@ -1164,14 +1170,16 @@ export function LandingClient() {
             <div className="flex gap-3 justify-center mt-8 flex-wrap">
               <Link href="/app">
                 <button className="h-12 px-8 rounded-xl text-[15px] font-bold bg-teal-500 text-white cursor-pointer transition-all hover:bg-teal-400 hover:-translate-y-0.5 shadow-[0_6px_24px_rgba(20,184,166,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b]">
-                  Open MindStore <ArrowRight className="w-4 h-4 inline ml-1.5" />
+                  {isLoggedIn ? <>Go to Dashboard <ArrowRight className="w-4 h-4 inline ml-1.5" /></> : <>Open MindStore <ArrowRight className="w-4 h-4 inline ml-1.5" /></>}
                 </button>
               </Link>
-              <Link href="/login">
-                <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
-                  Sign In
-                </button>
-              </Link>
+              {!isLoggedIn && (
+                <Link href="/login">
+                  <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
+                    Sign In
+                  </button>
+                </Link>
+              )}
               <a href="https://github.com/WarriorSushi/mindstore" target="_blank" rel="noopener noreferrer">
                 <button className="h-12 px-6 rounded-xl text-[15px] font-medium bg-transparent text-zinc-400 border border-zinc-800 cursor-pointer transition-all hover:text-zinc-100 hover:border-zinc-600">
                   GitHub
