@@ -171,3 +171,26 @@ export function getConversationStats(convo: Conversation): { messageCount: numbe
 export function clearAllConversations(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
+
+const LAST_ACTIVE_KEY = "mindstore-last-chat-id";
+
+/** Persist the last active conversation ID */
+export function setLastActiveConversation(id: string): void {
+  try { localStorage.setItem(LAST_ACTIVE_KEY, id); } catch {}
+}
+
+/** Restore the last active conversation, falling back to most recent with messages */
+export function getLastActiveConversation(): Conversation | null {
+  try {
+    const lastId = localStorage.getItem(LAST_ACTIVE_KEY);
+    const convos = getConversations();
+    if (lastId) {
+      const found = convos.find(c => c.id === lastId && c.messages.length > 0);
+      if (found) return found;
+    }
+    // Fall back to most recently updated conversation with messages
+    return convos.find(c => c.messages.length > 0) || null;
+  } catch {
+    return null;
+  }
+}

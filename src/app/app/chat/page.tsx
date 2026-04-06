@@ -34,6 +34,8 @@ import {
   createConversation,
   saveConversation,
   deleteConversation,
+  getLastActiveConversation,
+  setLastActiveConversation,
 } from "@/lib/chat-history";
 
 /* ─── Suggestion prompts for empty state ─── */
@@ -182,6 +184,13 @@ export default function ChatPage() {
       if (d.chatProvider) setChatProvider(d.chatProvider);
     });
     refreshHistory();
+    // Restore last active conversation
+    const last = getLastActiveConversation();
+    if (last) {
+      setConversationId(last.id);
+      setMessages(last.messages);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ─── Listen for Command Palette events ─── */
@@ -242,6 +251,7 @@ export default function ChatPage() {
     if (!conversationId || messages.length === 0) return;
     const t = setTimeout(() => {
       saveConversation(conversationId, messages);
+      setLastActiveConversation(conversationId);
       refreshHistory();
     }, 300);
     return () => clearTimeout(t);
@@ -306,6 +316,7 @@ export default function ChatPage() {
     if (!convo) return;
     setConversationId(id);
     setMessages(convo.messages);
+    setLastActiveConversation(id);
     setMobileSidebarOpen(false);
     setFollowUps([]);
   }
