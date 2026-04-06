@@ -214,9 +214,16 @@ export default function ImportPage() {
   };
 
   const handleFileImport = async (files: FileList | null) => {
-    if (!files?.length) return; setState("parsing");
-    const fd = new FormData(); fd.append('source_type', 'file');
-    for (const f of Array.from(files)) { if (f.name.match(/\.(txt|md|markdown)$/i)) fd.append('files', f); }
+    if (!files?.length) return;
+    const matched = Array.from(files).filter(f => f.name.match(/\.(txt|md|markdown)$/i));
+    if (!matched.length) {
+      toast.error('Only .txt and .md files are supported');
+      return;
+    }
+    setState("parsing");
+    const fd = new FormData();
+    fd.append('source_type', 'file');
+    for (const f of matched) fd.append('files', f);
     await importViaApi(fd);
   };
 
