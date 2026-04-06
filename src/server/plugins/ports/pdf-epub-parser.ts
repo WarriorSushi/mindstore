@@ -271,38 +271,21 @@ function findTocTitle(epub: any, idOrHref: string): string | null {
 }
 
 export async function parsePDF(buffer: Buffer, fileName: string): Promise<ParsedDocument> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
+  const { extractText } = await import("unpdf");
 
-  const textResult = await parser.getText();
-  const fullText = textResult.text || "";
-
-  let info: Record<string, string> = {};
-  try {
-    info = ((await parser.getInfo())?.info || {}) as Record<string, string>;
-  } catch {
-    info = {};
-  }
-
-  const title = info.Title || fileName.replace(/\.pdf$/i, "");
-  const author = info.Author || undefined;
-  const totalPages = textResult?.pages?.length || undefined;
-
-  await parser.destroy().catch(() => {});
+  const uint8 = new Uint8Array(buffer);
+  const { text, totalPages } = await extractText(uint8, { mergePages: true });
+  const fullText = Array.isArray(text) ? text.join('\n') : (text || '');
+  const title = fileName.replace(/\.pdf$/i, '');
 
   return {
     title,
-    author,
+    author: undefined,
     format: "pdf",
     totalPages,
     totalChapters: undefined,
     sections: extractPDFSections(fullText, title),
     metadata: {
-      ...(info.Title ? { title: info.Title } : {}),
-      ...(info.Author ? { author: info.Author } : {}),
-      ...(info.Subject ? { subject: info.Subject } : {}),
-      ...(info.Creator ? { creator: info.Creator } : {}),
-      ...(info.Producer ? { producer: info.Producer } : {}),
       ...(totalPages ? { pages: String(totalPages) } : {}),
     },
   };
