@@ -1,0 +1,393 @@
+-- MindStore — complete schema
+-- Run this in Supabase SQL Editor to set up all tables.
+-- Safe to re-run: all statements use IF NOT EXISTS / ON CONFLICT DO NOTHING.
+
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Enums
+DO $$ BEGIN
+  CREATE TYPE content_type AS ENUM ('text', 'image', 'audio', 'video', 'code', 'conversation', 'webpage', 'document');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE plugin_type AS ENUM ('extension', 'mcp', 'prompt');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE plugin_status AS ENUM ('installed', 'active', 'disabled', 'error');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE notification_type AS ENUM (
+    'import_complete', 'analysis_ready', 'review_due', 'plugin_event',
+    'system', 'export_ready', 'connection_found', 'milestone'
+  );
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- Users
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE,
+  name TEXT,
+  image TEXT,
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Memories
+CREATE TABLE IF NOT EXISTS memories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  content TEXT NOT NULL,
+  embedding vector,
+  content_type content_type DEFAULT 'text',
+  source_type TEXT NOT NULL,
+  source_id TEXT,
+  source_title TEXT,
+  metadata JSONB DEFAULT '{}',
+  parent_id UUID,
+  tree_path TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  imported_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tree index
+CREATE TABLE IF NOT EXISTS tree_index (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT,
+  level INT DEFAULT 0,
+  parent_id UUID,
+  memory_ids UUID[],
+  embedding vector,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE memories ALTER COLUMN embedding TYPE vector USING embedding::vector;
+ALTER TABLE tree_index ALTER COLUMN embedding TYPE vector USING embedding::vector;
+
+-- Profile
+CREATE TABLE IF NOT EXISTS profile (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
+  confidence REAL DEFAULT 0.5,
+  source TEXT DEFAULT 'manual',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, key)
+);
+
+-- Facts
+CREATE TABLE IF NOT EXISTS facts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  fact TEXT NOT NULL,
+  category TEXT,
+  entities TEXT[],
+  learned_at TIMESTAMPTZ DEFAULT NOW(),
+  source TEXT DEFAULT 'conversation'
+);
+
+-- Connections
+CREATE TABLE IF NOT EXISTS connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  memory_a_id UUID REFERENCES memories(id),
+  memory_b_id UUID REFERENCES memories(id),
+  similarity REAL,
+  surprise REAL,
+  bridge_concept TEXT,
+  discovered_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Contradictions
+CREATE TABLE IF NOT EXISTS contradictions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  memory_a_id UUID REFERENCES memories(id),
+  memory_b_id UUID REFERENCES memories(id),
+  topic TEXT,
+  description TEXT,
+  detected_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Media
+CREATE TABLE IF NOT EXISTS media (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  memory_id UUID REFERENCES memories(id),
+  file_type TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size INT,
+  metadata JSONB DEFAULT '{}',
+  transcript TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Plugins
+CREATE TABLE IF NOT EXISTS plugins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  version TEXT DEFAULT '1.0.0',
+  type plugin_type NOT NULL DEFAULT 'extension',
+  status plugin_status NOT NULL DEFAULT 'installed',
+  icon TEXT,
+  category TEXT,
+  author TEXT DEFAULT 'MindStore',
+  config JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}',
+  installed_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_error TEXT
+);
+
+-- Plugin job schedules
+CREATE TABLE IF NOT EXISTS plugin_job_schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  plugin_slug TEXT NOT NULL,
+  job_id TEXT NOT NULL,
+  enabled INT NOT NULL DEFAULT 1,
+  interval_minutes INT NOT NULL DEFAULT 1440,
+  next_run_at TIMESTAMPTZ,
+  last_run_at TIMESTAMPTZ,
+  last_status TEXT,
+  last_summary TEXT,
+  last_error TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, plugin_slug, job_id)
+);
+
+-- Flashcard decks
+CREATE TABLE IF NOT EXISTS flashcard_decks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT NOT NULL,
+  cards JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Voice recordings
+CREATE TABLE IF NOT EXISTS voice_recordings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  title TEXT,
+  transcript TEXT,
+  duration_seconds REAL,
+  audio_size INT,
+  audio_format TEXT DEFAULT 'webm',
+  language TEXT,
+  provider TEXT,
+  model TEXT,
+  confidence REAL,
+  word_count INT,
+  saved_as_memory INT NOT NULL DEFAULT 0,
+  memory_id UUID REFERENCES memories(id),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- API keys
+CREATE TABLE IF NOT EXISTS api_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  key TEXT UNIQUE NOT NULL,
+  name TEXT,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Settings
+CREATE TABLE IF NOT EXISTS settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key TEXT UNIQUE NOT NULL,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Search history
+CREATE TABLE IF NOT EXISTS search_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  query TEXT NOT NULL,
+  result_count INT DEFAULT 0,
+  searched_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Chat conversations
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  title TEXT NOT NULL DEFAULT 'New conversation',
+  messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+  model TEXT,
+  memory_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Memory reviews (spaced repetition)
+CREATE TABLE IF NOT EXISTS memory_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  memory_id UUID REFERENCES memories(id) ON DELETE CASCADE NOT NULL,
+  review_count INT DEFAULT 0,
+  next_review_at TIMESTAMPTZ NOT NULL,
+  last_reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, memory_id)
+);
+
+-- Tags
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  name TEXT NOT NULL,
+  color TEXT DEFAULT 'teal',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS memory_tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id UUID REFERENCES memories(id) ON DELETE CASCADE NOT NULL,
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Notifications
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  type notification_type NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  icon TEXT,
+  color TEXT DEFAULT 'teal',
+  href TEXT,
+  plugin_slug TEXT,
+  metadata JSONB DEFAULT '{}',
+  read INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Image analyses
+CREATE TABLE IF NOT EXISTS image_analyses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  title TEXT,
+  description TEXT,
+  image_data TEXT,
+  image_size INTEGER,
+  image_format TEXT DEFAULT 'png',
+  image_width INTEGER,
+  image_height INTEGER,
+  tags TEXT[] DEFAULT '{}',
+  context_type TEXT DEFAULT 'general',
+  provider TEXT,
+  model TEXT,
+  word_count INTEGER,
+  saved_as_memory BOOLEAN DEFAULT false,
+  memory_id UUID REFERENCES memories(id),
+  custom_prompt TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexing / backfill jobs
+CREATE TABLE IF NOT EXISTS indexing_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  job_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reason TEXT,
+  provider TEXT,
+  requested_count INT NOT NULL DEFAULT 0,
+  processed_count INT NOT NULL DEFAULT 0,
+  remaining_count INT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  scheduled_at TIMESTAMPTZ DEFAULT NOW(),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- OAuth accounts (NextAuth)
+CREATE TABLE IF NOT EXISTS accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  type TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  provider_account_id TEXT NOT NULL,
+  refresh_token TEXT,
+  access_token TEXT,
+  expires_at INT,
+  token_type TEXT,
+  scope TEXT,
+  id_token TEXT
+);
+
+-- Sessions (NextAuth)
+CREATE TABLE IF NOT EXISTS sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) NOT NULL,
+  session_token TEXT UNIQUE NOT NULL,
+  expires TIMESTAMPTZ NOT NULL
+);
+
+-- Default single-user account
+INSERT INTO users (id, email, name)
+VALUES ('00000000-0000-0000-0000-000000000000', 'default@mindstore.local', 'Default User')
+ON CONFLICT (email) DO NOTHING;
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_plugins_slug ON plugins(slug);
+CREATE INDEX IF NOT EXISTS idx_plugins_status ON plugins(status);
+CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category);
+CREATE INDEX IF NOT EXISTS idx_plugin_job_schedule_due ON plugin_job_schedules(enabled, next_run_at);
+CREATE INDEX IF NOT EXISTS idx_flashcard_decks_user ON flashcard_decks(user_id);
+CREATE INDEX IF NOT EXISTS idx_flashcard_decks_updated ON flashcard_decks(updated_at);
+CREATE INDEX IF NOT EXISTS idx_voice_recordings_user ON voice_recordings(user_id);
+CREATE INDEX IF NOT EXISTS idx_voice_recordings_created ON voice_recordings(created_at);
+CREATE INDEX IF NOT EXISTS idx_voice_recordings_saved ON voice_recordings(saved_as_memory);
+CREATE INDEX IF NOT EXISTS idx_search_history_user ON search_history(user_id, searched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_convos_user ON chat_conversations(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_reviews_due ON memory_reviews(user_id, next_review_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_user_name ON tags(user_id, name);
+CREATE INDEX IF NOT EXISTS idx_tags_user ON tags(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_tags_unique ON memory_tags(memory_id, tag_id);
+CREATE INDEX IF NOT EXISTS idx_memory_tags_memory ON memory_tags(memory_id);
+CREATE INDEX IF NOT EXISTS idx_memory_tags_tag ON memory_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_image_analyses_user ON image_analyses(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_indexing_jobs_user ON indexing_jobs(user_id, scheduled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_indexing_jobs_status ON indexing_jobs(status, scheduled_at DESC);
+CREATE INDEX IF NOT EXISTS idx_indexing_jobs_user_type ON indexing_jobs(user_id, job_type, status);
+CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_source ON memories(user_id, source_type);
+CREATE INDEX IF NOT EXISTS idx_memories_tree ON memories(user_id, tree_path);
+CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_tree_user ON tree_index(user_id);
+CREATE INDEX IF NOT EXISTS idx_facts_user ON facts(user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_fts ON memories USING gin(to_tsvector('english', content));
+CREATE INDEX IF NOT EXISTS idx_memories_trgm ON memories USING gin(content gin_trgm_ops);
