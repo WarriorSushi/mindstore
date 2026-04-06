@@ -17,11 +17,12 @@ const TEXT_SETTING_KEYS = [
 const TRANSCRIPTION_SETTING_KEYS = [
   "openai_api_key",
   "gemini_api_key",
+  "groq_api_key",
   "chat_provider",
 ] as const;
 
 export type AITextProvider = "openai-compatible" | "gemini" | "ollama";
-export type AITranscriptionProvider = "openai" | "gemini";
+export type AITranscriptionProvider = "openai" | "gemini" | "groq";
 export type AIMessageRole = "system" | "user" | "assistant";
 
 export interface AIMessage {
@@ -315,13 +316,15 @@ export function resolveTranscriptionConfigFromSettings(
   const preferred = settings.chat_provider;
   const openaiKey = settings.openai_api_key || process.env.OPENAI_API_KEY;
   const geminiKey = settings.gemini_api_key || process.env.GEMINI_API_KEY;
-
-  if (preferred === "gemini" && geminiKey) {
-    return { type: "gemini", key: geminiKey, model: "gemini-2.0-flash-lite" };
-  }
+  const groqKey = settings.groq_api_key || process.env.GROQ_API_KEY;
 
   if (preferred === "openai" && openaiKey) {
     return { type: "openai", key: openaiKey, model: "whisper-1" };
+  }
+
+  // Groq Whisper — free, generous quota, best default
+  if (groqKey) {
+    return { type: "groq", key: groqKey, model: "whisper-large-v3-turbo" };
   }
 
   if (openaiKey) {
@@ -345,11 +348,12 @@ export async function transcribeAudio(
 ): Promise<AITranscriptionResult> {
   if (config.type === "openai") {
     const result = await transcribeWithWhisper(config, request);
-    return {
-      ...result,
-      provider: "openai",
-      model: config.model,
-    };
+    return { ...result, provider: "openai", model: config.model };
+  }
+
+  if (config.type === "groq") {
+    const result = await transcribeWithGroq(config, request);
+    return { ...result, provider: "groq", model: config.model };
   }
 
   const result = await transcribeWithGemini(config, request);
@@ -715,6 +719,47 @@ async function transcribeWithWhisper(
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Whisper API error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json() as {
+    text?: string;
+    language?: string;
+    duration?: number;
+    segments?: unknown[];
+  };
+
+  return {
+    text: data.text || "",
+    language: data.language || request.language || "en",
+    duration: data.duration || 0,
+    segments: data.segments,
+  };
+}
+
+async function transcribeWithGroq(
+  config: AITranscriptionConfig,
+  request: AITranscriptionRequest,
+) {
+  const formData = new FormData();
+  const blob = new Blob([new Uint8Array(request.audioBuffer)], {
+    type: request.mimeType || "audio/webm",
+  });
+  formData.append("file", blob, "recording.webm");
+  formData.append("model", config.model);
+  formData.append("response_format", "verbose_json");
+  if (request.language) {
+    formData.append("language", request.language);
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.key}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq Whisper API error (${response.status}): ${errorText}`);
   }
 
   const data = await response.json() as {
