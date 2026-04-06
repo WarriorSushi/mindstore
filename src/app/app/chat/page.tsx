@@ -246,6 +246,11 @@ export default function ChatPage() {
     return () => el.removeEventListener("scroll", onScroll);
   }, [messages.length]);
 
+  /* ─── Track active conversation ID immediately on change ─── */
+  useEffect(() => {
+    if (conversationId) setLastActiveConversation(conversationId);
+  }, [conversationId]);
+
   /* ─── Persist messages on change ─── */
   useEffect(() => {
     if (!conversationId || messages.length === 0) return;
