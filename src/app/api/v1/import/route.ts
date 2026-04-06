@@ -279,10 +279,11 @@ export async function POST(req: NextRequest) {
       
       // Check for existing content in batch (dedup by exact content match)
       const contentHashes = batch.map(c => c.content.trim().substring(0, 500));
+      // Use unnest to safely pass array without ANY() casting issues
       const existingCheck = await db.execute(sql`
         SELECT SUBSTRING(content, 1, 500) as prefix FROM memories
         WHERE user_id = ${userId}::uuid
-        AND SUBSTRING(content, 1, 500) = ANY(${contentHashes})
+        AND SUBSTRING(content, 1, 500) IN (SELECT unnest(${contentHashes}::text[]))
       `);
       const existingPrefixes = new Set((existingCheck as any[]).map(r => r.prefix));
 
