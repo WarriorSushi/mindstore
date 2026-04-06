@@ -169,10 +169,14 @@ export async function POST(req: NextRequest) {
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const sourceType = formData.get('source_type') as string || 'text';
-      const files = formData.getAll('files') as File[];
+      const files = formData.getAll('files');
 
-      for (const file of files) {
-        const isZip = file.name.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
+      for (const fileEntry of files) {
+        // Next.js formData returns File objects (which extend Blob)
+        if (!(fileEntry instanceof Blob)) continue;
+        const file = fileEntry as File;
+        const filename = (file as any).name || 'file.txt';
+        const isZip = filename.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
         
         if (isZip) {
           // Handle ZIP files (ChatGPT exports come as ZIP containing conversations.json)
@@ -180,27 +184,27 @@ export async function POST(req: NextRequest) {
           const JSZip = (await import("jszip")).default;
           const zip = await JSZip.loadAsync(buffer);
           
-          for (const [filename, zipEntry] of Object.entries(zip.files)) {
+          for (const [zipFilename, zipEntry] of Object.entries(zip.files)) {
             if (zipEntry.dir) continue;
             const entryText = await zipEntry.async('text');
-            
-            if (filename.endsWith('.json') && (sourceType === 'chatgpt' || filename.includes('conversations'))) {
+
+            if (zipFilename.endsWith('.json') && (sourceType === 'chatgpt' || zipFilename.includes('conversations'))) {
               try {
                 const parsed = parseChatGPT(JSON.parse(entryText));
                 documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
               } catch { /* skip non-ChatGPT JSON files in ZIP */ }
-            } else if (filename.endsWith('.md') || filename.endsWith('.txt')) {
-              documents.push({ title: cleanTitle(filename), content: entryText, sourceType: sourceType || 'file' });
+            } else if (zipFilename.endsWith('.md') || zipFilename.endsWith('.txt')) {
+              documents.push({ title: cleanTitle(zipFilename), content: entryText, sourceType: sourceType || 'file' });
             }
           }
         } else {
           const text = await file.text();
           
-          if (sourceType === 'chatgpt' && file.name.endsWith('.json')) {
+          if (sourceType === 'chatgpt' && filename.endsWith('.json')) {
             const parsed = parseChatGPT(JSON.parse(text));
             documents.push(...parsed.map(p => ({ ...p, sourceType: 'chatgpt' })));
           } else {
-            documents.push({ title: cleanTitle(file.name), content: text, sourceType });
+            documents.push({ title: cleanTitle(filename), content: text, sourceType });
           }
         }
       }
