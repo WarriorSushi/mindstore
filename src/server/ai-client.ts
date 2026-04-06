@@ -133,16 +133,7 @@ export function resolveTextGenerationConfigFromSettings(
       type: "openai-compatible",
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: openrouterKey,
-      model: selectedModel || defaults.openrouter || "google/gemini-2.0-flash-lite:free",
-      extraHeaders: {
-        "HTTP-Referer": "https://mindstore.org",
-        "X-Title": "MindStore",
-      },
-      providerLabel: "openrouter",
-    };
-  }
-
-  if (preferred === "custom" && customKey && customUrl) {
+      model: selectedModel || defaults.openrouter || "google/gemini-2.5-flash-preview",
     return {
       type: "openai-compatible",
       url: customUrl,
@@ -191,7 +182,7 @@ export function resolveTextGenerationConfigFromSettings(
       type: "openai-compatible",
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: openrouterKey,
-      model: selectedModel || defaults.openrouter || "google/gemini-2.0-flash-lite:free",
+      model: selectedModel || defaults.openrouter || "google/gemini-2.5-flash-preview",
       extraHeaders: {
         "HTTP-Referer": "https://mindstore.org",
         "X-Title": "MindStore",
