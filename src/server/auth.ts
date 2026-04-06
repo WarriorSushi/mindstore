@@ -19,33 +19,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account }) {
       if (!user.email) return false;
 
-      // Upsert user
-      const existing = await db.execute(
-        sql`SELECT id FROM users WHERE email = ${user.email}`
-      );
+      try {
+        // Upsert user
+        const existing = await db.execute(
+          sql`SELECT id FROM users WHERE email = ${user.email}`
+        );
 
-      let userId: string;
-      if ((existing as any[]).length > 0) {
-        userId = (existing as any[])[0].id;
-      } else {
-        const result = await db.execute(sql`
-          INSERT INTO users (email, name, image)
-          VALUES (${user.email}, ${user.name || null}, ${user.image || null})
-          RETURNING id
-        `);
-        userId = (result as any[])[0].id;
+        let userId: string;
+        if ((existing as any[]).length > 0) {
+          userId = (existing as any[])[0].id;
+        } else {
+          const result = await db.execute(sql`
+            INSERT INTO users (email, name, image)
+            VALUES (${user.email}, ${user.name || null}, ${user.image || null})
+            RETURNING id
+          `);
+          userId = (result as any[])[0].id;
+        }
+
+        // Upsert OAuth account link
+        if (account) {
+          await db.execute(sql`
+            INSERT INTO accounts (user_id, type, provider, provider_account_id, access_token, refresh_token, expires_at)
+            VALUES (${userId}::uuid, ${account.type}, ${account.provider}, ${account.providerAccountId}, ${account.access_token || null}, ${account.refresh_token || null}, ${account.expires_at || null})
+            ON CONFLICT DO NOTHING
+          `);
+        }
+
+        return true;
+      } catch (err) {
+        console.error('[auth] signIn callback error:', err);
+        return false;
       }
-
-      // Upsert OAuth account link
-      if (account) {
-        await db.execute(sql`
-          INSERT INTO accounts (user_id, type, provider, provider_account_id, access_token, refresh_token, expires_at)
-          VALUES (${userId}::uuid, ${account.type}, ${account.provider}, ${account.providerAccountId}, ${account.access_token || null}, ${account.refresh_token || null}, ${account.expires_at || null})
-          ON CONFLICT DO NOTHING
-        `);
-      }
-
-      return true;
     },
     async jwt({ token, user }) {
       if (user?.email) {
