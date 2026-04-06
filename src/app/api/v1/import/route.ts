@@ -279,13 +279,19 @@ export async function POST(req: NextRequest) {
       
       // Check for existing content in batch (dedup by exact content match)
       const contentHashes = batch.map(c => c.content.trim().substring(0, 500));
-      // Use unnest to safely pass array without ANY() casting issues
-      const existingCheck = await db.execute(sql`
-        SELECT SUBSTRING(content, 1, 500) as prefix FROM memories
-        WHERE user_id = ${userId}::uuid
-        AND SUBSTRING(content, 1, 500) IN (SELECT unnest(${contentHashes}::text[]))
-      `);
-      const existingPrefixes = new Set((existingCheck as any[]).map(r => r.prefix));
+      let existingPrefixes = new Set<string>();
+      try {
+        // Build individual OR conditions to avoid array casting issues
+        const conditions = contentHashes.map(h => sql`SUBSTRING(content, 1, 500) = ${h}`);
+        const combined = conditions.reduce((acc, cond) => sql`${acc} OR ${cond}`);
+        const existingCheck = await db.execute(sql`
+          SELECT SUBSTRING(content, 1, 500) as prefix FROM memories
+          WHERE user_id = ${userId}::uuid AND (${combined})
+        `);
+        existingPrefixes = new Set((existingCheck as any[]).map(r => r.prefix));
+      } catch {
+        // If dedup check fails, proceed without it
+      }
 
       for (let i = 0; i < batch.length; i++) {
         const chunk = batch[i];
